@@ -3792,6 +3792,11 @@ bool JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 	}
 
+	// With some icon themes, such as Sifr in dark mode, we disable drawing of
+	// some native controls
+	if ( isSupported )
+		isSupported = JavaSalFrame::UseNativeControlWithCurrentIconTheme( nType, nPart );
+
 	return isSupported;
 }
 

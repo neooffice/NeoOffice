@@ -74,6 +74,7 @@ static SalColor *pVCLTextColor = NULL;
 static SalColor *pVCLHighlightColor = NULL;
 static SalColor *pVCLHighlightTextColor = NULL;
 static SalColor *pVCLDisabledControlTextColor = NULL;
+static SalColor *pVCLFieldColor = NULL;
 static SalColor *pVCLBackColor = NULL;
 static SalColor *pVCLAlternateSelectedControlTextColor = NULL;
 static SalColor *pVCLSelectedControlTextColor = NULL;
@@ -265,17 +266,20 @@ static void HandleSystemColorsChangedRequest()
 	SetSalColorFromNSColor( [NSColor selectedTextColor], &pVCLHighlightTextColor );
 	SetSalColorFromNSColor( [NSColor disabledControlTextColor], &pVCLDisabledControlTextColor );
 	// Unselected Sifr icons are nearly the same color as the background
-	// color when running in Dark Mode so lighten the background slightly
+	// color when running in Dark Mode so darken the background significantly
+	// to give a high contrast effect
 	if ( bVCLUseDarkModeColors && bVCLUseSifrIconTheme )
-		SetSalColorFromNSColor( [NSColor darkGrayColor], &pVCLBackColor );
-#if MACOSX_SDK_VERSION < 101400
-	else if ( class_getClassMethod( [NSColor class], @selector(unemphasizedSelectedContentBackgroundColor) ) )
-#else // MACOSX_SDK_VERSION < 101400
-	else if ( @available(macOS 10.14, * ) )
-#endif	// MACOSX_SDK_VERSION < 101400
-		SetSalColorFromNSColor( [NSColor unemphasizedSelectedContentBackgroundColor], &pVCLBackColor );
-	else if ( class_getClassMethod( [NSColor class], @selector(controlHighlightColor) ) )
-		SetSalColorFromNSColor( [NSColor controlHighlightColor], &pVCLBackColor );
+	{
+		NSColor *pBackColor = [NSColor shadowColor];
+		SetSalColorFromNSColor( pBackColor ? [pBackColor blendedColorWithFraction:0.3f ofColor:[NSColor darkGrayColor]] : nil, &pVCLFieldColor );
+		SetSalColorFromNSColor( pBackColor, &pVCLBackColor );
+	}
+	else
+	{
+		NSColor *pBackColor = [NSColor unemphasizedSelectedContentBackgroundColor];
+		SetSalColorFromNSColor( pBackColor, &pVCLFieldColor );
+		SetSalColorFromNSColor( pBackColor, &pVCLBackColor );
+	}
 	SetSalColorFromNSColor( [NSColor alternateSelectedControlTextColor], &pVCLAlternateSelectedControlTextColor );
 	SetSalColorFromNSColor( [NSColor selectedControlTextColor], &pVCLSelectedControlTextColor );
 	// Use deprecated selector for selected menu item for macOS 10.14 light mode
@@ -3375,6 +3379,21 @@ void JavaSalFrame::UpdateColorsForIconTheme( OUString& rTheme )
 
 // -----------------------------------------------------------------------
 
+bool JavaSalFrame::UseNativeControlWithCurrentIconTheme( ControlType nType, ControlPart nPart )
+{
+	bool bRet = true;
+
+	if ( nType == CTRL_MENU_POPUP && nPart == PART_ENTIRE_CONTROL )
+	{
+		MutexGuard aGuard( aSystemColorsMutex );
+		bRet = ( !bVCLUseDarkModeColors || !bVCLUseSifrIconTheme );
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 {
 	if ( pObject )
@@ -4768,10 +4787,12 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 		Color aWindowColor( *pVCLWindowColor );
 
 		aStyleSettings.SetActiveTabColor( aWindowColor );
-		aStyleSettings.SetFieldColor( aWindowColor );
 		aStyleSettings.SetWindowColor( aWindowColor );
 		aStyleSettings.SetWorkspaceColor( aWindowColor );
 	}
+
+	if ( pVCLFieldColor )
+		aStyleSettings.SetFieldColor( Color( *pVCLFieldColor ) );
 
 	if ( pVCLLinkColor )
 		aStyleSettings.SetLinkColor( Color( *pVCLLinkColor ) );

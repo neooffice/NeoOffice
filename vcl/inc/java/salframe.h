@@ -40,6 +40,7 @@
 
 #include <tools/link.hxx>
 #include <vcl/salgtype.hxx>
+#include <vcl/salnativewidgets.hxx>
 #include <vcl/sysdata.hxx>
 
 #include <premac.h>
@@ -111,6 +112,7 @@ public:
 	static bool				GetSelectedMenuItemTextColor( SalColor& rSalColor );
 	static bool				GetSelectedTabTextColor( SalColor& rSalColor );
 	static void				UpdateColorsForIconTheme( OUString& rTheme );
+	static bool				UseNativeControlWithCurrentIconTheme( ControlType nType, ControlPart nPart );
 
 							JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent );
 	virtual					~JavaSalFrame();
