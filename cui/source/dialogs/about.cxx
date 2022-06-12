@@ -177,6 +177,7 @@ void AboutDialog::StyleControls()
     aLargeFont.SetSize( Size( 0, aLabelFont.GetSize().Height() * 1.2 ) );
     m_pVersion->SetControlFont(aLargeFont);
 
+#ifndef USE_JAVA
     // If not in high-contrast mode, hard-code colors
     if ( !(Application::GetSettings().GetStyleSettings().GetHighContrastMode()) )
     {
@@ -185,6 +186,7 @@ void AboutDialog::StyleControls()
         m_pDescriptionText->SetControlForeground(Color(51, 51, 51));
         m_pCopyrightText->SetControlForeground(Color(102, 102, 102));
     }
+#endif	// !USE_JAVA
 }
 
 void AboutDialog::SetLogo()
