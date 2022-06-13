@@ -1038,8 +1038,11 @@ else
 endif
 endif
 
+build.store_notarytool_credentials:
+	xcrun notarytool store-credentials AC_PASSWORD --apple-id "$(APPLEDEVELOPERID)" --team-id "$(CERTSANDBOXTEAMIDENTIFIER)"
+
 build.notarize_package_shared:
-	xcrun altool --notarize-app -f "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
+	xcrun notarytool submit "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --keychain-profile AC_PASSWORD --wait
 
 build.notarize_patch_package: build.patch_package
 	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
@@ -1054,7 +1057,7 @@ ifndef PRODUCT_BUILD3
 endif
 
 build.notarize_patch_package_shared:
-	xcrun altool --notarize-app -f "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --primary-bundle-id "$(PRODUCT_DOMAIN).$(PRODUCT_DIR_NAME)" -u "$(APPLEDEVELOPERID)"
+	xcrun notarytool submit "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --keychain-profile AC_PASSWORD --wait
 
 build.notarize_all: build.notarize_package build.notarize_package2 build.notarize_package3
 	touch "$@"
@@ -1096,9 +1099,8 @@ endif
 endif
 
 build.staple_package_shared:
-# Check that stapler executables exist before proceeding
-	@sh -e -c 'for i in stapler; do if [ -z "`which $$i`" ] ; then echo "$$i command not found" ; exit 1 ; fi ; done'
-	stapler staple "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
+	xcrun stapler staple "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
+	xcrun stapler validate "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
 
 build.staple_patch_package: build.notarize_patch_package
 	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
@@ -1113,7 +1115,8 @@ ifndef PRODUCT_BUILD3
 endif
 
 build.staple_patch_package_shared:
-	stapler staple "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
+	xcrun stapler staple "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
+	xcrun stapler validate "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
 
 build.staple_all: build.staple_package build.staple_package2 build.staple_package3
 	touch "$@"

@@ -92,15 +92,7 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
       "<source folder>/build/patch_install/*.dmg" - Patch installer for the Mac App Store version
       "<source folder>/build/patch_install3/*.dmg" - Patch installer for the Professional Edition version
 
-12. You can notarize the installers using Apple's notarization service by opening the "<source folder>/certs.mk" file that you created and setting the APPLEDEVELOPERID macro to the e-mail of your Apple Developer ID. Then, invoke the following command:
-
-   make build.notarize_all
-
-   If you built patch installers, also invoke the following command:
-
-   make build.notarize_all_patches
-
-13. If you notarized the installers in the previous step and Apple has sent you  an e-mail saving that your installers were successfully notarized, "staple" Apple's notarization to the installers by invoking the following command:
+12. You can notarize and staple the installer .dmg files built in the previous step using Apple's notarization service. First, open the "<source folder>/certs.mk" file that you created earlier and set the APPLEDEVELOPERID macro to the e-mail of your Apple Developer account. Then, invoke the following command:
 
    make build.staple_all
 
@@ -108,7 +100,11 @@ At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey
 
    make build.staple_all_patches
 
-14. There are several make rules to clean build files. To clean only the NeoOffice installers and patch installers execute the following commmand:
+   Important: if the installer build fails with a "notarytool store-credentials" error, you will need to execute the following command once in a Terminal to cache your Apple developer ID's password in the macOS Keychain Access application so that Xcode's notarytool can fetch it and use it to upload the installer to Apple's notarization servers:
+
+   make build.store_notarytool_credentials
+
+13. There are several make rules to clean build files. To clean only the NeoOffice installers and patch installers execute the following commmand:
 
     make build.clean_neo_installers
 
