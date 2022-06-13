@@ -795,7 +795,6 @@ CppunitTest_vcl_filters_test.mk
 source/glyphs/graphite_layout.cxx
 source/glyphs/graphite_features.cxx
 source/app/dbggui.cxx
-source/app/IconThemeInfo.cxx
 source/app/unohelp.cxx
 source/app/salvtables.cxx
 source/app/sound.cxx
