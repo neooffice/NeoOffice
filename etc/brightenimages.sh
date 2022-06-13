@@ -31,7 +31,7 @@ fi
 
 echo "$imagesfiles" | while read i ; do
 	mkdir -p "$2/"`dirname "$i"`
-	convert "$1/$i" -modulate 300 "$2/$i"
+	convert "$1/$i" -modulate 300 -background none -flatten "$2/$i"
 done
 
 exit 0
