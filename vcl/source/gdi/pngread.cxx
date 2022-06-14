@@ -794,7 +794,11 @@ bool PNGReaderImpl::ImplReadTransparent()
                            // white or black when displaying the sidebar's first
                            // toolbar icon by using an alpha mask if there is
                            // any transparency
-                           bNeedAlpha |= (mpTransTab[i]!=0xFF);
+                           if ( mpTransTab[i]!=0xFF )
+                           {
+                               bNeedAlpha = true;
+                               break;
+                           }
 #else	// USE_JAVA
                            bNeedAlpha |= (mpTransTab[i]!=0x00) && (mpTransTab[i]!=0xFF);
 #endif	// USE_JAVA
