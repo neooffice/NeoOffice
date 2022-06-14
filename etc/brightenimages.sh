@@ -15,8 +15,8 @@ if [ ! -d "$2" ] ; then
 	mkdir -p "$2" || exit 1
 fi
 
-imagesfiles=`cd "$1" && find . -type f \( -iname "*.png" -o -iname "*.bmp" -o -iname "*.jpg" \)`
-if [ -z "$imagesfiles" ] ; then
+imagefiles=`cd "$1" && find . -type f \( -iname "*.png" -o -iname "*.bmp" -o -iname "*.jpg" \)`
+if [ -z "$imagefiles" ] ; then
 	echo "Error: no image files found in source folder" >&2
 	exit 1
 fi
@@ -29,9 +29,16 @@ if [ ! -z "$txtfiles" ] ; then
 	done
 fi
 
-echo "$imagesfiles" | while read i ; do
+echo "$imagefiles" | while read i ; do
 	mkdir -p "$2/"`dirname "$i"`
 	convert "$1/$i" -modulate 300 -background none -flatten "$2/$i"
 done
+
+sourcefiles=`cd "$1" && find . ! -type d | sort -u`
+destfiles=`cd "$2" && find . ! -type d | sort -u`
+if [ "$sourcefiles" != "$destfiles" ] ; then
+	echo "Error: source and destinations folders have extra or missing files" >&2
+	exit 1
+fi
 
 exit 0
