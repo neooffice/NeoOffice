@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 if [ ! -w "$1" ] ; then
 	echo "Usage: $0 <source file>" >&2

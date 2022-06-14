@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 if [ ! -r "$1" ] ; then
 	echo "Usage: $0 <source file>" >&2
 	exit 1
