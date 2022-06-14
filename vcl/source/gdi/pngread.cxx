@@ -789,7 +789,15 @@ bool PNGReaderImpl::ImplReadTransparent()
                         maDataIter += mnChunkLen;
                         // need alpha transparency if not on/off masking
                         for( int i = 0; i < mnChunkLen; ++i )
+#ifdef USE_JAVA
+                           // Fix transparent background displaying as opaque
+                           // white or black when displaying the sidebar's first
+                           // toolbar icon by using an alpha mask if there is
+                           // any transparency
+                           bNeedAlpha |= (mpTransTab[i]!=0xFF);
+#else	// USE_JAVA
                            bNeedAlpha |= (mpTransTab[i]!=0x00) && (mpTransTab[i]!=0xFF);
+#endif	// USE_JAVA
                     }
                 }
             }
