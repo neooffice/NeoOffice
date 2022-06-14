@@ -117,7 +117,11 @@ private:
     bool                mbGrayScale;
     bool                mbzCodecInUse;
     bool                mbStatus;
+#ifdef NO_LIBO_PNG_IDAT_FIX
     bool                mbIDAT;         // true if finished with enough IDAT chunks
+#else	// NO_LIBO_PNG_IDAT_FIX
+    bool                mbIDATComplete; // true if finished with enough IDAT chunks
+#endif	// NO_LIBO_PNG_IDAT_FIX
     bool                mbGamma;        // true if Gamma Correction available
     bool                mbpHYs;         // true if pysical size of pixel available
     bool                mbIgnoreGammaChunk;
@@ -199,7 +203,11 @@ PNGReaderImpl::PNGReaderImpl( SvStream& rPNGStream )
     mbGrayScale( false ),
     mbzCodecInUse   ( false ),
     mbStatus( true ),
+#ifdef NO_LIBO_PNG_IDAT_FIX
     mbIDAT( false ),
+#else	// NO_LIBO_PNG_IDAT_FIX
+    mbIDATComplete( false ),
+#endif	// NO_LIBO_PNG_IDAT_FIX
     mbGamma             ( false ),
     mbpHYs              ( false ),
     mbIgnoreGammaChunk  ( false ),
@@ -348,8 +356,12 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
     }
 
     // parse the remaining chunks
+#ifdef NO_LIBO_PNG_IDAT_FIX
     bool bRetFromNextChunk;
     while( mbStatus && !mbIDAT && (bRetFromNextChunk = ReadNextChunk()) )
+#else	// NO_LIBO_PNG_IDAT_FIX
+    while (mbStatus && !mbIDATComplete && ReadNextChunk())
+#endif	// NO_LIBO_PNG_IDAT_FIX
     {
         switch( mnChunkType )
         {
@@ -361,7 +373,11 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
 
             case PNGCHUNK_gAMA :                                // the gamma chunk must precede
             {                                                   // the 'IDAT' and also the 'PLTE'(if available )
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 if ( !mbIgnoreGammaChunk && !mbIDAT )
+#else	// NO_LIBO_PNG_IDAT_FIX
+                if (!mbIgnoreGammaChunk && !mbIDATComplete)
+#endif	// NO_LIBO_PNG_IDAT_FIX
                     ImplGetGamma();
             }
             break;
@@ -375,14 +391,22 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
 
             case PNGCHUNK_tRNS :
             {
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 if ( !mbIDAT )                                  // the tRNS chunk must precede the IDAT
+#else	// NO_LIBO_PNG_IDAT_FIX
+                if (!mbIDATComplete)                            // the tRNS chunk must precede the IDAT
+#endif	// NO_LIBO_PNG_IDAT_FIX
                     mbStatus = ImplReadTransparent();
             }
             break;
 
             case PNGCHUNK_bKGD :                                // the background chunk must appear
             {
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 if ( !mbIDAT && mbPalette )         // before the 'IDAT' and after the
+#else	// NO_LIBO_PNG_IDAT_FIX
+                if (!mbIDATComplete && mbPalette)               // before the 'IDAT' and after the
+#endif	// NO_LIBO_PNG_IDAT_FIX
                     ImplGetBackground();                        // PLTE(if available ) chunk.
             }
             break;
@@ -391,14 +415,22 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
             {
                 if ( !mpInflateInBuf )  // taking care that the header has properly been read
                     mbStatus = false;
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 else if ( !mbIDAT )     // the gfx is finished, but there may be left a zlibCRC of about 4Bytes
+#else	// NO_LIBO_PNG_IDAT_FIX
+                else if (!mbIDATComplete) // the gfx is finished, but there may be left a zlibCRC of about 4Bytes
+#endif	// NO_LIBO_PNG_IDAT_FIX
                     ImplReadIDAT();
             }
             break;
 
             case PNGCHUNK_pHYs :
             {
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 if ( !mbIDAT && mnChunkLen == 9 )
+#else	// NO_LIBO_PNG_IDAT_FIX
+                if (!mbIDATComplete && mnChunkLen == 9)
+#endif	// NO_LIBO_PNG_IDAT_FIX
                 {
                     sal_uInt32 nXPixelPerMeter = ImplReadsal_uInt32();
                     sal_uInt32 nYPixelPerMeter = ImplReadsal_uInt32();
@@ -417,7 +449,11 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
             break;
 
             case PNGCHUNK_IEND:
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 mbStatus = mbIDAT;  // there is a problem if the image is not complete yet
+#else	// NO_LIBO_PNG_IDAT_FIX
+                mbStatus = mbIDATComplete;  // there is a problem if the image is not complete yet
+#endif	// NO_LIBO_PNG_IDAT_FIX
             break;
         }
     }
@@ -439,7 +475,11 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
     // return the resulting BitmapEx
     BitmapEx aRet;
 
+#ifdef NO_LIBO_PNG_IDAT_FIX
     if( !mbStatus || !mbIDAT )
+#else	// NO_LIBO_PNG_IDAT_FIX
+    if (!mbStatus || !mbIDATComplete)
+#endif	// NO_LIBO_PNG_IDAT_FIX
         aRet.Clear();
     else
     {
@@ -495,7 +535,11 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
     }
 
     mbPalette = true;
+#ifdef NO_LIBO_PNG_IDAT_FIX
     mbIDAT = mbAlphaChannel = mbTransparent = false;
+#else	// NO_LIBO_PNG_IDAT_FIX
+    mbIDATComplete = mbAlphaChannel = mbTransparent = false;
+#endif	// NO_LIBO_PNG_IDAT_FIX
     mbGrayScale = mbRGBTriple = false;
     mnTargetDepth = mnPngDepth;
     sal_uInt64 nScansize64 = ( ( static_cast< sal_uInt64 >( maOrigSize.Width() ) * mnPngDepth ) + 7 ) >> 3;
@@ -789,19 +833,7 @@ bool PNGReaderImpl::ImplReadTransparent()
                         maDataIter += mnChunkLen;
                         // need alpha transparency if not on/off masking
                         for( int i = 0; i < mnChunkLen; ++i )
-#ifdef USE_JAVA
-                           // Fix transparent background displaying as opaque
-                           // white or black when displaying the sidebar's first
-                           // toolbar icon by using an alpha mask if there is
-                           // any transparency
-                           if ( mpTransTab[i]!=0xFF )
-                           {
-                               bNeedAlpha = true;
-                               break;
-                           }
-#else	// USE_JAVA
                            bNeedAlpha |= (mpTransTab[i]!=0x00) && (mpTransTab[i]!=0xFF);
-#endif	// USE_JAVA
                     }
                 }
             }
@@ -960,13 +992,21 @@ void PNGReaderImpl::ImplReadIDAT()
                 if( (mnPass < 7) && mnInterlaceType )
                     if( ImplPreparePass() )
                         continue;
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 mbIDAT = true;
+#else	// NO_LIBO_PNG_IDAT_FIX
+                mbIDATComplete = true;
+#endif	// NO_LIBO_PNG_IDAT_FIX
                 break;
             }
         }
     }
 
+#ifdef NO_LIBO_PNG_IDAT_FIX
     if( mbIDAT )
+#else	// NO_LIBO_PNG_IDAT_FIX
+    if (mbIDATComplete)
+#endif	// NO_LIBO_PNG_IDAT_FIX
     {
         mpZCodec.EndCompression();
         mbzCodecInUse = false;
