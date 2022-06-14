@@ -120,6 +120,7 @@ private:
 #ifdef NO_LIBO_PNG_IDAT_FIX
     bool                mbIDAT;         // true if finished with enough IDAT chunks
 #else	// NO_LIBO_PNG_IDAT_FIX
+    bool                mbIDATStarted;  // true if IDAT seen
     bool                mbIDATComplete; // true if finished with enough IDAT chunks
 #endif	// NO_LIBO_PNG_IDAT_FIX
     bool                mbGamma;        // true if Gamma Correction available
@@ -206,6 +207,7 @@ PNGReaderImpl::PNGReaderImpl( SvStream& rPNGStream )
 #ifdef NO_LIBO_PNG_IDAT_FIX
     mbIDAT( false ),
 #else	// NO_LIBO_PNG_IDAT_FIX
+    mbIDATStarted( false ),
     mbIDATComplete( false ),
 #endif	// NO_LIBO_PNG_IDAT_FIX
     mbGamma             ( false ),
@@ -384,7 +386,11 @@ BitmapEx PNGReaderImpl::GetBitmapEx( const Size& rPreviewSizeHint )
 
             case PNGCHUNK_PLTE :
             {
+#ifdef NO_LIBO_PNG_IDAT_FIX
                 if ( !mbPalette )
+#else	// NO_LIBO_PNG_IDAT_FIX
+                if (!mbPalette && !mbIDATStarted)
+#endif	// NO_LIBO_PNG_IDAT_FIX
                     mbStatus = ImplReadPalette();
             }
             break;
@@ -538,7 +544,7 @@ bool PNGReaderImpl::ImplReadHeader( const Size& rPreviewSizeHint )
 #ifdef NO_LIBO_PNG_IDAT_FIX
     mbIDAT = mbAlphaChannel = mbTransparent = false;
 #else	// NO_LIBO_PNG_IDAT_FIX
-    mbIDATComplete = mbAlphaChannel = mbTransparent = false;
+    mbIDATStarted = mbIDATComplete = mbAlphaChannel = mbTransparent = false;
 #endif	// NO_LIBO_PNG_IDAT_FIX
     mbGrayScale = mbRGBTriple = false;
     mnTargetDepth = mnPngDepth;
@@ -955,6 +961,10 @@ void PNGReaderImpl::ImplReadIDAT()
 {
     if( mnChunkLen > 0 )
     {
+#ifndef NO_LIBO_PNG_IDAT_FIX
+        mbIDATStarted = true;
+#endif	// !NO_LIBO_PNG_IDAT_FIX
+
         if ( !mbzCodecInUse )
         {
             mbzCodecInUse = true;
@@ -1717,7 +1727,11 @@ void PNGReaderImpl::ImplSetAlphaPixel( sal_uInt32 nY, sal_uInt32 nX,
     nX >>= mnPreviewShift;
 
     mpAcc->SetPixelIndex( nY, nX, nPalIndex );
+#ifdef NO_LIBO_SET_ALPHA_PIXEL_FIX
     mpMaskAcc->SetPixelIndex( nY, nX, ~nAlpha );
+#else	// NO_LIBO_SET_ALPHA_PIXEL_FIX
+    mpMaskAcc->SetPixel(nY, nX, BitmapColor(~nAlpha));
+#endif	// NO_LIBO_SET_ALPHA_PIXEL_FIX
 }
 
 void PNGReaderImpl::ImplSetAlphaPixel( sal_uInt32 nY, sal_uInt32 nX,
@@ -1731,7 +1745,11 @@ void PNGReaderImpl::ImplSetAlphaPixel( sal_uInt32 nY, sal_uInt32 nX,
     mpAcc->SetPixel( nY, nX, rBitmapColor );
     if (!mpMaskAcc)
         return;
+#ifdef NO_LIBO_SET_ALPHA_PIXEL_FIX
     mpMaskAcc->SetPixelIndex( nY, nX, ~nAlpha );
+#else	// NO_LIBO_SET_ALPHA_PIXEL_FIX
+    mpMaskAcc->SetPixel(nY, nX, BitmapColor(~nAlpha));
+#endif	// NO_LIBO_SET_ALPHA_PIXEL_FIX
 }
 
 sal_uInt32 PNGReaderImpl::ImplReadsal_uInt32()
