@@ -69,6 +69,7 @@ static ::osl::Mutex aScreensMutex;
 static bool bSystemColorsInitialized = false;
 static bool	bVCLUseDarkModeColors = false;
 static bool	bVCLUseSifrIconTheme = false;
+static bool	bVCLUseSifrDarkIconTheme = false;
 static SalColor *pVCLControlTextColor = NULL;
 static SalColor *pVCLTextColor = NULL;
 static SalColor *pVCLHighlightColor = NULL;
@@ -86,6 +87,7 @@ static SalColor *pVCLLinkColor = NULL;
 static SalColor *pVCLUnderPageColor = NULL;
 static long nVCLScrollbarSize = 0;
 static bool bScrollbarJumpPage = false;
+static OUString aCurrentTheme;
 
 static ::osl::Mutex aSystemColorsMutex;
 static NSString *pVCLTrackingAreaWindowKey = @"VCLTrackingAreaWindow";
@@ -272,6 +274,12 @@ static void HandleSystemColorsChangedRequest()
 	{
 		NSColor *pBackColor = [NSColor shadowColor];
 		SetSalColorFromNSColor( pBackColor ? [pBackColor blendedColorWithFraction:0.3f ofColor:[NSColor darkGrayColor]] : nil, &pVCLFieldColor );
+		SetSalColorFromNSColor( pBackColor, &pVCLBackColor );
+	}
+	else if ( !bVCLUseDarkModeColors && bVCLUseSifrDarkIconTheme )
+	{
+		NSColor *pBackColor = [NSColor lightGrayColor];
+		SetSalColorFromNSColor( pBackColor ? [pBackColor blendedColorWithFraction:0.3f ofColor:[NSColor whiteColor]] : nil, &pVCLFieldColor );
 		SetSalColorFromNSColor( pBackColor, &pVCLBackColor );
 	}
 	else
@@ -3351,29 +3359,29 @@ bool JavaSalFrame::GetSelectedTabTextColor( SalColor& rSalColor )
 void JavaSalFrame::UpdateColorsForIconTheme( OUString& rTheme )
 {
 	bool bSifrTheme = ( rTheme == "sifr" );
+	bool bSifrDarkTheme = ( rTheme.startsWith( "sifr_Dark" ) || rTheme.startsWith( "sifr_dark" ) );
 
 	// Update colors if any system colors have not yet been set
 	InitializeSystemColors();
 
 	ClearableMutexGuard aGuard( aSystemColorsMutex );
-	if ( bVCLUseSifrIconTheme != bSifrTheme )
+	if ( aCurrentTheme != rTheme )
 	{
 		bVCLUseSifrIconTheme = bSifrTheme;
+		bVCLUseSifrDarkIconTheme = bSifrDarkTheme;
+		aCurrentTheme = rTheme;
 
 		// Force reinitialization of system colors when the icon theme has
-		// change to or from Sifr while in Dark Mode
-		if ( bVCLUseDarkModeColors )
-		{
-			aGuard.clear();
+		// changed
+		aGuard.clear();
 
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-			VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(systemColorsChanged:) withObject:nil waitUntilDone:YES modes:pModes];
+		VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(systemColorsChanged:) withObject:nil waitUntilDone:YES modes:pModes];
 
-			[pPool release];
-		}
+		[pPool release];
 	}
 }
 
@@ -3386,7 +3394,8 @@ bool JavaSalFrame::UseNativeControlWithCurrentIconTheme( ControlType nType, Cont
 	if ( nType == CTRL_MENU_POPUP && nPart == PART_ENTIRE_CONTROL )
 	{
 		MutexGuard aGuard( aSystemColorsMutex );
-		bRet = ( !bVCLUseDarkModeColors || !bVCLUseSifrIconTheme );
+		if ( ( bVCLUseDarkModeColors && bVCLUseSifrIconTheme ) || ( !bVCLUseDarkModeColors && bVCLUseSifrDarkIconTheme ) )
+			bRet = false;
 	}
 
 	return bRet;
