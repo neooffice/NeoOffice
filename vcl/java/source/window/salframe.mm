@@ -272,8 +272,8 @@ static void HandleSystemColorsChangedRequest()
 	// to give a high contrast effect
 	if ( bVCLUseDarkModeColors && bVCLUseSifrIconTheme )
 	{
-		NSColor *pBackColor = [NSColor shadowColor];
-		SetSalColorFromNSColor( pBackColor ? [pBackColor blendedColorWithFraction:0.3f ofColor:[NSColor darkGrayColor]] : nil, &pVCLFieldColor );
+		NSColor *pBackColor = [NSColor darkGrayColor];
+		SetSalColorFromNSColor( pBackColor ? [pBackColor blendedColorWithFraction:0.3f ofColor:[NSColor blackColor]] : nil, &pVCLFieldColor );
 		SetSalColorFromNSColor( pBackColor, &pVCLBackColor );
 	}
 	else if ( !bVCLUseDarkModeColors && bVCLUseSifrDarkIconTheme )
