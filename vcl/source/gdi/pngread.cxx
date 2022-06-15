@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified June 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <vcl/pngread.hxx>
@@ -839,7 +846,19 @@ bool PNGReaderImpl::ImplReadTransparent()
                         maDataIter += mnChunkLen;
                         // need alpha transparency if not on/off masking
                         for( int i = 0; i < mnChunkLen; ++i )
+#ifdef USE_JAVA
+                           // Fix transparent background displaying as opaque
+                           // black in some of the newer Sifr icons such as
+                           // the line alignment icons by using an alpha mask
+                           // if there is any transparency
+                           if ( mpTransTab[i]!=0xFF )
+                           {
+                               bNeedAlpha = true;
+                               break;
+                           }
+#else	// USE_JAVA
                            bNeedAlpha |= (mpTransTab[i]!=0x00) && (mpTransTab[i]!=0xFF);
+#endif	// USE_JAVA
                     }
                 }
             }
