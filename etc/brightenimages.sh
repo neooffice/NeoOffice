@@ -3,7 +3,7 @@
 set -e
 
 function print_usage_and_exit() {
-	echo "Usage: '$0' <source folder>" "<destination folder" >&2
+	echo "Usage: '$0' <source folder> <destination folder> [tint color] [tint percent]"  >&2
 	exit 1
 }
 
@@ -29,9 +29,21 @@ if [ ! -z "$txtfiles" ] ; then
 	done
 fi
 
+# Determine tint color
+tintcolor="white"
+if [ $# -ge 3 -o ! -z "$3" ] ; then
+	tintcolor="$3"
+fi
+
+# Determine tint percentage
+tintpercent="125%"
+if [ $# -ge 4 -o ! -z "$4" ] ; then
+	tintpercent="$4"
+fi
+
 echo "$imagefiles" | while read i ; do
 	mkdir -p "$2/"`dirname "$i"`
-	convert "$1/$i" -modulate 300 -background none -flatten "$2/$i"
+	convert "$1/$i" -fill "$tintcolor" -tint "$tintpercent" -background none "$2/$i"
 done
 
 sourcefiles=`cd "$1" && find . ! -type d | sort -u`
