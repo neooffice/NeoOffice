@@ -36,7 +36,7 @@ if [ $# -ge 3 -o ! -z "$3" ] ; then
 fi
 
 # Determine tint percentage
-tintpercent="50%"
+tintpercent="75%"
 if [ $# -ge 4 -o ! -z "$4" ] ; then
 	tintpercent="$4"
 fi
