@@ -1152,7 +1152,6 @@ source/core/text/portxt.hxx
 source/core/text/guess.hxx
 source/core/text/SwGrammarMarkUp.cxx
 source/core/text/itrtxt.cxx
-source/core/text/txtfrm.cxx
 source/core/text/portab.hxx
 source/core/text/blink.cxx
 source/core/text/porexp.cxx
