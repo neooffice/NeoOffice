@@ -53,7 +53,6 @@ source/sidebar/FocusManager.hxx
 source/sidebar/PanelTitleBar.hxx
 source/sidebar/Context.hxx
 source/sidebar/ContextList.cxx
-source/sidebar/Theme.cxx
 source/sidebar/DeckDescriptor.hxx
 source/sidebar/DrawHelper.hxx
 source/sidebar/Panel.cxx
