@@ -32,6 +32,9 @@
 #include <vcl/virdev.hxx>
 #include <vcl/image.hxx>
 #include <vcl/settings.hxx>
+#ifdef USE_JAVA
+#include <vcl/svapp.hxx>
+#endif	// USE_JAVA
 
 #include <image.h>
 #include <boost/scoped_array.hpp>
@@ -43,12 +46,18 @@ ImageAryData::ImageAryData( const ImageAryData& rData ) :
     maName( rData.maName ),
     mnId( rData.mnId ),
     maBitmapEx( rData.maBitmapEx )
+#ifdef USE_JAVA
+    , maIconTheme( rData.maIconTheme )
+#endif	// USE_JAVA
 {
 }
 
 ImageAryData::ImageAryData( const OUString &aName,
                             sal_uInt16 nId, const BitmapEx &aBitmap )
         : maName( aName ), mnId( nId ), maBitmapEx( aBitmap )
+#ifdef USE_JAVA
+        , maIconTheme( Application::GetSettings().GetStyleSettings().DetermineIconTheme() )
+#endif	// USE_JAVA
 {
 }
 
@@ -64,6 +73,25 @@ ImageAryData& ImageAryData::operator=( const ImageAryData& rData )
 
     return *this;
 }
+
+#ifdef USE_JAVA
+
+bool ImageAryData::IsLoadable()
+{
+    if ( maBitmapEx.IsEmpty() && !maName.isEmpty() )
+        return true;
+
+    OUString aIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
+    if ( maIconTheme != aIconTheme )
+    {
+        maIconTheme = aIconTheme;
+        maBitmapEx.SetEmpty();
+    }
+
+    return ( maBitmapEx.IsEmpty() && !maName.isEmpty() );
+}
+
+#endif	// USE_JAVA
 
 ImplImageList::ImplImageList()
     : mnRefCount(1)

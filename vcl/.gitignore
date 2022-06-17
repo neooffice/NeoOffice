@@ -304,7 +304,6 @@ inc/ilstbox.hxx
 inc/salgeom.hxx
 inc/fontmanager.hxx
 inc/bmpfast.hxx
-inc/image.h
 inc/factory.hxx
 inc/salframe.hxx
 inc/graphite_features.hxx
@@ -857,7 +856,6 @@ source/gdi/pdffontcache.hxx
 source/gdi/regband.cxx
 source/gdi/bitmap.cxx
 source/gdi/pdfwriter_impl.hxx.orig
-source/gdi/image.cxx
 source/gdi/impbmp.cxx
 source/gdi/regionband.cxx
 source/gdi/oldprintadaptor.cxx
