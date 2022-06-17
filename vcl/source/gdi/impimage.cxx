@@ -46,18 +46,12 @@ ImageAryData::ImageAryData( const ImageAryData& rData ) :
     maName( rData.maName ),
     mnId( rData.mnId ),
     maBitmapEx( rData.maBitmapEx )
-#ifdef USE_JAVA
-    , maIconTheme( rData.maIconTheme )
-#endif	// USE_JAVA
 {
 }
 
 ImageAryData::ImageAryData( const OUString &aName,
                             sal_uInt16 nId, const BitmapEx &aBitmap )
         : maName( aName ), mnId( nId ), maBitmapEx( aBitmap )
-#ifdef USE_JAVA
-        , maIconTheme( Application::GetSettings().GetStyleSettings().DetermineIconTheme() )
-#endif	// USE_JAVA
 {
 }
 
@@ -74,27 +68,11 @@ ImageAryData& ImageAryData::operator=( const ImageAryData& rData )
     return *this;
 }
 
-#ifdef USE_JAVA
-
-bool ImageAryData::IsLoadable()
-{
-    if ( maBitmapEx.IsEmpty() && !maName.isEmpty() )
-        return true;
-
-    OUString aIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
-    if ( maIconTheme != aIconTheme )
-    {
-        maIconTheme = aIconTheme;
-        maBitmapEx.SetEmpty();
-    }
-
-    return ( maBitmapEx.IsEmpty() && !maName.isEmpty() );
-}
-
-#endif	// USE_JAVA
-
 ImplImageList::ImplImageList()
     : mnRefCount(1)
+#ifdef USE_JAVA
+    , maIconTheme( Application::GetSettings().GetStyleSettings().DetermineIconTheme() )
+#endif	// USE_JAVA
 {
 }
 
@@ -102,6 +80,9 @@ ImplImageList::ImplImageList( const ImplImageList &aSrc )
     : maPrefix(aSrc.maPrefix)
     , maImageSize(aSrc.maImageSize)
     , mnRefCount(1)
+#ifdef USE_JAVA
+    , maIconTheme( aSrc.maIconTheme )
+#endif	// USE_JAVA
 {
     maImages.reserve( aSrc.maImages.size() );
     for ( ImageAryDataVec::const_iterator aIt = aSrc.maImages.begin(), aEnd = aSrc.maImages.end(); aIt != aEnd; ++aIt )

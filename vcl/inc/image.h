@@ -66,20 +66,13 @@ struct ImageAryData
     // Images identified by either name, or by id
     sal_uInt16          mnId;
     BitmapEx        maBitmapEx;
-#ifdef USE_JAVA
-    OUString maIconTheme;
-#endif	// USE_JAVA
 
     ImageAryData( const OUString &aName,
                   sal_uInt16 nId, const BitmapEx &aBitmap );
     ImageAryData( const ImageAryData& rData );
     ~ImageAryData();
 
-#ifdef USE_JAVA
-    bool IsLoadable();
-#else	// USE_JAVA
     bool IsLoadable() { return maBitmapEx.IsEmpty() && !maName.isEmpty(); }
-#endif	// USE_JAVA
     void Load(const OUString &rPrefix);
 
     ImageAryData&   operator=( const ImageAryData& rData );
@@ -96,6 +89,9 @@ struct ImplImageList
     OUString               maPrefix;
     Size                        maImageSize;
     sal_uIntPtr                       mnRefCount;
+#ifdef USE_JAVA
+    OUString maIconTheme;
+#endif	// USE_JAVA
 
     ImplImageList();
     ImplImageList( const ImplImageList &aSrc );
@@ -104,6 +100,9 @@ struct ImplImageList
     void AddImage( const OUString &aName,
                    sal_uInt16 nId, const BitmapEx &aBitmapEx );
     void RemoveImage( sal_uInt16 nPos );
+#ifdef USE_JAVA
+    void SetBitmapsToEmptyIfIconThemeChanged();
+#endif	// USE_JAVA
 };
 
 // - ImplImageRefData -

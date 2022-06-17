@@ -382,13 +382,7 @@ void ImageAryData::Load(const OUString &rPrefix)
 {
     static ImplImageTreeSingletonRef aImageTree;
 
-#ifdef USE_JAVA
-    if ( maIconTheme.isEmpty() )
-        maIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
-    OUString aIconTheme = maIconTheme;
-#else	// USE_JAVA
     OUString aIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
-#endif	// USE_JAVA
 
     BitmapEx aBmpEx;
 
@@ -418,6 +412,11 @@ BitmapEx ImageList::GetAsHorizontalStrip() const
     if( !nCount )
         return BitmapEx();
     aSize.Width() *= nCount;
+
+#ifdef USE_JAVA
+    // Reset if icon theme changed before loading image
+    mpImplData->SetBitmapsToEmptyIfIconThemeChanged();
+#endif	// USE_JAVA
 
     // Load any stragglers
     for (sal_uInt16 nIdx = 0; nIdx < nCount; nIdx++)
@@ -546,6 +545,11 @@ Image ImageList::GetImage( sal_uInt16 nId ) const
 
     if( mpImplData )
     {
+#ifdef USE_JAVA
+        // Reset if icon theme changed before loading image
+        mpImplData->SetBitmapsToEmptyIfIconThemeChanged();
+#endif	// USE_JAVA
+
         std::vector<ImageAryData *>::iterator aIter;
         for( aIter = mpImplData->maImages.begin();
              aIter != mpImplData->maImages.end(); ++aIter)
@@ -575,6 +579,11 @@ Image ImageList::GetImage( const OUString& rImageName ) const
 {
     if( mpImplData )
     {
+#ifdef USE_JAVA
+        // Reset if icon theme changed before loading image
+        mpImplData->SetBitmapsToEmptyIfIconThemeChanged();
+#endif	// USE_JAVA
+
         ImageAryData *pImg = mpImplData->maNameHash[ rImageName ];
 
         if( pImg )
@@ -713,5 +722,23 @@ bool ImageList::operator==( const ImageList& rImageList ) const
 
     return bRet;
 }
+
+#ifdef USE_JAVA
+
+void ImplImageList::SetBitmapsToEmptyIfIconThemeChanged()
+{
+    OUString aIconTheme = Application::GetSettings().GetStyleSettings().DetermineIconTheme();
+    if ( maIconTheme != aIconTheme )
+    {
+        maIconTheme = aIconTheme;
+
+        // Set bitmaps to empty so that they will be reloaded
+        std::vector<ImageAryData *>::iterator aIter;
+        for( aIter = maImages.begin(); aIter != maImages.end(); ++aIter)
+            (*aIter)->maBitmapEx.SetEmpty();
+    }
+}
+
+#endif	// USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
