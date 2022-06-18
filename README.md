@@ -4,7 +4,66 @@ NeoOffice is an office suite for Mac that is based on <a href="http://www.openof
 Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a> file.
 
 ## Download NeoOffice
-### Current version (macOS Monterey and macOS Big Sur)
-You can download the current version of NeoOffice from either of the following site. Note: the Mac App Store Edition is easier to install and update, but <a href="https://www.neooffice.org/neojava/macappstore.php">some features are not available</a> in order to comply with Apple's Mac App Store security requirements:
-- <a href="https://github.com/neooffice/NeoOffice/releases/latest">NeoOffice Professional Edition</a>
-- <a href="https://apps.apple.com/app/neooffice/id639210716?mt=12">NeoOffice Mac App Store Edition</a>
+<table>
+  <tr>
+    <th>NeoOffice version</th>
+    <th>macOS and OS X versions</th>
+    <th width="30%">Notes</th>
+  </tr>
+  <tr>
+    <td colspan="3">Current versions:</td>
+  </tr>
+  <tr>
+    <td>Download from either of the following sites:<br/>- <a href="https://github.com/neooffice/NeoOffice/releases/latest">NeoOffice Professional Edition</a><br/>- <a href="https://apps.apple.com/app/neooffice/id639210716?mt=12">NeoOffice Mac App Store Edition</a>
+    </td>
+    <td>
+      <ul>
+        <li>macOS Monterey</li>
+        <li>macOS Big Sur</li>
+      </ul>
+    </td>
+    <td>Mac App Store users: <a href="https://www.neooffice.org/neojava/macappstore.php">some features are not available</a> in the Mac App Store Edition in order to comply with Apple's Mac App Store security requirements</td>
+  <tr>
+    <td colspan="3">Older versions:</td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-2017_33">NeoOffice 2017.33 Professional Edition</a></td>
+    <td>
+      <ul>
+        <li>macOS Monterey</li>
+        <li>macOS Big Sur</li>
+        <li>macOS Catalina</li>
+        <li>macOS Mojave</li>
+        <li>macOS High Sierra</li>
+        <li>macOS Sierra
+      </ul>
+    </td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-2015_12_Classic_Edition">NeoOffice 2017.12 Classic Edition</a></td>
+    <td>
+      <ul>
+        <li>macOS Sierra</li>
+        <li>OS X El Capitan</li>
+        <li>OS X Yosemite</li>
+        <li>OS X Mavericks</li>
+        <li>OS X Mountain Lion</li>
+      </ul>
+    </td>
+    <td></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-3_4_1-28">NeoOffice 3.4.1 + Patch 28</a></td>
+    <td>
+      <ul>
+        <li>OS X Yosemite</li>
+        <li>OS X Mavericks</li>
+        <li>OS X Mountain Lion</li>
+        <li>OS X Lion</li>
+        <li>OS X Snow Leopard</li>
+      </ul>
+    </td>
+    <td></td>
+  </tr>
+</table>
