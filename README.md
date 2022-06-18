@@ -10,10 +10,10 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     <th>macOS and OS X versions</th>
     <th width="30%">Notes</th>
   </tr>
-  <tr>
+  <tr valign="top">
     <td colspan="3">Current versions:</td>
   </tr>
-  <tr>
+  <tr valign="top">
     <td>Download from either of the following sites:<br/><a href="https://github.com/neooffice/NeoOffice/releases/latest">NeoOffice Professional Edition</a><br/><a href="https://apps.apple.com/app/neooffice/id639210716?mt=12">NeoOffice Mac App Store Edition</a>
     </td>
     <td>
@@ -23,10 +23,11 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
       </ul>
     </td>
     <td>Mac App Store users: <a href="https://www.neooffice.org/neojava/macappstore.php">some features are not available</a> in the Mac App Store Edition in order to comply with Apple's Mac App Store security requirements</td>
-  <tr>
+  </tr>
+  <tr valign="top">
     <td colspan="3">Older versions:</td>
   </tr>
-  <tr>
+  <tr valign="top">
     <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-2017_33">NeoOffice 2017.33 Professional Edition</a></td>
     <td>
       <ul>
@@ -40,7 +41,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     </td>
     <td></td>
   </tr>
-  <tr>
+  <tr valign="top">
     <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-2015_12_Classic_Edition">NeoOffice 2017.12 Classic Edition</a></td>
     <td>
       <ul>
@@ -53,7 +54,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     </td>
     <td></td>
   </tr>
-  <tr>
+  <tr valign="top">
     <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-3_4_1-28">NeoOffice 3.4.1 + Patch 28</a></td>
     <td>
       <ul>
