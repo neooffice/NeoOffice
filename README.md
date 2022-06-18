@@ -14,7 +14,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     <td colspan="3">Current versions:</td>
   </tr>
   <tr valign="top">
-    <td>Download from either of the following sites:<br/><a href="https://github.com/neooffice/NeoOffice/releases/latest">NeoOffice Professional Edition</a><br/><a href="https://apps.apple.com/app/neooffice/id639210716?mt=12">NeoOffice Mac App Store Edition</a>
+    <td>Download from either of the following sites:<br><a href="https://github.com/neooffice/NeoOffice/releases/latest">NeoOffice Professional Edition</a><br><a href="https://apps.apple.com/app/neooffice/id639210716?mt=12">NeoOffice Mac App Store Edition</a>
     </td>
     <td>
       <ul>
