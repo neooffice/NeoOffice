@@ -79,7 +79,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     <th width="30%">Product</th>
     <th>Description</th>
   </tr>
-  <tr>
+  <tr valign="top">
     <td><a href="https://github.com/neooffice/pdfwriterformac/releases/latest">PDFwriter for Mac</a></td>
     <td>PDFwriter for Mac is a native printer driver for macOS which will let you generate PDF files by simply printing. PDFwriter for Mac is useful for applications such as Adobe Acrobat Reader that do not provide a way to save PDF files that can be opened in the macOS Preview application because they do not use the native macOS print dialog.</td>
   </tr>
