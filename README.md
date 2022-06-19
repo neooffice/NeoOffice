@@ -46,7 +46,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     <td></td>
   </tr>
   <tr valign="top">
-    <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-2015_12_Classic_Edition">NeoOffice 2017.12 Classic Edition</a></td>
+    <td><a href="https://github.com/neooffice/NeoOffice/releases/tag/NeoOffice-2015_12_Classic_Edition">NeoOffice 2015.12 Classic Edition</a></td>
     <td>
       <ul>
         <li>macOS Sierra</li>
