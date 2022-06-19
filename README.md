@@ -22,7 +22,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
         <li>macOS Big Sur</li>
       </ul>
     </td>
-    <td>Mac App Store users: <a href="https://www.neooffice.org/neojava/macappstore.php">some features are not available</a> in the Mac App Store Edition in order to comply with Apple's Mac App Store security requirements</td>
+    <td>Mac App Store users: <a href="https://www.neooffice.org/neojava/macappstore.php">some features are not available</a> in the Mac App Store version in order to comply with Apple's Mac App Store security requirements</td>
   </tr>
   <tr valign="top">
     <td colspan="3"><b>Older versions:</b></td>
