@@ -36,7 +36,12 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
 
-Cette version de NeoOffice ajoute le support natif d'Apple Silicon.
+This version of NeoOffice fixes the following bugs:
+• When using the Sifr icons while in Dark Mode, most Sifr icons were nearly impossible to see against the color of NeoOffice's toolbar background
+• When using mail merge, NeoOffice would unexpectedly quit when transitioning between some of the panels in the Mail Merge Wizard and would fail to save the mail merge results
+• When pasting HTML into a Writer document, NeoOffice would sometimes crash
+• When undoing text that has been changed using the Chinese conversion dialog, LibreOffice bug #91995 would occur in NeoOffice
+• When dragging images from the Finder, dropping the image into NeoOffice would fail
 
 
 Promotional Text:
