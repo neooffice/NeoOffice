@@ -22,6 +22,7 @@ Instructions for building NeoOffice are in the <a href="BUILD.txt">BUILD.txt</a>
     </td>
     <td>
       <ul>
+        <li>macOS Ventura</li>
         <li>macOS Monterey</li>
         <li>macOS Big Sur</li>
       </ul>
