@@ -1004,7 +1004,7 @@ else
 endif
 	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
 
-build.all: build.package build.package2 build.package3
+build.all: build.package build.package3
 	touch "$@"
 
 build.all_patches: build.patch_package build.patch_package3
@@ -1064,7 +1064,7 @@ endif
 build.notarize_patch_package_shared:
 	xcrun notarytool submit "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg" --keychain-profile AC_PASSWORD --wait
 
-build.notarize_all: build.notarize_package build.notarize_package2 build.notarize_package3
+build.notarize_all: build.notarize_package build.notarize_package3
 	touch "$@"
 
 build.notarize_all_patches: build.notarize_patch_package build.notarize_patch_package3
@@ -1123,7 +1123,7 @@ build.staple_patch_package_shared:
 	xcrun stapler staple "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
 	xcrun stapler validate "$(PATCH_INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
 
-build.staple_all: build.staple_package build.staple_package2 build.staple_package3
+build.staple_all: build.staple_package build.staple_package3
 	touch "$@"
 
 build.staple_all_patches: build.staple_patch_package build.staple_patch_package3
