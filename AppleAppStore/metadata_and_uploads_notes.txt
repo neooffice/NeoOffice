@@ -52,10 +52,13 @@ Keywords:
 neo,office,document,spreadsheet,text,presentation,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+https://www.neooffice.org/neojava/macappstore.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+https://www.neooffice.org/neojava/features.php
+
+Privacy Policy URL:
+https://www.neooffice.org/neojava/faq.php?fragment=privacy
 
 App Screenshots:
 Upload ScreenSnapshotWriterAndCalc.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.
