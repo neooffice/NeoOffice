@@ -1,6 +1,6 @@
 This file contains notes for submitting a new version of NeoOffice to the Apple Mac App Store in iTunes Connect.
 
-Warning: since NeoOffice is a registered trademark of Planamesa Inc. and Planamesa Inc. owns the copyright to all NeoOffice source code, these notes are only applicable to submissions made by Planamesa Inc.
+Warning: since NeoOffice is a registered trademark, these notes are only applicable to submissions made by the trademark owner.
 
 
 Version Information
@@ -10,7 +10,7 @@ Version:
 Use PRODUCT_VERSION macro value in main makefile.
 
 Copyright:
-Use "2003 - <current year> Planamesa Inc."
+Use "2003 - <current year>"
 
 Primary Category:
 Productivity
@@ -34,7 +34,7 @@ App Review Information
 Review Notes:
 Paste the following paragraphs into the Review Notes text area. Stop before the "App Sandbox Entitlement Usage Information" section:
 
-NeoOffice is a registered trademark that we - Planamesa Inc. - own. This product is a combination of our own Planamesa Inc. copyrighted source code plus the following third-party source code licensed under various open source software licenses:
+NeoOffice is a registered trademark that we own. This product is a combination of our own copyrighted source code plus the following third-party source code licensed under various open source software licenses:
 
 Mozilla Public License, version 2.0:
 - LibreOffice source code copyright by LibreOffice contributors
