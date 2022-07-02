@@ -48,7 +48,7 @@ PRODUCT_DIR_PATCH_VERSION_EXTRA=
 -include custom.mk
 
 # Custom code signing certificate macros go in the following file. For builds
-# with the NeoOffice trademark, copy certs.neo.mk to certs.mk and set the APPLEDEVELOPERID macro to e-mail address of your Apple Developer account.
+# with the NeoOffice trademark, copy certs.neo.mk to certs.mk.
 -include certs.mk
 
 EMPTY:=
