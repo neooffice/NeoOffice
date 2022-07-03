@@ -100,7 +100,7 @@ ifeq ($(OS),MACOSX)
 $(eval $(call gb_Library_use_system_darwin_frameworks,sal,\
 	$(if $(filter $(PRODUCT_BUILD_TYPE),java),,Carbon) \
 	CoreFoundation \
-	Foundation \
+	$(if $(filter $(PRODUCT_BUILD_TYPE),java),AppKit,Foundation) \
 	$(if $(ENABLE_MACOSX_SANDBOX),Security) \
 ))
 endif

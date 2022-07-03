@@ -33,9 +33,7 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Foundation/Foundation.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "system.hxx"
 
@@ -302,4 +300,13 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 	}
 
 	return bRet;
+}
+
+void osl_performSelectorOnMainThread( NSObject *pObj, SEL aSel, NSObject *pArg, sal_Bool bWait )
+{
+	if ( !pObj || !aSel )
+		return;
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pObj performSelectorOnMainThread:@selector(createWindow:) withObject:( pArg ? pArg : pObj ) waitUntilDone:bWait modes:pModes];
 }
