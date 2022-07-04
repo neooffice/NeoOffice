@@ -472,7 +472,7 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
-build.neo_avmedia_patch build.neo_cpputools_patch: build.neo_sal_patch
+build.neo_avmedia_patch build.neo_cpputools_patch build.neo_extensions_patch build.neo_fpicker_patch : build.neo_sal_patch
 build.neo_cui_patch: build.neo_vcl_patch
 build.neo_sd_patch: build.neo_vcl_patch build.neo_editeng_patch build.neo_svx_patch
 build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch build.neo_vcl_patch
@@ -900,6 +900,7 @@ endif
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libcuilo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libdbulo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libdrawinglayerlo.dylib" \
+	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libfps_aqualo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libhwplo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libjvmfwklo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libmswordlo.dylib" \
