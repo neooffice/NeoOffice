@@ -34,7 +34,6 @@
  ************************************************************************/
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 
