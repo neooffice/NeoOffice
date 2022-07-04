@@ -31,6 +31,8 @@
  *
  *************************************************************************/
 
+#include <osl/objcutils.h>
+
 #include "update_cocoa.hxx"
 #include "update_java.hxx"
 #include "updatei18n_cocoa.hxx"
@@ -301,9 +303,8 @@ sal_Bool UpdateQuitNativeDownloadWebView()
 
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	UpdateQuitWebViewImpl *pImp = [UpdateQuitWebViewImpl create];
-	[pImp performSelectorOnMainThread:@selector(quitWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pImp, @selector(quitWebView:), pImp, YES );
 	bRet = (sal_Bool)[pImp webViewRequestedQuitApp];
 
 	[pool release];
@@ -322,9 +323,8 @@ sal_Bool UpdateShowNativeDownloadWebView( OUString aURL, OUString aUserAgent, OU
 	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
 	if ( pURL )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		UpdateCreateWebViewImpl *pImp = [UpdateCreateWebViewImpl createWithURL:pURL userAgent:pUserAgent title:pTitle];
-		[pImp performSelectorOnMainThread:@selector(showWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pImp, @selector(showWebView:), pImp, YES );
 		bRet = (sal_Bool)[pImp isWebViewShowing];
 	}
 

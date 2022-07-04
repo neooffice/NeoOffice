@@ -33,9 +33,7 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "scanunx_cocoa.h"
 
@@ -86,8 +84,7 @@ void NSWorkspace_launchImageCaptureApplication()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	ScnLaunchImageCaptureApplication *pScnLaunchImageCaptureApplication = [ScnLaunchImageCaptureApplication create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pScnLaunchImageCaptureApplication performSelectorOnMainThread:@selector(launchImageCaptureApplication:) withObject:pScnLaunchImageCaptureApplication waitUntilDone:NO modes:pModes];
+	osl_performSelectorOnMainThread( pScnLaunchImageCaptureApplication, @selector(launchImageCaptureApplication:), pScnLaunchImageCaptureApplication, NO );
 
 	[pPool release];
 }
