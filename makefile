@@ -472,6 +472,7 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
+build.neo_cpputools_patch: build.neo_sal_patch
 build.neo_cui_patch: build.neo_vcl_patch
 build.neo_sd_patch: build.neo_vcl_patch build.neo_editeng_patch build.neo_svx_patch
 build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch build.neo_vcl_patch
@@ -891,6 +892,7 @@ else ifdef PRODUCT_BUILD2
 else
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 endif
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/uno" "MacOS/uno" ; chmod a+x "MacOS/uno"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libcmdmaillo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libcppcanvaslo.dylib" \
