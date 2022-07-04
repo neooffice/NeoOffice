@@ -308,5 +308,5 @@ void osl_performSelectorOnMainThread( NSObject *pObj, SEL aSel, NSObject *pArg, 
 		return;
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pObj performSelectorOnMainThread:@selector(createWindow:) withObject:( pArg ? pArg : pObj ) waitUntilDone:bWait modes:pModes];
+	[pObj performSelectorOnMainThread:aSel withObject:( pArg ? pArg : pObj ) waitUntilDone:bWait modes:pModes];
 }
