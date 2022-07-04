@@ -33,11 +33,8 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-
 #include <osl/file.hxx>
+#include <osl/objcutils.h>
 
 #import "cmdmailsuppl.hxx"
 #import "cmdmailsuppl_cocoa.h"
@@ -209,8 +206,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, 
 			}
 
 			CmdMailSupplOpenURLs *pCmdMailSupplOpenURLs = [CmdMailSupplOpenURLs createWithURLs:pURLs appID:pAppID];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pCmdMailSupplOpenURLs performSelectorOnMainThread:@selector(openURLs:) withObject:pCmdMailSupplOpenURLs waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pCmdMailSupplOpenURLs, @selector(openURLs:), pCmdMailSupplOpenURLs, YES );
 			bRet = [pCmdMailSupplOpenURLs result];
 		}
 	}

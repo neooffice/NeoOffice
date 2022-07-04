@@ -33,11 +33,8 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-
 #include <osl/file.hxx>
+#include <osl/objcutils.h>
 
 #import "shellexec.hxx"
 #import "shellexec_cocoa.h"
@@ -148,8 +145,7 @@ sal_Bool ShellExec_openURL( OUString &rURL, sal_Bool bSelectInFinder )
 				bSelectInFinder = sal_True;
 
 			ShellExecOpenURL *pShellExecOpenURL = [ShellExecOpenURL createWithURL:pURL selectInFinder:bSelectInFinder];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pShellExecOpenURL performSelectorOnMainThread:@selector(openURL:) withObject:pShellExecOpenURL waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pShellExecOpenURL, @selector(openURL:), pShellExecOpenURL, YES );
 			bRet = [pShellExecOpenURL result];
 		}
 	}
