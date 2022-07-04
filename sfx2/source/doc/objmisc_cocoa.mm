@@ -33,8 +33,9 @@
  *
  ************************************************************************/
 
-#import <Cocoa/Cocoa.h>
-#import "objmisc_cocoa.h"
+#include <osl/objcutils.h>
+
+#include "objmisc_cocoa.h"
 
 @interface DoSetModified : NSObject
 {
@@ -85,8 +86,7 @@ void DoCocoaSetWindowModifiedBit( void *pView, bool isModified )
 	if ( pView )
 	{
 		DoSetModified *pDoSetModified = [DoSetModified createWithState:((isModified) ? YES : NO) view:(NSView *)pView ];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pDoSetModified, @selector(setModified:), pDoSetModified, YES );
 	}
 
 	[pPool release];

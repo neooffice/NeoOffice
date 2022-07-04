@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#include <osl/objcutils.h>
 #include <sfx2/app.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/sfxresid.hxx>
@@ -41,7 +42,6 @@
 #include <vcl/layout.hxx>
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 
@@ -253,8 +253,7 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 				NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
+				osl_performSelectorOnMainThread( pShowSaveDisabledDialog, @selector(showSaveDisabledDialog:), pShowSaveDisabledDialog, NO );
 
 				[pPool release];
 			}

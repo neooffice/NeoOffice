@@ -38,6 +38,7 @@
 
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <osl/file.h>
+#include <osl/objcutils.h>
 #include <sfx2/docfile.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/viewfrm.hxx>
@@ -45,7 +46,6 @@
 #include <vcl/syswin.hxx>
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 #import "topfrm_cocoa.hxx"
@@ -1540,9 +1540,8 @@ void SFXDocument_createDocument( SfxViewFrame *pFrame, NSView *pView, CFURLRef a
 
 	if ( pFrame && pView )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:(NSURL *)aURL readOnly:bReadOnly];
-		[pRunSFXDocument performSelectorOnMainThread:@selector(createDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pRunSFXDocument, @selector(createDocument:), pRunSFXDocument, YES );
 	}
 
 	[pPool release];
@@ -1559,9 +1558,8 @@ sal_Bool SFXDocument_documentIsReliquished( SfxViewFrame *pFrame )
 
 	if ( pFrame )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-		[pRunSFXDocument performSelectorOnMainThread:@selector(getDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pRunSFXDocument, @selector(getDocument:), pRunSFXDocument, YES );
 		bRet = [pRunSFXDocument documentIsRelinquished];
 	}
 
@@ -1581,9 +1579,8 @@ sal_Bool SFXDocument_hasDocument( SfxViewFrame *pFrame )
 
 	if ( pFrame )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-		[pRunSFXDocument performSelectorOnMainThread:@selector(getDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pRunSFXDocument, @selector(getDocument:), pRunSFXDocument, YES );
 		bRet = ( [pRunSFXDocument document] ? YES : NO );
 	}
 
@@ -1601,9 +1598,8 @@ void SFXDocument_releaseDocument( SfxViewFrame *pFrame )
 
 	if ( pFrame )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-		[pRunSFXDocument performSelectorOnMainThread:@selector(release:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pRunSFXDocument, @selector(release:), pRunSFXDocument, YES );
 	}
 
 	[pPool release];
@@ -1616,10 +1612,9 @@ void SFXDocument_revertDocumentToSaved( SfxViewFrame *pFrame )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 	sal_uLong nCount = Application::ReleaseSolarMutex();
-	[pRunSFXDocument performSelectorOnMainThread:@selector(revertDocumentToSaved:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pRunSFXDocument, @selector(revertDocumentToSaved:), pRunSFXDocument, YES );
 	Application::AcquireSolarMutex( nCount );
 
 	[pPool release];
@@ -1632,9 +1627,8 @@ void SFXDocument_saveVersionOfDocument( SfxViewFrame *pFrame )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-	[pRunSFXDocument performSelectorOnMainThread:@selector(saveVersionOfDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pRunSFXDocument, @selector(saveVersionOfDocument:), pRunSFXDocument, YES );
 
 	[pPool release];
 }
@@ -1649,9 +1643,8 @@ sal_Bool SFXDocument_setDocumentModified( SfxViewFrame *pFrame, sal_Bool bModifi
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSNumber *pNumber = [NSNumber numberWithBool:bModified];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
-	[pRunSFXDocument performSelectorOnMainThread:@selector(setDocumentModified:) withObject:pNumber waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pRunSFXDocument, @selector(setDocumentModified:), pNumber, YES );
 	bRet = ( [pRunSFXDocument document] ? sal_True : sal_False );
 
 	[pPool release];

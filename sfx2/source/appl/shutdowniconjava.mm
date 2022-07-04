@@ -36,6 +36,7 @@
 #import <set>
 
 #include <comphelper/sequenceashashmap.hxx>
+#include <osl/objcutils.h>
 #include <sfx2/app.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <tools/link.hxx>
@@ -49,10 +50,6 @@
 #include "../dialog/dialog.hrc"
 #include "shutdowniconjava.hrc"
 #include "shutdownicon.hxx"
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "../view/topfrm_cocoa.hxx"
 
@@ -1001,8 +998,7 @@ extern "C" void java_init_systray()
 	sal_uLong nCount = Application::ReleaseSolarMutex();
 
 	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItemDescriptors:&aAppMenuItems];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pItems, @selector(addMenuItems:), pItems, YES );
 
 	Application::AcquireSolarMutex( nCount );
 
