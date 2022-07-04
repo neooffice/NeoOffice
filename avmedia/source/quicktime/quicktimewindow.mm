@@ -37,6 +37,7 @@
 #include "quicktimecommon.hxx"
 #include "quicktimewindow.hxx"
 
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 
 using namespace ::com::sun::star::awt;
@@ -196,8 +197,7 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nZoomLevel]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setZoomLevel:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setZoomLevel:), pArgs, YES );
 		bRet = sal_True;
 		if ( bRet )
 			mnZoomLevel = nZoomLevel;
@@ -224,8 +224,7 @@ void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nPointerType]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setPointer:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setPointer:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -242,8 +241,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 	if ( mpMoviePlayer && mpParentView )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(NSView *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setBounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setBounds:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -260,8 +258,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(bounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(bounds:), pArgs, YES );
 		NSValue *pRet = (NSValue *)[pArgs result];
 		if ( pRet )
 		{
@@ -291,8 +288,7 @@ void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 			pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(AvmediaMoviePlayer *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
 		else
 			pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setSuperview:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -312,10 +308,7 @@ void Window::setEnable( sal_Bool /* bEnable */ ) throw( RuntimeException )
 void Window::setFocus() throw( RuntimeException )
 {
 	if ( mpMoviePlayer )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setFocus:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
-	}
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setFocus:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
 }
 
 // ----------------------------------------------------------------------------

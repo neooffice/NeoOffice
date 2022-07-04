@@ -37,6 +37,7 @@
 #include "quicktimecommon.hxx"
 #include "quicktimeframegrabber.hxx"
 
+#include <osl/objcutils.h>
 #include <tools/gen.hxx>
 #include <vcl/bitmap.hxx>
 #include <vcl/bmpacc.hxx>
@@ -87,8 +88,7 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) thro
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fMediaTime]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(frameImageAtTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(frameImageAtTime:), pArgs, YES );
 		NSBitmapImageRep *pImageRep = (NSBitmapImageRep *)[pArgs result];
 		if ( pImageRep )
 		{
