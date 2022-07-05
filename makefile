@@ -472,11 +472,11 @@ build.neo_patches: \
 	touch "$@"
 
 # Custom modules that need to link directly to other custom modules
-build.neo_avmedia_patch build.neo_cpputools_patch build.neo_extensions_patch build.neo_fpicker_patch build.neo_lingucomponent_patch build.neo_shell_patch : build.neo_sal_patch
+build.neo_avmedia_patch build.neo_cpputools_patch build.neo_extensions_patch build.neo_fpicker_patch build.neo_lingucomponent_patch build.neo_shell_patch build.neo_sw_patch : build.neo_sal_patch
 build.neo_cui_patch build.neo_sfx2_patch : build.neo_vcl_patch
 build.neo_sd_patch: build.neo_vcl_patch build.neo_editeng_patch build.neo_svx_patch
 build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch build.neo_vcl_patch
-build.neo_svtools_patch: build.neo_extensions_patch build.neo_vcl_patch
+build.neo_svtools_patch: build.neo_sal_patch build.neo_extensions_patch build.neo_vcl_patch
 
 build.neo_solenv_patch: solenv build.neo_configure
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(LIBO_BUILD_HOME)/$<" ; find . -type d | sed "s/ /\\ /g" | grep -v /CVS$$ ) | while read i ; do mkdir -p "$$i" ; done'
@@ -910,6 +910,7 @@ endif
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libscnlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libsfxlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libspelllo.dylib" \
+	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libsvtlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libswlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libswuilo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libsysshlo.dylib" \

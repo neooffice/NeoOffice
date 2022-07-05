@@ -33,11 +33,9 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
-#import "javainteractionhandler_cocoa.h"
+#include "javainteractionhandler_cocoa.h"
 
 @interface OpenJavaDownloadURL : NSObject
 {
@@ -84,8 +82,7 @@ void JavaInteractionHandler_downloadJava()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	OpenJavaDownloadURL *pOpenJavaDownloadURL = [OpenJavaDownloadURL create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pOpenJavaDownloadURL performSelectorOnMainThread:@selector(openJavaDownloadURL:) withObject:pOpenJavaDownloadURL waitUntilDone:NO modes:pModes];
+	osl_performSelectorOnMainThread( pOpenJavaDownloadURL, @selector(openJavaDownloadURL:), pOpenJavaDownloadURL, NO );
 
 	[pPool release];
 }

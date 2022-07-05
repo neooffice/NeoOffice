@@ -33,12 +33,9 @@
  *
  ************************************************************************/
 
+#include <osl/objcutils.h>
 #include <sfx2/app.hxx>
 #include <tools/rcid.h>
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "macdictlookup.hxx"
 
@@ -100,9 +97,8 @@ void LookupInMacDict( const OUString &aString )
 		NSString *pString = [NSString stringWithCharacters:aString.getStr() length:aString.getLength()];
 		if ( pString )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			SWPerformMacDictService *pSWPerformMacDictService = [SWPerformMacDictService create];
-			[pSWPerformMacDictService performSelectorOnMainThread:@selector(lookupInMacDict:) withObject:pString waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pSWPerformMacDictService, @selector(lookupInMacDict:), pString, YES );
 		}
 	}
 
