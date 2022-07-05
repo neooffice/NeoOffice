@@ -254,7 +254,7 @@ void NSApplication_run()
 			// Fix deadlock waiting for the application mutex when Oracle's Java
 			// calls [NSObject performSelectorOnMainThread:withObject:waitUntilDone:]
 			// by adding our custom run loop mode to the list of common modes
-			CFRunLoopAddCommonMode( CFRunLoopGetMain(), CFSTR( "AWTRunLoopMode" ) );
+			CFRunLoopAddCommonMode( CFRunLoopGetMain(), JAVA_AWT_RUNLOOPMODE );
 
 			// Attempt to stop crashing due to uncaught Objective-C exceptions
 			// in the main thread by running until the [NSApplication run]

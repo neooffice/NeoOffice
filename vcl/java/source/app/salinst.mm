@@ -36,11 +36,8 @@
 #include <unistd.h>
 #include <sys/syslimits.h>
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-
 #include <comphelper/processfactory.hxx>
+#include <osl/objcutils.h>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
@@ -378,7 +375,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 		// We need to let any timers run that were added by any menu
 		// changes. Otherwise, some menus will be drawn in the state
 		// that they were in before we updated the menus.
-		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+		CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 	}
 
 	rSolarMutex.release();
@@ -1169,7 +1166,7 @@ void SalYieldMutex::acquire()
 					maMainThreadCondition.wait( &aDelay );
 				maMainThreadCondition.set();
 
-				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+				CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 
 				// Fix hanging that occurs when the native Open dialog and the 
 				// the OOo "Enter password" dialogs are both displayed and the

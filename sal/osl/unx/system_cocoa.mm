@@ -304,9 +304,11 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 
 void osl_performSelectorOnMainThread( NSObject *pObj, SEL aSel, NSObject *pArg, sal_Bool bWait )
 {
-	if ( !pObj || !aSel )
-		return;
+	if ( pObj && aSel )
+		[pObj performSelectorOnMainThread:aSel withObject:pArg waitUntilDone:bWait modes:osl_getStandardRunLoopModes()];
+}
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pObj performSelectorOnMainThread:aSel withObject:pArg waitUntilDone:bWait modes:pModes];
+NSArray<NSRunLoopMode> *osl_getStandardRunLoopModes()
+{
+	return [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, (NSRunLoopMode)JAVA_AWT_RUNLOOPMODE, nil];
 }

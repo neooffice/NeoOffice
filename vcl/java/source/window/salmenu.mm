@@ -205,14 +205,9 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 
 	// Queue processing to occur after a very slight delay
 	if ( bNoDelay )
-	{
 		[pVCLMainMenuDidEndTracking handlePendingMainMenuChanges:[NSNumber numberWithBool:bNoDelay]];
-	}
 	else
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLMainMenuDidEndTracking performSelector:@selector(handlePendingMainMenuChanges:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL inModes:pModes];
-	}
+		[pVCLMainMenuDidEndTracking performSelector:@selector(handlePendingMainMenuChanges:) withObject:nil afterDelay:MAIN_MENU_CHANGE_WAIT_INTERVAL inModes:osl_getStandardRunLoopModes()];
 }
 
 - (void)handlePendingMainMenuChanges:(id)pObject

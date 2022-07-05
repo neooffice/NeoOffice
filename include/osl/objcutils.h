@@ -28,8 +28,7 @@
  *
  *  You should have received a copy of the GNU General Public
  *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *  MA  02111-1307  USA
+ *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, *  MA  02111-1307  USA
  *
  ************************************************************************/
 
@@ -44,7 +43,10 @@
 
 #include <sal/saldllapi.h>
 
+#define JAVA_AWT_RUNLOOPMODE CFSTR( "AWTRunLoopMode" )
+
 SAL_DLLPUBLIC void osl_performSelectorOnMainThread( NSObject *pObj, SEL aSel, NSObject *pArg, sal_Bool bWait );
+SAL_DLLPUBLIC NSArray<NSRunLoopMode> *osl_getStandardRunLoopModes();
 
 #endif	// __OBJC__
 
