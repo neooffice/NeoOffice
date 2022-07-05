@@ -36,12 +36,9 @@
 #include <stdio.h>
 
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 #include <vcl/sysdata.hxx>
-
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#include <postmac.h>
 
 #include "java/salinst.h"
 
@@ -1065,9 +1062,7 @@ JavaDragSource::~JavaDragSource()
 
 	if ( mpPasteboardHelper )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterAndDestroy:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-
+		osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(unregisterAndDestroy:), mpPasteboardHelper, YES );
 		[mpPasteboardHelper release];
 	}
 
@@ -1102,10 +1097,7 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) th
 		// Do not retain as invoking alloc disables autorelease
 		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingSource:pView dragOwner:this];
 		if ( mpPasteboardHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[mpPasteboardHelper performSelectorOnMainThread:@selector(registerDragSource:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(registerDragSource:), mpPasteboardHelper, YES );
 	}
 
 	[pPool release];
@@ -1157,10 +1149,9 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 
 		// Fix bug 3644 by releasing the application mutex so that the drag
 		// code can display tooltip windows and dialogs without hanging
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		sal_uLong nCount = Application::ReleaseSolarMutex();
-		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-		bDragStarted = [(JavaDNDPasteboardHelper *)mpPasteboardHelper dragStarted];
+		osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(startDrag:), mpPasteboardHelper, YES );
+		bDragStarted = [mpPasteboardHelper dragStarted];
 		Application::AcquireSolarMutex( nCount );
 
 		[pPool release];
@@ -1264,9 +1255,7 @@ void JavaDropTarget::disposing()
 
 	if ( mpPasteboardHelper )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterAndDestroy:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-
+		osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(unregisterAndDestroy:), mpPasteboardHelper, YES );
 		[mpPasteboardHelper release];
 		mpPasteboardHelper = nil;
 	}
@@ -1305,10 +1294,7 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) th
 		// Do not retain as invoking alloc disables autorelease
 		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingDestination:pView newTypes:DTransTransferable::getSupportedPasteboardTypes()];
 		if ( mpPasteboardHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(registerForDraggedTypes:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(registerForDraggedTypes:), mpPasteboardHelper, YES );
 	}
 
 	[pPool release];

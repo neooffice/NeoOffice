@@ -34,12 +34,9 @@
  ************************************************************************/
 
 #include <basegfx/polygon/b2dpolypolygon.hxx>
+#include <osl/objcutils.h>
 #include <rtl/process.h>
 #include <vcl/unohelp.hxx>
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "PhysicalFontCollection.hxx"
 #include "outdev.h"
@@ -741,8 +738,7 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaPhysicalFontFace, RunNativeFontsTimer, void*, /
 
 	sal_uLong nCount = Application::ReleaseSolarMutex();
 	VCLLoadNativeFonts *pVCLLoadNativeFonts = [VCLLoadNativeFonts create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLLoadNativeFonts performSelectorOnMainThread:@selector(loadNativeFonts:) withObject:pVCLLoadNativeFonts waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLLoadNativeFonts, @selector(loadNativeFonts:), pVCLLoadNativeFonts, YES );
 	Application::AcquireSolarMutex( nCount );
 
 	[pPool release];

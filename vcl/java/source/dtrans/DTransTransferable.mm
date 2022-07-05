@@ -36,17 +36,13 @@
 #include <list>
 #include <mach-o/dyld.h>
 
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 
 #include "DTransClipboard.hxx"
 #include "DTransTransferable.hxx"
 
 #include "../../../osx/HtmlFmtFlt.hxx"
-
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#import <CoreServices/CoreServices.h>
-#include <postmac.h>
 
 #define HTML_TYPE_TAG @"HTML"
 #define PDF_TYPE_TAG @"PDF"
@@ -612,10 +608,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		// deleting the transferable asynchronously
 		DTransTransferableDeletor *pDeletor = [DTransTransferableDeletor createWithTransferable:mpTransferable];
 		if ( pDeletor )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pDeletor performSelectorOnMainThread:@selector(deleteTransferable:) withObject:pDeletor waitUntilDone:NO modes:pModes];
-		}
+			osl_performSelectorOnMainThread( pDeletor, @selector(deleteTransferable:), pDeletor, NO );
 	}
 
 	[super dealloc];
@@ -972,10 +965,7 @@ void DTransTransferable::flush()
 
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(flush:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( pHelper, @selector(flush:), [NSNumber numberWithInt:mnChangeCount], YES );
 
 		[pPool release];
 	}
@@ -1006,7 +996,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 	{
 		NSString *pRequestedType = nil;
 		bool bRequestedTypeIsText = false;
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
 		// Run a loop so that if data type fails, we can try another
 		for ( sal_uInt16 i = 0; !bDataRetrieved && i < nSupportedTypes; i++ )
@@ -1023,7 +1012,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 			if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 			{
-				[pHelper performSelectorOnMainThread:@selector(getStringForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pHelper, @selector(getStringForType:), pRequestedType, YES );
 				bDataAvailable = [pHelper isTypeAvailable];
 				NSString *pString = [pHelper stringForType];
 				if ( pString )
@@ -1059,7 +1048,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 			{
 				if ( bRequestedTypeIsText )
 				{
-					[pHelper performSelectorOnMainThread:@selector(getDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+					osl_performSelectorOnMainThread( pHelper, @selector(getDataForType:), pRequestedType, YES );
 					bDataAvailable = [pHelper isTypeAvailable];
 					NSData *pData = [pHelper dataForType];
 					if ( pData )
@@ -1112,7 +1101,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					// code asks for BMP data as we have made some changes
 					// to the vcl/source/gdi/bitmap2.cxx code to accept
 					// PNG data
-					[pHelper performSelectorOnMainThread:@selector(getPNGDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+					osl_performSelectorOnMainThread( pHelper, @selector(getPNGDataForType:), pRequestedType, YES );
 					bDataAvailable = [pHelper isTypeAvailable];
 					NSData *pData = [pHelper PNGDataForType];
 					if ( pData )
@@ -1178,10 +1167,7 @@ DTransTransferable::~DTransTransferable()
 
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(clearContentsWithChangeCount:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( pHelper, @selector(clearContentsWithChangeCount:), [NSNumber numberWithInt:mnChangeCount], YES );
 
 		[pPool release];
 	}
@@ -1204,8 +1190,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 	DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 	if ( pHelper )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pHelper performSelectorOnMainThread:@selector(getTypes:) withObject:pHelper waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pHelper, @selector(getTypes:), pHelper, YES );
 		NSArray *pTypes = [pHelper types];
 		if ( pTypes )
 		{
@@ -1248,8 +1233,7 @@ sal_Bool DTransTransferable::hasOwnership()
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(getChangeCount:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pHelper, @selector(getChangeCount:), pHelper, YES );
 			if ( [pHelper changeCount] == mnChangeCount )
 				out = sal_True;
 		}
@@ -1271,7 +1255,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	const NSString *pRequestedType = nil;
+	NSString *pRequestedType = nil;
 	for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
 	{
 		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
@@ -1286,8 +1270,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(getTypeAvailable:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pHelper, @selector(getTypeAvailable:), pRequestedType, YES );
 			if ( [pHelper isTypeAvailable] )
 				out = sal_True;
 		}
@@ -1367,8 +1350,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 			DTransPasteboardOwner *pOwner = [DTransPasteboardOwner createWithTransferable:this pasteboardName:mpPasteboardName types:pTypes];
 			if ( pOwner )
 			{
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:[NSNumber numberWithBool:( pPasteboardWriter ? YES : NO )] waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pOwner, @selector(setContents:), [NSNumber numberWithBool:( pPasteboardWriter ? YES : NO )], YES );
 				mnChangeCount = [pOwner changeCount];
 				if ( mnChangeCount >= 0 )
 				{
@@ -1400,8 +1382,7 @@ void DTransTransferable::updateChangeCount()
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(getChangeCount:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pHelper, @selector(getChangeCount:), pHelper, YES );
 			mnChangeCount = [pHelper changeCount];
 		}
 

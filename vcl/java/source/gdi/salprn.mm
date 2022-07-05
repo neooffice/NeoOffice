@@ -35,14 +35,11 @@
 
 #include <list>
 
+#include <osl/objcutils.h>
 #include <sfx2/sfx.hrc>
 #include <tools/rcid.h>
 #include <vcl/print.hxx>
 #include <vcl/svapp.hxx>
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "jobset.h"
 #include "salptype.hxx"
@@ -1600,8 +1597,7 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:nil];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pJavaSalInfoPrinterCreatePrintInfo, @selector(createPrintInfo:), pJavaSalInfoPrinterCreatePrintInfo, YES );
 	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
 	if ( mpInfo )
 		[mpInfo retain];
@@ -1673,11 +1669,10 @@ bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetupData
 		sal_uLong nCount = Application::ReleaseSolarMutex();
 
 		JavaSalInfoPrinterShowPageLayoutDialog *pJavaSalInfoPrinterShowPageLayoutDialog = [JavaSalInfoPrinterShowPageLayoutDialog createWithPrintInfo:mpInfo window:pNSWindow];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pJavaSalInfoPrinterShowPageLayoutDialog, @selector(showPageLayoutDialog:), pJavaSalInfoPrinterShowPageLayoutDialog, YES );
 		while ( ![pJavaSalInfoPrinterShowPageLayoutDialog finished] && !Application::IsShutDown() )
 		{
-			[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(checkForErrors:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pJavaSalInfoPrinterShowPageLayoutDialog, @selector(checkForErrors:), pJavaSalInfoPrinterShowPageLayoutDialog, YES );
 			if ( Application::IsShutDown() )
 				break;
 
@@ -1702,7 +1697,7 @@ bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetupData
 			bRet = true;
 		}
 
-		[pJavaSalInfoPrinterShowPageLayoutDialog performSelectorOnMainThread:@selector(destroy:) withObject:pJavaSalInfoPrinterShowPageLayoutDialog waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pJavaSalInfoPrinterShowPageLayoutDialog, @selector(destroy:), pJavaSalInfoPrinterShowPageLayoutDialog, YES );
 
 		Application::AcquireSolarMutex( nCount );
 		Application_endModalSheet();
@@ -1902,8 +1897,7 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	// Create a copy of the info printer's print info to any isolate changes
 	// made by the print job
 	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:( mpInfoPrinter ? mpInfoPrinter->GetPrintInfo() : nil )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pJavaSalInfoPrinterCreatePrintInfo, @selector(createPrintInfo:), pJavaSalInfoPrinterCreatePrintInfo, YES );
 	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
 	if ( mpInfo )
 		[mpInfo retain];
@@ -1922,8 +1916,7 @@ JavaSalPrinter::~JavaSalPrinter()
 
 	if ( mpPrintJob )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpPrintJob, @selector(destroy:), mpPrintJob, YES );
 		[mpPrintJob release];
 	}
 
@@ -1983,15 +1976,14 @@ bool JavaSalPrinter::StartJob( const OUString* /* pFileName */, const OUString& 
 				// from a different thread while the dialog is showing
 				sal_uLong nCount = Application::ReleaseSolarMutex();
 
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[mpPrintJob performSelectorOnMainThread:@selector(runPrintJob:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( mpPrintJob, @selector(runPrintJob:), mpPrintJob, YES );
 
 				Application::AcquireSolarMutex( nCount );
 
 				bNeedsRestart = [(JavaSalPrinterPrintJob *)mpPrintJob needsRestart];
 				if ( bNeedsRestart )
 				{
-					[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+					osl_performSelectorOnMainThread( mpPrintJob, @selector(destroy:), mpPrintJob, YES );
 					[mpPrintJob release];
 					mpPrintJob = nil;
 					continue;
@@ -2015,7 +2007,7 @@ bool JavaSalPrinter::StartJob( const OUString* /* pFileName */, const OUString& 
 					}
 				}
 
-				[mpPrintJob performSelectorOnMainThread:@selector(destroy:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( mpPrintJob, @selector(destroy:), mpPrintJob, YES );
 				[mpPrintJob release];
 				mpPrintJob = nil;
 			}
@@ -2053,8 +2045,7 @@ bool JavaSalPrinter::EndJob()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpPrintJob performSelectorOnMainThread:@selector(end:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpPrintJob, @selector(end:), mpPrintJob, YES );
 
 		[pPool release];
 	}
@@ -2071,8 +2062,7 @@ bool JavaSalPrinter::AbortJob()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpPrintJob performSelectorOnMainThread:@selector(cancel:) withObject:mpPrintJob waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpPrintJob, @selector(cancel:), mpPrintJob, YES );
 
 		[pPool release];
 	}

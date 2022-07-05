@@ -36,11 +36,11 @@
 #include <dlfcn.h>
 #include <signal.h>
 
+#include <osl/objcutils.h>
 #include <rtl/digest.h>
 #include <vcl/unohelp.hxx>
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <CommonCrypto/CommonDigest.h>
 #import <IOKit/IOKitLib.h>
 #import <Security/SecAsn1Coder.h>
@@ -515,8 +515,7 @@ void NSApplication_terminate()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		GetExitCode *pGetExitCode = [GetExitCode create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pGetExitCode performSelectorOnMainThread:@selector(getExitCodeForTermination:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pGetExitCode, @selector(getExitCodeForTermination:), pGetExitCode, YES );
 		nRet = [pGetExitCode exitCode];
 
 		[pPool release];
@@ -534,8 +533,7 @@ sal_Bool Application_validateReceipt()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	GetExitCode *pGetExitCode = [GetExitCode create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pGetExitCode performSelectorOnMainThread:@selector(getExitCode:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pGetExitCode, @selector(getExitCode:), pGetExitCode, YES );
 	if ( ![pGetExitCode exitCode] )
 		bRet = sal_True;
 

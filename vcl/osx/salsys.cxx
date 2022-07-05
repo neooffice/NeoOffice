@@ -29,9 +29,7 @@
 #include "vcl/button.hxx"
 
 #ifdef USE_JAVA
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "java/salsys.h"
 
@@ -395,10 +393,9 @@ int AquaSalSystem::ShowNativeMessageBox( const OUString& rTitle,
         NSWindow *pNSWindow = nil;
         if ( Application_beginModalSheet( &pNSWindow ) )
         {
-            NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-            [pVCLShowNativeMessageBox performSelectorOnMainThread:@selector(showNativeMessageBox:) withObject:pNSWindow waitUntilDone:YES modes:pModes];
-             while ( ![pVCLShowNativeMessageBox finished] && !Application::IsShutDown() )
-                 [pVCLShowNativeMessageBox performSelectorOnMainThread:@selector(checkForErrors:) withObject:pVCLShowNativeMessageBox waitUntilDone:YES modes:pModes];
+            osl_performSelectorOnMainThread( pVCLShowNativeMessageBox, @selector(showNativeMessageBox:), pNSWindow, YES );
+            while ( ![pVCLShowNativeMessageBox finished] && !Application::IsShutDown() )
+                osl_performSelectorOnMainThread( pVCLShowNativeMessageBox, @selector(checkForErrors:), pVCLShowNativeMessageBox, YES );
 
             NSModalResponse nModalResponse = [pVCLShowNativeMessageBox modalResponse];
             if ( nModalResponse == NSAlertFirstButtonReturn )
@@ -408,7 +405,7 @@ int AquaSalSystem::ShowNativeMessageBox( const OUString& rTitle,
             else if ( nModalResponse == NSAlertThirdButtonReturn )
                 nResult = 3;
 
-            [pVCLShowNativeMessageBox performSelectorOnMainThread:@selector(destroy:) withObject:pVCLShowNativeMessageBox waitUntilDone:YES modes:pModes];
+            osl_performSelectorOnMainThread( pVCLShowNativeMessageBox, @selector(destroy:), pVCLShowNativeMessageBox, YES );
 
             Application_endModalSheet();
         }

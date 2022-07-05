@@ -33,13 +33,13 @@
  *
  ************************************************************************/
 
+#include <osl/objcutils.h>
 #include <vcl/dialog.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/status.hxx>
 #include <vcl/svapp.hxx>
 
 #include <premac.h>
-#import <AppKit/AppKit.h>
 #import <IOKit/pwr_mgt/IOPMLib.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
@@ -2396,9 +2396,8 @@ static void InitializeScreens()
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 			VCLUpdateScreens *pVCLUpdateScreens = [VCLUpdateScreens create];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			aGuard.clear();
-			[pVCLUpdateScreens performSelectorOnMainThread:@selector(updateScreens:) withObject:pVCLUpdateScreens waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pVCLUpdateScreens, @selector(updateScreens:), pVCLUpdateScreens, YES );
 
 			[pPool release];
 		}
@@ -2419,9 +2418,8 @@ static void InitializeSystemColors()
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 			VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			aGuard.clear();
-			[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(updateSystemColors:) withObject:pVCLUpdateSystemColors waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pVCLUpdateSystemColors, @selector(updateSystemColors:), pVCLUpdateSystemColors, YES );
 
 			[pPool release];
 		}
@@ -2652,8 +2650,7 @@ JavaSalFrame::JavaSalFrame( sal_uLong nSalFrameStyle, JavaSalFrame *pParent ) :
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:nil showOnlyMenus:mbShowOnlyMenus utility:IsUtilityWindow()];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLCreateWindow performSelectorOnMainThread:@selector(createWindow:) withObject:pVCLCreateWindow waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLCreateWindow, @selector(createWindow:), pVCLCreateWindow, YES );
 	VCLWindowWrapper *pWindow = [pVCLCreateWindow window];
 	if ( pWindow )
 	{
@@ -2742,8 +2739,7 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( mpWindow )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(destroy:) withObject:mpWindow waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
 		[mpWindow release];
 	}
 
@@ -3119,8 +3115,7 @@ void JavaSalFrame::FlushAllFrames()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLSetNeedsDisplayAllViews *pVCLSetNeedsDisplayAllViews = [VCLSetNeedsDisplayAllViews create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLSetNeedsDisplayAllViews performSelectorOnMainThread:@selector(setNeedsDisplay:) withObject:pVCLSetNeedsDisplayAllViews waitUntilDone:NO modes:pModes];
+	osl_performSelectorOnMainThread( pVCLSetNeedsDisplayAllViews, @selector(setNeedsDisplay:), pVCLSetNeedsDisplayAllViews, NO );
 
 	[pPool release];
 }
@@ -3377,8 +3372,7 @@ void JavaSalFrame::UpdateColorsForIconTheme( OUString& rTheme )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLUpdateSystemColors *pVCLUpdateSystemColors = [VCLUpdateSystemColors create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLUpdateSystemColors performSelectorOnMainThread:@selector(systemColorsChanged:) withObject:nil waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pVCLUpdateSystemColors, @selector(systemColorsChanged:), nil, YES );
 
 		[pPool release];
 	}
@@ -3423,8 +3417,7 @@ bool JavaSalFrame::Deminimize()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pRequestFocusArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(deminimize:) withObject:pRequestFocusArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(deminimize:), pRequestFocusArgs, YES );
 		NSNumber *pResult = (NSNumber *)[pRequestFocusArgs result];
 		if ( pResult && [pResult boolValue] )
 			bRet = true;
@@ -3484,8 +3477,7 @@ const Rectangle JavaSalFrame::GetBounds( sal_Bool *pInLiveResize, sal_Bool *pInF
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pGetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pInLiveResize], [NSValue valueWithPointer:pInFullScreenMode], [NSNumber numberWithBool:bUseFullScreenOriginalBounds], [NSNumber numberWithBool:bUseNonTabbedBounds], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(getFrame:) withObject:pGetFrameArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(getFrame:), pGetFrameArgs, YES );
 		NSValue *pFrame = (NSValue *)[pGetFrameArgs result];
 		if ( pFrame )
 		{
@@ -3558,8 +3550,7 @@ id JavaSalFrame::GetNativeWindowContentView( sal_Bool bTopLevelWindow )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pGetContentViewArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:bTopLevelWindow]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(getContentView:) withObject:pGetContentViewArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(getContentView:), pGetContentViewArgs, YES );
 		pRet = [pGetContentViewArgs result];
 
 		[pPool release];
@@ -3579,8 +3570,7 @@ sal_uLong JavaSalFrame::GetState()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pGetStateArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(getState:) withObject:pGetStateArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(getState:), pGetStateArgs, YES );
 		NSNumber *pState = (NSNumber *)[pGetStateArgs result];
 		if ( pState )
 			nRet = [pState unsignedLongValue];
@@ -3599,8 +3589,7 @@ void JavaSalFrame::MakeModal()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(makeModal:) withObject:mpWindow waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(makeModal:), mpWindow, YES );
 
 		[pPool release];
 	}
@@ -3617,8 +3606,7 @@ bool JavaSalFrame::RequestFocus()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pRequestFocusArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(requestFocus:) withObject:pRequestFocusArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(requestFocus:), pRequestFocusArgs, YES );
 		NSNumber *pResult = (NSNumber *)[pRequestFocusArgs result];
 		if ( pResult && [pResult boolValue] )
 			bRet = true;
@@ -3646,8 +3634,7 @@ void JavaSalFrame::SetState( sal_uLong nFrameState )
 			nState = WINDOWSTATE_STATE_NORMAL;
 
 		VCLWindowWrapperArgs *pSetStateArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:nState]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setState:) withObject:pSetStateArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setState:), pSetStateArgs, YES );
 
 		[pPool release];
 	}
@@ -3662,8 +3649,7 @@ void JavaSalFrame::SetVisible( bool bVisible, bool bNoActivate )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pSetVisibleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:bVisible], [NSNumber numberWithBool:bNoActivate], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setVisible:) withObject:pSetVisibleArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setVisible:), pSetVisibleArgs, YES );
 
 		[pPool release];
 	}
@@ -3680,8 +3666,7 @@ bool JavaSalFrame::ToFront()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pToFrontArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(toFront:) withObject:pToFrontArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(toFront:), pToFrontArgs, YES );
 		NSNumber *pResult = (NSNumber *)[pToFrontArgs result];
 		if ( pResult && [pResult boolValue] )
 			bRet = true;
@@ -3709,8 +3694,7 @@ void JavaSalFrame::UpdateLayer()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLViewGetGraphicsLayer *pVCLViewGetGraphicsLayer = [VCLViewGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.mpNSView];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLViewGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLViewGetGraphicsLayer waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLViewGetGraphicsLayer, @selector(getGraphicsLayer:), pVCLViewGetGraphicsLayer, YES );
 	maFrameLayer = [pVCLViewGetGraphicsLayer layer];
 	if ( maFrameLayer )
 		CGLayerRetain( maFrameLayer );
@@ -3765,8 +3749,7 @@ void JavaSalFrame::AddTrackingRect( Window *pWindow )
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 			VCLWindowWrapperArgs *pAddTrackingAreaArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPointer:pWindow], [NSValue valueWithRect:NSRectFromCGRect( aRect )], nil]];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[mpWindow performSelectorOnMainThread:@selector(addTrackingArea:) withObject:pAddTrackingAreaArgs waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( mpWindow, @selector(addTrackingArea:), pAddTrackingAreaArgs, YES );
 
 			[pPool release];
 		}
@@ -3782,8 +3765,7 @@ void JavaSalFrame::RemoveTrackingRect( Window *pWindow )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pRemoveTrackingAreaArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithPointer:pWindow]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(removeTrackingArea:) withObject:pRemoveTrackingAreaArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(removeTrackingArea:), pRemoveTrackingAreaArgs, YES );
 
 		[pPool release];
 	}
@@ -3798,8 +3780,7 @@ void JavaSalFrame::SetMovable( bool bMoveable )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pSetMovableArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:bMoveable]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setMovable:) withObject:pSetMovableArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setMovable:), pSetMovableArgs, YES );
 
 		[pPool release];
 	}
@@ -3870,8 +3851,7 @@ void JavaSalFrame::SetTitle( const OUString& rTitle )
 
 		NSString *pTitle = [NSString stringWithCharacters:maTitle.getStr() length:maTitle.getLength()];
 		VCLWindowWrapperArgs *pSetTitleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:pTitle]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setTitle:) withObject:pSetTitleArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setTitle:), pSetTitleArgs, YES );
 
 		[pPool release];
 	}
@@ -4096,8 +4076,7 @@ void JavaSalFrame::Show( bool bVisible, bool bNoActivate )
 		if ( pNSWindow )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:YES];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pVCLToggleFullScreen, @selector(toggleFullScreen:), pVCLToggleFullScreen, YES );
 		}
 
 		[pPool release];
@@ -4114,8 +4093,7 @@ void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 
 		NSSize aMinSize = NSMakeSize( nWidth, nHeight );
 		VCLWindowWrapperArgs *pSetMinSizeArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithSize:aMinSize]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setMinSize:) withObject:pSetMinSizeArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setMinSize:), pSetMinSizeArgs, YES );
 
 		[pPool release];
 	}
@@ -4239,8 +4217,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 
 		NSRect aFrame = NSMakeRect( nX, nY, nWidth, nHeight );
 		VCLWindowWrapperArgs *pSetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithRect:aFrame], [NSNumber numberWithBool:mbInSetWindowState], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setJavaFrame:) withObject:pSetFrameArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setJavaFrame:), pSetFrameArgs, YES );
 
 		[pPool release];
 	}
@@ -4287,8 +4264,7 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight, sal_
 
 				NSRect aFrame = NSMakeRect( nX, nY, nWidth, nHeight );
 				VCLWindowWrapperArgs *pSetFrameArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithRect:aFrame], [NSNumber numberWithBool:mbInSetWindowState], nil]];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[mpWindow performSelectorOnMainThread:@selector(setJavaFrame:) withObject:pSetFrameArgs waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( mpWindow, @selector(setJavaFrame:), pSetFrameArgs, YES );
 
 				[pPool release];
 			}
@@ -4417,8 +4393,7 @@ void JavaSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay )
 		if ( pNSWindow )
 		{
 			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow toggleToCurrentScreenMode:NO];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pVCLToggleFullScreen, @selector(toggleFullScreen:), pVCLToggleFullScreen, YES );
 		}
 
 		[pPool release];
@@ -4449,8 +4424,7 @@ void JavaSalFrame::ShowFullScreen( bool bFullScreen, sal_Int32 nDisplay )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLWindowWrapperArgs *pSetFullScreenModeArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:bFullScreen]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(setFullScreenMode:) withObject:pSetFullScreenModeArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(setFullScreenMode:), pSetFullScreenModeArgs, YES );
 
 		[pPool release];
 	}
@@ -4507,8 +4481,7 @@ void JavaSalFrame::StartPresentation( bool bStart )
 	// Always run the timer to ensure that the remote control feature works
 	// when the presentation window is on a secondary screen
 	VCLSetSystemUIMode *pVCLSetSystemUIMode = [VCLSetSystemUIMode createFullScreen:mbPresentation];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLSetSystemUIMode performSelectorOnMainThread:@selector(setSystemUIMode:) withObject:pVCLSetSystemUIMode waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLSetSystemUIMode, @selector(setSystemUIMode:), pVCLSetSystemUIMode, YES );
 
 	[pPool release];
 
@@ -4581,8 +4554,7 @@ void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLSetCursor *pVCLSetCursor = [VCLSetCursor createWithPointerStyle:ePointerStyle windowWrapper:mpWindow];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLSetCursor performSelectorOnMainThread:@selector(setCursor:) withObject:pVCLSetCursor waitUntilDone:NO modes:pModes];
+	osl_performSelectorOnMainThread( pVCLSetCursor, @selector(setCursor:), pVCLSetCursor, NO );
 
 	[pPool release];
 }
@@ -4615,8 +4587,7 @@ void JavaSalFrame::Flush()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpWindow performSelectorOnMainThread:@selector(flush:) withObject:mpWindow waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpWindow, @selector(flush:), mpWindow, NO );
 
 		[pPool release];
 	}
@@ -4661,8 +4632,7 @@ void JavaSalFrame::EndExtTextInput( sal_uInt16 /* nFlags */ )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLDiscardMarkedText *pVCLDiscardMarkedText = [VCLDiscardMarkedText create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLDiscardMarkedText performSelectorOnMainThread:@selector(discardMarkedText:) withObject:pVCLDiscardMarkedText waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLDiscardMarkedText, @selector(discardMarkedText:), pVCLDiscardMarkedText, YES );
 
 	[pPool release];
 }
@@ -4939,15 +4909,14 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			pParentWindow = [(VCLWindowWrapper *)mpParent->mpWindow window];
 
 		VCLCreateWindow *pVCLCreateWindow = [VCLCreateWindow createWithStyle:mnStyle frame:this parent:pParentWindow showOnlyMenus:mbShowOnlyMenus utility:bUtilityWindow];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLCreateWindow performSelectorOnMainThread:@selector(createWindow:) withObject:pVCLCreateWindow waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pVCLCreateWindow, @selector(createWindow:), pVCLCreateWindow, YES );
 		VCLWindowWrapper *pWindow = [pVCLCreateWindow window];
 		if ( pWindow )
 		{
 			// Release old window wrapper
 			if ( mpWindow )
 			{
-				[mpWindow performSelectorOnMainThread:@selector(destroy:) withObject:mpWindow waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
 				[mpWindow release];
 			}
 

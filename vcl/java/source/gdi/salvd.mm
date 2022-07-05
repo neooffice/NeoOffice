@@ -33,9 +33,7 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "java/saldata.hxx"
 #include "java/salgdi.h"
@@ -213,8 +211,7 @@ bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLVirtualDeviceGetGraphicsLayer *pVCLVirtualDeviceGetGraphicsLayer = [VCLVirtualDeviceGetGraphicsLayer createWithWidth:nDX height:nDY];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLVirtualDeviceGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLVirtualDeviceGetGraphicsLayer waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLVirtualDeviceGetGraphicsLayer, @selector(getGraphicsLayer:), pVCLVirtualDeviceGetGraphicsLayer, YES );
 	maVirDevLayer = [pVCLVirtualDeviceGetGraphicsLayer layer];
 	if ( maVirDevLayer )
 	{

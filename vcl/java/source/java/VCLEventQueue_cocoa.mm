@@ -34,13 +34,13 @@
  ************************************************************************/
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 // Need to include for virtual key constants but we don't link to it
 #import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
 #import <apple_remote/RemoteControl.h>
 #include <postmac.h>
 
+#include <osl/objcutils.h>
 #include <vcl/cmdevt.hxx>
 
 #include "java/saldata.hxx"
@@ -3756,8 +3756,7 @@ sal_Bool NSApplication_isActive()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	IsApplicationActive *pIsApplicationActive = [IsApplicationActive create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pIsApplicationActive performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActive waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pIsApplicationActive, @selector(isApplicationActive:), pIsApplicationActive, YES );
 	bRet = (sal_Bool)[pIsApplicationActive isActive];
 
 	[pPool release];
@@ -3819,8 +3818,7 @@ void VCLEventQueue_cancelTermination()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	CancelTermination *pCancelTermination = [CancelTermination create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pCancelTermination, @selector(cancelTermination:), pCancelTermination, YES );
 
 	[pPool release];
 }
@@ -3830,8 +3828,7 @@ void VCLEventQueue_installVCLEventQueueClasses()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pInstallVCLEventQueueClasses, @selector(installVCLEventQueueClasses:), pInstallVCLEventQueueClasses, YES );
 
 	[pPool release];
 }

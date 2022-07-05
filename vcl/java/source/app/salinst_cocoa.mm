@@ -35,10 +35,7 @@
 
 #include <dlfcn.h>
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
@@ -478,8 +475,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 						// Ignore any AWT events while the open dialog is
 						// showing to emulate a modal dialog
 						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle];
-						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						osl_performSelectorOnMainThread( pVCLRequestSecurityScopedURL, @selector(requestSecurityScopedURL:), pVCLRequestSecurityScopedURL, YES );
 
 						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
 						if ( pSecurityScopedURL && [pSecurityScopedURL startAccessingSecurityScopedResource] )
@@ -488,7 +484,7 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							[pSecurityScopedURLs addObject:pSecurityScopedURL];
 						}
 
-						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						osl_performSelectorOnMainThread( pVCLRequestSecurityScopedURL, @selector(destroy:), pVCLRequestSecurityScopedURL, YES );
 
 						Application::AcquireSolarMutex( nCount );
 					}
@@ -976,8 +972,7 @@ id NSApplication_getModalWindow()
 	NSWindow *pModalWindow = nil;
 
 	GetModalWindow *pGetModalWindow = [GetModalWindow create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pGetModalWindow performSelectorOnMainThread:@selector(getModalWindow:) withObject:pGetModalWindow waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pGetModalWindow, @selector(getModalWindow:), pGetModalWindow, YES );
 	pModalWindow = [pGetModalWindow modalWindow];
 
 	[pPool release];

@@ -35,14 +35,10 @@
 
 #include <map>
 
+#include <osl/objcutils.h>
 #include <vcl/window.hxx>
 #include <framework/menuconfiguration.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-
-#include <premac.h>
-#import <CoreFoundation/CoreFoundation.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "java/saldata.hxx"
 #include "java/salframe.h"
@@ -1116,8 +1112,7 @@ JavaSalMenu::~JavaSalMenu()
 
 	if ( mpMenu )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(destroy:) withObject:mpMenu waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(destroy:), mpMenu, YES );
 		[mpMenu release];
 	}
 
@@ -1137,7 +1132,6 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 		pFrame = pFrame->mpParent;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
 	// Fix bug reported in the following NeoOffice forum post that causes the
 	// empty menu to be set when editing an embedded OLE object by only setting
@@ -1149,7 +1143,7 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 	{
 		if ( pFrame->mpMenuBar && pFrame->mpMenuBar->mbIsMenuBarMenu && pFrame->mpMenuBar->mpMenu )
 		{
-			[pFrame->mpMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pFrame->mpMenuBar->mpMenu waitUntilDone:NO modes:pModes];
+			osl_performSelectorOnMainThread( pFrame->mpMenuBar->mpMenu, @selector(setMenuAsMainMenu:), pFrame->mpMenuBar->mpMenu, NO );
 		}
 		else if ( ( pFrame->mpParent && pFrame->mpParent->mbVisible ) || ( !pFrame->mpParent && !pFrame->IsFloatingFrame() && !pFrame->IsUtilityWindow() ) )
 		{
@@ -1162,7 +1156,7 @@ void JavaSalMenu::SetMenuBarToFocusFrame()
 			}
 
 			if ( pEmptyMenuBar && pEmptyMenuBar->mbIsMenuBarMenu && pEmptyMenuBar->mpMenu )
-				[pEmptyMenuBar->mpMenu performSelectorOnMainThread:@selector(setMenuAsMainMenu:) withObject:pEmptyMenuBar->mpMenu waitUntilDone:NO modes:pModes];
+				osl_performSelectorOnMainThread( pEmptyMenuBar->mpMenu, @selector(setMenuAsMainMenu:), pEmptyMenuBar->mpMenu, NO );
 		}
 	}
 
@@ -1187,8 +1181,7 @@ void JavaSalMenu::SetFrame( const SalFrame *pFrame )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLMenuWrapperArgs *pSetFrameArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)mpParentFrame]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setFrame:) withObject:pSetFrameArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(setFrame:), pSetFrameArgs, NO );
 
 		if ( mpParentFrame && mpParentFrame == GetSalData()->mpFocusFrame )
 			SetMenuBarToFocusFrame();
@@ -1207,8 +1200,7 @@ void JavaSalMenu::InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLMenuWrapperArgs *pInsertMenuItemArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:pJavaSalMenuItem->mpMenuItem, [NSNumber numberWithUnsignedInt:nPos], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(insertMenuItem:) withObject:pInsertMenuItemArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(insertMenuItem:), pInsertMenuItemArgs, NO );
 
 		[pPool release];
 	}
@@ -1223,8 +1215,7 @@ void JavaSalMenu::RemoveItem( unsigned nPos )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLMenuWrapperArgs *pRemoveMenuItemArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithUnsignedInt:nPos]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(removeMenuItem:) withObject:pRemoveMenuItemArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(removeMenuItem:), pRemoveMenuItemArgs, NO );
 
 		[pPool release];
 	}
@@ -1248,8 +1239,7 @@ void JavaSalMenu::SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsi
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLMenuWrapperArgs *pSetMenuItemSubmenuArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:pJavaSubMenu->mpMenu, [NSNumber numberWithUnsignedInt:nPos], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuItemSubmenu:) withObject:pSetMenuItemSubmenuArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(setMenuItemSubmenu:), pSetMenuItemSubmenuArgs, NO );
 
 		[pPool release];
 	}
@@ -1265,8 +1255,7 @@ void JavaSalMenu::CheckItem( unsigned nPos, bool bCheck )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLMenuWrapperArgs *pCheckMenuItemArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], [NSNumber numberWithBool:bCheck], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(checkMenuItem:) withObject:pCheckMenuItemArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(checkMenuItem:), pCheckMenuItemArgs, NO );
 
 		[pPool release];
 	}
@@ -1281,8 +1270,7 @@ void JavaSalMenu::EnableItem( unsigned nPos, bool bEnable )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		VCLMenuWrapperArgs *pEnableMenuItemArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], [NSNumber numberWithBool:bEnable], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(enableMenuItem:) withObject:pEnableMenuItemArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(enableMenuItem:), pEnableMenuItemArgs, NO );
 
 		[pPool release];
 	}
@@ -1313,8 +1301,7 @@ void JavaSalMenu::SetItemText( unsigned /* nPos */, SalMenuItem* pSalMenuItem, c
 
 		NSString *pTitle = [NSString stringWithCharacters:aText.getStr() length:aText.getLength()];
 		VCLMenuWrapperArgs *pSetMenuItemTitleArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:( pTitle ? pTitle : @"" ), pJavaSalMenuItem->mpMenuItem, nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuItemTitle:) withObject:pSetMenuItemTitleArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(setMenuItemTitle:), pSetMenuItemTitleArgs, NO );
 
 		[pPool release];
 	}
@@ -1345,8 +1332,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 
 		NSString *pKeyEquivalent = [NSString stringWithCharacters:aKeyEquivalent.getStr() length:aKeyEquivalent.getLength()];
 		VCLMenuWrapperArgs *pSetMenuItemKeyEquivalentArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], ( pKeyEquivalent ? pKeyEquivalent : @"" ), [NSNumber numberWithUnsignedShort:rKeyCode.GetFullCode()], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenu performSelectorOnMainThread:@selector(setMenuItemKeyEquivalent:) withObject:pSetMenuItemKeyEquivalentArgs waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenu, @selector(setMenuItemKeyEquivalent:), pSetMenuItemKeyEquivalentArgs, NO );
 
 		[pPool release];
 	}
@@ -1379,8 +1365,7 @@ JavaSalMenuItem::~JavaSalMenuItem()
 	if ( mpMenuItem )
 	{
 		VCLDestroyMenuItem *pVCLDestroyMenuItem = [VCLDestroyMenuItem createWithMenuItem:mpMenuItem];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLDestroyMenuItem performSelectorOnMainThread:@selector(destroy:) withObject:pVCLDestroyMenuItem waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pVCLDestroyMenuItem, @selector(destroy:), pVCLDestroyMenuItem, YES );
 	}
 
 	[pPool release];
@@ -1403,8 +1388,7 @@ void JavaSalMenuItem::SetCommand( const OUString& rCommand )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpMenuItem performSelectorOnMainThread:@selector(setMenuType:) withObject:[NSNumber numberWithInt:meMenuType] waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( mpMenuItem, @selector(setMenuType:), [NSNumber numberWithInt:meMenuType], NO );
 
 		[pPool release];
 	}
@@ -1422,8 +1406,7 @@ SalMenu* JavaSalInstance::CreateMenu( bool bMenuBar, Menu *pVCLMenuWrapper )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLCreateMenu *pVCLCreateMenu = [VCLCreateMenu create:bMenuBar];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLCreateMenu performSelectorOnMainThread:@selector(createMenu:) withObject:pVCLCreateMenu waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLCreateMenu, @selector(createMenu:), pVCLCreateMenu, YES );
 	VCLMenuWrapper *pMenu = [pVCLCreateMenu menu];
 	if ( pMenu )
 	{
@@ -1470,8 +1453,7 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 
 	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
 	VCLCreateMenuItem *pVCLCreateMenuItem = [VCLCreateMenuItem createWithTitle:pTitle type:pItemData->eType id:pItemData->nId menu:pItemData->pMenu];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLCreateMenuItem performSelectorOnMainThread:@selector(createMenuItem:) withObject:pVCLCreateMenuItem waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLCreateMenuItem, @selector(createMenuItem:), pVCLCreateMenuItem, YES );
 	NSMenuItem *pMenuItem = [pVCLCreateMenuItem menuItem];
 	if ( pMenuItem )
 	{

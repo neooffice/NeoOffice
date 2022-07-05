@@ -33,15 +33,15 @@
  *
  ************************************************************************/
 
-#include <rtl/ustring.h>
 #include <osl/module.h>
+#include <osl/objcutils.h>
+#include <rtl/ustring.h>
 #include <vcl/decoview.hxx>
 #include <vcl/settings.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
 
@@ -2989,8 +2989,7 @@ static bool DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:YES bitmapBuffer:&aSharedComboBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeComboBox performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeComboBox waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeComboBox, @selector(draw:), pVCLNativeComboBox, YES );
 	bRet = [pVCLNativeComboBox drawn];
 
 	[pPool release];
@@ -3032,8 +3031,7 @@ static bool DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:NO bitmapBuffer:&aSharedListBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeComboBox performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeComboBox waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeComboBox, @selector(draw:), pVCLNativeComboBox, YES );
 	bRet = [pVCLNativeComboBox drawn];
 
 	[pPool release];
@@ -3071,8 +3069,7 @@ static bool DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:pBuffer graphics:pGraphics scrollbarValue:pScrollbarValue doubleScrollbarArrows:GetSalData()->mbDoubleScrollbarArrows destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeScrollbar performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeScrollbar waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeScrollbar, @selector(draw:), pVCLNativeScrollbar, YES );
 	bRet = [pVCLNativeScrollbar drawn];
 
 	[pPool release];
@@ -3106,16 +3103,15 @@ static bool DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 
 	// Always disable focus in the spinbutton and let the edit box have focus
 	VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState & ~CTRL_STATE_FOCUSED bitmapBuffer:&aSharedSpinbuttonBuffer graphics:pGraphics spinbuttonValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeSpinbuttons, @selector(getSize:), pVCLNativeSpinbuttons, YES );
 	NSSize aSize = [pVCLNativeSpinbuttons size];
 	if ( !NSEqualSizes( aSize, NSZeroSize ) )
 	{
-		[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pVCLNativeSpinbuttons, @selector(draw:), pVCLNativeSpinbuttons, YES );
 		if ( [pVCLNativeSpinbuttons drawn] )
 		{
 			VCLNativeTextField *pVCLNativeTextField = [VCLNativeTextField createWithControlState:nState bitmapBuffer:&aSharedEditBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth() - aSize.width, rDestBounds.GetHeight() )];
-			[pVCLNativeTextField performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTextField waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pVCLNativeTextField, @selector(draw:), pVCLNativeTextField, YES );
 			bRet = [pVCLNativeTextField drawn];
 		}
 	}
@@ -3149,8 +3145,7 @@ static bool DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:&aSharedSpinbuttonBuffer graphics:pGraphics spinbuttonValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeSpinbuttons, @selector(draw:), pVCLNativeSpinbuttons, YES );
 	bRet = [pVCLNativeSpinbuttons drawn];
 
 	[pPool release];
@@ -3183,8 +3178,7 @@ static bool DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( bSmall ? NSControlSizeSmall : NSControlSizeRegular ) bitmapBuffer:&aSharedProgressbarBuffer graphics:pGraphics progressbarValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeProgressbar performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeProgressbar waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeProgressbar, @selector(draw:), pVCLNativeProgressbar, YES );
 	bRet = [pVCLNativeProgressbar drawn];
 
 	[pPool release];
@@ -3218,8 +3212,7 @@ static bool DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeTabCell *pVCLNativeTabCell = [VCLNativeTabCell createWithControlState:nState bitmapBuffer:&aSharedTabBuffer graphics:pGraphics tabitemValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeTabCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTabCell waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeTabCell, @selector(draw:), pVCLNativeTabCell, YES );
 	bRet = [pVCLNativeTabCell drawn];
 
 	[pPool release];
@@ -3248,8 +3241,7 @@ static bool DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeTabBorder *pVCLNativeTabBorder = [VCLNativeTabBorder createWithControlState:nState bitmapBuffer:&aSharedTabBoundingBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeTabBorder performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTabBorder waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeTabBorder, @selector(draw:), pVCLNativeTabBorder, YES );
 	bRet = [pVCLNativeTabBorder drawn];
 
 	[pPool release];
@@ -3278,8 +3270,7 @@ static bool DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeBox *pVCLNativeBox = [VCLNativeBox createWithControlState:nState bitmapBuffer:&aSharedPrimaryGroupBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeBox performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeBox waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeBox, @selector(draw:), pVCLNativeBox, YES );
 	bRet = [pVCLNativeBox drawn];
 
 	[pPool release];
@@ -3307,8 +3298,7 @@ static bool DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeMenuItemCell *pVCLNativeMenuItemCell = [VCLNativeMenuItemCell createWithControlState:nState bitmapBuffer:&aSharedMenuBackgroundBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) drawSeparator:NO];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeMenuItemCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeMenuItemCell waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeMenuItemCell, @selector(draw:), pVCLNativeMenuItemCell, YES );
 	bRet = [pVCLNativeMenuItemCell drawn];
 
 	[pPool release];
@@ -3335,8 +3325,7 @@ static bool DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeTextField *pVCLNativeTextField = [VCLNativeTextField createWithControlState:nState bitmapBuffer:&aSharedEditBoxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeTextField performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTextField waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeTextField, @selector(draw:), pVCLNativeTextField, YES );
 	bRet = [pVCLNativeTextField drawn];
 
 	[pPool release];
@@ -3363,8 +3352,7 @@ static bool DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeBorderView *pVCLNativeBorderView = [VCLNativeBorderView createWithControlState:nState bitmapBuffer:&aSharedListViewFrameBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeBorderView performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeBorderView waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeBorderView, @selector(draw:), pVCLNativeBorderView, YES );
 	bRet = [pVCLNativeBorderView drawn];
 
 	[pPool release];
@@ -3401,8 +3389,7 @@ static bool DrawNativeDisclosureButton( JavaSalGraphics *pGraphics, const Rectan
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeOnOff bezelStyle:NSBezelStyleDisclosure controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedDisclosureBtnBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeButton, @selector(draw:), pVCLNativeButton, YES );
 	bRet = [pVCLNativeButton drawn];
 
 	[pPool release];
@@ -3432,8 +3419,7 @@ static bool DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeMenuItemCell *pVCLNativeMenuItemCell = [VCLNativeMenuItemCell createWithControlState:nState bitmapBuffer:&aSharedSeparatorLineBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) drawSeparator:YES];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeMenuItemCell performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeMenuItemCell waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeMenuItemCell, @selector(draw:), pVCLNativeMenuItemCell, YES );
 	bRet = [pVCLNativeMenuItemCell drawn];
 
 	[pPool release];
@@ -3475,8 +3461,7 @@ static bool DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 	}
 
 	VCLNativeTableHeaderColumn *pVCLNativeTableHeaderColumn = [VCLNativeTableHeaderColumn createWithControlState:nState bitmapBuffer:&aSharedListViewHeaderBuffer graphics:pGraphics listViewHeaderValue:pValue destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeTableHeaderColumn performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeTableHeaderColumn waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeTableHeaderColumn, @selector(draw:), pVCLNativeTableHeaderColumn, YES );
 	bRet = [pVCLNativeTableHeaderColumn drawn];
 
 	if ( bRet && bRedraw && pGraphics->mpFrame )
@@ -3525,8 +3510,7 @@ static bool DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeOnOff bezelStyle:NSBezelStyleShadowlessSquare controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedBevelButtonBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeButton, @selector(draw:), pVCLNativeButton, YES );
 	bRet = [pVCLNativeButton drawn];
 
 	[pPool release];
@@ -3564,8 +3548,7 @@ static bool DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeSwitch bezelStyle:NSBezelStyleRounded controlSize:nControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeButton, @selector(draw:), pVCLNativeButton, YES );
 	bRet = [pVCLNativeButton drawn];
 
 	[pPool release];
@@ -3603,8 +3586,7 @@ static bool DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeRadio bezelStyle:NSBezelStyleRounded controlSize:nControlSize buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeButton, @selector(draw:), pVCLNativeButton, YES );
 	bRet = [pVCLNativeButton drawn];
 
 	[pPool release];
@@ -3642,8 +3624,7 @@ static bool DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 		nState |= CTRL_STATE_INACTIVE;
 
 	VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeMomentaryLight bezelStyle:NSBezelStyleRounded controlSize:NSControlSizeRegular buttonState:nButtonState controlState:nState drawRTL:NO bitmapBuffer:&aSharedCheckboxBuffer graphics:pGraphics destRect:CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() )];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLNativeButton performSelectorOnMainThread:@selector(draw:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLNativeButton, @selector(draw:), pVCLNativeButton, YES );
 	bRet = [pVCLNativeButton drawn];
 
 	if ( bRet && pGraphics->mpFrame && [pVCLNativeButton redraw] )
@@ -4094,8 +4075,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeButton *pVCLNativeButton = [VCLNativeButton createWithButtonType:NSButtonTypeMomentaryLight bezelStyle:NSBezelStyleRounded controlSize:NSControlSizeRegular buttonState:NSControlStateValueOff controlState:0 drawRTL:NO bitmapBuffer:NULL graphics:NULL destRect:CGRectZero];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeButton performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeButton waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeButton, @selector(getSize:), pVCLNativeButton, YES );
 				NSSize aSize = [pVCLNativeButton size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
@@ -4158,8 +4138,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeComboBox *pVCLNativeComboBox = [VCLNativeComboBox createWithControlState:nState editable:bEditable bitmapBuffer:NULL graphics:NULL destRect:CGRectMake( comboBoxRect.Left(), comboBoxRect.Top(), comboBoxRect.GetWidth(), comboBoxRect.GetHeight() )];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeComboBox performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeComboBox waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeComboBox, @selector(getSize:), pVCLNativeComboBox, YES );
 				NSSize aSize = [pVCLNativeComboBox size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
@@ -4236,8 +4215,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeScrollbar *pVCLNativeScrollbar = [VCLNativeScrollbar createWithControlState:nState bitmapBuffer:NULL graphics:NULL scrollbarValue:pValue doubleScrollbarArrows:bDoubleScrollbarArrows destRect:CGRectMake( scrollbarRect.Left(), scrollbarRect.Top(), scrollbarRect.GetWidth(), scrollbarRect.GetHeight() )];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeScrollbar performSelectorOnMainThread:@selector(getBounds:) withObject:pVCLNativeScrollbar waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeScrollbar, @selector(getBounds:), pVCLNativeScrollbar, YES );
 
 				BOOL bHorizontal = [pVCLNativeScrollbar horizontal];
 				NSRect aDecrementArrowBounds = [pVCLNativeScrollbar decrementArrowBounds];
@@ -4345,8 +4323,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:NULL graphics:NULL spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeSpinbuttons, @selector(getSize:), pVCLNativeSpinbuttons, YES );
 				NSSize aSize = [pVCLNativeSpinbuttons size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
@@ -4414,8 +4391,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeSpinbuttons *pVCLNativeSpinbuttons = [VCLNativeSpinbuttons createWithControlState:nState bitmapBuffer:NULL graphics:NULL spinbuttonValue:pValue destRect:CGRectMake( spinboxRect.Left(), spinboxRect.Top(), spinboxRect.GetWidth(), spinboxRect.GetHeight() )];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeSpinbuttons performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeSpinbuttons waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeSpinbuttons, @selector(getSize:), pVCLNativeSpinbuttons, YES );
 				NSSize aSize = [pVCLNativeSpinbuttons size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
@@ -4466,8 +4442,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeProgressbar *pVCLNativeProgressbar = [VCLNativeProgressbar createWithControlState:nState controlSize:( nType == CTRL_INTROPROGRESS ? NSControlSizeSmall : NSControlSizeRegular ) bitmapBuffer:NULL graphics:NULL progressbarValue:&aValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeProgressbar performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeProgressbar waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeProgressbar, @selector(getSize:), pVCLNativeProgressbar, YES );
 				NSSize aSize = [pVCLNativeProgressbar size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
@@ -4496,8 +4471,7 @@ bool JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				VCLNativeTabCell *pVCLNativeTabCell = [VCLNativeTabCell createWithControlState:nState bitmapBuffer:NULL graphics:NULL tabitemValue:pValue destRect:CGRectMake( controlRect.Left(), controlRect.Top(), controlRect.GetWidth(), controlRect.GetHeight() )];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pVCLNativeTabCell performSelectorOnMainThread:@selector(getSize:) withObject:pVCLNativeTabCell waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pVCLNativeTabCell, @selector(getSize:), pVCLNativeTabCell, YES );
 				NSSize aSize = [pVCLNativeTabCell size];
 				if ( !NSEqualSizes( aSize, NSZeroSize ) )
 				{
