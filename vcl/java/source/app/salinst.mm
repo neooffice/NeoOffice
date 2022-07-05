@@ -3019,7 +3019,7 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( sal_uInt16 nType )
 void JavaSalEventQueue::dispatchNextEvent()
 {
 	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
-		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+		CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 }
 
 // -------------------------------------------------------------------------
