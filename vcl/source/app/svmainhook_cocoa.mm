@@ -46,7 +46,6 @@
 #import <Security/SecAsn1Coder.h>
 #import <Security/SecAsn1Templates.h>
 #include <postmac.h>
-#undef check
 
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"

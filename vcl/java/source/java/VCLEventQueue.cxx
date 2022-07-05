@@ -49,7 +49,6 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <Cocoa/Cocoa.h>
 #include <postmac.h>
-#undef check
 
 #include "window.h"
 #include "java/saldata.hxx"

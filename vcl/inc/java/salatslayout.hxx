@@ -43,7 +43,6 @@
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
-#undef check
 
 #include "sallayout.hxx"
 

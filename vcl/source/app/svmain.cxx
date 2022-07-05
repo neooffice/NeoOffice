@@ -102,7 +102,6 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
-#undef check
  
 #include "java/saldata.hxx"
 

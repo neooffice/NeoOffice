@@ -38,7 +38,6 @@
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
-#undef check
 
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>

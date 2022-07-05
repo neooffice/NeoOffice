@@ -43,7 +43,6 @@
 #import <CoreFoundation/CoreFoundation.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
-#undef check
 
 #include "java/saldata.hxx"
 #include "java/salframe.h"

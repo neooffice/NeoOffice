@@ -42,7 +42,6 @@
 #include <premac.h>
 #import <AppKit/AppKit.h>
 #include <postmac.h>
-#undef check
 
 #include "java/salinst.h"
 

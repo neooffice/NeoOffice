@@ -36,7 +36,6 @@
 #include <premac.h>
 #import <AppKit/AppKit.h>
 #include <postmac.h>
-#undef check
 
 #include "java/saldata.hxx"
 #include "java/salgdi.h"

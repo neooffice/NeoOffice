@@ -43,7 +43,6 @@
 #import <IOKit/pwr_mgt/IOPMLib.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
-#undef check
 
 #include "java/saldata.hxx"
 #include "java/salframe.h"

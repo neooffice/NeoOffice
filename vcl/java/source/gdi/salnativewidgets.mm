@@ -44,7 +44,6 @@
 #import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
 #include <postmac.h>
-#undef check
 
 #include "java/salbmp.h"
 #include "java/saldata.hxx"

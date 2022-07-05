@@ -40,7 +40,6 @@
 #import <objc/objc-class.h>
 #import <apple_remote/RemoteControl.h>
 #include <postmac.h>
-#undef check
 
 #include <vcl/cmdevt.hxx>
 
