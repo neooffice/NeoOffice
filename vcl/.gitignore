@@ -636,7 +636,6 @@ osx/a11yselectionwrapper.h
 osx/a11ycomponentwrapper.mm
 osx/a11yfocuslistener.cxx
 osx/cuidraw.hxx
-osx/a11ytextwrapper.mm
 osx/salmenu.cxx
 osx/a11ywrapperscrollarea.mm
 osx/a11ywrappercheckbox.mm
