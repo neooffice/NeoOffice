@@ -474,6 +474,10 @@ $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/java/source/gdi/salfont \
     vcl/java/source/gdi/salgdi2 \
     vcl/java/source/java/VCLEventQueue \
+    vcl/osx/a11yfocuslistener \
+    vcl/osx/a11yfocustracker \
+    vcl/osx/a11ylistener \
+    vcl/osx/documentfocuslistener \
     vcl/osx/HtmlFmtFlt \
     vcl/osx/salsys \
     vcl/quartz/utils \
@@ -497,6 +501,32 @@ $(eval $(call gb_Library_add_objcxxobjects,vcl,\
     vcl/java/source/window/salmenu \
     vcl/java/source/window/salobj \
     vcl/java/source/window/salobj_cocoa \
+    vcl/osx/a11yactionwrapper \
+    vcl/osx/a11ycomponentwrapper \
+    vcl/osx/a11yfactory \
+    vcl/osx/a11yrolehelper \
+    vcl/osx/a11yselectionwrapper \
+    vcl/osx/a11ytablewrapper \
+    vcl/osx/a11ytextattributeswrapper \
+    vcl/osx/a11ytextwrapper \
+    vcl/osx/a11yutil \
+    vcl/osx/a11yvaluewrapper \
+    vcl/osx/a11ywrapper \
+    vcl/osx/a11ywrapperbutton \
+    vcl/osx/a11ywrappercheckbox \
+    vcl/osx/a11ywrappercombobox \
+    vcl/osx/a11ywrappergroup \
+    vcl/osx/a11ywrapperlist \
+    vcl/osx/a11ywrapperradiobutton \
+    vcl/osx/a11ywrapperradiogroup \
+    vcl/osx/a11ywrapperrow \
+    vcl/osx/a11ywrapperscrollarea \
+    vcl/osx/a11ywrapperscrollbar \
+    vcl/osx/a11ywrappersplitter \
+    vcl/osx/a11ywrapperstatictext \
+    vcl/osx/a11ywrappertabgroup \
+    vcl/osx/a11ywrappertextarea \
+    vcl/osx/a11ywrappertoolbar \
     vcl/osx/printaccessoryview \
     vcl/source/app/svmainhook_cocoa \
 ))

@@ -514,7 +514,6 @@ osx/a11ywrappersplitter.mm
 osx/salobj.cxx
 osx/a11ywrapperradiobutton.h
 osx/a11ycomponentwrapper.h
-osx/a11ytextattributeswrapper.mm
 osx/OpenGLWrapper.cxx
 osx/a11yrolehelper.h
 osx/clipboard.cxx
@@ -654,7 +653,6 @@ osx/PictToBmpFlt.hxx
 osx/a11ywrapperstatictext.h
 osx/a11yrolehelper.mm
 osx/a11ywrappercombobox.h
-osx/a11yfactory.mm
 osx/a11ywrappertoolbar.mm
 osx/a11yutil.h
 osx/a11ytablewrapper.mm
@@ -663,7 +661,6 @@ osx/clipboard.hxx
 osx/HtmlFmtFlt.hxx
 osx/a11ywrapperrow.mm
 osx/README.a11y
-osx/a11ywrapper.mm
 osx/DragSource.hxx
 osx/DropTarget.cxx
 osx/a11ywrapperscrollarea.h
