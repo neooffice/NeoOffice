@@ -123,11 +123,9 @@ void JavaFilePicker_controlStateChanged( int nID, void *pPicker )
 {
 	if ( pPicker && nID == COCOA_CONTROL_ID_FILETYPE )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		if ( !Application::IsShutDown() )
 		{
-			rSolarMutex.acquire();
-
+			ACQUIRE_SOLARMUTEX
 			JavaFilePicker *pJavaFilePicker = NULL;
 			for ( ::std::list< JavaFilePicker* >::const_iterator it = aFilePickers.begin(); it != aFilePickers.end(); ++it )
 			{
@@ -144,8 +142,7 @@ void JavaFilePicker_controlStateChanged( int nID, void *pPicker )
 				aEvent.ElementId = CommonFilePickerElementIds::LISTBOX_FILTER;
 				pJavaFilePicker->controlStateChanged( aEvent );
 			}
-
-			rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 		}
 	}
 }

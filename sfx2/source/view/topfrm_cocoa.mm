@@ -475,15 +475,11 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 {
 	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-			if ( pDoc == self )
-				SFXDocument_duplicate( mpFrame, bWait, NO );
-		}
-		rSolarMutex.release();
+		ACQUIRE_SOLARMUTEX
+		SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+		if ( pDoc == self )
+			SFXDocument_duplicate( mpFrame, bWait, NO );
+		RELEASE_SOLARMUTEX
 	}
 }
 
@@ -574,15 +570,11 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 			if ( ![self isRelinquished] )
 			{
-				comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-				rSolarMutex.acquire();
-				if ( !Application::IsShutDown() )
-				{
-					SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-					if ( pDoc == self )
-						SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
-				}
-				rSolarMutex.release();
+				ACQUIRE_SOLARMUTEX
+				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+				if ( pDoc == self )
+					SFXDocument_documentHasMoved( mpFrame, NSStringToOUString( [pURL absoluteString] ) );
+				RELEASE_SOLARMUTEX
 			}
 		}
 	}];
@@ -623,11 +615,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 	id pFileID = nil;
 	NSURL *pURL = [self fileURL];
 
-	comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-	rSolarMutex.acquire();
-
-	if ( !Application::IsShutDown() )
-	{
+		ACQUIRE_SOLARMUTEX
 		SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 		if ( pDoc == self )
 		{
@@ -677,9 +665,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 				}
 			}
 		}
-	}
-
-	rSolarMutex.release();
+		RELEASE_SOLARMUTEX
 
 	aReacquirer(^{
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
@@ -805,11 +791,10 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		}
 		else
 		{
-			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
+			ACQUIRE_SOLARMUTEX
 			// Fix Mac App Store crash by not reloading if SfxGetpApp() returns
 			// NULL as that means we are already in DeInitVCL()
-			if ( !Application::IsShutDown() && SfxGetpApp() )
+			if ( SfxGetpApp() )
 			{
 				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 				if ( pDoc == self )
@@ -820,7 +805,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					SFXDocument_reload( mpFrame, bSilent );
 				}
 			}
-			rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 		}
 	}
 }
@@ -904,15 +889,11 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 
 	if ( !mbInSetDocumentModified && nChangeType == NSChangeDone && !bIsEdited && [self isDocumentEdited] )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-			if ( pDoc == self )
-				SFXDocument_documentHasBeenModified( mpFrame );
-		}
-		rSolarMutex.release();
+		ACQUIRE_SOLARMUTEX
+		SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+		if ( pDoc == self )
+			SFXDocument_documentHasBeenModified( mpFrame );
+		RELEASE_SOLARMUTEX
 	}
 }
 

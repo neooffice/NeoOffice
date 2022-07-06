@@ -138,10 +138,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 		if ( !Application::IsShutDown() )
 		{
-			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() )
-			{
+				ACQUIRE_SOLARMUTEX
+
 				// Set buttons
 				switch ( nType )
 				{
@@ -195,9 +193,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 						Application::PostUserEvent( STATIC_LINK( NULL, Window, fireMouseMovedEvent ), new MouseEventData( pMoviePlayer, aEvt ) );
 						break;
 				}
-			}
-
-			rSolarMutex.release();
+				RELEASE_SOLARMUTEX
 		}
 	}
 }
