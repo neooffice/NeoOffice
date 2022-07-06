@@ -2639,10 +2639,7 @@ static CFDataRef aRTFSelection = nil;
 		// retaining the window
 		[pWindow retain];
 
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			// Fix bug 2426 by checking the frame pointer before any use
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -2716,9 +2713,7 @@ static CFDataRef aRTFSelection = nil;
 						mbTextInputWantsNonRepeatKeyDown = YES;
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 
 		[pWindow release];
 	}

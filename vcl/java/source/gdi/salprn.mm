@@ -1433,10 +1433,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 		mpPrintOperation = pPrintOperation;
 		[mpPrintOperation retain];
 
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			PrintAccessoryViewState aAccViewState;
 			NSObject *pAccViewObj = nil;
 			sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock();
@@ -1526,9 +1523,7 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 
 			if ( pAccViewObj )
 				[pAccViewObj release];
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return bRet;
@@ -1676,11 +1671,9 @@ bool JavaSalInfoPrinter::Setup( SalFrame* /* pFrame */, ImplJobSetup* pSetupData
 			if ( Application::IsShutDown() )
 				break;
 
-			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() )
-				Application::Yield();
-			rSolarMutex.release();
+			ACQUIRE_SOLARMUTEX
+			Application::Yield();
+			RELEASE_SOLARMUTEX
 		}
 
 		NSPrintInfo *pInfo = [pJavaSalInfoPrinterShowPageLayoutDialog printInfo];

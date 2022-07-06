@@ -39,9 +39,10 @@
 #include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 
+#include "java/salinst.h"
+
 #include "DTransClipboard.hxx"
 #include "DTransTransferable.hxx"
-
 #include "../../../osx/HtmlFmtFlt.hxx"
 
 #define HTML_TYPE_TAG @"HTML"
@@ -740,14 +741,10 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 	if ( mpTransferable )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			delete mpTransferable;
-			mpTransferable = nil;
-		}
-		rSolarMutex.release();
+		ACQUIRE_SOLARMUTEX
+		delete mpTransferable;
+		mpTransferable = nil;
+		RELEASE_SOLARMUTEX
 	}
 }
 
@@ -826,12 +823,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 {
 	id pRet = nil;
 
-	if ( pTransferable && pType && !Application::IsShutDown() )
+	if ( pTransferable && pType && ImplApplicationIsRunning() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			bool bTransferableFound = false;
 			if ( pTransferable )
 			{
@@ -937,9 +931,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 					}
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return pRet;

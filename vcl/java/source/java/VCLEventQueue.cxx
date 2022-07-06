@@ -85,11 +85,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 
 	if ( pNSWindow && !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaSalFrame *pFrame = NULL;
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -217,9 +213,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 					}
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -231,11 +225,7 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaSalFrame *pFrame = NULL;
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -297,9 +287,7 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 					}
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return bRet;
@@ -313,11 +301,8 @@ void VCLEventQueue_removeCachedEvents()
 	// crash
 	if ( ImplApplicationIsRunning() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
+			ACQUIRE_SOLARMUTEX
 
-		if ( !Application::IsShutDown() )
-		{
 			// Yield to give Java event dispatch thread a chance to finish
 			Thread::yield();
 
@@ -327,8 +312,6 @@ void VCLEventQueue_removeCachedEvents()
 				if ( (*it)->mbVisible )
 					JavaSalEventQueue::removeCachedEvents( *it );
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }

@@ -651,12 +651,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					{
 						if ( ImplApplicationIsRunning() )
 						{
-							comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-							rSolarMutex.acquire();
-							mbAppMenuInitialized = YES;
+								ACQUIRE_SOLARMUTEX
+								mbAppMenuInitialized = YES;
 
-							if ( !Application::IsShutDown() )
-							{
 								NSString *pAbout = nil;
 								NSString *pPreferences = nil;
 								NSString *pServices = nil;
@@ -742,9 +739,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 										}
 									}
 								}
-							}
-
-							rSolarMutex.release();
+								RELEASE_SOLARMUTEX
 						}
 					}
 				}

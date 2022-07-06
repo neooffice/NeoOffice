@@ -437,10 +437,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -453,9 +450,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				nRet = ImplGetOperationFromActions( pTarget->handleDragEnter( aPos.X(), aPos.Y(), pSender ) );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return nRet;
@@ -473,10 +468,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -489,9 +481,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				pTarget->handleDragExit( aPos.X(), aPos.Y(), pSender );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -509,10 +499,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -525,9 +512,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				nRet = ImplGetOperationFromActions( pTarget->handleDragOver( aPos.X(), aPos.Y(), pSender ) );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return nRet;
@@ -568,10 +553,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -584,9 +566,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				bRet = pTarget->handleDrop( aPos.X(), aPos.Y(), pSender );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return bRet;
@@ -642,10 +622,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
@@ -675,9 +652,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 				// DragSourceDropEvent in the VCL event dispatch thread
 				Application::PostUserEvent( STATIC_LINK( NULL, JavaDragSource, dragDropEnd ), pDragEvent );
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	VCLInstance_setDragPrintLock( NO );
@@ -697,10 +672,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
@@ -713,9 +685,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pSource && pTrackDragOwner == pSource )
 				pSource->handleDrag( aPos.X(), aPos.Y() );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -730,9 +700,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
  
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( pTrackDragOwner && !Application::IsShutDown() )
+		ACQUIRE_SOLARMUTEX
+		if ( pTrackDragOwner )
 		{
 			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
@@ -747,8 +716,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 			if ( pSource && pSource == pTrackDragOwner )
 				nRet = ImplGetOperationMaskFromActions( pSource->mnActions );
 		}
-
-		rSolarMutex.release();
+		RELEASE_SOLARMUTEX
 	}
 
 	return nRet;
@@ -768,10 +736,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
@@ -784,9 +749,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pSource && pTrackDragOwner == pSource )
 				pSource->handleDrag( aPos.X(), aPos.Y() );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 

@@ -832,11 +832,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	{
 		// Prevent flooding of the OOo event queue when holding down a native
 		// menu shortcut by by locking the application mutex
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			JavaSalEvent *pActivateEvent = new JavaSalEvent( SALEVENT_MENUACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 			JavaSalEventQueue::postCachedEvent( pActivateEvent );
 			pActivateEvent->release();
@@ -848,9 +844,7 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 			JavaSalEvent *pDeactivateEvent = new JavaSalEvent( SALEVENT_MENUDEACTIVATE, pMenuBarFrame, new SalMenuEvent( mnID, mpMenu ) );
 			JavaSalEventQueue::postCachedEvent( pDeactivateEvent );
 			pDeactivateEvent->release();
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	nLastMenuItemSelectedTime = [NSDate timeIntervalSinceReferenceDate] + MAIN_MENU_CHANGE_WAIT_INTERVAL;

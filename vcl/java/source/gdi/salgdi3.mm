@@ -98,11 +98,9 @@ static void ImplFontListChangedCallback( CFNotificationCenterRef, void*, CFStrin
 	// Queue font list update
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-			Application::PostUserEvent( STATIC_LINK( NULL, JavaPhysicalFontFace, RunNativeFontsTimer ) );
-		rSolarMutex.release();
+		ACQUIRE_SOLARMUTEX
+		Application::PostUserEvent( STATIC_LINK( NULL, JavaPhysicalFontFace, RunNativeFontsTimer ) );
+		RELEASE_SOLARMUTEX
 	}
 
 	bInCallback = false;
@@ -162,12 +160,9 @@ static void ImplFontListChanged()
 
 	bInLoad = true;
 
-	if ( !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			SalData *pSalData = GetSalData();
 
 			// Clean out caches
@@ -490,9 +485,7 @@ static void ImplFontListChanged()
 			}
 
 			OutputDevice::ImplUpdateAllFontData( true );
-
-			rSolarMutex.release();
-		}
+			RELEASE_SOLARMUTEX
 	}
 
 	bNativeFontsLoaded = true;
