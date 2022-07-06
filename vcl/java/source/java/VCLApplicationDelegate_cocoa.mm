@@ -91,9 +91,8 @@ static BOOL IsResumeEnabled()
 static void HandleAboutRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -105,10 +104,9 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 {
 	if ( rPath.getLength() && !Application::IsShutDown() )
 	{
-		// If no application mutex exists yet, queue event as we are likely to
-		// crash. Check if ImplSVData exists first since
-		// Application::IsShutDown() uses it.
-		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+		// If no application mutex exists yet, ignore event as we are likely to
+		// crash
+		if ( ImplApplicationIsRunning() )
 		{
 			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, rPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
@@ -126,9 +124,8 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 static void HandlePreferencesRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -141,15 +138,14 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	NSApplicationTerminateReply nRet = NSTerminateCancel;
 
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
 		// application mutex on the main thread
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pEvent );
-		while ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+		while ( ImplApplicationIsRunning() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
 			NSApplication_dispatchPendingEvents( NO, YES );
 		pEvent->release();
 	}
@@ -160,9 +156,8 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 static void HandleDidChangeScreenParametersRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SCREENPARAMSCHANGED, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
@@ -654,9 +649,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					NSMenu *pAppMenu = [pItem submenu];
 					if ( pAppMenu )
 					{
-						// Check if ImplSVData exists first since
-						// Application::IsShutDown() uses it
-						if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+						if ( ImplApplicationIsRunning() )
 						{
 							comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 							rSolarMutex.acquire();

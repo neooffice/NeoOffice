@@ -827,9 +827,8 @@ static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 	}
 
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
 		// Prevent flooding of the OOo event queue when holding down a native
 		// menu shortcut by by locking the application mutex

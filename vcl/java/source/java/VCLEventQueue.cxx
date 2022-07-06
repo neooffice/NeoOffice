@@ -310,9 +310,8 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 void VCLEventQueue_removeCachedEvents()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();

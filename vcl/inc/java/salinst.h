@@ -43,6 +43,7 @@
 #include <vcl/svapp.hxx>
 
 #include "salinst.hxx"
+#include "svdata.hxx"
 #include "java/salframe.h"
 
 // Custom event types
@@ -240,5 +241,10 @@ public:
 	static void				setLastNativeEventTime( double nEventTime );
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
+
+extern "C" inline sal_Bool ImplSalInstanceExists() { return ( ImplGetSVData() && ImplGetSVData()->mpDefInst ); }
+
+// Check if ImplSVData exists first since Application::IsShutDown() uses it
+extern "C" inline sal_Bool ImplApplicationIsRunning() { return ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() ); }
 
 #endif // _SV_SALINST_H

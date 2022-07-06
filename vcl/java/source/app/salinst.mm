@@ -264,9 +264,8 @@ sal_Bool VCLInstance_updateNativeMenus()
 	sal_Bool bRet = sal_False;
 
 	// If no application mutex exists yet, queue event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( !ImplGetSVData() || !ImplGetSVData()->mpDefInst || Application::IsShutDown() )
+	// crash
+	if ( !ImplApplicationIsRunning() )
 		return bRet;
 
 	// Check if there is a native modal window as we will deadlock when a
@@ -404,8 +403,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 {
 	sal_Bool bRet = sal_False;
 
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 	{
 		Application::GetSolarMutex().acquire();
 		bRet = sal_True;
@@ -420,8 +418,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 		Application::GetSolarMutex().release();
 }
 
@@ -431,8 +428,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_acquireAllSolarMutex( sal_uLong nCount )
 {
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 		Application::AcquireSolarMutex( nCount );
 }
 
@@ -444,8 +440,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_uLong Application_releaseAllSolarMutex()
 {
 	sal_uLong nRet = 0;
 
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 		nRet = Application::ReleaseSolarMutex();
 
 	return nRet;

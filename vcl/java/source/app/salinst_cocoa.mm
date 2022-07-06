@@ -1054,7 +1054,7 @@ id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurit
 {
 	id pRet = nil;
 
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
+	if ( ImplSalInstanceExists() && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1072,7 +1072,7 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 {
 	id pRet = nil;
 
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL )
+	if ( ImplSalInstanceExists() && pNonSecurityScopedURL )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1107,7 +1107,7 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 
 void Application_cacheSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL )
 {
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
+	if ( ImplSalInstanceExists() && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
