@@ -1226,11 +1226,13 @@ void SpinField::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, 
         aUp.Top()++;
         aDown.Move( aPos.X(), aPos.Y() );
 
+#ifndef USE_JAVA
         Color aButtonTextColor;
         if ( ( nFlags & WINDOW_DRAW_MONO ) || ( eOutDevType == OUTDEV_PRINTER ) )
             aButtonTextColor = Color( COL_BLACK );
         else
             aButtonTextColor = GetSettings().GetStyleSettings().GetButtonTextColor();
+#endif	// !USE_JAVA
 
         if ( GetStyle() & WB_DROPDOWN )
         {

@@ -113,7 +113,7 @@ bool SalGraphics::getNativeControlRegion(  ControlType,
  *
  *  aValue:		An optional value (tristate/numerical/string)
  */
-bool SalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& nTextColor )
+bool SalGraphics::getNativeControlTextColor( ControlType /* nType */, ControlPart /* nPart */, ControlState /* nState */, const ImplControlValue& /* aValue */, SalColor& /* nTextColor */ )
 {
     return false;
 }

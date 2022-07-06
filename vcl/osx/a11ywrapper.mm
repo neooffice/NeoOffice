@@ -62,6 +62,11 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
 #ifdef USE_JAVA
+
+@interface NSObject (AquaA11yWrapper)
+- (nullable id)accessibilityAttributeValue:(NSAccessibilityAttributeName)attribute;
+@end
+
 @interface VCLPanel (AquaA11yWrapper)
 {
 }
@@ -262,7 +267,14 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             return subRole;
         } else {
             [ subRole release ];
+#ifdef USE_JAVA
+            if ( [ super respondsToSelector:@selector(accessibilityAttributeValue:) ] )
+#endif	// USE_JAVA
             return [ super accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
+#ifdef USE_JAVA
+            else
+                return @"";
+#endif	// USE_JAVA
         }
     }
 }
@@ -938,7 +950,13 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( [ parent isKindOfClass: [ AquaA11yWrapper class ] ] ) {
         parentAsWrapper = (AquaA11yWrapper *) parent;
     }
+#ifdef USE_JAVA
+    NSString * parentRole = @"";
+    if ( [ parent respondsToSelector:@selector(accessibilityAttributeValue:) ] )
+        parentRole = (NSString *) [ parent accessibilityAttributeValue: NSAccessibilityRoleAttribute ];
+#else	// USE_JAVA
     NSString * parentRole = (NSString *) [ parent accessibilityAttributeValue: NSAccessibilityRoleAttribute ];
+#endif	// USE_JAVA
     // if we are a textarea inside a combobox, then the combobox is the action responder
     if ( enabled
       && [ role isEqualToString: NSAccessibilityTextAreaRole ]
@@ -980,8 +998,17 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 -(BOOL)isViewElement:(NSObject *)viewElement hitByPoint:(NSPoint)point {
     BOOL hit = NO;
     NSAutoreleasePool * pool = [ [ NSAutoreleasePool alloc ] init ];
+#ifdef USE_JAVA
+    NSValue * position = nil;
+    NSValue * size = nil;
+    if ( [ viewElement respondsToSelector:@selector(accessibilityAttributeValue:) ] ) {
+        position = [ viewElement accessibilityAttributeValue: NSAccessibilityPositionAttribute ];
+        size = [ viewElement accessibilityAttributeValue: NSAccessibilitySizeAttribute ];
+    }
+#else	// USE_JAVA
     NSValue * position = [ viewElement accessibilityAttributeValue: NSAccessibilityPositionAttribute ];
     NSValue * size = [ viewElement accessibilityAttributeValue: NSAccessibilitySizeAttribute ];
+#endif	// USE_JAVA
     if ( position != nil && size != nil ) {
         float minX = [ position pointValue ].x;
         float minY = [ position pointValue ].y;

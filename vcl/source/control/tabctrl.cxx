@@ -467,7 +467,9 @@ Rectangle TabControl::ImplGetTabRect( sal_uInt16 nItemPos, long nWidth, long nHe
         nMaxWidth -= GetItemsOffset().X();
 
         sal_uInt16          nLines = 0;
+#ifndef USE_JAVA
         sal_uInt16          nCurLine = 0;
+#endif	// !USE_JAVA
         long            nLineWidthAry[100];
         sal_uInt16          nLinePosAry[101];
 
@@ -508,8 +510,10 @@ Rectangle TabControl::ImplGetTabRect( sal_uInt16 nItemPos, long nWidth, long nHe
             nLineWidthAry[nLines] += aSize.Width();
             nX += aSize.Width();
 
+#ifndef USE_JAVA
             if ( it->mnId == mnCurPageId )
                 nCurLine = nLines;
+#endif	// !USE_JAVA
 
             nPos++;
         }
