@@ -64,6 +64,7 @@ static ::osl::Mutex aCachedContextMutex;
 static CGSize aCachedContextSize = CGSizeMake( 0, 0 );
 static NSWindow *pCachedContextWindow = nil;
 
+using namespace com::sun::star::accessibility;
 using namespace osl;
 
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
@@ -738,16 +739,14 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
-- (nullable id)accessibilityAttributeValue:(NSAccessibilityAttributeName)attribute;
+#ifndef USE_AQUA_A11Y
+- (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
+#endif	// !USE_AQUA_A11Y
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
 - (void)paste:(id)pSender;
 - (void)redo:(id)pSender;
 - (void)undo:(id)pSender;
-@end
-
-@interface NSView (VCLViewPoseAs)
-- (BOOL)poseAsAccessibilityIsIgnored;
 @end
 
 @interface VCLCMenuBar : NSObject
@@ -802,6 +801,15 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	[self setDelegate:self];
 	[self setAcceptsMouseMovedEvents:YES];
 }
+
+#ifdef USE_AQUA_A11Y
+
+- (XAccessibleContext *)accessibleContext
+{
+	return nullptr;
+}
+
+#endif	// USE_AQUA_A11Y
 
 - (BOOL)canBecomeKeyWindow
 {
@@ -998,6 +1006,15 @@ static NSUInteger nMouseMask = 0;
 	[self setDelegate:self];
 	[self setAcceptsMouseMovedEvents:YES];
 }
+
+#ifdef USE_AQUA_A11Y
+
+- (XAccessibleContext *)accessibleContext
+{
+	return nullptr;
+}
+
+#endif	// USE_AQUA_A11Y
 
 - (void)becomeKeyWindow
 {
@@ -2154,7 +2171,16 @@ static CFDataRef aRTFSelection = nil;
 	}
 }
 
-- (id)accessibilityAttributeValue:(NSString *)aAttribute
+#ifdef USE_AQUA_A11Y
+
+- (XAccessibleContext *)accessibleContext
+{
+	return nullptr;
+}
+
+#else	// USE_AQUA_A11Y
+
+- (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute
 {
 	if ( [NSAccessibilityRoleAttribute isEqualToString:aAttribute] )
 	{
@@ -2185,6 +2211,8 @@ static CFDataRef aRTFSelection = nil;
 
 	return nil;
 }
+
+#endif	// USE_AQUA_A11Y
 
 - (void)dealloc
 {

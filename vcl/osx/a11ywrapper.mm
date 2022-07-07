@@ -62,25 +62,16 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
 
 #ifdef USE_JAVA
-
 @interface NSObject (AquaA11yWrapper)
-- (nullable id)accessibilityAttributeValue:(NSAccessibilityAttributeName)attribute;
+- (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
 @end
-
-@interface VCLPanel (AquaA11yWrapper)
-{
-}
--(Reference<XAccessibleContext>)accessibleContext;
-@end
-
-@interface VCLWindow (AquaA11yWrapper)
 #else	// USE_JAVA
 @interface SalFrameWindow : NSWindow
-#endif	// USE_JAVA
 {
 }
 -(Reference<XAccessibleContext>)accessibleContext;
 @end
+#endif	// USE_JAVA
 
 static BOOL isPopupMenuOpen = NO;
 

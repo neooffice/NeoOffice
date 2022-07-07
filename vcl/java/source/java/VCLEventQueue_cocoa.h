@@ -36,7 +36,13 @@
 #ifndef __VCLEVENTQUEUE_COCOA_H__
 #define __VCLEVENTQUEUE_COCOA_H__
 
+#include <com/sun/star/accessibility/XAccessibleContext.hpp>
+
 #include "java/salframe.h"
+#include "osx/a11ywrapper.h"
+
+// Uncomment to enable LibreOffice's native accessibility code
+// #define USE_AQUA_A11Y
 
 #ifdef __OBJC__
 
@@ -63,7 +69,11 @@
 + (NSColor *)unemphasizedSelectedTextColor;
 @end
 
+#ifdef USE_AQUA_A11Y
+@interface VCLView : AquaA11yWrapper <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
+#else	// USE_AQUA_A11Y
 @interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
+#endif	// USE_AQUA_A11Y
 {
 	JavaSalFrame*			mpFrame;
 	BOOL					mbInKeyDown;
@@ -77,7 +87,11 @@
 }
 - (BOOL)acceptsFirstResponder;
 - (void)abandonInput;
-- (id)accessibilityAttributeValue:(NSString *)aAttribute;
+#ifdef USE_AQUA_A11Y
+- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+#else	// USE_AQUA_A11Y
+- (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
+#endif	// USE_AQUA_A11Y
 - (void)dealloc;
 - (void)keyDown:(NSEvent *)pEvent;
 - (void)keyUp:(NSEvent *)pEvent;
@@ -139,6 +153,9 @@
 	NSRect					maNonFullScreenFrame;
 }
 - (void)_init;
+#ifdef USE_AQUA_A11Y
+- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+#endif	// USE_AQUA_A11Y
 - (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
 - (NSRect)nonFullScreenFrame;
@@ -162,6 +179,9 @@
 + (void)restoreModalWindowLevel;
 + (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)_init;
+#ifdef USE_AQUA_A11Y
+- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+#endif	// USE_AQUA_A11Y
 - (void)becomeKeyWindow;
 - (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
@@ -195,6 +215,18 @@
 - (void)windowWillClose:(NSNotification *)pNotification;
 - (void)windowWillExitVersionBrowser:(NSNotification *)pNotification;
 @end
+
+#ifndef USE_AQUA_A11Y
+
+@interface VCLPanel (AquaA11yWrapper)
+- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+@end
+
+@interface VCLWindow (AquaA11yWrapper)
+- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+@end
+
+#endif	// !USE_AQUA_A11Y
 
 SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
 SAL_DLLPRIVATE NSCursor *JavaSalFrame_getCursor( NSView *pView );
