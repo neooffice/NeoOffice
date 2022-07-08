@@ -42,8 +42,10 @@
 
 #include <osl/objcutils.h>
 #include <vcl/cmdevt.hxx>
+#include <vcl/window.hxx>
 
 #include "java/saldata.hxx"
+#include "osx/a11yfactory.h"
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
@@ -64,7 +66,6 @@ static ::osl::Mutex aCachedContextMutex;
 static CGSize aCachedContextSize = CGSizeMake( 0, 0 );
 static NSWindow *pCachedContextWindow = nil;
 
-using namespace com::sun::star::accessibility;
 using namespace osl;
 
 inline long FloatToLong( float f ) { return (long)( f == 0 ? f : f < 0 ? f - 0.5 : f + 0.5 ); }
@@ -804,9 +805,9 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 #ifdef USE_AQUA_A11Y
 
-- (XAccessibleContext *)accessibleContext
+-(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext
 {
-	return nullptr;
+    return mpFrame -> GetWindow() -> GetAccessible() -> getAccessibleContext();
 }
 
 #endif	// USE_AQUA_A11Y
@@ -1009,9 +1010,9 @@ static NSUInteger nMouseMask = 0;
 
 #ifdef USE_AQUA_A11Y
 
-- (XAccessibleContext *)accessibleContext
+-(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext
 {
-	return nullptr;
+    return mpFrame -> GetWindow() -> GetAccessible() -> getAccessibleContext();
 }
 
 #endif	// USE_AQUA_A11Y
@@ -2173,9 +2174,19 @@ static CFDataRef aRTFSelection = nil;
 
 #ifdef USE_AQUA_A11Y
 
-- (XAccessibleContext *)accessibleContext
+- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext
 {
-	return nullptr;
+    if ( mpReferenceWrapper == nil ) {
+        // some frames never become visible ..
+        ::vcl::Window *pWindow = mpFrame -> GetWindow();
+        if ( ! pWindow )
+            return nil;
+
+        mpReferenceWrapper = new ReferenceWrapper;
+        mpReferenceWrapper -> rAccessibleContext =  pWindow -> /*GetAccessibleChildWindow( 0 ) ->*/ GetAccessible() -> getAccessibleContext();
+        [ AquaA11yFactory insertIntoWrapperRepository: self forAccessibleContext: mpReferenceWrapper -> rAccessibleContext ];
+    }
+    return [ super accessibleContext ];
 }
 
 #else	// USE_AQUA_A11Y

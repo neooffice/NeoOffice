@@ -37,6 +37,7 @@
 #define __VCLEVENTQUEUE_COCOA_H__
 
 #include <com/sun/star/accessibility/XAccessibleContext.hpp>
+#include <com/sun/star/uno/Reference.hxx>
 
 #include "java/salframe.h"
 #include "osx/a11ywrapper.h"
@@ -154,7 +155,7 @@
 }
 - (void)_init;
 #ifdef USE_AQUA_A11Y
-- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+- (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
 #endif	// USE_AQUA_A11Y
 - (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
@@ -180,7 +181,7 @@
 + (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)_init;
 #ifdef USE_AQUA_A11Y
-- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+- (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
 #endif	// USE_AQUA_A11Y
 - (void)becomeKeyWindow;
 - (BOOL)canBecomeKeyWindow;
@@ -219,11 +220,11 @@
 #ifndef USE_AQUA_A11Y
 
 @interface VCLPanel (AquaA11yWrapper)
-- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+- (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
 @end
 
 @interface VCLWindow (AquaA11yWrapper)
-- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+- (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
 @end
 
 #endif	// !USE_AQUA_A11Y
