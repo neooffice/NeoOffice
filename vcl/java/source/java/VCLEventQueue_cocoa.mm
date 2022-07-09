@@ -807,7 +807,18 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 -(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext
 {
-    return mpFrame -> GetWindow() -> GetAccessible() -> getAccessibleContext();
+	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > aRet;
+
+	if ( mpFrame )
+	{
+		ACQUIRE_SOLARMUTEX
+		::vcl::Window *pWindow = mpFrame->GetWindow();
+		if ( pWindow )
+			aRet = pWindow->GetAccessible()->getAccessibleContext();
+		RELEASE_SOLARMUTEX
+	}
+
+	return aRet;
 }
 
 #endif	// USE_AQUA_A11Y
@@ -1012,7 +1023,18 @@ static NSUInteger nMouseMask = 0;
 
 -(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext
 {
-    return mpFrame -> GetWindow() -> GetAccessible() -> getAccessibleContext();
+	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > aRet;
+
+	if ( mpFrame )
+	{
+		ACQUIRE_SOLARMUTEX
+		::vcl::Window *pWindow = mpFrame->GetWindow();
+		if ( pWindow )
+			aRet = pWindow->GetAccessible()->getAccessibleContext();
+		RELEASE_SOLARMUTEX
+	}
+
+	return aRet;
 }
 
 #endif	// USE_AQUA_A11Y
@@ -1454,7 +1476,7 @@ static NSUInteger nMouseMask = 0;
 			{
 				// Fix toolbar popup from appearing after selecting the
 				// Move Tab to New Window menu item in a tab's popover window
-                // by detecting if the event changed the window's content size
+				// by detecting if the event changed the window's content size
 				NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
 				if ( aContentFrame.size.width != aOldContentFrame.size.width || aContentFrame.size.height != aOldContentFrame.size.height )
 					return;
@@ -1763,7 +1785,7 @@ static NSUInteger nMouseMask = 0;
 
 			NSPoint aLocation = GetFlippedContentViewLocation( self, pEvent );
 
-	        // Fix bug 3030 by setting the modifiers. Note that we ignore the
+			// Fix bug 3030 by setting the modifiers. Note that we ignore the
 			// Shift modifier as using it will disable horizontal scrolling.
 			sal_uInt16 nCode = GetEventCode( nModifiers ) & ( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 );
 			BOOL bScrollPages = ( nType == NSEventTypeSwipe && ! ( nModifiers & NSEventModifierFlagCommand ) );
@@ -2176,17 +2198,30 @@ static CFDataRef aRTFSelection = nil;
 
 - (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext
 {
-    if ( mpReferenceWrapper == nil ) {
-        // some frames never become visible ..
-        ::vcl::Window *pWindow = mpFrame -> GetWindow();
-        if ( ! pWindow )
-            return nil;
+	if ( !mpFrame )
+		return nullptr;
 
-        mpReferenceWrapper = new ReferenceWrapper;
-        mpReferenceWrapper -> rAccessibleContext =  pWindow -> /*GetAccessibleChildWindow( 0 ) ->*/ GetAccessible() -> getAccessibleContext();
-        [ AquaA11yFactory insertIntoWrapperRepository: self forAccessibleContext: mpReferenceWrapper -> rAccessibleContext ];
-    }
-    return [ super accessibleContext ];
+	if ( !mpReferenceWrapper )
+	{
+		ACQUIRE_SOLARMUTEX
+		// some frames never become visible ..
+		::vcl::Window *pWindow = mpFrame->GetWindow();
+		if ( !pWindow )
+		{
+			rSolarMutex.release();
+			return nullptr;
+		}
+
+		if ( !mpReferenceWrapper )
+		{
+			mpReferenceWrapper = new ReferenceWrapper;
+			mpReferenceWrapper->rAccessibleContext = pWindow->GetAccessible()->getAccessibleContext();
+			[AquaA11yFactory insertIntoWrapperRepository:self forAccessibleContext:mpReferenceWrapper ->rAccessibleContext ];
+		}
+		RELEASE_SOLARMUTEX
+	}
+
+	return [super accessibleContext];
 }
 
 #else	// USE_AQUA_A11Y
