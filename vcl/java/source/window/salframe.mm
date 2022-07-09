@@ -51,6 +51,7 @@
 #include "java/salmenu.h"
 #include "java/salobj.h"
 #include "java/salsys.h"
+#include "osx/a11yfactory.h"
 
 #include "../java/VCLEventQueue_cocoa.h"
 
@@ -1662,6 +1663,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 		CloseOrOrderOutWindow( mpWindow );
 
+#ifdef USE_AQUA_A11Y
+		[AquaA11yFactory revokeView:[mpWindow contentView]];
+#endif	// USE_AQUA_A11Y
+
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
 		if ( nwit != aNativeWindowMap.end() )
 			aNativeWindowMap.erase( nwit );
@@ -2203,6 +2208,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			// combobox or listbox is reopened so always apply immediately
 			// before displaying the window
 			[self adjustCornerRadius];
+
+#ifdef USE_AQUA_A11Y
+			[AquaA11yFactory registerView:[mpWindow contentView]];
+#endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			BOOL bCanBecomeKeyWindow;

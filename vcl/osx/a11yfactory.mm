@@ -208,7 +208,11 @@ static bool enabled = false;
     // TODO: when RADIO_BUTTON search for associated RadioGroup-wrapper and delete that as well
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessibleContext createIfNotExists: NO ];
     if ( theWrapper != nil ) {
+#ifdef USE_JAVA
+        if (![theWrapper isKindOfClass:[VCLView class]]) {
+#else	// USE_JAVA
         if (![theWrapper isKindOfClass:NSClassFromString(@"SalFrameView")]) {
+#endif	// USE_JAVA
             [theWrapper removeFromSuperview];
         }
         [ [ AquaA11yFactory allWrapper ] removeObjectForKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
