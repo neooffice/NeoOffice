@@ -3648,8 +3648,16 @@ void JavaSalFrame::SetVisible( bool bVisible, bool bNoActivate )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+#ifdef USE_AQUA_A11Y
+		// Native accessibility calls will the following selector is run on
+		// the main thread so release the application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+#endif	// USE_AQUA_A11Y
 		VCLWindowWrapperArgs *pSetVisibleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:bVisible], [NSNumber numberWithBool:bNoActivate], nil]];
 		osl_performSelectorOnMainThread( mpWindow, @selector(setVisible:), pSetVisibleArgs, YES );
+#ifdef USE_AQUA_A11Y
+		Application::AcquireSolarMutex( nCount );
+#endif	// USE_AQUA_A11Y
 
 		[pPool release];
 	}
