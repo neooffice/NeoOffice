@@ -2224,6 +2224,16 @@ static CFDataRef aRTFSelection = nil;
 	return [super accessibleContext];
 }
 
+- (id)parentAttribute
+{
+	return [self window];
+}
+
+- (NSWindow *)windowForParent
+{
+	return [self window];
+}
+
 #else	// USE_AQUA_A11Y
 
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute

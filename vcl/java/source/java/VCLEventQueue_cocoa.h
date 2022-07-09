@@ -90,6 +90,8 @@
 - (void)abandonInput;
 #ifdef USE_AQUA_A11Y
 - (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
+- (id)parentAttribute;
+- (NSWindow *)windowForParent;
 #else	// USE_AQUA_A11Y
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
 #endif	// USE_AQUA_A11Y
