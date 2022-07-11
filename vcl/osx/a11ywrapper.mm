@@ -1299,8 +1299,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 #ifdef USE_JAVA
 
 -(void)removeFromWrapperRepositoryOnMainThread: (id)pObject {
-    (void)pObject;
-
     if ( pObject && [ pObject isKindOfClass:[ AquaA11yWrapper class ] ] )
     {
         ACQUIRE_SOLARMUTEX
