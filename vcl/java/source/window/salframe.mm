@@ -619,6 +619,7 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)adjustColorLevelAndShadow;
 - (void)adjustCornerRadius;
 - (void)animateWaitingView:(BOOL)bAnimate;
+- (void)disconnectJavaFrame:(id)pObject;
 - (id)initWithStyle:(sal_uLong)nStyle frame:(JavaSalFrame *)pFrame parent:(NSWindow *)pParent showOnlyMenus:(BOOL)bShowOnlyMenus utility:(BOOL)bUtility;
 - (void)deminimize:(VCLWindowWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
@@ -1424,6 +1425,20 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	}
 }
 
+- (void)disconnectJavaFrame:(id)pObject
+{
+	(void)pObject;
+
+	mpFrame = nullptr;
+	if ( mpWindow )
+	{
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow setJavaFrame:mpFrame];
+		else
+			[(VCLWindow *)mpWindow setJavaFrame:mpFrame];
+	}
+}
+
 - (void)adjustColorLevelAndShadow
 {
 	if ( mpWindow )
@@ -1654,10 +1669,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 		// Disconnect frame from native window as the frame may be deleted
 		// before the destroy: selector is run
-		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow setJavaFrame:nullptr];
-		else
-			[(VCLWindow *)mpWindow setJavaFrame:nullptr];
+		[self disconnectJavaFrame:self];
 	}
 
 	// Attempt to fix Mac App Store crash by delaying release of native window
@@ -2766,16 +2778,14 @@ JavaSalFrame::~JavaSalFrame()
 	if ( mpWindow )
 	{
 #ifdef USE_AQUA_A11Y
-		// Native accessibility calls will be called when the following
-		// selector is run on the main thread so release the
-		// application mutex
-		sal_uLong nCount = Application::ReleaseSolarMutex();
-#endif	// USE_AQUA_A11Y
+		// Avoid releasing the application mutex by disconnecting frame from
+		// native window and delaying release of the window wrapper
+		osl_performSelectorOnMainThread( mpWindow, @selector(disconnectJavaFrame:), mpWindow, YES );
+		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, NO );
+#else	// USE_AQUA_A11Y
 		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
-		[mpWindow release];
-#ifdef USE_AQUA_A11Y
-		Application::AcquireSolarMutex( nCount );
 #endif	// USE_AQUA_A11Y
+		[mpWindow release];
 	}
 
 	[pPool release];
@@ -4961,16 +4971,16 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			if ( mpWindow )
 			{
 #ifdef USE_AQUA_A11Y
-				// Native accessibility calls will be called when the following
-				// selector is run on the main thread so release the
-				// application mutex
-				sal_uLong nCount = Application::ReleaseSolarMutex();
-#endif	// USE_AQUA_A11Y
+				// Disconnect frame from native window as this frame will
+				// reregister itself when this frame is reshown
+				osl_performSelectorOnMainThread( mpWindow, @selector(disconnectJavaFrame:), mpWindow, YES );
+				// Avoid releasing the application mutex by delaying release
+				// of the old window wrapper
+				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, NO );
+#else	// USE_AQUA_A11Y
 				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
-				[mpWindow release];
-#ifdef USE_AQUA_A11Y
-				Application::AcquireSolarMutex( nCount );
 #endif	// USE_AQUA_A11Y
+				[mpWindow release];
 			}
 
 			[pWindow retain];
