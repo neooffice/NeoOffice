@@ -205,7 +205,6 @@ inc/osx/salnativewidgets.h
 inc/osx/osxvcltypes.h
 inc/osx/vclnsapp.h
 inc/osx/salsys.h
-inc/osx/a11yfactory.h
 inc/osx/saldata.hxx
 inc/osx/keyboardfocuslistener.hxx
 inc/osx/salnstimer.h

@@ -303,8 +303,14 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)enabledAttribute {
+#ifdef USE_JAVA
+    XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
+    if ( pAccessibleContext && pAccessibleContext -> getAccessibleStateSet().is() ) {
+        return [ NSNumber numberWithBool: pAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::ENABLED ) ];
+#else	// USE_JAVA
     if ( [ self accessibleContext ] -> getAccessibleStateSet().is() ) {
         return [ NSNumber numberWithBool: [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::ENABLED ) ];
+#endif	// USE_JAVA
     } else {
         return nil;
     }
@@ -769,7 +775,16 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         return NO;
     }
     BOOL ignored = NO;
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return ignored;
+    ACQUIRE_SOLARMUTEX
+    XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
+    if ( pAccessibleContext ) {
+        sal_Int16 nRole = [ self accessibleContext ] -> getAccessibleRole();
+#else	// USE_JAVA
     sal_Int16 nRole = [ self accessibleContext ] -> getAccessibleRole();
+#endif	// USE_JAVA
     switch ( nRole ) {
         //case AccessibleRole::PANEL:
         case AccessibleRole::FRAME:
@@ -780,9 +795,17 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             ignored = YES;
             break;
         default:
+#ifdef USE_JAVA
+            ignored = ! ( pAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::VISIBLE ) );
+#else	// USE_JAVA
             ignored = ! ( [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::VISIBLE ) );
+#endif	// USE_JAVA
             break;
     }
+#ifdef USE_JAVA
+    }
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
     return ignored; // TODO: to be completed
 }
 
@@ -1300,11 +1323,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 -(void)removeFromWrapperRepositoryOnMainThread: (id)pObject {
     if ( pObject && [ pObject isKindOfClass:[ AquaA11yWrapper class ] ] )
-    {
-        ACQUIRE_SOLARMUTEX
-        [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) pObject accessibleContext ] ];
-        RELEASE_SOLARMUTEX
-    }
+        [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) pObject ];
 }
 
 #endif	// USE_JAVA

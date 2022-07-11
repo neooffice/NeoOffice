@@ -225,6 +225,22 @@ static bool enabled = false;
     }
 }
 
+#ifdef USE_JAVA
+
++(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper {
+    if ( theWrapper && enabled ) {
+        if (![theWrapper isKindOfClass:[VCLView class]])
+            [theWrapper removeFromSuperviewWithoutNeedingDisplay];
+
+        NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
+        NSArray< NSValue* > *pKeysForView = [ dAllWrapper allKeysForObject: theWrapper ];
+        if ( pKeysForView && [pKeysForView count] )
+            [ dAllWrapper removeObjectsForKeys: pKeysForView ];
+    }
+}
+
+#endif	// USE_JAVA
+
 +(void)registerView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
 #ifdef USE_JAVA
@@ -243,13 +259,9 @@ static bool enabled = false;
 +(void)revokeView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
 #ifdef USE_JAVA
-    {
-        ACQUIRE_SOLARMUTEX
-#endif	// USE_JAVA
+        [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theView ];
+#else	// USE_JAVA
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) theView accessibleContext ] ];
-#ifdef USE_JAVA
-        RELEASE_SOLARMUTEX
-    }
 #endif	// USE_JAVA
     }
 }
