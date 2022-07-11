@@ -214,10 +214,11 @@ static bool enabled = false;
     if ( theWrapper != nil ) {
 #ifdef USE_JAVA
         if (![theWrapper isKindOfClass:[VCLView class]]) {
+            [theWrapper removeFromSuperviewWithoutNeedingDisplay];
 #else	// USE_JAVA
         if (![theWrapper isKindOfClass:NSClassFromString(@"SalFrameView")]) {
-#endif	// USE_JAVA
             [theWrapper removeFromSuperview];
+#endif	// USE_JAVA
         }
         [ [ AquaA11yFactory allWrapper ] removeObjectForKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
         [ theWrapper release ];

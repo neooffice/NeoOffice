@@ -833,7 +833,12 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         }
         try
         {
+#ifdef USE_JAVA
+            if ( pAccessibleContext )
+                nAccessibleChildren = pAccessibleContext -> getAccessibleChildCount();
+#else	// USE_JAVA
             nAccessibleChildren = [ self accessibleContext ] -> getAccessibleChildCount();
+#endif	// USE_JAVA
             if (  nAccessibleChildren > 0 ) {
                 [ attributeNames addObject: NSAccessibilityChildrenAttribute ];
         }
