@@ -716,7 +716,6 @@ static NSComboBox *pSharedComboBox = nil;
 				@catch ( NSException *pExc )
 				{
 					// Something has gone wrong so dispose of the combobox
-CFShow( [pSharedComboBox className] );
 					NSComboBox *pOldSharedComboBox = pSharedComboBox;
 					pSharedComboBox = nil;
 					[pOldSharedComboBox release];

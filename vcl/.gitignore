@@ -212,8 +212,6 @@ inc/osx/salnstimer.h
 inc/osx/salobj.h
 inc/osx/a11yfocustracker.hxx
 inc/osx/svsys.h
-inc/osx/salinst.h
-inc/osx/a11ywrapper.h
 inc/osx/salnsmenu.h
 inc/osx/salprn.h
 inc/osx/saltimer.h
@@ -655,7 +653,6 @@ osx/a11ywrappercombobox.h
 osx/a11ywrappertoolbar.mm
 osx/a11yutil.h
 osx/a11ytablewrapper.mm
-osx/a11ylistener.cxx
 osx/clipboard.hxx
 osx/HtmlFmtFlt.hxx
 osx/a11ywrapperrow.mm

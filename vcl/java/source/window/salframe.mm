@@ -1235,8 +1235,11 @@ static void CloseOrOrderOutWindow( NSWindow *pWindow )
 
 		// Release the content view's layer now
 		NSView *pContentView = [pWindow contentView];
-		if ( pContentView && pContentView.layer )
-			pContentView.layer = nil;
+		if ( pContentView )
+		{
+			if ( pContentView.layer )
+				pContentView.layer = nil;
+		}
 
 		[pWindow close];
 
@@ -1641,6 +1644,22 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 - (void)destroy:(id)pObject
 {
+	if ( mpWindow )
+	{
+#ifdef USE_AQUA_A11Y
+		NSView *pContentView = [mpWindow contentView];
+		if ( pContentView )
+			[AquaA11yFactory revokeView:pContentView];
+#endif	// USE_AQUA_A11Y
+
+		// Disconnect frame from native window as the frame may be deleted
+		// before the destroy: selector is run
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow setJavaFrame:nullptr];
+		else
+			[(VCLWindow *)mpWindow setJavaFrame:nullptr];
+	}
+
 	// Attempt to fix Mac App Store crash by delaying release of native window
 	// and related objects
 	if ( pObject )
@@ -1662,10 +1681,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[pParentWindow removeChildWindow:mpWindow];
 
 		CloseOrOrderOutWindow( mpWindow );
-
-#ifdef USE_AQUA_A11Y
-		[AquaA11yFactory revokeView:[mpWindow contentView]];
-#endif	// USE_AQUA_A11Y
 
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
 		if ( nwit != aNativeWindowMap.end() )
@@ -2210,7 +2225,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[self adjustCornerRadius];
 
 #ifdef USE_AQUA_A11Y
-			[AquaA11yFactory registerView:[mpWindow contentView]];
+			NSView *pContentView = [mpWindow contentView];
+			if ( pContentView )
+				[AquaA11yFactory registerView:pContentView];
 #endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
@@ -2748,8 +2765,17 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( mpWindow )
 	{
+#ifdef USE_AQUA_A11Y
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+#endif	// USE_AQUA_A11Y
 		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
 		[mpWindow release];
+#ifdef USE_AQUA_A11Y
+		Application::AcquireSolarMutex( nCount );
+#endif	// USE_AQUA_A11Y
 	}
 
 	[pPool release];
@@ -3658,8 +3684,9 @@ void JavaSalFrame::SetVisible( bool bVisible, bool bNoActivate )
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 #ifdef USE_AQUA_A11Y
-		// Native accessibility calls will the following selector is run on
-		// the main thread so release the application mutex
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
 		sal_uLong nCount = Application::ReleaseSolarMutex();
 #endif	// USE_AQUA_A11Y
 		VCLWindowWrapperArgs *pSetVisibleArgs = [VCLWindowWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:bVisible], [NSNumber numberWithBool:bNoActivate], nil]];
@@ -4933,8 +4960,17 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			// Release old window wrapper
 			if ( mpWindow )
 			{
+#ifdef USE_AQUA_A11Y
+				// Native accessibility calls will be called when the following
+				// selector is run on the main thread so release the
+				// application mutex
+				sal_uLong nCount = Application::ReleaseSolarMutex();
+#endif	// USE_AQUA_A11Y
 				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
 				[mpWindow release];
+#ifdef USE_AQUA_A11Y
+				Application::AcquireSolarMutex( nCount );
+#endif	// USE_AQUA_A11Y
 			}
 
 			[pWindow retain];

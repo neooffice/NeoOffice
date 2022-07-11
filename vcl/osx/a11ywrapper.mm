@@ -25,7 +25,11 @@
  */
 
 
+#ifdef USE_JAVA
+#include "java/salinst.h"
+#else	// USE_JAVA
 #include "osx/salinst.h"
+#endif	// USE_JAVA
 #include "osx/saldata.hxx"
 
 #include "osx/a11ywrapper.h"
@@ -163,9 +167,15 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(void)dealloc {
+#ifdef USE_JAVA
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     if ( mpReferenceWrapper != nil ) {
         delete mpReferenceWrapper;
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
     [ super dealloc ];
 }
 
@@ -271,7 +281,15 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)titleAttribute {
+#ifdef USE_JAVA
+    XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
+    if ( pAccessibleContext )
+        return CreateNSString ( pAccessibleContext -> getAccessibleName() );
+    else
+        return @"";
+#else	// USE_JAVA
     return CreateNSString ( [ self accessibleContext ] -> getAccessibleName() );
+#endif	// USE_JAVA
 }
 
 -(id)descriptionAttribute {
@@ -711,6 +729,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     }
 
     id value = nil;
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return nil;
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     // if we are no longer in the wrapper repository, we have been disposed
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ self accessibleContext ] createIfNotExists: NO ];
     if ( theWrapper != nil || mIsTableCell ) {
@@ -722,6 +745,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         } catch ( const DisposedException & e ) {
             mIsTableCell = NO; // just to be sure
             [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
+#ifdef USE_JAVA
+            rSolarMutex.release();
+#endif	// USE_JAVA
             return nil;
         } catch ( const Exception & e ) {
             // empty
@@ -730,6 +756,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( theWrapper != nil ) {
         [ theWrapper release ]; // the above called method calls retain on the returned Wrapper
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
     return value;
 }
 
@@ -763,6 +792,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( isPopupMenuOpen ) {
         return nil;
     }
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return nil;
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     NSString * nativeSubrole = nil;
     NSString * title = nil;
     NSMutableArray * attributeNames = nil;
@@ -778,9 +812,21 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             NSAccessibilityTopLevelUIElementAttribute,
             NSAccessibilityRoleDescriptionAttribute,
             nil ];
+#ifdef USE_JAVA
+        XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
+        if ( pAccessibleContext )
+            nativeSubrole = (NSString *) [ AquaA11yRoleHelper getNativeSubroleFrom: pAccessibleContext -> getAccessibleRole() ];
+#else	// USE_JAVA
         nativeSubrole = (NSString *) [ AquaA11yRoleHelper getNativeSubroleFrom: [ self accessibleContext ] -> getAccessibleRole() ];
+#endif	// USE_JAVA
         title = (NSString *) [ self titleAttribute ];
+#ifdef USE_JAVA
+        Reference < XAccessibleRelationSet > rxRelationSet;
+        if ( pAccessibleContext )
+            rxRelationSet = pAccessibleContext -> getAccessibleRelationSet();
+#else	// USE_JAVA
         Reference < XAccessibleRelationSet > rxRelationSet = [ self accessibleContext ] -> getAccessibleRelationSet();
+#endif	// USE_JAVA
         // Special Attributes depending on attribute values
         if ( nativeSubrole != nil && ! [ nativeSubrole isEqualToString: @"" ] ) {
             [ attributeNames addObject: NSAccessibilitySubroleAttribute ];
@@ -805,7 +851,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             [ attributeNames addObject: NSAccessibilityServesAsTitleForUIElementsAttribute ];
         }
         // Special Attributes depending on interface
+#ifdef USE_JAVA
+        if ( pAccessibleContext && pAccessibleContext -> getAccessibleRole() == AccessibleRole::TABLE )
+#else	// USE_JAVA
         if( [self accessibleContext ] -> getAccessibleRole() == AccessibleRole::TABLE )
+#endif	// USE_JAVA
             [AquaA11yTableWrapper addAttributeNamesTo: attributeNames object: self];
 
         if ( [ self accessibleText ] != nil ) {
@@ -822,6 +872,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         }
         [ nativeSubrole release ];
         [ title release ];
+#ifdef USE_JAVA
+        rSolarMutex.release();
+#endif	// USE_JAVA
         return attributeNames;
     } catch ( DisposedException & e ) { // Object is no longer available
         if ( nativeSubrole != nil ) {
@@ -834,8 +887,15 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             [ attributeNames release ];
         }
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
+#ifdef USE_JAVA
+        rSolarMutex.release();
+#endif	// USE_JAVA
         return [ [ NSArray alloc ] init ];
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+    return nil;
+#endif	// USE_JAVA
 }
 
 -(BOOL)accessibilityIsAttributeSettable:(NSString *)attribute {
@@ -868,10 +928,21 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(id)accessibilityAttributeValue:(NSString *)attribute forParameter:(id)parameter {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityAttributeValue:" << attribute << " forParameter:" << ((NSObject*)parameter) << "]");
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return nil;
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: YES withGetterParameter: YES ];
     if ( [ self respondsToSelector: methodSelector ] ) {
+#ifdef USE_JAVA
+        rSolarMutex.release();
+#endif	// USE_JAVA
         return [ self performSelector: methodSelector withObject: parameter ];
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
     return nil; // TODO: to be completed
 }
 
@@ -965,21 +1036,37 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(void)accessibilityPerformAction:(NSString *)action {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityPerformAction:" << action << "]");
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return;
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
         [ AquaA11yActionWrapper doAction: action ofElement: actionResponder ];
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
 }
 
 -(NSArray *)accessibilityActionNames {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityActionNames]");
     NSArray * actionNames = nil;
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return nil;
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
         actionNames = [ AquaA11yActionWrapper actionNamesForElement: actionResponder ];
     } else {
         actionNames = [ [ NSArray alloc ] init ];
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
     return actionNames;
 }
 
@@ -1066,6 +1153,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 -(id)accessibilityHitTest:(NSPoint)point {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityHitTest:" << point << "]");
     static id wrapper = nil;
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return nil;
+    ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
     if ( nil != wrapper ) {
         [ wrapper release ];
         wrapper = nil;
@@ -1122,6 +1214,9 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     if ( wrapper != nil ) {
         [ wrapper retain ]; // TODO: retain only when transient ?
     }
+#ifdef USE_JAVA
+    RELEASE_SOLARMUTEX
+#endif	// USE_JAVA
     return wrapper;
 }
 
@@ -1195,6 +1290,21 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 +(void)setPopupMenuOpen:(BOOL)popupMenuOpen {
     isPopupMenuOpen = popupMenuOpen;
 }
+
+#ifdef USE_JAVA
+
+-(void)removeFromWrapperRepositoryOnMainThread: (id)pObject {
+    (void)pObject;
+
+    if ( pObject && [ pObject isKindOfClass:[ AquaA11yWrapper class ] ] )
+    {
+        ACQUIRE_SOLARMUTEX
+        [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) pObject accessibleContext ] ];
+        RELEASE_SOLARMUTEX
+    }
+}
+
+#endif	// USE_JAVA
 
 @end
 

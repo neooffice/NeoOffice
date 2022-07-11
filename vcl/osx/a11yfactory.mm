@@ -51,7 +51,11 @@
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 
 #ifdef USE_JAVA
+
+#include <vcl/svapp.hxx>
+
 #include "../java/source/java/VCLEventQueue_cocoa.h"
+
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star::accessibility;
@@ -222,14 +226,30 @@ static bool enabled = false;
 
 +(void)registerView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
+#ifdef USE_JAVA
+    {
+        ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
         // insertIntoWrapperRepository gets called from SalFrameView itself to bootstrap the bridge initially
         [ (AquaA11yWrapper *) theView accessibleContext ];
+#ifdef USE_JAVA
+        RELEASE_SOLARMUTEX
+    }
+#endif	// USE_JAVA
     }
 }
 
 +(void)revokeView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
+#ifdef USE_JAVA
+    {
+        ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) theView accessibleContext ] ];
+#ifdef USE_JAVA
+        RELEASE_SOLARMUTEX
+    }
+#endif	// USE_JAVA
     }
 }
 

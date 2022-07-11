@@ -811,11 +811,9 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 	if ( mpFrame )
 	{
-		ACQUIRE_SOLARMUTEX
-		::vcl::Window *pWindow = mpFrame->GetWindow();
+		vcl::Window *pWindow = mpFrame->GetWindow();
 		if ( pWindow )
 			aRet = pWindow->GetAccessible()->getAccessibleContext();
-		RELEASE_SOLARMUTEX
 	}
 
 	return aRet;
@@ -1027,11 +1025,9 @@ static NSUInteger nMouseMask = 0;
 
 	if ( mpFrame )
 	{
-		ACQUIRE_SOLARMUTEX
-		::vcl::Window *pWindow = mpFrame->GetWindow();
+		vcl::Window *pWindow = mpFrame->GetWindow();
 		if ( pWindow )
 			aRet = pWindow->GetAccessible()->getAccessibleContext();
-		RELEASE_SOLARMUTEX
 	}
 
 	return aRet;
@@ -2203,14 +2199,10 @@ static CFDataRef aRTFSelection = nil;
 
 	if ( !mpReferenceWrapper )
 	{
-		ACQUIRE_SOLARMUTEX
 		// some frames never become visible ..
-		::vcl::Window *pWindow = mpFrame->GetWindow();
+		vcl::Window *pWindow = mpFrame->GetWindow();
 		if ( !pWindow )
-		{
-			rSolarMutex.release();
 			return nullptr;
-		}
 
 		if ( !mpReferenceWrapper )
 		{
@@ -2218,7 +2210,6 @@ static CFDataRef aRTFSelection = nil;
 			mpReferenceWrapper->rAccessibleContext = pWindow->GetAccessible()->getAccessibleContext();
 			[AquaA11yFactory insertIntoWrapperRepository:self forAccessibleContext:mpReferenceWrapper ->rAccessibleContext ];
 		}
-		RELEASE_SOLARMUTEX
 	}
 
 	return [super accessibleContext];
