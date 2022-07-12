@@ -918,18 +918,27 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
 #ifdef USE_JAVA
         RELEASE_DRAGPRINTLOCKIFNEEDED
-#endif	// USE_JAVA
+        return [ NSArray array ];
+#else	// USE_JAVA
         return [ [ NSArray alloc ] init ];
+#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK
-    return nil;
+    return [ NSArray array ];
 #endif	// USE_JAVA
 }
 
 -(BOOL)accessibilityIsAttributeSettable:(NSString *)attribute {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityAttributeIsSettable:" << attribute << "]");
     BOOL isSettable = NO;
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return isSettable;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+#endif	// USE_JAVA
     if ( [ self accessibleText ] != nil ) {
         isSettable = [ AquaA11yTextWrapper isAttributeSettable: attribute forElement: self ];
     }
@@ -942,6 +951,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( ! isSettable && [ self accessibleValue ] != nil ) {
         isSettable = [ AquaA11yValueWrapper isAttributeSettable: attribute forElement: self ];
     }
+#ifdef USE_JAVA
+    RELEASE_DRAGPRINTLOCK
+#endif	// USE_JAVA
     return isSettable; // TODO: to be completed
 }
 
@@ -987,6 +999,13 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(void)accessibilitySetValue:(id)value forAttribute:(NSString *)attribute {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilitySetValue:" << ((NSObject*)value) << " forAttribute:" << attribute << "]");
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+#endif	// USE_JAVA
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: NO withGetterParameter: NO ];
     if ( [ AquaA11yComponentWrapper respondsToSelector: methodSelector ] ) {
         [ AquaA11yComponentWrapper performSelector: methodSelector withObject: self withObject: value ];
@@ -1000,6 +1019,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( [ AquaA11yValueWrapper respondsToSelector: methodSelector ] ) {
         [ AquaA11yValueWrapper performSelector: methodSelector withObject: self withObject: value ];
     }
+#ifdef USE_JAVA
+    RELEASE_DRAGPRINTLOCK
+#endif	// USE_JAVA
 }
 
 -(id)accessibilityFocusedUIElement {
