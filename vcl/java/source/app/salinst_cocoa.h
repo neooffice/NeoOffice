@@ -61,4 +61,20 @@ SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURL( id pNonSecuritySco
 SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pSecurityScopedURLs );
 }
 
+#define ACQUIRE_DRAGPRINTLOCK \
+	sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock(); \
+	sal_Bool bNeedToReleaseDragPrintLock = sal_False; \
+	if ( !bInDragPrintLock ) \
+		bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True ); \
+	if ( bInDragPrintLock || bNeedToReleaseDragPrintLock ) \
+	{
+
+#define RELEASE_DRAGPRINTLOCKIFNEEDED \
+	if ( bNeedToReleaseDragPrintLock ) \
+		VCLInstance_setDragPrintLock( sal_False );
+
+#define RELEASE_DRAGPRINTLOCK \
+	RELEASE_DRAGPRINTLOCKIFNEEDED \
+	}
+
 #endif

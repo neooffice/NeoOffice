@@ -57,6 +57,7 @@
 #include <com/sun/star/lang/DisposedException.hpp>
 
 #ifdef USE_JAVA
+#include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
 #endif	// USE_JAVA
 
@@ -732,7 +733,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return nil;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     // if we are no longer in the wrapper repository, we have been disposed
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ self accessibleContext ] createIfNotExists: NO ];
@@ -746,7 +749,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             mIsTableCell = NO; // just to be sure
             [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
 #ifdef USE_JAVA
-            rSolarMutex.release();
+            RELEASE_DRAGPRINTLOCKIFNEEDED
 #endif	// USE_JAVA
             return nil;
         } catch ( const Exception & e ) {
@@ -757,7 +760,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         [ theWrapper release ]; // the above called method calls retain on the returned Wrapper
     }
 #ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return value;
 }
@@ -772,7 +775,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return ignored;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
     XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
     if ( pAccessibleContext ) {
         sal_Int16 nRole = [ self accessibleContext ] -> getAccessibleRole();
@@ -798,7 +803,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     }
 #ifdef USE_JAVA
     }
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return ignored; // TODO: to be completed
 }
@@ -812,7 +817,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return nil;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     NSString * nativeSubrole = nil;
     NSString * title = nil;
@@ -895,7 +902,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         [ nativeSubrole release ];
         [ title release ];
 #ifdef USE_JAVA
-        rSolarMutex.release();
+        RELEASE_DRAGPRINTLOCKIFNEEDED
 #endif	// USE_JAVA
         return attributeNames;
     } catch ( DisposedException & e ) { // Object is no longer available
@@ -910,12 +917,12 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         }
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
 #ifdef USE_JAVA
-        rSolarMutex.release();
+        RELEASE_DRAGPRINTLOCKIFNEEDED
 #endif	// USE_JAVA
         return [ [ NSArray alloc ] init ];
     }
 #ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
     return nil;
 #endif	// USE_JAVA
 }
@@ -953,17 +960,19 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return nil;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: YES withGetterParameter: YES ];
     if ( [ self respondsToSelector: methodSelector ] ) {
 #ifdef USE_JAVA
-        rSolarMutex.release();
+        RELEASE_DRAGPRINTLOCKIFNEEDED
 #endif	// USE_JAVA
         return [ self performSelector: methodSelector withObject: parameter ];
     }
 #ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return nil; // TODO: to be completed
 }
@@ -1061,14 +1070,16 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
         [ AquaA11yActionWrapper doAction: action ofElement: actionResponder ];
     }
 #ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
 }
 
@@ -1078,7 +1089,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return nil;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
@@ -1087,7 +1100,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         actionNames = [ [ NSArray alloc ] init ];
     }
 #ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return actionNames;
 }
@@ -1178,7 +1191,9 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
         return nil;
-    ACQUIRE_SOLARMUTEX
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     if ( nil != wrapper ) {
         [ wrapper release ];
@@ -1237,7 +1252,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         [ wrapper retain ]; // TODO: retain only when transient ?
     }
 #ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
+    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return wrapper;
 }
