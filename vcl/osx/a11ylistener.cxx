@@ -70,7 +70,9 @@ AquaA11yEventListener::AquaA11yEventListener(id wrapperObject, sal_Int16 role) :
 AquaA11yEventListener::~AquaA11yEventListener()
 {
 #ifdef USE_JAVA
-    osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), nil, NO );
+    ACQUIRE_SOLARMUTEX
+    osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), nil, YES );
+    RELEASE_SOLARMUTEX
 #else	// USE_JAVA
     [ m_wrapperObject release ];
 #endif	// USE_JAVA
@@ -80,7 +82,9 @@ void SAL_CALL
 AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 #ifdef USE_JAVA
+    ACQUIRE_SOLARMUTEX
     osl_performSelectorOnMainThread( m_wrapperObject, @selector(removeFromWrapperRepositoryOnMainThread:), m_wrapperObject, YES );
+    RELEASE_SOLARMUTEX
 #else	// USE_JAVA
     [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) m_wrapperObject accessibleContext ] ];
 #endif	// USE_JAVA

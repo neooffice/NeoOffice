@@ -167,15 +167,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(void)dealloc {
-#ifdef USE_JAVA
-    ACQUIRE_SOLARMUTEX
-#endif	// USE_JAVA
     if ( mpReferenceWrapper != nil ) {
         delete mpReferenceWrapper;
     }
-#ifdef USE_JAVA
-    RELEASE_SOLARMUTEX
-#endif	// USE_JAVA
     [ super dealloc ];
 }
 

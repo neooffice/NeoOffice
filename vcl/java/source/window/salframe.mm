@@ -2239,7 +2239,11 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 #ifdef USE_AQUA_A11Y
 			NSView *pContentView = [mpWindow contentView];
 			if ( pContentView )
+			{
+				ACQUIRE_SOLARMUTEX
 				[AquaA11yFactory registerView:pContentView];
+				RELEASE_SOLARMUTEX
+			}
 #endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
@@ -2778,12 +2782,11 @@ JavaSalFrame::~JavaSalFrame()
 	if ( mpWindow )
 	{
 #ifdef USE_AQUA_A11Y
-		// Avoid releasing the application mutex by disconnecting frame from
-		// native window and delaying release of the window wrapper
-		osl_performSelectorOnMainThread( mpWindow, @selector(disconnectJavaFrame:), mpWindow, YES );
-		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, NO );
-#else	// USE_AQUA_A11Y
+		ACQUIRE_SOLARMUTEX
+#endif	// USE_AQUA_A11Y
 		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
+#ifdef USE_AQUA_A11Y
+		RELEASE_SOLARMUTEX
 #endif	// USE_AQUA_A11Y
 		[mpWindow release];
 	}
@@ -4971,14 +4974,11 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			if ( mpWindow )
 			{
 #ifdef USE_AQUA_A11Y
-				// Disconnect frame from native window as this frame will
-				// reregister itself when this frame is reshown
-				osl_performSelectorOnMainThread( mpWindow, @selector(disconnectJavaFrame:), mpWindow, YES );
-				// Avoid releasing the application mutex by delaying release
-				// of the old window wrapper
-				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, NO );
-#else	// USE_AQUA_A11Y
+				ACQUIRE_SOLARMUTEX
+#endif	// USE_AQUA_A11Y
 				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
+#ifdef USE_AQUA_A11Y
+				RELEASE_SOLARMUTEX
 #endif	// USE_AQUA_A11Y
 				[mpWindow release];
 			}

@@ -243,16 +243,8 @@ static bool enabled = false;
 
 +(void)registerView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
-#ifdef USE_JAVA
-    {
-        ACQUIRE_SOLARMUTEX
-#endif	// USE_JAVA
         // insertIntoWrapperRepository gets called from SalFrameView itself to bootstrap the bridge initially
         [ (AquaA11yWrapper *) theView accessibleContext ];
-#ifdef USE_JAVA
-        RELEASE_SOLARMUTEX
-    }
-#endif	// USE_JAVA
     }
 }
 
