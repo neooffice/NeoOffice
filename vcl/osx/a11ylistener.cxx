@@ -146,10 +146,8 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
 #endif	// USE_JAVA
             if ( m_oldBounds.X != 0 && ( bounds.X != m_oldBounds.X || bounds.Y != m_oldBounds.Y ) ) {
 #ifdef USE_JAVA
-                sal_uLong nCount = Application::ReleaseSolarMutex();
                 AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityMovedNotification ];
-                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, YES );
-                Application::AcquireSolarMutex( nCount );
+                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, NO );
 #else	// USE_JAVA
                 NSAccessibilityPostNotification(element, NSAccessibilityMovedNotification); // post directly since both cases can happen simultaneously
 #endif	// USE_JAVA
@@ -157,9 +155,7 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
             if ( m_oldBounds.X != 0 && ( bounds.Width != m_oldBounds.Width || bounds.Height != m_oldBounds.Height ) ) {
 #ifdef USE_JAVA
                 AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityResizedNotification ];
-                sal_uLong nCount = Application::ReleaseSolarMutex();
-                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, YES );
-                Application::AcquireSolarMutex( nCount );
+                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, NO );
 #else	// USE_JAVA
                 NSAccessibilityPostNotification(element, NSAccessibilityResizedNotification); // post directly since both cases can happen simultaneously
 #endif	// USE_JAVA
@@ -197,10 +193,8 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
     if( nil != notification )
 #ifdef USE_JAVA
     {
-        sal_uLong nCount = Application::ReleaseSolarMutex();
         AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: notification ];
-        osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, YES );
-        Application::AcquireSolarMutex( nCount );
+        osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, NO );
     }
 #else	// USE_JAVA
         NSAccessibilityPostNotification(element, notification);
