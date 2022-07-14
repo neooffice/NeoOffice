@@ -84,11 +84,7 @@ AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, 
 {
 #ifdef USE_JAVA
     if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
-    {
-        sal_uLong nCount = Application::ReleaseSolarMutex();
-        osl_performSelectorOnMainThread( (AquaA11yWrapper *)m_wrapperObject, @selector(removeFromWrapperRepository:), m_wrapperObject, YES );
-        Application::AcquireSolarMutex( nCount );
-    }
+        osl_performSelectorOnMainThread( (AquaA11yWrapper *)m_wrapperObject, @selector(removeFromWrapperRepository:), m_wrapperObject, NO );
 #else	// USE_JAVA
     [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) m_wrapperObject accessibleContext ] ];
 #endif	// USE_JAVA
