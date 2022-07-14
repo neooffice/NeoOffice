@@ -33,8 +33,11 @@
 #include "a11ytextwrapper.h"
 
 #ifdef USE_JAVA
+
 #include <osl/objcutils.h>
-#include <vcl/svapp.hxx>
+
+#include "../java/source/app/salinst_cocoa.h"
+
 #endif	// USE_JAVA
 
 #include <com/sun/star/accessibility/AccessibleEventId.hpp>
@@ -70,9 +73,7 @@ AquaA11yEventListener::AquaA11yEventListener(id wrapperObject, sal_Int16 role) :
 AquaA11yEventListener::~AquaA11yEventListener()
 {
 #ifdef USE_JAVA
-    ACQUIRE_SOLARMUTEX
-    osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), nil, YES );
-    RELEASE_SOLARMUTEX
+    osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), m_wrapperObject, NO );
 #else	// USE_JAVA
     [ m_wrapperObject release ];
 #endif	// USE_JAVA
@@ -82,9 +83,12 @@ void SAL_CALL
 AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 #ifdef USE_JAVA
-    ACQUIRE_SOLARMUTEX
-    osl_performSelectorOnMainThread( m_wrapperObject, @selector(removeFromWrapperRepositoryOnMainThread:), m_wrapperObject, YES );
-    RELEASE_SOLARMUTEX
+    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
+    {
+        sal_uLong nCount = Application::ReleaseSolarMutex();
+        osl_performSelectorOnMainThread( (AquaA11yWrapper *)m_wrapperObject, @selector(removeFromWrapperRepository:), m_wrapperObject, YES );
+        Application::AcquireSolarMutex( nCount );
+    }
 #else	// USE_JAVA
     [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) m_wrapperObject accessibleContext ] ];
 #endif	// USE_JAVA
@@ -132,14 +136,42 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
             break;
 
         case AccessibleEventId::BOUNDRECT_CHANGED:
+#ifdef USE_JAVA
+        {
+            // The accessibleComponent selector only executes C++ code so no
+            // need to perform the selector on the main thread
+            [ element retain ];
+            ACQUIRE_SOLARMUTEX
+#endif	// USE_JAVA
             bounds = [ element accessibleComponent ] -> getBounds();
+#ifdef USE_JAVA
+            RELEASE_SOLARMUTEX
+            [ element release ];
+#endif	// USE_JAVA
             if ( m_oldBounds.X != 0 && ( bounds.X != m_oldBounds.X || bounds.Y != m_oldBounds.Y ) ) {
+#ifdef USE_JAVA
+                sal_uLong nCount = Application::ReleaseSolarMutex();
+                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityMovedNotification ];
+                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, YES );
+                Application::AcquireSolarMutex( nCount );
+#else	// USE_JAVA
                 NSAccessibilityPostNotification(element, NSAccessibilityMovedNotification); // post directly since both cases can happen simultaneously
+#endif	// USE_JAVA
             }
             if ( m_oldBounds.X != 0 && ( bounds.Width != m_oldBounds.Width || bounds.Height != m_oldBounds.Height ) ) {
+#ifdef USE_JAVA
+                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityResizedNotification ];
+                sal_uLong nCount = Application::ReleaseSolarMutex();
+                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, YES );
+                Application::AcquireSolarMutex( nCount );
+#else	// USE_JAVA
                 NSAccessibilityPostNotification(element, NSAccessibilityResizedNotification); // post directly since both cases can happen simultaneously
+#endif	// USE_JAVA
             }
             m_oldBounds = bounds;
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
             break;
 
         case AccessibleEventId::SELECTION_CHANGED:
@@ -167,7 +199,16 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
     }
 
     if( nil != notification )
+#ifdef USE_JAVA
+    {
+        sal_uLong nCount = Application::ReleaseSolarMutex();
+        AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: notification ];
+        osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, YES );
+        Application::AcquireSolarMutex( nCount );
+    }
+#else	// USE_JAVA
         NSAccessibilityPostNotification(element, notification);
+#endif	// USE_JAVA
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

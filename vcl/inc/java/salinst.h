@@ -59,6 +59,7 @@
 #define SALEVENT_ABOUT				((sal_uInt16)130)
 #define SALEVENT_PREFS				((sal_uInt16)140)
 #define SALEVENT_WAKEUP				((sal_uInt16)150)
+#define SALEVENT_DELETEREFWRAPPER	((sal_uInt16)160)
 
 // -----------------
 // - SalYieldMutex -

@@ -51,11 +51,8 @@
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 
 #ifdef USE_JAVA
-
-#include <vcl/svapp.hxx>
-
+#include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
-
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star::accessibility;
@@ -259,5 +256,100 @@ static bool enabled = false;
 }
 
 @end
+
+#ifdef USE_JAVA
+
+@implementation AquaA11yPostNotification
+
++ (id)createWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName
+{
+    AquaA11yPostNotification *pRet = [ [ AquaA11yPostNotification alloc ] initWithElement: pElement name: pName ];
+    [ pRet autorelease ];
+    return pRet;
+}
+
+- (id)initWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName
+{
+    [ super init ];
+
+    mpElement = pElement;
+    if ( mpElement )
+        [mpElement retain];
+    mpName = pName;
+    if ( mpName )
+        [mpName retain];
+
+    return self;
+}
+
+- (void)dealloc
+{
+    if ( mpElement )
+        [ mpElement release ];
+
+    if ( mpName )
+        [ mpName release ];
+
+    [ super dealloc ];
+}
+
+- (void)postNotification:(id)pObject
+{
+    if ( mpElement && mpName )
+    {
+        ACQUIRE_DRAGPRINTLOCK
+        NSAccessibilityPostNotification( mpElement, mpName );
+        RELEASE_DRAGPRINTLOCK
+    }
+}
+
+@end
+
+@implementation AquaA11yFactoryWrapperForAccessibleContext
+
++ (id)createWithContext:(::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) xContext
+{
+    AquaA11yFactoryWrapperForAccessibleContext *pRet = [ [ AquaA11yFactoryWrapperForAccessibleContext alloc ] initWithContext: xContext ];
+    [ pRet autorelease ];
+    return pRet;
+}
+
+- (id)initWithContext:(::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) xContext
+{
+    [ super init ];
+
+    mxContext = xContext;
+    mpWrapper = nil;
+
+    return self;
+}
+
+- (void)dealloc
+{
+    if ( mpWrapper )
+        [ mpWrapper release ];
+
+    [ super dealloc ];
+}
+
+- (void)wrapperForAccessibleContext:(id)pObject
+{
+    if ( !mpWrapper )
+        return;
+
+    // The returned wrapper is retained by wrapperForAccessibleContext:
+    ACQUIRE_DRAGPRINTLOCK
+    mpWrapper = [ AquaA11yFactory wrapperForAccessibleContext: mxContext ];
+    RELEASE_DRAGPRINTLOCK
+}
+
+- (AquaA11yWrapper *)wrapper
+{
+    return mpWrapper;
+}
+
+@end
+
+#endif	// USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

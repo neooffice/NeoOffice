@@ -169,7 +169,13 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(void)dealloc {
     if ( mpReferenceWrapper != nil ) {
+#ifdef USE_JAVA
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_DELETEREFWRAPPER, NULL, mpReferenceWrapper );
+		JavaSalEventQueue::postCachedEvent( pUserEvent );
+		pUserEvent->release();
+#else	// USE_JAVA
         delete mpReferenceWrapper;
+#endif	// USE_JAVA
     }
     [ super dealloc ];
 }
@@ -1352,9 +1358,10 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 #ifdef USE_JAVA
 
--(void)removeFromWrapperRepositoryOnMainThread: (id)pObject {
-    if ( pObject && [ pObject isKindOfClass:[ AquaA11yWrapper class ] ] )
-        [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) pObject ];
+-(void)removeFromWrapperRepository: (id)pObject {
+    ACQUIRE_DRAGPRINTLOCK
+    [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: self ];
+    RELEASE_DRAGPRINTLOCK
 }
 
 #endif	// USE_JAVA

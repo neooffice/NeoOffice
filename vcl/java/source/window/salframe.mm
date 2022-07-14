@@ -53,6 +53,7 @@
 #include "java/salsys.h"
 #include "osx/a11yfactory.h"
 
+#include "../app/salinst_cocoa.h"
 #include "../java/VCLEventQueue_cocoa.h"
 
 #define MIN_CONTENT_WIDTH 130
@@ -2182,6 +2183,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// Fix bug reported in the following NeoOffice forum post by treating
 	// minimized windows the same as visible windows:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63308#63308
+#ifdef USE_AQUA_A11Y
+	ACQUIRE_DRAGPRINTLOCK
+#endif	// USE_AQUA_A11Y
 	BOOL bVisible = [pVisible boolValue];
 	if ( mpWindow && bVisible != ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) )
 	{
@@ -2239,11 +2243,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 #ifdef USE_AQUA_A11Y
 			NSView *pContentView = [mpWindow contentView];
 			if ( pContentView )
-			{
-				ACQUIRE_SOLARMUTEX
 				[AquaA11yFactory registerView:pContentView];
-				RELEASE_SOLARMUTEX
-			}
 #endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
@@ -2295,6 +2295,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	// for the current window:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63224#63224
 	[VCLWindowWrapper updateShowOnlyMenusWindows];
+#ifdef USE_AQUA_A11Y
+	RELEASE_DRAGPRINTLOCK
+#endif	// USE_AQUA_A11Y
 }
 
 - (void)toFront:(VCLWindowWrapperArgs *)pArgs

@@ -112,7 +112,7 @@ struct ReferenceWrapper
 -(::com::sun::star::accessibility::XAccessibleTextMarkup *)accessibleTextMarkup;
 
 #ifdef USE_JAVA
--(void)removeFromWrapperRepositoryOnMainThread: (id) pObject;
+-(void)removeFromWrapperRepository: (id) pObject;
 #endif	// USE_JAVA
 @end
 

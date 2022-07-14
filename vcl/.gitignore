@@ -601,7 +601,6 @@ osx/salframe.cxx
 osx/DataFlavorMapping.cxx
 osx/a11ywrappertabgroup.h
 osx/PictToBmpFlt.cxx.orig
-osx/a11yfocuslistener.hxx
 osx/a11ywrapperrow.h
 osx/a11yfocustracker.cxx
 osx/a11ywrappergroup.h
@@ -623,7 +622,6 @@ osx/salnativewidgets.cxx
 osx/a11ywrappersplitter.h
 osx/a11yselectionwrapper.h
 osx/a11ycomponentwrapper.mm
-osx/a11yfocuslistener.cxx
 osx/cuidraw.hxx
 osx/salmenu.cxx
 osx/DragSourceContext.hxx

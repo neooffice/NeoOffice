@@ -47,6 +47,33 @@
 +(void)revokeView: (NSView *) theViewt;
 @end
 
+#ifdef USE_JAVA
+
+@interface AquaA11yPostNotification : NSObject
+{
+    id                      mpElement;
+    NSAccessibilityNotificationName mpName;
+}
++ (id)createWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
+- (id)initWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
+- (void)dealloc;
+- (void)postNotification:(id)pObject;
+@end
+
+@interface AquaA11yFactoryWrapperForAccessibleContext : NSObject
+{
+    ::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext > mxContext;
+    AquaA11yWrapper*        mpWrapper;
+}
++ (id)createWithContext:(::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) xContext;
+- (id)initWithContext:(::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) xContext;
+- (void)dealloc;
+- (void)wrapperForAccessibleContext:(id)pObject;
+- (AquaA11yWrapper *)wrapper;
+@end
+
+#endif	// USE_JAVA
+
 #endif // INCLUDED_VCL_INC_OSX_A11YFACTORY_H
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
