@@ -3656,11 +3656,20 @@ bool JavaSalFrame::RequestFocus()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+#ifdef USE_AQUA_A11Y
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+#endif	// USE_AQUA_A11Y
 		VCLWindowWrapperArgs *pRequestFocusArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
 		osl_performSelectorOnMainThread( mpWindow, @selector(requestFocus:), pRequestFocusArgs, YES );
 		NSNumber *pResult = (NSNumber *)[pRequestFocusArgs result];
 		if ( pResult && [pResult boolValue] )
 			bRet = true;
+#ifdef USE_AQUA_A11Y
+		Application::AcquireSolarMutex( nCount );
+#endif	// USE_AQUA_A11Y
 
 		[pPool release];
 	}
@@ -3725,11 +3734,20 @@ bool JavaSalFrame::ToFront()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+#ifdef USE_AQUA_A11Y
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+#endif	// USE_AQUA_A11Y
 		VCLWindowWrapperArgs *pToFrontArgs = [VCLWindowWrapperArgs argsWithArgs:nil];
 		osl_performSelectorOnMainThread( mpWindow, @selector(toFront:), pToFrontArgs, YES );
 		NSNumber *pResult = (NSNumber *)[pToFrontArgs result];
 		if ( pResult && [pResult boolValue] )
 			bRet = true;
+#ifdef USE_AQUA_A11Y
+		Application::AcquireSolarMutex( nCount );
+#endif	// USE_AQUA_A11Y
 
 		[pPool release];
 	}
