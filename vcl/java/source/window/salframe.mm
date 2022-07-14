@@ -2223,7 +2223,14 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 					{
 						
 						if ( mbUndecorated )
+#ifdef USE_JAVA
+						{
+							RELEASE_DRAGPRINTLOCKIFNEEDED
+#endif	// USE_JAVA
 							return;
+#ifdef USE_JAVA
+						}
+#endif	// USE_JAVA
 						else
 							[pResponderWindow orderOut:self];
 					}
