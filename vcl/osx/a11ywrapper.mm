@@ -918,9 +918,13 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( title != nil ) {
             [ title release ];
         }
+#ifdef USE_JAVA
+        // attributeNames is autoreleased so do not release it
+#else	// USE_JAVA
         if ( attributeNames != nil ) {
             [ attributeNames release ];
         }
+#endif	// USE_JAVA
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
 #ifdef USE_JAVA
         RELEASE_DRAGPRINTLOCKIFNEEDED
