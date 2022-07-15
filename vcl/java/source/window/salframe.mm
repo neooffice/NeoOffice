@@ -1986,8 +1986,14 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpWindow && [mpWindow isVisible] && ![self isFloatingWindow] )
 	{
+#ifdef USE_AQUA_A11Y
+		ACQUIRE_DRAGPRINTLOCK
+#endif	// USE_AQUA_A11Y
 		[mpWindow makeKeyWindow];
 		[pArgs setResult:[NSNumber numberWithBool:YES]];
+#ifdef USE_AQUA_A11Y
+		RELEASE_DRAGPRINTLOCK
+#endif	// USE_AQUA_A11Y
 	}
 }
 
@@ -2311,6 +2317,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpWindow && ( [mpWindow isVisible] || [mpWindow isMiniaturized] ) && ![self isFloatingWindow] )
 	{
+#ifdef USE_AQUA_A11Y
+		ACQUIRE_DRAGPRINTLOCK
+#endif	// USE_AQUA_A11Y
 		// Fix bug reported in the following NeoOffice forum post by
 		// unminiaturizing the window before making it the key window:
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63241#63241
@@ -2322,6 +2331,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[mpWindow makeKeyAndOrderFront:self];
 			[pArgs setResult:[NSNumber numberWithBool:YES]];
 		}
+#ifdef USE_AQUA_A11Y
+		RELEASE_DRAGPRINTLOCK
+#endif	// USE_AQUA_A11Y
 	}
 }
 
