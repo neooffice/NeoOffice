@@ -268,6 +268,10 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
         if ( _bShowLogo )
             SetScreenBitmap (_aIntroBmp);
         Size aSize = _aIntroBmp.GetSizePixel();
+#ifdef USE_JAVA
+        // We use 144 DPI .png images so set all output devices to half the size
+        aSize = Size( aSize.Width() / 2, aSize.Height() / 2 );
+#endif	// USE_JAVA
         SetOutputSizePixel( aSize );
         _vdev.SetOutputSizePixel( aSize );
         _height = aSize.Height();
@@ -608,7 +612,12 @@ void SplashScreen::Paint( const Rectangle&)
     		return;
 #endif	// USE_JAVA && MACOSX
 
+#ifdef USE_JAVA
+        // We use 144 DPI .png images so set all output devices to half the size
+        DrawBitmapEx( Point(), GetOutputSizePixel(), _aIntroBmp );
+#else	// USE_JAVA
         DrawBitmapEx( Point(), _aIntroBmp );
+#endif	// USE_JAVA
 
         ImplControlValue aValue( _iProgress * _barwidth / _iMax);
         Rectangle aDrawRect( Point(_tlx, _tly), Size( _barwidth, _barheight ) );
@@ -639,7 +648,12 @@ void SplashScreen::Paint( const Rectangle&)
     //non native drawing
     // draw bitmap
     if (_bPaintBitmap)
+#ifdef USE_JAVA
+        // We use 144 DPI .png images so set all output devices to half the size
+        _vdev.DrawBitmapEx( Point(), _vdev.GetOutputSizePixel(), _aIntroBmp );
+#else	// USE_JAVA
         _vdev.DrawBitmapEx( Point(), _aIntroBmp );
+#endif	// USE_JAVA
 
     if (_bPaintProgress) {
         // draw progress...
