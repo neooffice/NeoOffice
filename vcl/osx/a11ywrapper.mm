@@ -1371,6 +1371,13 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 #ifdef USE_JAVA
 
 -(void)removeFromWrapperRepository: (id)pObject {
+    // Prevent releasing of a wrapper if the wrapper is already within an
+    // NSAccessibility call by requeuing this selector
+    if ( VCLInstance_isInDragPrintLock() ) {
+        [self performSelector:@selector(wrapperForAccessibleContext:) withObject:pObject afterDelay:0.5f];
+        return;
+    }
+
     ACQUIRE_DRAGPRINTLOCK
     [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: self ];
     RELEASE_DRAGPRINTLOCK
