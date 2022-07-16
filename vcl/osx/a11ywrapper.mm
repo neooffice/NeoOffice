@@ -1226,11 +1226,17 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-#endif	// USE_JAVA
+
+    // Attempt to fix crash by delaying release until after the new wrapper
+    // is retained
+    id oldWrapper = wrapper;
+    wrapper = nil;
+#else	// USE_JAVA
     if ( nil != wrapper ) {
         [ wrapper release ];
         wrapper = nil;
     }
+#endif	// USE_JAVA
     Reference < XAccessibleContext > hitChild;
     NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
     com::sun::star::awt::Point hitPoint ( static_cast<long>(point.x) , static_cast<long>(screenRect.size.height - point.y) );
@@ -1284,6 +1290,8 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         [ wrapper retain ]; // TODO: retain only when transient ?
     }
 #ifdef USE_JAVA
+    if ( oldWrapper )
+        [ oldWrapper release];
     RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return wrapper;
