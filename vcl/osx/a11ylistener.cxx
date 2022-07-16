@@ -83,14 +83,8 @@ void SAL_CALL
 AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 #ifdef USE_JAVA
-    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] ) {
-        // Try to prevent crashing in the main thread due to a backlog of
-        // pending removeFromWrapperRepository: calls when quitting by
-        // releasing the application mutex
-        sal_uLong nCount = Application::ReleaseSolarMutex();
+    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
         osl_performSelectorOnMainThread( (AquaA11yWrapper *)m_wrapperObject, @selector(removeFromWrapperRepository:), m_wrapperObject, NO );
-        Application::AcquireSolarMutex( nCount );
-    }
 #else	// USE_JAVA
     [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) m_wrapperObject accessibleContext ] ];
 #endif	// USE_JAVA
