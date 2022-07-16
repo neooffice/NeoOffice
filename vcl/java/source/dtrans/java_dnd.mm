@@ -54,6 +54,7 @@ using namespace osl;
 static ::std::list< JavaDragSource* > aDragSources;
 static ::std::list< JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
+static sal_Bool bNeedToReleaseDragPrintLock = sal_False;
 
 static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow );
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
@@ -62,6 +63,22 @@ static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame );
 static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
+static inline sal_Bool ImplAcquireDragPrintLockIfNeeded()
+{
+	sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock();
+	if ( !bInDragPrintLock )
+		bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True );
+	return ( bInDragPrintLock || bNeedToReleaseDragPrintLock );
+}
+
+static inline void ImplReleaseDragPrintLockIfNeeded()
+{
+	if ( bNeedToReleaseDragPrintLock )
+	{
+		bNeedToReleaseDragPrintLock = sal_False;
+		VCLInstance_setDragPrintLock( sal_False );
+	}
+}
 
 // ========================================================================
 
@@ -297,7 +314,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 		// get released during a native drag session. This prevents drag events
 		// from getting dispatched out of order when we release and reacquire
 		// the mutex.
-		if ( VCLInstance_setDragPrintLock( sal_True ) )
+		if ( ImplAcquireDragPrintLockIfNeeded() )
 		{
 			NSDraggingSession *pDraggingSession = nil;
 			if ( mpDragOwner == pTrackDragOwner && mpDragOwner->maContents.is() )
@@ -320,9 +337,9 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 								NSRect aDraggingFrame = pDraggingItem.draggingFrame;
 								if ( NSIsEmptyRect( aDraggingFrame ) )
 								{
-								    aDraggingFrame.size.width = 1;
-								    aDraggingFrame.size.height = 1;
-								    pDraggingItem.draggingFrame = aDraggingFrame;
+									aDraggingFrame.size.width = 1;
+									aDraggingFrame.size.height = 1;
+									pDraggingItem.draggingFrame = aDraggingFrame;
 								}
 
 								pDraggingSession = [mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pDraggingItem] event:mpLastMouseEvent source:mpDraggingSource];
@@ -341,7 +358,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 			if ( pDraggingSession )
 				mbDragStarted = YES;
 			else
-				VCLInstance_setDragPrintLock( sal_False );
+				ImplReleaseDragPrintLockIfNeeded();
 		}
 	}
 }
@@ -420,6 +437,9 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 - (void)draggingEnded:(id < NSDraggingInfo >)pSender
 {
+	// Release the drag print lock if it is still locked in case the
+	// the performDragOperation: selector was not called
+	ImplReleaseDragPrintLockIfNeeded();
 	(void)pSender;
 }
 
@@ -541,7 +561,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	// native drag lock so that the OOo code can display any dialogs in the
 	// drop event
 	if ( [pSender draggingSource] )
-		VCLInstance_setDragPrintLock( sal_False );
+		ImplReleaseDragPrintLockIfNeeded();
 
 	if ( !mpDestination )
 		return bRet;
@@ -608,14 +628,14 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 	if ( !mpSource )
 	{
-		VCLInstance_setDragPrintLock( sal_False );
+		ImplReleaseDragPrintLockIfNeeded();
 		return;
 	}
  
 	NSWindow *pWindow = [mpSource window];
 	if ( !pWindow )
 	{
-		VCLInstance_setDragPrintLock( sal_False );
+		ImplReleaseDragPrintLockIfNeeded();
 		return;
 	}
  
@@ -655,7 +675,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 			RELEASE_SOLARMUTEX
 	}
 
-	VCLInstance_setDragPrintLock( sal_False );
+	ImplReleaseDragPrintLockIfNeeded();
 }
 
 - (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint
