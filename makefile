@@ -910,6 +910,7 @@ endif
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libscnlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libsfxlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libspelllo.dylib" \
+	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libspllo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libsvtlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libswlo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libswuilo.dylib" \
@@ -924,6 +925,17 @@ ifdef PRODUCT_BUILD3
 endif
 # Copy custom icons
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/images_sifr.zip" "Resources/config"
+ifeq ($(filter NeoOffice,$(PRODUCT_NAME)),NeoOffice)
+ifneq ($(filter-out NeoOffice,$(PRODUCT_NAME)),)
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_developer.png" "Resources/intro.png"
+else ifdef PRODUCT_BUILD3
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_professional.png" "Resources/intro.png"
+else ifdef PRODUCT_BUILD2
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro_free.png" "Resources/intro.png"
+else
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/intro.png" "Resources/intro.png"
+endif
+endif
 # Copy copyright files
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; mkdir -p "Resources/config/soffice.cfg/cui/ui" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/config/soffice.cfg/cui/ui/aboutdialog.ui" "Resources/config/soffice.cfg/cui/ui/aboutdialog.ui"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; mkdir -p "Resources/config/soffice.cfg/sfx/ui" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/config/soffice.cfg/sfx/ui/licensedialog.ui" "Resources/config/soffice.cfg/sfx/ui/licensedialog.ui"
