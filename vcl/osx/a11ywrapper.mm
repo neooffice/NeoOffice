@@ -1239,7 +1239,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 #endif	// USE_JAVA
     Reference < XAccessibleContext > hitChild;
     NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
+#ifdef NO_LIBO_POINT_CASTING_FIX
     com::sun::star::awt::Point hitPoint ( static_cast<long>(point.x) , static_cast<long>(screenRect.size.height - point.y) );
+#else	// NO_LIBO_POINT_CASTING_FIX
+    com::sun::star::awt::Point hitPoint ( static_cast<sal_Int32>(point.x) , static_cast<sal_Int32>(screenRect.size.height - point.y) );
+#endif	// NO_LIBO_POINT_CASTING_FIX
     // check child windows first
     NSWindow * window = (NSWindow *) [ self accessibilityAttributeValue: NSAccessibilityWindowAttribute ];
     NSArray * childWindows = [ window childWindows ];
