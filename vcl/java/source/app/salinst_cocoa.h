@@ -63,19 +63,14 @@ SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pSecurityScop
 }
 
 #define ACQUIRE_DRAGPRINTLOCK \
-	sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock(); \
-	sal_Bool bNeedToReleaseDragPrintLock = sal_False; \
-	if ( !bInDragPrintLock ) \
-		bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True ); \
-	if ( bInDragPrintLock || bNeedToReleaseDragPrintLock ) { \
-		@try {
+	if ( VCLInstance_setDragPrintLock( sal_True ) ) { \
+		try {
 
 #define RELEASE_DRAGPRINTLOCKIFNEEDED \
-		if ( bNeedToReleaseDragPrintLock ) \
 			VCLInstance_setDragPrintLock( sal_False );
 
 #define RELEASE_DRAGPRINTLOCK \
-		} @catch ( id releaseDragPrintLock ) { \
+		} catch ( ... ) { \
 		} \
 		RELEASE_DRAGPRINTLOCKIFNEEDED \
 	}

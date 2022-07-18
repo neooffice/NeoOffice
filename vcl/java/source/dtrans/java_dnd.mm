@@ -65,10 +65,11 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 static inline sal_Bool ImplAcquireDragPrintLockIfNeeded()
 {
-	sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock();
-	if ( !bInDragPrintLock )
-		bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True );
-	return ( bInDragPrintLock || bNeedToReleaseDragPrintLock );
+	if ( bNeedToReleaseDragPrintLock )
+		return sal_False;
+
+	bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True );
+	return bNeedToReleaseDragPrintLock;
 }
 
 static inline void ImplReleaseDragPrintLockIfNeeded()

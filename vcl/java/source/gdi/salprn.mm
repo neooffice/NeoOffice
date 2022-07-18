@@ -1436,7 +1436,6 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 			ACQUIRE_SOLARMUTEX
 			PrintAccessoryViewState aAccViewState;
 			NSObject *pAccViewObj = nil;
-			sal_Bool bInDragPrintLock = VCLInstance_isInDragPrintLock();
 			sal_Bool bNeedToReleaseDragPrintLock = sal_False;
 
 			@try
@@ -1486,9 +1485,9 @@ static void ImplGetPageInfo( NSPrintInfo *pInfo, const ImplJobSetup* pSetupData,
 				// Set drag lock if it has not already been set since drawing
 				// to windows during a print operation causes unpredictable
 				// changes to the native print graphics context
-				if ( !bInDragPrintLock )
+				if ( !bNeedToReleaseDragPrintLock )
 					bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True );
-				if ( bInDragPrintLock || bNeedToReleaseDragPrintLock )
+				if ( bNeedToReleaseDragPrintLock )
 				{
 					// Only run a modal print operation because using a sheet
 					// requires that we dispatch OOo events and that causes
