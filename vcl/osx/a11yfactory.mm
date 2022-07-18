@@ -299,7 +299,7 @@ static bool enabled = false;
     {
         // Prevent posting of notification if we are already within an
         // NSAccessibility call by requeuing this selector
-        if ( VCLInstance_isInDragPrintLock() ) {
+        if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
             [self performSelector:@selector(postNotification:) withObject:pObject afterDelay:0.5f];
             return;
         }

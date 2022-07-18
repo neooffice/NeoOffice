@@ -1377,7 +1377,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 -(void)removeFromWrapperRepository: (id)pObject {
     // Prevent releasing of a wrapper if the wrapper is already within an
     // NSAccessibility call by requeuing this selector
-    if ( VCLInstance_isInDragPrintLock() ) {
+    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
         [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.5f];
         return;
     }

@@ -85,7 +85,8 @@ public:
 
 static bool bInUnitTest = false;
 static bool bAllowReleaseYieldMutex = false;
-static sal_Bool bInNativeDragPrint = sal_False;
+static sal_uLong nInNativeDragPrint = 0;
+static sal_uLong nWaitingToAcquireNativeDragPrint = 0;
 static SalYieldMutex aEventQueueMutex;
 static sal_uLong nCurrentTimeout = 0;
 static NSMutableArray *pObjectsRetainedDuringDragPrintLock = nil;
@@ -189,7 +190,14 @@ static JavaSalFrame *FindValidFrame( JavaSalFrame *pFrame )
 
 sal_Bool VCLInstance_isInDragPrintLock()
 {
-	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && bInNativeDragPrint );
+	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && nInNativeDragPrint );
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool VCLInstance_isInOrAcquiringDragPrintLock()
+{
+	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && ( nInNativeDragPrint || nWaitingToAcquireNativeDragPrint ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -198,7 +206,7 @@ sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject )
 {
 	sal_Bool bRet = sal_False;
 
-	if ( !aObject || CFRunLoopGetCurrent() != CFRunLoopGetMain() || !bInNativeDragPrint )
+	if ( !aObject || CFRunLoopGetCurrent() != CFRunLoopGetMain() || !nInNativeDragPrint )
 		return bRet;
 
 	if ( !pObjectsRetainedDuringDragPrintLock )
@@ -228,13 +236,14 @@ sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 
 	if ( bLock )
 	{
-		if ( !Application::IsShutDown() && !bInNativeDragPrint )
+		nWaitingToAcquireNativeDragPrint++;
+		if ( !Application::IsShutDown() )
 		{
 			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() && !bInNativeDragPrint )
+			if ( !Application::IsShutDown() )
 			{	
-				bInNativeDragPrint = sal_True;
+				nInNativeDragPrint++;
 				bRet = sal_True;
 			}
 			else
@@ -243,12 +252,17 @@ sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 				return bRet;
 			}
 		}
+		nWaitingToAcquireNativeDragPrint--;
 	}
-	else if ( bInNativeDragPrint )
+	else if ( nInNativeDragPrint )
 	{
-		bInNativeDragPrint = sal_False;
-		if ( pObjectsRetainedDuringDragPrintLock )
-			[pObjectsRetainedDuringDragPrintLock removeAllObjects];
+		nInNativeDragPrint--;
+		if ( !nInNativeDragPrint )
+		{
+			if ( pObjectsRetainedDuringDragPrintLock )
+				[pObjectsRetainedDuringDragPrintLock removeAllObjects];
+		}
+
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.release();
 		bRet = sal_True;
@@ -270,7 +284,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing.
-	if ( bInNativeDragPrint || NSApplication_getModalWindow() )
+	if ( nInNativeDragPrint || NSApplication_getModalWindow() )
 		return bRet;
 
 	// Fix bug 2783 by cancelling menu actions if the input method if the
@@ -593,7 +607,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler
 		if ( pSalData->maNativeEventCondition.check() )
-			NSApplication_dispatchPendingEvents( bInNativeDragPrint, bWait );
+			NSApplication_dispatchPendingEvents( nInNativeDragPrint, bWait );
 	}
 	else
 	{
@@ -1168,7 +1182,7 @@ void SalYieldMutex::acquire()
 				// OOo dialog is closed first by dispatching any pending
 				// NSModalPanelRunLoopMode events. Don't check if there is a
 				// modal window as that check is very slow on macOS 11 Big Sur.
-				NSApplication_dispatchPendingEvents( bInNativeDragPrint, sal_False );
+				NSApplication_dispatchPendingEvents( nInNativeDragPrint, sal_False );
 
 				// Fix crashing bug when quitting by checking if another thread
 				// has started shutting down the application to avoid using this
@@ -1260,7 +1274,7 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( ( ( !bAllowReleaseYieldMutex && !bInUnitTest ) || bInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+	if ( ( ( !bAllowReleaseYieldMutex && !bInUnitTest ) || nInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return nRet;
 
 	if ( mnThreadId == Thread::getCurrentIdentifier() )
