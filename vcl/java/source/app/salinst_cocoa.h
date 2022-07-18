@@ -71,6 +71,7 @@ SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pSecurityScop
 
 #define RELEASE_DRAGPRINTLOCK \
 		} catch ( ... ) { \
+			NSLog( @"Exception caught while in drag print lock: %s", __PRETTY_FUNCTION__ ); \
 		} \
 		RELEASE_DRAGPRINTLOCKIFNEEDED \
 	}
