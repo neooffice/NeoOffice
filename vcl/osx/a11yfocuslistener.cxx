@@ -76,8 +76,10 @@ id AquaA11yFocusListener::getFocusedUIElement()
                 if( xContext.is() )
 #ifdef USE_JAVA
                 {
-                    sal_uLong nCount = Application::ReleaseSolarMutex();
+                    // Create object before releasing application mutex due to
+                    // passing a C++ reference 
                     AquaA11yFactoryWrapperForAccessibleContext *pAquaA11yFactoryWrapperForAccessibleContext = [ AquaA11yFactoryWrapperForAccessibleContext createWithContext: xContext ];
+                    sal_uLong nCount = Application::ReleaseSolarMutex();
                     osl_performSelectorOnMainThread( pAquaA11yFactoryWrapperForAccessibleContext, @selector(wrapperForAccessibleContext:), pAquaA11yFactoryWrapperForAccessibleContext, YES );
                     m_focusedObject = [pAquaA11yFactoryWrapperForAccessibleContext wrapper ];
                     if ( m_focusedObject )
@@ -114,8 +116,10 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
             if( xContext.is() )
             {
 #ifdef USE_JAVA
-                sal_uLong nCount = Application::ReleaseSolarMutex();
+                // Create object before releasing application mutex due to
+                // passing a C++ reference 
                 AquaA11yFactoryWrapperForAccessibleContext *pAquaA11yFactoryWrapperForAccessibleContext = [ AquaA11yFactoryWrapperForAccessibleContext createWithContext: xContext ];
+                sal_uLong nCount = Application::ReleaseSolarMutex();
                 AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
                 osl_performSelectorOnMainThread( pAquaA11yFactoryWrapperForAccessibleContext, @selector(wrapperForAccessibleContext:), pAquaA11yFactoryWrapperForAccessibleContext, YES );
                 m_focusedObject = [pAquaA11yFactoryWrapperForAccessibleContext wrapper ];

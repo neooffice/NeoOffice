@@ -387,7 +387,7 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
 
 - (void)wrapperForAccessibleContext:(id)pObject
 {
-    if ( !mpWrapper )
+    if ( mpWrapper )
         return;
 
     // The returned wrapper is retained by wrapperForAccessibleContext:
