@@ -825,7 +825,6 @@ source/core/access/accpage.hxx
 source/core/access/accselectionhelper.hxx
 source/core/access/acchyperlink.cxx
 source/core/access/textmarkuphelper.cxx
-source/core/access/accmap.cxx
 source/core/access/accpara.cxx
 source/core/access/accframebase.cxx
 source/core/access/accfootnote.hxx
