@@ -328,15 +328,12 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
             if ( !pPostNotification )
                 continue;
 
+            // Ignore this notification if there is an identical newer one
             id pElement = pPostNotification->mpElement;
             NSAccessibilityNotificationName pName = pPostNotification->mpName;
-            if ( !pElement || !pName )
-                continue;
-
-            // Ignore this notification if there is an identical newer one
             BOOL bPost = YES;
             for ( NSUInteger j = i + 1 ; j < nCount ; j++ ) {
-                AquaA11yPostNotification *pNextPostNotification = [ pPendingPostNotificationQueue objectAtIndex: i ];
+                AquaA11yPostNotification *pNextPostNotification = [ pPendingPostNotificationQueue objectAtIndex: j ];
                 if ( !pNextPostNotification )
                     continue;
 
@@ -347,7 +344,7 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
             }
 
             if ( bPost )
-                NSAccessibilityPostNotification( pPostNotification->mpElement, pPostNotification->mpName );
+                NSAccessibilityPostNotification( pElement, pName );
         }
         [ pPendingPostNotificationQueue removeAllObjects ];
     }

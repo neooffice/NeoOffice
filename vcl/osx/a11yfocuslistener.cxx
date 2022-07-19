@@ -120,11 +120,11 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
                 // passing a C++ reference 
                 AquaA11yFactoryWrapperForAccessibleContext *pAquaA11yFactoryWrapperForAccessibleContext = [ AquaA11yFactoryWrapperForAccessibleContext createWithContext: xContext ];
                 sal_uLong nCount = Application::ReleaseSolarMutex();
-                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
                 osl_performSelectorOnMainThread( pAquaA11yFactoryWrapperForAccessibleContext, @selector(wrapperForAccessibleContext:), pAquaA11yFactoryWrapperForAccessibleContext, YES );
-                m_focusedObject = [pAquaA11yFactoryWrapperForAccessibleContext wrapper ];
-                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, NO );
                 Application::AcquireSolarMutex( nCount );
+                m_focusedObject = [pAquaA11yFactoryWrapperForAccessibleContext wrapper ];
+                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
+                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, NO );
 #else	// USE_JAVA
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
                 NSAccessibilityPostNotification(m_focusedObject, NSAccessibilityFocusedUIElementChangedNotification);
