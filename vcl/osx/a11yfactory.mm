@@ -259,6 +259,9 @@ static bool enabled = false;
 
 #ifdef USE_JAVA
 
+static NSMutableArray<AquaA11yPostNotification*> *pPendingPostNotificationQueue = nil;
+static ::osl::Mutex aPendingPostNotificationQueueMutex;
+
 @implementation AquaA11yPostNotification
 
 + (id)createWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName
@@ -279,6 +282,19 @@ static bool enabled = false;
     if ( mpName )
         [mpName retain];
 
+    ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
+
+    if ( !pPendingPostNotificationQueue ) {
+        pPendingPostNotificationQueue = [ NSMutableArray arrayWithCapacity: 100 ];
+        if ( pPendingPostNotificationQueue )
+            [ pPendingPostNotificationQueue retain ];
+    }
+
+    if ( pPendingPostNotificationQueue )
+        [ pPendingPostNotificationQueue addObject: self ];
+
+    aGuard.clear();
+
     return self;
 }
 
@@ -295,19 +311,49 @@ static bool enabled = false;
 
 - (void)postNotification:(id)pObject
 {
-    if ( mpElement && mpName )
-    {
-        // Prevent posting of notification if we are already within an
-        // NSAccessibility call by requeuing this selector
-        if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
-            [self performSelector:@selector(postNotification:) withObject:pObject afterDelay:0.5f];
-            return;
-        }
-
-        ACQUIRE_DRAGPRINTLOCK
-        NSAccessibilityPostNotification( mpElement, mpName );
-        RELEASE_DRAGPRINTLOCK
+    // Prevent posting of notification if we are already within an
+    // NSAccessibility call by requeuing this selector
+    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
+        [self performSelector:@selector(postNotification:) withObject:pObject afterDelay:0.5f];
+        return;
     }
+
+    ACQUIRE_DRAGPRINTLOCK
+    ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
+
+    if ( pPendingPostNotificationQueue ) {
+        NSUInteger nCount = [ pPendingPostNotificationQueue count ];
+        for ( NSUInteger i = 0 ; i < nCount ; i++ ) {
+            AquaA11yPostNotification *pPostNotification = [ pPendingPostNotificationQueue objectAtIndex: i ];
+            if ( !pPostNotification )
+                continue;
+
+            id pElement = pPostNotification->mpElement;
+            NSAccessibilityNotificationName pName = pPostNotification->mpName;
+            if ( !pElement || !pName )
+                continue;
+
+            // Ignore this notification if there is an identical newer one
+            BOOL bPost = YES;
+            for ( NSUInteger j = i + 1 ; j < nCount ; j++ ) {
+                AquaA11yPostNotification *pNextPostNotification = [ pPendingPostNotificationQueue objectAtIndex: i ];
+                if ( !pNextPostNotification )
+                    continue;
+
+                if ( pNextPostNotification->mpElement == pElement && pNextPostNotification->mpName == pName ) {
+                    bPost = NO;
+                    break;
+                }
+            }
+
+            if ( bPost )
+                NSAccessibilityPostNotification( pPostNotification->mpElement, pPostNotification->mpName );
+        }
+        [ pPendingPostNotificationQueue removeAllObjects ];
+    }
+
+    aGuard.clear();
+    RELEASE_DRAGPRINTLOCK
 }
 
 @end
