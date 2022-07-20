@@ -63,6 +63,9 @@ struct ReferenceWrapper
     ReferenceWrapper * mpReferenceWrapper;
     BOOL mActsAsRadioGroup;
     BOOL mIsTableCell;
+#ifdef USE_JAVA
+    ::com::sun::star::awt::Rectangle mComponentBounds;
+#endif	// USE_JAVA
 }
 // NSAccessibility Protocol
 -(id)accessibilityAttributeValue:(NSString *)attribute;
@@ -112,6 +115,8 @@ struct ReferenceWrapper
 -(::com::sun::star::accessibility::XAccessibleTextMarkup *)accessibleTextMarkup;
 
 #ifdef USE_JAVA
+-(::com::sun::star::awt::Rectangle&)componentBounds;
+-(void)getComponentBounds: (id) pObject;
 -(void)removeFromWrapperRepository: (id) pObject;
 #endif	// USE_JAVA
 @end
