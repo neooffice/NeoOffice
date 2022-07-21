@@ -113,6 +113,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     mActsAsRadioGroup = NO;
     mpReferenceWrapper -> rAccessibleContext = rxAccessibleContext;
     mIsTableCell = NO;
+#ifdef USE_JAVA
+    mpAddingSubview = nil;
+#endif	// USE_JAVA
     // Querying all supported interfaces
     try {
         // XAccessibleComponent
@@ -1365,6 +1368,66 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 }
 
 #ifdef USE_JAVA
+
+-(void)addSubview:(NSView *)pView
+{
+    if ( !pView )
+        return;
+
+    NSView *pOldAddingSubview = mpAddingSubview;
+    mpAddingSubview = pView;
+
+    [ super addSubview: pView ];
+
+    mpAddingSubview = pOldAddingSubview;
+}
+
+-(void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView
+{
+    if ( !pView )
+        return;
+
+    NSView *pOldAddingSubview = mpAddingSubview;
+    mpAddingSubview = pView;
+
+    [ super addSubview: pView positioned: nPlace relativeTo: pOtherView ];
+
+    mpAddingSubview = pOldAddingSubview;
+}
+
+- (void)setNeedsDisplay:(BOOL)bDisplay
+{
+    // Since AquaA11yWrapper and all of its subclasses (except VCLView) do not
+    // draw, do not change a VCLView's needsDisplay property if an
+    // AquaA11yWrapper subview is being added
+    // so never needsDisplay property to YES
+    if ( [ self isKindOfClass: [ VCLView class ] ] ) {
+        if ( ! mpAddingSubview || ! [ mpAddingSubview isKindOfClass: [ AquaA11yWrapper class ] ] )
+            [ super setNeedsDisplay: bDisplay ];
+        return;
+    }
+
+    // AquaA11yWrapper and all of its subclasses (except VCLView) do not draw
+    // so never needsDisplay property to YES
+    [ super setNeedsDisplay: NO ];
+}
+
+- (void)setNeedsDisplayInRect:(NSRect)aRect
+{
+    // Since AquaA11yWrapper and all of its subclasses (except VCLView) do not
+    // draw, do not change a VCLView's needsDisplay property if an
+    // AquaA11yWrapper subview is being added
+    // so never needsDisplay property to YES
+    if ( [ self isKindOfClass: [ VCLView class ] ] ) {
+        if ( ! mpAddingSubview || ! [ mpAddingSubview isKindOfClass: [ AquaA11yWrapper class ] ] )
+            [ super setNeedsDisplayInRect: aRect ];
+        return;
+    }
+
+    // AquaA11yWrapper and all of its subclasses (except VCLView) do not draw
+    // so never needsDisplay property to YES
+    [ super setNeedsDisplay: NO ];
+}
 
 -(::com::sun::star::awt::Rectangle&)componentBounds {
     return mComponentBounds;

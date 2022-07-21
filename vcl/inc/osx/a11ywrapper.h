@@ -65,6 +65,7 @@ struct ReferenceWrapper
     BOOL mIsTableCell;
 #ifdef USE_JAVA
     ::com::sun::star::awt::Rectangle mComponentBounds;
+    NSView *mpAddingSubview;
 #endif	// USE_JAVA
 }
 // NSAccessibility Protocol
