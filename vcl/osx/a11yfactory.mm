@@ -325,26 +325,12 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
         NSUInteger nCount = [ pPendingPostNotificationQueue count ];
         for ( NSUInteger i = 0 ; i < nCount ; i++ ) {
             AquaA11yPostNotification *pPostNotification = [ pPendingPostNotificationQueue objectAtIndex: i ];
-            if ( !pPostNotification )
+            if ( !pPostNotification || !pPostNotification->mpElement || !pPostNotification->mpName )
                 continue;
 
-            // Ignore this notification if there is an identical newer one
-            id pElement = pPostNotification->mpElement;
-            NSAccessibilityNotificationName pName = pPostNotification->mpName;
-            BOOL bPost = YES;
-            for ( NSUInteger j = i + 1 ; j < nCount ; j++ ) {
-                AquaA11yPostNotification *pNextPostNotification = [ pPendingPostNotificationQueue objectAtIndex: j ];
-                if ( !pNextPostNotification )
-                    continue;
-
-                if ( pNextPostNotification->mpElement == pElement && pNextPostNotification->mpName == pName ) {
-                    bPost = NO;
-                    break;
-                }
-            }
-
-            if ( bPost )
-                NSAccessibilityPostNotification( pElement, pName );
+            // Do not coalesce notifications as it appears to suppress selected
+            // item notifications
+            NSAccessibilityPostNotification( pPostNotification->mpElement, pPostNotification->mpName );
         }
         [ pPendingPostNotificationQueue removeAllObjects ];
     }

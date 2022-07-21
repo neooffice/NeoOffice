@@ -789,7 +789,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     ACQUIRE_DRAGPRINTLOCK
     XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
     if ( pAccessibleContext ) {
-        sal_Int16 nRole = [ self accessibleContext ] -> getAccessibleRole();
+        sal_Int16 nRole = pAccessibleContext -> getAccessibleRole();
 #else	// USE_JAVA
     sal_Int16 nRole = [ self accessibleContext ] -> getAccessibleRole();
 #endif	// USE_JAVA
