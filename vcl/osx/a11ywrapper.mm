@@ -1429,22 +1429,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     [ super setNeedsDisplay: NO ];
 }
 
--(::com::sun::star::awt::Rectangle&)componentBounds {
-    return mComponentBounds;
-}
-
--(void)getComponentBounds: (id) pObject {
-    (void)pObject;
-
-    ACQUIRE_DRAGPRINTLOCK
-    XAccessibleComponent *pAccessibleComponent = [ self accessibleComponent ];
-    if ( pAccessibleComponent )
-        mComponentBounds = pAccessibleComponent -> getBounds();
-    else
-        mComponentBounds = ::com::sun::star::awt::Rectangle();
-    RELEASE_DRAGPRINTLOCK
-}
-
 -(void)removeFromWrapperRepository: (id)pObject {
     // Prevent releasing of a wrapper if the wrapper is already within an
     // NSAccessibility call by requeuing this selector

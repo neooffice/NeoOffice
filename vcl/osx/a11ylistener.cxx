@@ -134,14 +134,12 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
         case AccessibleEventId::BOUNDRECT_CHANGED:
 #ifdef USE_JAVA
         {
-            if ( [ element isKindOfClass: [ AquaA11yWrapper class ] ] ) {
-                sal_uLong nCount = Application::ReleaseSolarMutex();
-                osl_performSelectorOnMainThread( (AquaA11yWrapper *)element, @selector(getComponentBounds:), element, YES );
-                bounds = [ (AquaA11yWrapper *)element componentBounds ];
-                Application::AcquireSolarMutex( nCount );
-#else	// USE_JAVA
-            bounds = [ element accessibleComponent ] -> getBounds();
+            // The accessibleComponent selector only executes C++ code so no
+            // need to perform the selector on the main thread
+            [ element retain ];
+            ACQUIRE_SOLARMUTEX
 #endif	// USE_JAVA
+            bounds = [ element accessibleComponent ] -> getBounds();
             if ( m_oldBounds.X != 0 && ( bounds.X != m_oldBounds.X || bounds.Y != m_oldBounds.Y ) ) {
 #ifdef USE_JAVA
                 AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityMovedNotification ];
@@ -160,7 +158,8 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
             }
             m_oldBounds = bounds;
 #ifdef USE_JAVA
-            }
+            RELEASE_SOLARMUTEX
+            [ element release ];
         }
 #endif	// USE_JAVA
             break;

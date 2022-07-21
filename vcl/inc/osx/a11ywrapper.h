@@ -64,7 +64,6 @@ struct ReferenceWrapper
     BOOL mActsAsRadioGroup;
     BOOL mIsTableCell;
 #ifdef USE_JAVA
-    ::com::sun::star::awt::Rectangle mComponentBounds;
     NSView *mpAddingSubview;
 #endif	// USE_JAVA
 }
@@ -116,8 +115,6 @@ struct ReferenceWrapper
 -(::com::sun::star::accessibility::XAccessibleTextMarkup *)accessibleTextMarkup;
 
 #ifdef USE_JAVA
--(::com::sun::star::awt::Rectangle&)componentBounds;
--(void)getComponentBounds: (id) pObject;
 -(void)removeFromWrapperRepository: (id) pObject;
 #endif	// USE_JAVA
 @end
