@@ -1044,6 +1044,13 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         return nil;
     }
 
+#ifdef USE_JAVA
+    if ( !ImplApplicationIsRunning() )
+        return nil;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+#endif	// USE_JAVA
     // as this seems to be the first API call on a newly created SalFrameView object,
     // make sure self gets registered in the repository ..
     [ self accessibleContext ];
@@ -1054,10 +1061,16 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
       // Make sure the focused object is a descendant of self
 //    do  {
 //       if( self == ancestor )
+#ifdef USE_JAVA
+             RELEASE_DRAGPRINTLOCKIFNEEDED
+#endif	// USE_JAVA
              return focusedUIElement;
 
 //       ancestor = [ ancestor accessibilityAttributeValue: NSAccessibilityParentAttribute ];
 //    }  while( nil != ancestor );
+#ifdef USE_JAVA
+    RELEASE_DRAGPRINTLOCK
+#endif	// USE_JAVA
 
     return self;
 }
