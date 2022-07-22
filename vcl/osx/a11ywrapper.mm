@@ -992,9 +992,12 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: YES withGetterParameter: YES ];
     if ( [ self respondsToSelector: methodSelector ] ) {
 #ifdef USE_JAVA
+        id value = [ self performSelector: methodSelector withObject: parameter ];
         RELEASE_DRAGPRINTLOCKIFNEEDED
-#endif	// USE_JAVA
+        return value;
+#else	// USE_JAVA
         return [ self performSelector: methodSelector withObject: parameter ];
+#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK
