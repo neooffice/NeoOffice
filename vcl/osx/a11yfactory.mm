@@ -285,7 +285,7 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
     ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
 
     if ( !pPendingPostNotificationQueue ) {
-        pPendingPostNotificationQueue = [ NSMutableArray arrayWithCapacity: 100 ];
+        pPendingPostNotificationQueue = [ NSMutableArray arrayWithCapacity: 10 ];
         if ( pPendingPostNotificationQueue )
             [ pPendingPostNotificationQueue retain ];
     }
@@ -322,66 +322,17 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
     ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
 
     if ( pPendingPostNotificationQueue ) {
-        NSUInteger nCount = [ pPendingPostNotificationQueue count ];
-        for ( NSUInteger i = 0 ; i < nCount ; i++ ) {
-            AquaA11yPostNotification *pPostNotification = [ pPendingPostNotificationQueue objectAtIndex: i ];
-            if ( !pPostNotification || !pPostNotification->mpElement || !pPostNotification->mpName )
-                continue;
-
+        for ( AquaA11yPostNotification *pPostNotification : pPendingPostNotificationQueue ) {
             // Do not coalesce notifications as it appears to suppress selected
             // item notifications
-            NSAccessibilityPostNotification( pPostNotification->mpElement, pPostNotification->mpName );
+            if ( pPostNotification && pPostNotification->mpElement && pPostNotification->mpName )
+                NSAccessibilityPostNotification( pPostNotification->mpElement, pPostNotification->mpName );
         }
         [ pPendingPostNotificationQueue removeAllObjects ];
     }
 
     aGuard.clear();
     RELEASE_DRAGPRINTLOCK
-}
-
-@end
-
-@implementation AquaA11yFactoryWrapperForAccessibleContext
-
-+ (id)createWithContext:(::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) xContext
-{
-    AquaA11yFactoryWrapperForAccessibleContext *pRet = [ [ AquaA11yFactoryWrapperForAccessibleContext alloc ] initWithContext: xContext ];
-    [ pRet autorelease ];
-    return pRet;
-}
-
-- (id)initWithContext:(::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) xContext
-{
-    [ super init ];
-
-    mxContext = xContext;
-    mpWrapper = nil;
-
-    return self;
-}
-
-- (void)dealloc
-{
-    if ( mpWrapper )
-        [ mpWrapper release ];
-
-    [ super dealloc ];
-}
-
-- (void)wrapperForAccessibleContext:(id)pObject
-{
-    if ( mpWrapper )
-        return;
-
-    // The returned wrapper is retained by wrapperForAccessibleContext:
-    ACQUIRE_DRAGPRINTLOCK
-    mpWrapper = [ AquaA11yFactory wrapperForAccessibleContext: mxContext ];
-    RELEASE_DRAGPRINTLOCK
-}
-
-- (AquaA11yWrapper *)wrapper
-{
-    return mpWrapper;
 }
 
 @end
