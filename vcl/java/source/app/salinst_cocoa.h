@@ -38,6 +38,8 @@
 
 #include <sal/types.h>
 
+#include <com/sun/star/lang/DisposedException.hpp>
+
 #include "java/salinst.h"
 
 SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDragPrint, sal_Bool bWait );
@@ -70,6 +72,7 @@ SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pSecurityScop
 			VCLInstance_setDragPrintLock( sal_False );
 
 #define RELEASE_DRAGPRINTLOCK \
+		} catch ( const ::com::sun::star::lang::DisposedException& ) { \
 		} catch ( ... ) { \
 			NSLog( @"Exception caught while in drag print lock: %s", __PRETTY_FUNCTION__ ); \
 		} \
