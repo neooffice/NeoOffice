@@ -309,12 +309,18 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
     [ super dealloc ];
 }
 
-- (void)postNotification:(id)pObject
+- (void)postNotification
+{
+    if ( mpElement && mpName )
+        NSAccessibilityPostNotification( mpElement, mpName );
+}
+
+- (void)postPendingNotifications:(id)pObject
 {
     // Prevent posting of notification if we are already within an
     // NSAccessibility call by requeuing this selector
     if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
-        [self performSelector:@selector(postNotification:) withObject:pObject afterDelay:0.5f];
+        [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.5f];
         return;
     }
 
@@ -325,8 +331,8 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
         for ( AquaA11yPostNotification *pPostNotification : pPendingPostNotificationQueue ) {
             // Do not coalesce notifications as it appears to suppress selected
             // item notifications
-            if ( pPostNotification && pPostNotification->mpElement && pPostNotification->mpName )
-                NSAccessibilityPostNotification( pPostNotification->mpElement, pPostNotification->mpName );
+            if ( pPostNotification )
+                [ pPostNotification postNotification ];
         }
         [ pPendingPostNotificationQueue removeAllObjects ];
     }

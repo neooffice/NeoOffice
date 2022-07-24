@@ -57,7 +57,8 @@
 + (id)createWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
 - (id)initWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
 - (void)dealloc;
-- (void)postNotification:(id)pObject;
+- (void)postNotification;
+- (void)postPendingNotifications:(id)pObject;
 @end
 
 #endif	// USE_JAVA

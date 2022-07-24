@@ -37,19 +37,18 @@
 
 #include "../java/source/app/salinst_cocoa.h"
 
-@interface AquaA11yFocusListenerFocusedObjectChanged : NSObject
+@interface AquaA11yFocusListenerFocusedObjectChanged : AquaA11yPostNotification
 {
     ::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessible > mxAccessible;
     AquaA11yFocusListener* mpFocusListener;
+    ::osl::Mutex maFocusListenerMutex;
+
 }
 + (id)createWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >&) xAccessible;
-- (void)focusedObjectChanged:(id)pObject;
 - (void)focusListenerWillBeDeleted:(AquaA11yFocusListener *)pFocusListener;
 - (id)initWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >&) xAccessible;
+- (void)postNotification;
 @end
-
-static NSMutableArray<AquaA11yFocusListenerFocusedObjectChanged*> *pPendingFocusedObjectChangedQueue = nil;
-static ::osl::Mutex aPendingFocusedObjectChangedQueueMutex;
 
 #endif	// USE_JAVA
 
@@ -74,19 +73,6 @@ AquaA11yFocusListener::AquaA11yFocusListener() : m_focusedObject(nil)
 
 AquaA11yFocusListener::~AquaA11yFocusListener()
 {
-    ::osl::ClearableMutexGuard aGuard( aPendingFocusedObjectChangedQueueMutex );
-
-    // Set the focus listener to NULl for any pending focused object change
-    // instances that contain a pointer to this
-    if ( pPendingFocusedObjectChangedQueue ) {
-        for ( AquaA11yFocusListenerFocusedObjectChanged *pFocusedObjectChanged : pPendingFocusedObjectChangedQueue ) {
-            if ( pFocusedObjectChanged )
-                [ pFocusedObjectChanged focusListenerWillBeDeleted: this ];
-        }
-    }
-
-    aGuard.clear();
-
     if ( m_focusedObject )
         osl_performSelectorOnMainThread( m_focusedObject, @selector(release), m_focusedObject, NO );
 }
@@ -121,9 +107,11 @@ void SAL_CALL
 AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAccessible)
 {
 #ifdef USE_JAVA
+    // Run this method on the main thread using the AquaA11yPostNotification
+    // pending post notifications queue
     if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() ) {
         AquaA11yFocusListenerFocusedObjectChanged *pAquaA11yFocusListenerFocusedObjectChanged = [ AquaA11yFocusListenerFocusedObjectChanged createWithFocusListener: this accessible: xAccessible ];
-        osl_performSelectorOnMainThread( pAquaA11yFocusListenerFocusedObjectChanged, @selector(focusedObjectChanged:), pAquaA11yFocusListenerFocusedObjectChanged, NO );
+        osl_performSelectorOnMainThread( pAquaA11yFocusListenerFocusedObjectChanged, @selector(postPendingNotifications:), pAquaA11yFocusListenerFocusedObjectChanged, NO );
         return;
     }
 #endif	// USE_JAVA
@@ -139,12 +127,7 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
             if( xContext.is() )
             {
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
-#ifdef USE_JAVA
-                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
-                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postNotification:), pAquaA11yPostNotification, NO );
-#else	// USE_JAVA
                 NSAccessibilityPostNotification(m_focusedObject, NSAccessibilityFocusedUIElementChangedNotification);
-#endif	// USE_JAVA
             }
         }
     } catch(const RuntimeException &) {
@@ -163,57 +146,28 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
     return pRet;
 }
 
-- (void)focusedObjectChanged:(id)pObject
-{
-    // Prevent posting of focus change if we are already within an
-    // NSAccessibility call by requeuing this selector
-    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
-        [self performSelector:@selector(focusedObjectChanged:) withObject:pObject afterDelay:0.5f];
-        return;
-    }
-
-    ACQUIRE_DRAGPRINTLOCK
-    ::osl::ClearableMutexGuard aGuard( aPendingFocusedObjectChangedQueueMutex );
-
-    if ( pPendingFocusedObjectChangedQueue ) {
-        for ( AquaA11yFocusListenerFocusedObjectChanged *pFocusedObjectChanged : pPendingFocusedObjectChangedQueue ) {
-            if ( pFocusedObjectChanged && pFocusedObjectChanged->mpFocusListener )
-                pFocusedObjectChanged->mpFocusListener->focusedObjectChanged( mxAccessible );
-        }
-        [ pPendingFocusedObjectChangedQueue removeAllObjects ];
-    }
-
-    aGuard.clear();
-    RELEASE_DRAGPRINTLOCK
-}
-
 - (void)focusListenerWillBeDeleted:(AquaA11yFocusListener *)pFocusListener
 {
+    ::osl::MutexGuard aGuard( maFocusListenerMutex );
 	if ( mpFocusListener == pFocusListener )
 	    mpFocusListener = nullptr;
 }
 
-- (id)initWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const Reference< XAccessible >&) xAccessible
+- (id)initWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >&) xAccessible
 {
-    [ super init ];
+    [ super initWithElement: nil name: nil ];
 
     mxAccessible = xAccessible;
     mpFocusListener = pFocusListener;
 
-    ::osl::ClearableMutexGuard aGuard( aPendingFocusedObjectChangedQueueMutex );
-
-    if ( !pPendingFocusedObjectChangedQueue ) {
-        pPendingFocusedObjectChangedQueue = [ NSMutableArray arrayWithCapacity: 10 ];
-        if ( pPendingFocusedObjectChangedQueue )
-            [ pPendingFocusedObjectChangedQueue retain ];
-    }
-
-    if ( pPendingFocusedObjectChangedQueue )
-        [ pPendingFocusedObjectChangedQueue addObject: self ];
-
-    aGuard.clear();
-
     return self;
+}
+
+- (void)postNotification
+{
+    ::osl::MutexGuard aGuard( maFocusListenerMutex );
+	if ( mpFocusListener )
+        mpFocusListener->focusedObjectChanged( mxAccessible );
 }
 
 @end
