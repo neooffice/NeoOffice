@@ -183,8 +183,14 @@ static NSMutableArray *pFocusListenerList = nil;
     ::osl::MutexGuard aGuard( aFocusListenerMutex );
     if ( pFocusListenerList )
         [ pFocusListenerList removeObject: self ];
-	if ( mpFocusListener )
-        mpFocusListener->focusedObjectChanged( mxAccessible );
+    if ( mpFocusListener ) {
+        try {
+            mpFocusListener->focusedObjectChanged( mxAccessible );
+        } catch ( const ::com::sun::star::lang::DisposedException& ) {
+        } catch ( ... ) {
+            NSLog( @"Exception caught while in AquaA11yFocusListener::focusedObjectChanged: %s", __PRETTY_FUNCTION__ );
+        }
+    }
 }
 
 @end
