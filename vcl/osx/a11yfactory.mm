@@ -318,9 +318,17 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
 - (void)postPendingNotifications:(id)pObject
 {
     // Prevent posting of notification if we are already within an
-    // NSAccessibility call by requeuing this selector
-    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
-        [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.5f];
+    // NSAccessibility call or not in the default run loop mode by requeuing
+    // this selector
+    sal_Bool bRequeue = VCLInstance_isInOrAcquiringDragPrintLock();
+    if ( !bRequeue ) {
+        CFRunLoopMode aMode = CFRunLoopCopyCurrentMode( CFRunLoopGetCurrent() );
+        bRequeue = ( !aMode || CFStringCompare( aMode, kCFRunLoopDefaultMode, 0 ) != kCFCompareEqualTo );
+        if ( aMode )
+            CFRelease( aMode );
+    }
+    if ( bRequeue ) {
+        [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
         return;
     }
 
