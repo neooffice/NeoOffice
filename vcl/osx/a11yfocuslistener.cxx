@@ -41,11 +41,9 @@
 {
     ::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessible > mxAccessible;
     AquaA11yFocusListener* mpFocusListener;
-    ::osl::Mutex maFocusListenerMutex;
-
 }
 + (id)createWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >&) xAccessible;
-- (void)focusListenerWillBeDeleted:(AquaA11yFocusListener *)pFocusListener;
++ (void)focusListenerWillBeDeleted:(const AquaA11yFocusListener *)pFocusListener;
 - (id)initWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >&) xAccessible;
 - (void)postNotification;
 @end
@@ -73,6 +71,7 @@ AquaA11yFocusListener::AquaA11yFocusListener() : m_focusedObject(nil)
 
 AquaA11yFocusListener::~AquaA11yFocusListener()
 {
+    [ AquaA11yFocusListenerFocusedObjectChanged focusListenerWillBeDeleted: this ];
     if ( m_focusedObject )
         osl_performSelectorOnMainThread( m_focusedObject, @selector(release), m_focusedObject, NO );
 }
@@ -137,6 +136,9 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
 
 #ifdef USE_JAVA
 
+static NSMutableArray *pFocusListenerList = nil;
+::osl::Mutex aFocusListenerMutex;
+
 @implementation AquaA11yFocusListenerFocusedObjectChanged
 
 + (id)createWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const Reference< XAccessible >&) xAccessible
@@ -146,11 +148,15 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
     return pRet;
 }
 
-- (void)focusListenerWillBeDeleted:(AquaA11yFocusListener *)pFocusListener
++ (void)focusListenerWillBeDeleted:(const AquaA11yFocusListener *)pFocusListener
 {
-    ::osl::MutexGuard aGuard( maFocusListenerMutex );
-	if ( mpFocusListener == pFocusListener )
-	    mpFocusListener = nullptr;
+    ::osl::MutexGuard aGuard( aFocusListenerMutex );
+    if ( pFocusListenerList ) {
+        for ( AquaA11yFocusListenerFocusedObjectChanged *pFocusedObjectChanged : pFocusListenerList ) {
+	        if ( pFocusedObjectChanged->mpFocusListener == pFocusListener )
+	            pFocusedObjectChanged->mpFocusListener = nullptr;
+        }
+    }
 }
 
 - (id)initWithFocusListener:(AquaA11yFocusListener *)pFocusListener accessible:(const ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >&) xAccessible
@@ -160,12 +166,23 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
     mxAccessible = xAccessible;
     mpFocusListener = pFocusListener;
 
+    ::osl::MutexGuard aGuard( aFocusListenerMutex );
+    if ( !pFocusListenerList ) {
+        pFocusListenerList = [ NSMutableArray arrayWithCapacity: 10 ];
+        if ( pFocusListenerList )
+            [ pFocusListenerList retain ];
+    }
+    if ( pFocusListenerList )
+        [ pFocusListenerList addObject: self ];
+
     return self;
 }
 
 - (void)postNotification
 {
-    ::osl::MutexGuard aGuard( maFocusListenerMutex );
+    ::osl::MutexGuard aGuard( aFocusListenerMutex );
+    if ( pFocusListenerList )
+        [ pFocusListenerList removeObject: self ];
 	if ( mpFocusListener )
         mpFocusListener->focusedObjectChanged( mxAccessible );
 }
