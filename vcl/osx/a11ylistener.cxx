@@ -73,7 +73,11 @@ AquaA11yEventListener::AquaA11yEventListener(id wrapperObject, sal_Int16 role) :
 AquaA11yEventListener::~AquaA11yEventListener()
 {
 #ifdef USE_JAVA
+    NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
+
     osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), m_wrapperObject, NO );
+
+    [ pPool release ]; 
 #else	// USE_JAVA
     [ m_wrapperObject release ];
 #endif	// USE_JAVA
@@ -83,8 +87,12 @@ void SAL_CALL
 AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, std::exception )
 {
 #ifdef USE_JAVA
+    NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
+
     if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
         osl_performSelectorOnMainThread( (AquaA11yWrapper *)m_wrapperObject, @selector(removeFromWrapperRepository:), m_wrapperObject, NO );
+
+    [ pPool release ]; 
 #else	// USE_JAVA
     [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) m_wrapperObject accessibleContext ] ];
 #endif	// USE_JAVA
@@ -93,6 +101,10 @@ AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, 
 void SAL_CALL
 AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw( RuntimeException, std::exception )
 {
+#ifdef USE_JAVA
+    NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
+#endif	// USE_JAVA
+
     NSString * notification = nil;
     id element = m_wrapperObject;
 #ifdef USE_JAVA
@@ -190,6 +202,8 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
         AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: notification ];
         osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postPendingNotifications:), pAquaA11yPostNotification, NO );
     }
+
+    [ pPool release ]; 
 #else	// USE_JAVA
         NSAccessibilityPostNotification(element, notification);
 #endif	// USE_JAVA

@@ -71,9 +71,13 @@ AquaA11yFocusListener::AquaA11yFocusListener() : m_focusedObject(nil)
 
 AquaA11yFocusListener::~AquaA11yFocusListener()
 {
+    NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
+
     [ AquaA11yFocusListenerFocusedObjectChanged focusListenerWillBeDeleted: this ];
     if ( m_focusedObject )
         osl_performSelectorOnMainThread( m_focusedObject, @selector(release), m_focusedObject, NO );
+
+    [ pPool release ]; 
 }
 
 #endif	// USE_JAVA
@@ -85,8 +89,10 @@ id AquaA11yFocusListener::getFocusedUIElement()
     // calls and should already be running on the main thread so we can safely
     // call +[AquaA11yFactory wrapperForAccessibleContext:] without having to
     // release the application mutex
-#endif	// USE_JAVA
+    if ( nil == m_focusedObject && CFRunLoopGetCurrent() == CFRunLoopGetMain() ) {
+#else	// USE_JAVA
     if ( nil == m_focusedObject ) {
+#endif	// USE_JAVA
         Reference< XAccessible > xAccessible( AquaA11yFocusTracker::get().getFocusedObject() );
         try {
             if( xAccessible.is() ) {
@@ -109,8 +115,12 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
     // Run this method on the main thread using the AquaA11yPostNotification
     // pending post notifications queue
     if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() ) {
+        NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
+
         AquaA11yFocusListenerFocusedObjectChanged *pAquaA11yFocusListenerFocusedObjectChanged = [ AquaA11yFocusListenerFocusedObjectChanged createWithFocusListener: this accessible: xAccessible ];
         osl_performSelectorOnMainThread( pAquaA11yFocusListenerFocusedObjectChanged, @selector(postPendingNotifications:), pAquaA11yFocusListenerFocusedObjectChanged, NO );
+
+        [ pPool release ]; 
         return;
     }
 #endif	// USE_JAVA
