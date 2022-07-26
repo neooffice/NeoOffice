@@ -261,6 +261,7 @@ static bool enabled = false;
 
 static NSMutableArray<AquaA11yPostNotification*> *pPendingPostNotificationQueue = nil;
 static ::osl::Mutex aPendingPostNotificationQueueMutex;
+static BOOL bInPostPendingNotifications = NO;
 
 @implementation AquaA11yPostNotification
 
@@ -320,7 +321,7 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
     // Prevent posting of notification if we are already within an
     // NSAccessibility call or not in the default run loop mode by requeuing
     // this selector
-    sal_Bool bRequeue = VCLInstance_isInOrAcquiringDragPrintLock();
+    sal_Bool bRequeue = ( bInPostPendingNotifications || VCLInstance_isInOrAcquiringDragPrintLock() );
     if ( !bRequeue ) {
         CFRunLoopMode aMode = CFRunLoopCopyCurrentMode( CFRunLoopGetCurrent() );
         bRequeue = ( !aMode || CFStringCompare( aMode, kCFRunLoopDefaultMode, 0 ) != kCFCompareEqualTo );
@@ -331,6 +332,8 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
         [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
         return;
     }
+
+    bInPostPendingNotifications = YES;
 
     ACQUIRE_DRAGPRINTLOCK
     ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
@@ -347,6 +350,8 @@ static ::osl::Mutex aPendingPostNotificationQueueMutex;
 
     aGuard.clear();
     RELEASE_DRAGPRINTLOCK
+
+    bInPostPendingNotifications = NO;
 }
 
 @end
