@@ -318,18 +318,15 @@ static BOOL bInPostPendingNotifications = NO;
 
 - (void)postPendingNotifications:(id)pObject
 {
+    if ( bInPostPendingNotifications )
+        return;
+
     // Prevent posting of notification if we are already within an
-    // NSAccessibility call or not in the default run loop mode by requeuing
-    // this selector
-    sal_Bool bRequeue = ( bInPostPendingNotifications || VCLInstance_isInOrAcquiringDragPrintLock() );
-    if ( !bRequeue ) {
-        CFRunLoopMode aMode = CFRunLoopCopyCurrentMode( CFRunLoopGetCurrent() );
-        bRequeue = ( !aMode || CFStringCompare( aMode, kCFRunLoopDefaultMode, 0 ) != kCFCompareEqualTo );
-        if ( aMode )
-            CFRelease( aMode );
-    }
-    if ( bRequeue ) {
-        [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
+    // NSAccessibility call
+    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
+        ::osl::MutexGuard aGuard( aPendingPostNotificationQueueMutex );
+        if ( pPendingPostNotificationQueue && [ pPendingPostNotificationQueue count ] )
+            [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
         return;
     }
 
