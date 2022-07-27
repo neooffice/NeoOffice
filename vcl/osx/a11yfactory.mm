@@ -112,9 +112,13 @@ static bool enabled = false;
         nKey = [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ];
     }
     AquaA11yWrapper * aWrapper = (AquaA11yWrapper *) [ dAllWrapper objectForKey: nKey ];
+#ifdef USE_JAVA
+    if ( !aWrapper && bCreate ) {
+#else	// USE_JAVA
     if ( aWrapper != nil ) {
         [ aWrapper retain ];
     } else if ( bCreate ) {
+#endif	// USE_JAVA
         NSString * nativeRole = [ AquaA11yRoleHelper getNativeRoleFrom: rxAccessibleContext.get() ];
         // TODO: reflection
         if ( [ nativeRole isEqualToString: NSAccessibilityButtonRole ] ) {
@@ -152,7 +156,11 @@ static bool enabled = false;
         } else {
             aWrapper = [ [ AquaA11yWrapper alloc ] initWithAccessibleContext: rxAccessibleContext ];
         }
+#ifdef USE_JAVA
+        [ aWrapper autorelease ];
+#else	// USE_JAVA
         [ nativeRole release ];
+#endif	// USE_JAVA
         [ aWrapper setActsAsRadioGroup: asRadioGroup ];
         #if 0
         /* #i102033# NSAccessibility does not seemt to know an equivalent for transient children.
@@ -218,7 +226,9 @@ static bool enabled = false;
 #endif	// USE_JAVA
         }
         [ [ AquaA11yFactory allWrapper ] removeObjectForKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
+#ifndef USE_JAVA
         [ theWrapper release ];
+#endif	// !USE_JAVA
     }
 }
 

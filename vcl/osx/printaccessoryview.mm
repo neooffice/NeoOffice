@@ -1105,12 +1105,24 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
         [pFormatter setMaximumFractionDigits: 0];
         if( nMinValue != nMaxValue )
         {
+#ifdef USE_JAVA
+            [pFormatter setMinimum: [NSNumber numberWithInt: nMinValue]];
+#else	// USE_JAVA
             [pFormatter setMinimum: [[NSNumber numberWithInt: nMinValue] autorelease]];
+#endif	// USE_JAVA
             [pStep setMinValue: nMinValue];
+#ifdef USE_JAVA
+            [pFormatter setMaximum: [NSNumber numberWithInt: nMaxValue]];
+#else	// USE_JAVA
             [pFormatter setMaximum: [[NSNumber numberWithInt: nMaxValue] autorelease]];
+#endif	// USE_JAVA
             [pStep setMaxValue: nMaxValue];
         }
+#ifdef USE_JAVA
+        [pFieldView setFormatter: [pFormatter autorelease]];
+#else	// USE_JAVA
         [pFieldView setFormatter: pFormatter];
+#endif	// USE_JAVA
 
         sal_Int64 nSelectVal = 0;
         if( pValue && pValue->Value.hasValue() )
@@ -1379,9 +1391,17 @@ static void addEdit( NSView* pCurParent, long& rCurX, long& rCurY, long nAttachO
                 NSString* pLabel = CreateNSString( aGroupTitle );
                 NSTabViewItem* pItem = [[NSTabViewItem alloc] initWithIdentifier: pLabel ];
                 [pItem setLabel: pLabel];
+#ifdef USE_JAVA
+                [pTabView addTabViewItem: [pItem autorelease]];
+#else	// USE_JAVA
                 [pTabView addTabViewItem: pItem];
+#endif	// USE_JAVA
                 pCurParent = [[NSView alloc] initWithFrame: aTabViewFrame];
+#ifdef USE_JAVA
+                [pItem setView: [pCurParent autorelease]];
+#else	// USE_JAVA
                 [pItem setView: pCurParent];
+#endif	// USE_JAVA
                 [pLabel release];
                 
                 // reset indent

@@ -37,7 +37,11 @@ using namespace ::com::sun::star::uno;
 @implementation AquaA11yTextWrapper : NSObject
 
 +(id)valueAttributeForElement:(AquaA11yWrapper *)wrapper {
+#ifdef USE_JAVA
+    return [ CreateNSString ( [ wrapper accessibleText ] -> getText() ) autorelease ];
+#else	// USE_JAVA
     return CreateNSString ( [ wrapper accessibleText ] -> getText() );
+#endif	// USE_JAVA
 }
 
 +(void)setValueAttributeForElement:(AquaA11yWrapper *)wrapper to:(id)value
@@ -52,7 +56,11 @@ using namespace ::com::sun::star::uno;
 }
 
 +(id)selectedTextAttributeForElement:(AquaA11yWrapper *)wrapper {
+#ifdef USE_JAVA
+    return [ CreateNSString ( [ wrapper accessibleText ] -> getSelectedText() ) autorelease ];
+#else	// USE_JAVA
     return CreateNSString ( [ wrapper accessibleText ] -> getSelectedText() );
+#endif	// USE_JAVA
 }
 
 +(void)setSelectedTextAttributeForElement:(AquaA11yWrapper *)wrapper to:(id)value {
@@ -106,13 +114,17 @@ using namespace ::com::sun::star::uno;
 
 +(id)sharedTextUIElementsAttributeForElement:(AquaA11yWrapper *)wrapper
 {
+#ifndef USE_JAVA
     (void)wrapper;
+#endif	// !USE_JAVA
     return [NSArray arrayWithObject:wrapper];
 }
 
 +(id)sharedCharacterRangeAttributeForElement:(AquaA11yWrapper *)wrapper
 {
+#ifndef USE_JAVA
     (void)wrapper;
+#endif	// !USE_JAVA
     return [ NSValue valueWithRange: NSMakeRange ( 0, [wrapper accessibleText]->getCharacterCount() ) ];
 }
 
@@ -175,9 +187,17 @@ using namespace ::com::sun::star::uno;
 +(id)stringForRangeAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)range {
     int loc = [ range rangeValue ].location;
     int len = [ range rangeValue ].length;
+#ifdef USE_JAVA
+    NSMutableString * textRange = [ NSMutableString stringWithCapacity: len ];
+#else	// USE_JAVA
     NSMutableString * textRange = [ [ NSMutableString alloc ] init ];
+#endif	// USE_JAVA
     try {
+#ifdef USE_JAVA
+        [ textRange appendString: [ CreateNSString ( [ wrapper accessibleText ] -> getTextRange ( loc, loc + len ) ) autorelease ] ];
+#else	// USE_JAVA
         [ textRange appendString: CreateNSString ( [ wrapper accessibleText ] -> getTextRange ( loc, loc + len ) ) ];
+#endif	// USE_JAVA
     } catch ( IndexOutOfBoundsException & e ) {
         // empty
     }

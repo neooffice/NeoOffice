@@ -89,13 +89,22 @@ using namespace ::com::sun::star::uno;
 }
 
 - (void)dealloc {
+#ifdef USE_JAVA
+    if ( _name )
+#endif	// USE_JAVA
     [_name release];
     [super dealloc];
 }
 
 -(void)setName:(NSString*)name {
     if (_name != name) {
+#ifdef USE_JAVA
+        if ( name )
+#endif	// USE_JAVA
         [name retain];
+#ifdef USE_JAVA
+        if ( _name )
+#endif	// USE_JAVA
         [_name release];
         _name = name;
     }
@@ -250,7 +259,11 @@ using namespace ::com::sun::star::uno;
             } else if ( property.Name.equals ( attrFontname ) ) {
                 OUString fontname;
                 property.Value >>= fontname;
+#ifdef USE_JAVA
+                [fontDescriptor setName:[CreateNSString(fontname) autorelease]];
+#else	// USE_JAVA
                 [fontDescriptor setName:CreateNSString(fontname)];
+#endif	// USE_JAVA
             } else if ( property.Name.equals ( attrBold ) ) {
                 [fontDescriptor setBold:[AquaA11yTextAttributesWrapper convertBoldStyle:property]];
             } else if ( property.Name.equals ( attrItalic ) ) {
@@ -349,8 +362,13 @@ using namespace ::com::sun::star::uno;
     int endIndex = loc + len;
     int currentIndex = loc;
     try {
+#ifdef USE_JAVA
+        NSString * myString = [ CreateNSString ( [ wrapper accessibleText ] -> getText() ) autorelease ]; // TODO: dirty fix for i87817
+        string = [ [ [ NSMutableAttributedString alloc ] initWithString: [ CreateNSString ( [ wrapper accessibleText ] -> getTextRange ( loc, loc + len ) ) autorelease ] ] autorelease ];
+#else	// USE_JAVA
         NSString * myString = CreateNSString ( [ wrapper accessibleText ] -> getText() ); // TODO: dirty fix for i87817
         string = [ [ NSMutableAttributedString alloc ] initWithString: CreateNSString ( [ wrapper accessibleText ] -> getTextRange ( loc, loc + len ) ) ];
+#endif	// USE_JAVA
         if ( [ wrapper accessibleTextAttributes ] != nil && [myString characterAtIndex:0] != 57361) { // TODO: dirty fix for i87817
             [ string beginEditing ];
             // add default attributes for whole string

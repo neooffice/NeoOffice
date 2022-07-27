@@ -98,7 +98,15 @@ id AquaA11yFocusListener::getFocusedUIElement()
             if( xAccessible.is() ) {
                 Reference< XAccessibleContext > xContext(xAccessible->getAccessibleContext());
                 if( xContext.is() )
+#ifdef USE_JAVA
+                {
+#endif	// USE_JAVA
                     m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
+#ifdef USE_JAVA
+                    if ( m_focusedObject )
+                        [ m_focusedObject retain ];
+                }
+#endif	// USE_JAVA
             }
         } catch(const RuntimeException &)  {
             // intentionally do nothing ..
@@ -136,6 +144,10 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
             if( xContext.is() )
             {
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
+#ifdef USE_JAVA
+                if ( m_focusedObject )
+                    [ m_focusedObject retain ];
+#endif	// USE_JAVA
                 NSAccessibilityPostNotification(m_focusedObject, NSAccessibilityFocusedUIElementChangedNotification);
             }
         }

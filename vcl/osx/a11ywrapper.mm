@@ -195,7 +195,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     NSAutoreleasePool * pool = [ [ NSAutoreleasePool alloc ] init ];
     @try {
         // step 1: create method name from attribute name
+#ifdef USE_JAVA
+        NSMutableString * methodName = [ NSMutableString stringWithCapacity: 100 ];
+#else	// USE_JAVA
         NSMutableString * methodName = [ NSMutableString string ];
+#endif	// USE_JAVA
         if ( ! asGetter ) {
             [ methodName appendString: @"set" ];
         }
@@ -271,9 +275,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( ! [ subRole isEqualToString: @"" ] ) {
             return subRole;
         } else {
-            [ subRole release ];
 #ifdef USE_JAVA
             if ( [ super respondsToSelector:@selector(accessibilityAttributeValue:) ] )
+#else	// USE_JAVA
+            [ subRole release ];
 #endif	// USE_JAVA
             return [ super accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
 #ifdef USE_JAVA
@@ -288,9 +293,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
     XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
     if ( pAccessibleContext )
-        return CreateNSString ( pAccessibleContext -> getAccessibleName() );
+        return [ CreateNSString ( pAccessibleContext -> getAccessibleName() ) autorelease ];
     else
-        return @"";
+        return [ NSString string ];
 #else	// USE_JAVA
     return CreateNSString ( [ self accessibleContext ] -> getAccessibleName() );
 #endif	// USE_JAVA
@@ -302,7 +307,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     } else if ( [ self accessibleExtendedComponent ] != nil ) {
         return [ AquaA11yComponentWrapper descriptionAttributeForElement: self ];
     } else {
+#ifdef USE_JAVA
+        return [ CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() ) autorelease ];
+#else	// USE_JAVA
         return CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() );
+#endif	// USE_JAVA
     }
 }
 
@@ -344,7 +353,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( rxAccessible.is() && rxAccessible -> getAccessibleContext().is() ) {
             Reference < XAccessibleContext > rxAccessibleContext = rxAccessible -> getAccessibleContext();
             id parent_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessibleContext createIfNotExists: YES asRadioGroup: YES ];
+#ifndef USE_JAVA
             [ parent_wrapper autorelease ];
+#endif	// !USE_JAVA
             return NSAccessibilityUnignoredAncestor( parent_wrapper );
         }
         return nil;
@@ -355,7 +366,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             Reference< XAccessibleContext > xContext( xParent -> getAccessibleContext() );
             if ( xContext.is() ) {
                 id parent_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
+#ifndef USE_JAVA
                 [ parent_wrapper autorelease ];
+#endif	// !USE_JAVA
                 return NSAccessibilityUnignoredAncestor( parent_wrapper );
             }
         }
@@ -368,10 +381,17 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(id)childrenAttribute {
     if ( mActsAsRadioGroup ) {
+#ifdef USE_JAVA
+        NSMutableArray * children = nil;
+#else	// USE_JAVA
         NSMutableArray * children = [ [ NSMutableArray alloc ] init ];
+#endif	// USE_JAVA
         Reference < XAccessibleRelationSet > rxAccessibleRelationSet = [ self accessibleContext ] -> getAccessibleRelationSet();
         AccessibleRelation relationMemberOf = rxAccessibleRelationSet -> getRelationByType ( AccessibleRelationType::MEMBER_OF );
         if ( relationMemberOf.RelationType == AccessibleRelationType::MEMBER_OF && relationMemberOf.TargetSet.hasElements() ) {
+#ifdef USE_JAVA
+            children = [ NSMutableArray arrayWithCapacity: relationMemberOf.TargetSet.getLength() ];
+#endif	// USE_JAVA
             for ( int index = 0; index < relationMemberOf.TargetSet.getLength(); index++ ) {
                 Reference < XAccessible > rMateAccessible = Reference < XAccessible > ( relationMemberOf.TargetSet[index], UNO_QUERY );
                 if ( rMateAccessible.is() ) {
@@ -379,7 +399,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                     if ( rMateAccessibleContext.is() ) {
                         id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rMateAccessibleContext ];
                         [ children addObject: wrapper ];
+#ifndef USE_JAVA
                         [ wrapper release ];
+#endif	// !USE_JAVA
                     }
                 }
             }
@@ -391,10 +413,15 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         return [ AquaA11yTableWrapper childrenAttributeForElement: pTable ];
     } else {
         try {
+#ifndef USE_JAVA
             NSMutableArray * children = [ [ NSMutableArray alloc ] init ];
+#endif	// !USE_JAVA
             Reference< XAccessibleContext > xContext( [ self accessibleContext ] );
 
             sal_Int32 cnt = xContext -> getAccessibleChildCount();
+#ifdef USE_JAVA
+            NSMutableArray * children = [ NSMutableArray arrayWithCapacity: cnt ];
+#endif	// USE_JAVA
             for ( sal_Int32 i = 0; i < cnt; i++ ) {
                 Reference< XAccessible > xChild( xContext -> getAccessibleChild( i ) );
                 if( xChild.is() ) {
@@ -403,7 +430,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                     if ( xChildContext.is() && AccessibleRole::MENU_BAR != xChildContext -> getAccessibleRole() ) {
                         id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: xChildContext ];
                         [ children addObject: wrapper ];
+#ifndef USE_JAVA
                         [ wrapper release ];
+#endif	// !USE_JAVA
                     }
                 }
             }
@@ -423,7 +452,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                 }
             }
 
+#ifndef USE_JAVA
             [ children autorelease ];
+#endif	// !USE_JAVA
             return NSAccessibilityUnignoredChildren( children );
         } catch (const Exception &e) {
             // TODO: Log
@@ -446,7 +477,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( loops++ == 100 )
             break;
         aWrapper = aTentativeParentWrapper;
+#ifndef USE_JAVA
         [ aWrapper autorelease ];
+#endif	// !USE_JAVA
     }
     // get associated NSWindow
     NSWindow* theWindow = [ aWrapper windowForParent ];
@@ -474,7 +507,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)helpAttribute {
+#ifdef USE_JAVA
+    return [ CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() ) autorelease ];
+#else	// USE_JAVA
     return CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() );
+#endif	// USE_JAVA
 }
 
 -(id)roleDescriptionAttribute {
@@ -498,15 +535,21 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 		// build string
 		NSNumber * nIndex = [ NSNumber numberWithInt: index ];
 		NSNumber * nGroupsize = [ NSNumber numberWithInt: [ children count ] ];
+#ifdef USE_JAVA
+		NSMutableString * value = [ NSMutableString stringWithCapacity: 100 ];
+#else	// USE_JAVA
 		NSMutableString * value = [ [ NSMutableString alloc ] init ];
+#endif	// USE_JAVA
 		[ value appendString: @"radio button " ];
 		[ value appendString: [ nIndex stringValue ] ];
 		[ value appendString: @" of " ];
 		[ value appendString: [ nGroupsize stringValue ] ];
 		// clean up and return string
+#ifndef USE_JAVA
 		[ nIndex release ];
 		[ nGroupsize release ];
 		[ children release ];
+#endif	// !USE_JAVA
 		return value;
     } else {
         return [ AquaA11yRoleHelper getRoleDescriptionFrom:
@@ -689,9 +732,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                 titleElement = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessible -> getAccessibleContext() ];
             }
         }
+#ifndef USE_JAVA
         if ( title != nil ) {
             [ title release ];
         }
+#endif	// !USE_JAVA
         return titleElement;
     } else {
         return nil;
@@ -765,11 +810,12 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             // empty
         }
     }
+#ifdef USE_JAVA
+    RELEASE_DRAGPRINTLOCK
+#else	// USE_JAVA
     if ( theWrapper != nil ) {
         [ theWrapper release ]; // the above called method calls retain on the returned Wrapper
     }
-#ifdef USE_JAVA
-    RELEASE_DRAGPRINTLOCK
 #endif	// USE_JAVA
     return value;
 }
@@ -908,26 +954,25 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( [ self accessibleValue ] != nil ) {
             [ AquaA11yValueWrapper addAttributeNamesTo: attributeNames ];
         }
-        [ nativeSubrole release ];
-        [ title release ];
 #ifdef USE_JAVA
         RELEASE_DRAGPRINTLOCKIFNEEDED
+#else	// USE_JAVA
+        [ nativeSubrole release ];
+        [ title release ];
 #endif	// USE_JAVA
         return attributeNames;
     } catch ( DisposedException & e ) { // Object is no longer available
+#ifndef USE_JAVA
         if ( nativeSubrole != nil ) {
             [ nativeSubrole release ];
         }
         if ( title != nil ) {
             [ title release ];
         }
-#ifdef USE_JAVA
-        // attributeNames is autoreleased so do not release it
-#else	// USE_JAVA
         if ( attributeNames != nil ) {
             [ attributeNames release ];
         }
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
 #ifdef USE_JAVA
         RELEASE_DRAGPRINTLOCKIFNEEDED
@@ -972,11 +1017,23 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(NSArray *)accessibilityParameterizedAttributeNames {
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityParameterizedAttributeNames]");
+#ifdef USE_JAVA
+    NSMutableArray * attributeNames = [ NSMutableArray arrayWithCapacity: 10 ];
+    if ( !ImplApplicationIsRunning() )
+        return attributeNames;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+#else	// USE_JAVA
     NSMutableArray * attributeNames = [ [ NSMutableArray alloc ] init ];
+#endif	// USE_JAVA
     // Special Attributes depending on interface
     if ( [ self accessibleText ] != nil ) {
         [ AquaA11yTextWrapper addParameterizedAttributeNamesTo: attributeNames ];
     }
+#ifdef USE_JAVA
+    RELEASE_DRAGPRINTLOCK
+#endif	// USE_JAVA
     return attributeNames; // TODO: to be completed
 }
 
@@ -1110,9 +1167,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     } else if ( enabled && [ self accessibleAction ] != nil ) {
         wrapper = self ;
     }
+#ifndef USE_JAVA
     [ parentRole release ];
     [ enabledAttr release ];
     [ role release ];
+#endif	// !USE_JAVA
     return wrapper;
 }
 
@@ -1148,7 +1207,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( actionResponder != nil ) {
         actionNames = [ AquaA11yActionWrapper actionNamesForElement: actionResponder ];
     } else {
+#ifdef USE_JAVA
+        actionNames = [ NSArray array ];
+#else	// USE_JAVA
         actionNames = [ [ NSArray alloc ] init ];
+#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK

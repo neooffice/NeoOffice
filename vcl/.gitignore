@@ -607,12 +607,10 @@ osx/a11ywrappergroup.h
 osx/OSXTransferable.cxx
 osx/DragSourceContext.cxx
 osx/a11yutil.mm
-osx/a11yactionwrapper.mm
 osx/a11ytablewrapper.h
 osx/PictToBmpFlt.cxx
 osx/a11ywrapperscrollbar.h
 osx/saltimer.cxx
-osx/a11yselectionwrapper.mm
 osx/a11yvaluewrapper.mm
 osx/a11ywrappercheckbox.h
 osx/a11ywrapperbutton.h
@@ -621,7 +619,6 @@ osx/a11yactionwrapper.h
 osx/salnativewidgets.cxx
 osx/a11ywrappersplitter.h
 osx/a11yselectionwrapper.h
-osx/a11ycomponentwrapper.mm
 osx/cuidraw.hxx
 osx/salmenu.cxx
 osx/DragSourceContext.hxx
@@ -634,10 +631,8 @@ osx/a11ytextattributeswrapper.h
 osx/salframeview.mm
 osx/PictToBmpFlt.hxx
 osx/a11ywrapperstatictext.h
-osx/a11yrolehelper.mm
 osx/a11ywrappercombobox.h
 osx/a11yutil.h
-osx/a11ytablewrapper.mm
 osx/clipboard.hxx
 osx/HtmlFmtFlt.hxx
 osx/README.a11y
