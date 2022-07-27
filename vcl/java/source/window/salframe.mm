@@ -2254,8 +2254,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[self adjustCornerRadius];
 
 #ifdef USE_AQUA_A11Y
+			// Do not register show only menus windows since we are trying to
+			// behave as if this type of window does not exist
 			NSView *pContentView = [mpWindow contentView];
-			if ( pContentView )
+			if ( pContentView && !mbShowOnlyMenus )
 				[AquaA11yFactory registerView:pContentView];
 #endif	// USE_AQUA_A11Y
 
