@@ -1517,7 +1517,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     }
 
     ACQUIRE_DRAGPRINTLOCK
-    [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: pObject ];
+    [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: self ];
     RELEASE_DRAGPRINTLOCK
 }
 
