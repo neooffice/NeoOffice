@@ -217,6 +217,7 @@ PRODUCT_MODULES = \
 	sal \
 	jvmfwk \
 	vcl \
+	accessibility \
 	apple_remote \
 	avmedia \
 	basic \
@@ -894,6 +895,7 @@ else
 endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/uno" "MacOS/uno" ; chmod a+x "MacOS/uno"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp \
+	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libacclo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libavmediaQuickTimelo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libcmdmaillo.dylib" \
 	"$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libcppcanvaslo.dylib" \
