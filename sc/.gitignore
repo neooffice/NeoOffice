@@ -1028,7 +1028,6 @@ source/ui/Accessibility/DrawModelBroadcaster.cxx
 source/ui/Accessibility/AccessibleFilterMenuItem.cxx
 source/ui/Accessibility/AccessibleGlobal.cxx
 source/ui/Accessibility/AccessibleCellBase.cxx
-source/ui/Accessibility/AccessibleDocument.cxx
 source/ui/Accessibility/AccessibleFilterMenu.cxx
 source/ui/navipi/scenwnd.cxx
 source/ui/navipi/navipi.hrc
