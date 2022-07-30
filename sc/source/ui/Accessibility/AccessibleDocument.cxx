@@ -382,6 +382,10 @@ ScChildrenShapes::~ScChildrenShapes()
         if (pDrawBC)
             EndListening(*pDrawBC);
     }
+#ifndef NO_LIBO_BUG_106872_FIX
+    if (mpAccessibleDocument && xSelectionSupplier.is())
+        xSelectionSupplier->removeSelectionChangeListener(mpAccessibleDocument);
+#endif	// !NO_LIBO_BUG_106872_FIX
 }
 
 void ScChildrenShapes::SetDrawBroadcaster()
