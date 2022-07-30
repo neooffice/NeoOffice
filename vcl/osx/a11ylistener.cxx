@@ -89,8 +89,10 @@ AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, 
 #ifdef USE_JAVA
     NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
 
-    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
-        osl_performSelectorOnMainThread( (AquaA11yWrapper *)m_wrapperObject, @selector(removeFromWrapperRepository:), m_wrapperObject, NO );
+    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] ) {
+        AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: m_wrapperObject ];
+        osl_performSelectorOnMainThread( pAquaA11yRemoveFromWrapperRepository, @selector(removeFromWrapperRepository:), pAquaA11yRemoveFromWrapperRepository, NO );
+    }
 
     [ pPool release ]; 
 #else	// USE_JAVA

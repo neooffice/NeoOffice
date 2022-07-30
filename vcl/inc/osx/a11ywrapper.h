@@ -113,10 +113,6 @@ struct ReferenceWrapper
 -(::com::sun::star::accessibility::XAccessibleTextAttributes *)accessibleTextAttributes;
 -(::com::sun::star::accessibility::XAccessibleMultiLineText *)accessibleMultiLineText;
 -(::com::sun::star::accessibility::XAccessibleTextMarkup *)accessibleTextMarkup;
-
-#ifdef USE_JAVA
--(void)removeFromWrapperRepository: (id) pObject;
-#endif	// USE_JAVA
 @end
 
 #endif // INCLUDED_VCL_INC_OSX_A11YWRAPPER_H

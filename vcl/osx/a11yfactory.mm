@@ -51,8 +51,12 @@
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 
 #ifdef USE_JAVA
+
+#include <osl/objcutils.h>
+
 #include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
+
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star::accessibility;
@@ -232,22 +236,6 @@ static bool enabled = false;
     }
 }
 
-#ifdef USE_JAVA
-
-+(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper {
-    if ( theWrapper && enabled ) {
-        if (![theWrapper isKindOfClass:[VCLView class]])
-            [theWrapper removeFromSuperviewWithoutNeedingDisplay];
-
-        NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
-        NSArray< NSValue* > *pKeysForView = [ dAllWrapper allKeysForObject: theWrapper ];
-        if ( pKeysForView && [pKeysForView count] )
-            [ dAllWrapper removeObjectsForKeys: pKeysForView ];
-    }
-}
-
-#endif	// USE_JAVA
-
 +(void)registerView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
         // insertIntoWrapperRepository gets called from SalFrameView itself to bootstrap the bridge initially
@@ -258,7 +246,8 @@ static bool enabled = false;
 +(void)revokeView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
 #ifdef USE_JAVA
-        [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theView ];
+        AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: (AquaA11yWrapper *)theView ];
+        osl_performSelectorOnMainThread( pAquaA11yRemoveFromWrapperRepository, @selector(removeFromWrapperRepository:), pAquaA11yRemoveFromWrapperRepository, NO );
 #else	// USE_JAVA
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) theView accessibleContext ] ];
 #endif	// USE_JAVA
@@ -268,6 +257,92 @@ static bool enabled = false;
 @end
 
 #ifdef USE_JAVA
+
+static NSMutableArray<AquaA11yRemoveFromWrapperRepository*> *pPendingRemoveFromWrapperRepositoryQueue = nil;
+static ::osl::Mutex aPendingRemoveFromWrapperRepositoryQueueMutex;
+static BOOL bInRemovePendingFromWrapperRepository = NO;
+
+@implementation AquaA11yRemoveFromWrapperRepository
+
++ (id)createWithElement:(AquaA11yWrapper *)pElement
+{
+    AquaA11yRemoveFromWrapperRepository *pRet = [ [ AquaA11yRemoveFromWrapperRepository alloc ] initWithElement: pElement ];
+    [ pRet autorelease ];
+    return pRet;
+}
+
+- (id)initWithElement:(AquaA11yWrapper *)pElement
+{
+    [ super init ];
+
+    mpElement = pElement;
+    if ( mpElement )
+        [mpElement retain];
+
+    ::osl::ClearableMutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
+
+    if ( !pPendingRemoveFromWrapperRepositoryQueue ) {
+        pPendingRemoveFromWrapperRepositoryQueue = [ NSMutableArray arrayWithCapacity: 10 ];
+        if ( pPendingRemoveFromWrapperRepositoryQueue )
+            [ pPendingRemoveFromWrapperRepositoryQueue retain ];
+    }
+
+    if ( pPendingRemoveFromWrapperRepositoryQueue )
+        [ pPendingRemoveFromWrapperRepositoryQueue addObject: self ];
+
+    aGuard.clear();
+
+    return self;
+}
+
+- (void)dealloc
+{
+    if ( mpElement )
+        [ mpElement release ];
+
+    [ super dealloc ];
+}
+
+- (void)removeFromWrapperRepository:(id)pObject
+{
+    if ( bInRemovePendingFromWrapperRepository )
+        return;
+
+    // Prevent posting of notification if we are already within an
+    // NSAccessibility call
+    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
+        ::osl::MutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
+        if ( pPendingRemoveFromWrapperRepositoryQueue && [ pPendingRemoveFromWrapperRepositoryQueue count ] )
+            [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.01f];
+        return;
+    }
+
+    bInRemovePendingFromWrapperRepository = YES;
+
+    ACQUIRE_DRAGPRINTLOCK
+    ::osl::ClearableMutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
+
+    if ( pPendingRemoveFromWrapperRepositoryQueue ) {
+        for ( AquaA11yRemoveFromWrapperRepository *pRemoveFromWrapperRepository : pPendingRemoveFromWrapperRepositoryQueue ) {
+            if ( pRemoveFromWrapperRepository && pRemoveFromWrapperRepository->mpElement ) {
+                try {
+                    [ AquaA11yFactory removeFromWrapperRepositoryFor: [ pRemoveFromWrapperRepository->mpElement accessibleContext ] ];
+                } catch ( const ::com::sun::star::lang::DisposedException& ) {
+                } catch ( ... ) {
+                    NSLog( @"Exception caught while in AquaA11yFocusListener::focusedObjectChanged: %s", __PRETTY_FUNCTION__ );
+                }
+            }
+        }
+        [ pPendingRemoveFromWrapperRepositoryQueue removeAllObjects ];
+    }
+
+    aGuard.clear();
+    RELEASE_DRAGPRINTLOCK
+
+    bInRemovePendingFromWrapperRepository = NO;
+}
+
+@end
 
 static NSMutableArray<AquaA11yPostNotification*> *pPendingPostNotificationQueue = nil;
 static ::osl::Mutex aPendingPostNotificationQueueMutex;

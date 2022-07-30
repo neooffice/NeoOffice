@@ -40,14 +40,21 @@
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate;
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate asRadioGroup:(BOOL) asRadioGroup;
 +(void)removeFromWrapperRepositoryFor: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
-#ifdef USE_JAVA
-+(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper;
-#endif	// USE_JAVA
 +(void)registerView: (NSView *) theView;
 +(void)revokeView: (NSView *) theViewt;
 @end
 
 #ifdef USE_JAVA
+
+@interface AquaA11yRemoveFromWrapperRepository : NSObject
+{
+    AquaA11yWrapper*        mpElement;
+}
++ (id)createWithElement:(AquaA11yWrapper *)pElement;
+- (id)initWithElement:(AquaA11yWrapper *)pElement;
+- (void)dealloc;
+- (void)removeFromWrapperRepository:(id)pObject;
+@end
 
 @interface AquaA11yPostNotification : NSObject
 {

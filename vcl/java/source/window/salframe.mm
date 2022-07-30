@@ -2805,13 +2805,7 @@ JavaSalFrame::~JavaSalFrame()
 
 	if ( mpWindow )
 	{
-#ifdef USE_AQUA_A11Y
-		ACQUIRE_SOLARMUTEX
-#endif	// USE_AQUA_A11Y
 		osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
-#ifdef USE_AQUA_A11Y
-		RELEASE_SOLARMUTEX
-#endif	// USE_AQUA_A11Y
 		[mpWindow release];
 	}
 
@@ -5015,13 +5009,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			// Release old window wrapper
 			if ( mpWindow )
 			{
-#ifdef USE_AQUA_A11Y
-				ACQUIRE_SOLARMUTEX
-#endif	// USE_AQUA_A11Y
 				osl_performSelectorOnMainThread( mpWindow, @selector(destroy:), mpWindow, YES );
-#ifdef USE_AQUA_A11Y
-				RELEASE_SOLARMUTEX
-#endif	// USE_AQUA_A11Y
 				[mpWindow release];
 			}
 
