@@ -28,5 +28,8 @@
 	<!-- Disable library validation or Java and native plugins won't load -->
 	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
+    <!-- Set to true to enable connecting from the Instruments application -->
+	<key>com.apple.security.get-task-allow</key>
+	<$(CODESIGN_FOR_DEBUGGING)/>
 </dict>
 </plist>

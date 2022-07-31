@@ -70,8 +70,10 @@ OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
 # the LibreOffice build
 JDK_HOME:=$(shell /usr/libexec/java_home -V 2>&1 | grep '"Oracle Corporation" - "Java SE 8"' | awk '{ print $$NF }')
 CODESIGN_EXTRA_OPTIONS:=--timestamp
+CODESIGN_FOR_DEBUGGING=true
 ifndef NO_HARDENED_RUNTIME
 CODESIGN_EXTRA_OPTIONS+=--options runtime
+CODESIGN_FOR_DEBUGGING=false
 endif
 TARGET_MACHINE:=$(shell uname -m)
 ifeq ($(TARGET_MACHINE),arm64)
@@ -752,11 +754,11 @@ ifndef CROSS_COMPILE_ARM64
 # Sign LibreOfficePython framework
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" "Contents/Frameworks/LibreOfficePython.framework/Versions/3.8"
 endif
-	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
+	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(CODESIGN_FOR_DEBUGGING)#$(CODESIGN_FOR_DEBUGGING)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 else
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `grep "$(TARGET_FILE_TYPE)" "$(PWD)/$(INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##" | grep -v "\/soffice\.bin"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
-	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(INSTALL_HOME)/Entitlements.plist"
+	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(CODESIGN_FOR_DEBUGGING)#$(CODESIGN_FOR_DEBUGGING)#g' > "$(INSTALL_HOME)/Entitlements.plist"
 	cd "$(INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(INSTALL_HOME)/Entitlements.plist" .
 endif
 ifndef CROSS_COMPILE
@@ -961,13 +963,13 @@ endif
 ifdef PRODUCT_BUILD3
 # The uno executable needs the same hardened runtime entitlements as soffice.bin
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `grep "$(TARGET_FILE_TYPE)" "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##" | grep -v "\/soffice\.bin"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only_no_sandbox.plist" "$$i" ; done'
-	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
+	cat "etc/package/Entitlements_hardened_runtime_no_sandbox.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(CODESIGN_FOR_DEBUGGING)#$(CODESIGN_FOR_DEBUGGING)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
 else
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources/help"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(LIBO_PRODUCT_NAME)#$(LIBO_PRODUCT_NAME)#g' "$(PWD)/etc/sandbox/Resources/help/main_transform.xsl" | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_URL)#$(PRODUCT_DOCUMENTATION_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_URL_TEXT)#$(PRODUCT_DOCUMENTATION_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)#$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)#$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)#g' > "Resources/help/main_transform.xsl"
 	cd "$(PATCH_INSTALL_HOME)/package" ; sh -e -c 'for i in `grep "$(TARGET_FILE_TYPE)" "$(PWD)/$(PATCH_INSTALL_HOME)/filetypes.txt" | sed "s#:.*\\$$##" | grep -v "\/soffice\.bin"` ; do codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/etc/package/Entitlements_inherit_only.plist" "$$i" ; done'
-	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
+	cat "etc/package/Entitlements_hardened_runtime.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(CERTSANDBOXTEAMIDENTIFIER)#$(CERTSANDBOXTEAMIDENTIFIER)#g' | sed 's#$$(CODESIGN_FOR_DEBUGGING)#$(CODESIGN_FOR_DEBUGGING)#g' > "$(PATCH_INSTALL_HOME)/Entitlements.plist"
 	cd "$(PATCH_INSTALL_HOME)/package" ; codesign --force $(CODESIGN_EXTRA_OPTIONS) -s "$(CERTAPPIDENTITY)" --entitlements "$(PWD)/$(PATCH_INSTALL_HOME)/Entitlements.plist" .
 endif
 # Verify codesigning
