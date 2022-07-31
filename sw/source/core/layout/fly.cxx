@@ -2151,8 +2151,13 @@ void SwFrm::RemoveDrawObj( SwAnchoredObject& _rToRemoveObj )
     if( pSh )
     {
         SwRootFrm* pLayout = getRootFrm();
+#ifdef NO_LIBO_BUG_58624_FIX
         if( pLayout && pLayout->IsAnyShellAccessible() )
         pSh->Imp()->DisposeAccessibleObj( _rToRemoveObj.GetDrawObj() );
+#else	// NO_LIBO_BUG_58624_FIX
+        if (pLayout && pLayout->IsAnyShellAccessible())
+            pSh->Imp()->DisposeAccessibleObj(_rToRemoveObj.GetDrawObj(), false);
+#endif	// NO_LIBO_BUG_58624_FIX
     }
 
     // deregister from page frame

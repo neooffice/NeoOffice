@@ -1,0 +1,88 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
+ * This file is part of the LibreOffice project.
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *
+ * This file incorporates work covered by the following license notice:
+ *
+ *   Licensed to the Apache Software Foundation (ASF) under one or more
+ *   contributor license agreements. See the NOTICE file distributed
+ *   with this work for additional information regarding copyright
+ *   ownership. The ASF licenses this file to you under the Apache
+ *   License, Version 2.0 (the "License"); you may not use this file
+ *   except in compliance with the License. You may obtain a copy of
+ *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ */
+
+#ifndef INCLUDED_SW_SOURCE_CORE_ACCESS_ACCPAGE_HXX
+#define INCLUDED_SW_SOURCE_CORE_ACCESS_ACCPAGE_HXX
+
+#include "acccontext.hxx"
+
+/**
+ * accessibility implementation for the page (SwPageFrm)
+ * The page is _only_ visible in the page preview. For the regular
+ * document view, it doesn't make sense to add this additional element
+ * into the hierarchy. For the page preview, however, the page is the
+ * important.
+ */
+class SwAccessiblePage : public SwAccessibleContext
+{
+    bool    bIsSelected;    // protected by base class mutex
+
+    bool    IsSelected();
+
+    using SwAccessibleFrame::GetBounds;
+
+protected:
+    // return the bounding box for the page in page preview mode
+    SwRect GetBounds( /* const SwFrm *pFrm =0 */ );
+
+    // Set states for getAccessibleStateSet.
+    // This derived class additionally sets
+    // FOCUSABLE(1) and FOCUSED(+)
+    virtual void GetStates( ::utl::AccessibleStateSetHelper& rStateSet ) SAL_OVERRIDE;
+
+    virtual void _InvalidateCursorPos() SAL_OVERRIDE;
+    virtual void _InvalidateFocus() SAL_OVERRIDE;
+
+    virtual ~SwAccessiblePage();
+
+public:
+    // convenience constructor to avoid typecast;
+    // may only be called with SwPageFrm argument
+#ifdef NO_LIBO_BUG_58624_FIX
+    SwAccessiblePage( SwAccessibleMap* pInitMap, const SwFrm* pFrame );
+#else	// NO_LIBO_BUG_58624_FIX
+    SwAccessiblePage(std::shared_ptr<SwAccessibleMap> const& pInitMap,
+                     const SwFrm* pFrame);
+#endif	// NO_LIBO_BUG_58624_FIX
+
+    // XAccessibleContext methods that need to be overridden
+
+    virtual OUString SAL_CALL getAccessibleDescription (void)
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+    // XServiceInfo
+
+    virtual OUString SAL_CALL getImplementationName (void)
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService (
+        const OUString& sServiceName)
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Sequence< OUString> SAL_CALL
+        getSupportedServiceNames (void)
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+    // XTypeProvider
+    virtual ::com::sun::star::uno::Sequence< sal_Int8 > SAL_CALL getImplementationId(  ) throw(::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+    virtual bool HasCursor() SAL_OVERRIDE;   // required by map to remember that object
+};
+
+#endif
+
+/* vim:set shiftwidth=4 softtabstop=4 expandtab: */
