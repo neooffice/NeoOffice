@@ -297,6 +297,11 @@ public:
     Point PixelToCore (const Point& rPoint) const;
     Rectangle CoreToPixel (const Rectangle& rRect) const;
 
+#ifndef NO_LIBO_BUG_117601_FIX
+    // is there a known accessibility impl cached for the frame
+    bool Contains(const SwFrm *pFrame) const;
+#endif	// !NO_LIBO_BUG_117601_FIX
+
 private:
     /** get mapping mode for LogicToPixel and PixelToLogic conversions
 

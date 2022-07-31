@@ -1766,7 +1766,7 @@ SwAccessibleMap::~SwAccessibleMap()
             }
         }
 #ifndef NO_LIBO_BUG_58624_FIX
-        assert((!mpFrameMap || mpFrameMap->empty()) &&
+        assert((!mpFrmMap || mpFrmMap->empty()) &&
                 "Frame map should be empty after disposing the root frame");
 #endif	// !NO_LIBO_BUG_58624_FIX
 #endif
@@ -2327,6 +2327,15 @@ void SwAccessibleMap::RemoveContext( const SdrObject *pObj )
         }
     }
 }
+
+#ifndef NO_LIBO_BUG_117601_FIX
+
+bool SwAccessibleMap::Contains(const SwFrm *pFrame) const
+{
+    return (pFrame && mpFrmMap && mpFrmMap->find(pFrame) != mpFrmMap->end());
+}
+
+#endif	// !NO_LIBO_BUG_117601_FIX
 
 void SwAccessibleMap::Dispose( const SwFrm *pFrm,
                                const SdrObject *pObj,

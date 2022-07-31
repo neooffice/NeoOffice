@@ -401,9 +401,14 @@ void SwAccessibleContext::DisposeChildren(const SwFrm *pFrm,
         const SwFrm* pLower = rLower.GetSwFrm();
         if( pLower )
         {
+#ifdef NO_LIBO_BUG_117601_FIX
             ::rtl::Reference< SwAccessibleContext > xAccImpl;
             if( rLower.IsAccessible( GetShell()->IsPreview() ) )
                 xAccImpl = GetMap()->GetContextImpl( pLower, false );
+#else	// NO_LIBO_BUG_117601_FIX
+            // tdf#117601 dispose the darn thing if it ever was accessible
+            ::rtl::Reference<SwAccessibleContext> xAccImpl = GetMap()->GetContextImpl(pLower, false);
+#endif	// NO_LIBO_BUG_117601_FIX
             if( xAccImpl.is() )
                 xAccImpl->Dispose( bRecursive );
 #ifdef NO_LIBO_BUG_58624_FIX
