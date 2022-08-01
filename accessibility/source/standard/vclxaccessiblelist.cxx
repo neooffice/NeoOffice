@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified July 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <accessibility/standard/vclxaccessiblelist.hxx>
@@ -116,6 +123,19 @@ void SAL_CALL VCLXAccessibleList::disposing (void)
 #ifdef NO_LIBO_SIMPLIFY_CLEARITEMS_FIX
     clearItems();
 #else	// NO_LIBO_SIMPLIFY_CLEARITEMS_FIX
+#ifdef USE_JAVA
+    // Fix memory leak by calling dispose() on all children
+    for ( ListItems::iterator aIter = m_aAccessibleChildren.begin(); aIter != m_aAccessibleChildren.end(); ++aIter )
+    {
+        Reference< XAccessible > xHold = *aIter;
+        if ( xHold.is() )
+        {
+            VCLXAccessibleListItem* pItem = static_cast< VCLXAccessibleListItem* >( xHold.get() );
+            if ( pItem )
+                pItem->dispose();
+        }
+    }
+#endif	// USE_JAVA
     m_aAccessibleChildren.clear();
 #endif	// NO_LIBO_SIMPLIFY_CLEARITEMS_FIX
 
@@ -557,6 +577,19 @@ void VCLXAccessibleList::HandleChangedItemList (bool /*bItemInserted*/, sal_Int3
 #ifdef NO_LIBO_SIMPLIFY_CLEARITEMS_FIX
     clearItems();
 #else	// NO_LIBO_SIMPLIFY_CLEARITEMS_FIX
+#ifdef USE_JAVA
+    // Fix memory leak by calling dispose() on all children
+    for ( ListItems::iterator aIter = m_aAccessibleChildren.begin(); aIter != m_aAccessibleChildren.end(); ++aIter )
+    {
+        Reference< XAccessible > xHold = *aIter;
+        if ( xHold.is() )
+        {
+            VCLXAccessibleListItem* pItem = static_cast< VCLXAccessibleListItem* >( xHold.get() );
+            if ( pItem )
+                pItem->dispose();
+        }
+    }
+#endif	// USE_JAVA
     m_aAccessibleChildren.clear();
 #endif	// NO_LIBO_SIMPLIFY_CLEARITEMS_FIX
     NotifyAccessibleEvent (
