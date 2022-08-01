@@ -49,7 +49,6 @@ inc/accessibility/standard/vclxaccessibledropdownlistbox.hxx
 inc/accessibility/standard/vclxaccessibleedit.hxx
 inc/accessibility/standard/vclxaccessiblefixedhyperlink.hxx
 inc/accessibility/standard/vclxaccessiblefixedtext.hxx
-inc/accessibility/standard/vclxaccessiblelist.hxx
 inc/accessibility/standard/vclxaccessiblelistbox.hxx
 inc/accessibility/standard/vclxaccessiblelistitem.hxx
 inc/accessibility/standard/vclxaccessiblemenu.hxx
@@ -118,7 +117,6 @@ source/standard/vclxaccessibledropdownlistbox.cxx
 source/standard/vclxaccessibleedit.cxx
 source/standard/vclxaccessiblefixedhyperlink.cxx
 source/standard/vclxaccessiblefixedtext.cxx
-source/standard/vclxaccessiblelist.cxx
 source/standard/vclxaccessiblelistbox.cxx
 source/standard/vclxaccessiblelistitem.cxx
 source/standard/vclxaccessiblemenu.cxx
