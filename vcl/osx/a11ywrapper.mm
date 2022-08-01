@@ -420,6 +420,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
             sal_Int32 cnt = xContext -> getAccessibleChildCount();
 #ifdef USE_JAVA
+            // Fix issue #11 by limiting the maximum number of child views that
+            // can be attached to the window
+            if ( cnt > AQUA11Y_MAX_CHILD_COUNT )
+                cnt = AQUA11Y_MAX_CHILD_COUNT;
+
             NSMutableArray * children = [ NSMutableArray arrayWithCapacity: cnt ];
 #endif	// USE_JAVA
             for ( sal_Int32 i = 0; i < cnt; i++ ) {
