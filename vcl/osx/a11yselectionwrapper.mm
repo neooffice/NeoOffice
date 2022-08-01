@@ -46,6 +46,11 @@ using namespace ::com::sun::star::uno;
         try {
             sal_Int32 n = xAccessibleSelection -> getSelectedAccessibleChildCount();
 #ifdef USE_JAVA
+            // Fix issue #11 by limiting the maximum number of child views that
+            // can be attached to the window
+            if ( n > AQUA11Y_MAX_CHILD_COUNT )
+                n = AQUA11Y_MAX_CHILD_COUNT;
+
             NSMutableArray * children = [ NSMutableArray arrayWithCapacity: n ];
 #endif	// USE_JAVA
             for ( sal_Int32 i=0 ; i < n ; ++i ) {
