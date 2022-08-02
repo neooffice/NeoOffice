@@ -57,6 +57,8 @@
 #include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
 
+#define AQUA11Y_MAX_REMOVE_BATCH_SIZE 100
+
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star::accessibility;
@@ -335,7 +337,7 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
         ::osl::MutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
         if ( pPendingRemoveFromWrapperRepositoryQueue && [ pPendingRemoveFromWrapperRepositoryQueue count ] )
-            [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.01f];
+            [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.1f];
         return;
     }
 
@@ -345,7 +347,10 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     ::osl::ClearableMutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
 
     if ( pPendingRemoveFromWrapperRepositoryQueue ) {
-        for ( AquaA11yRemoveFromWrapperRepository *pRemoveFromWrapperRepository : pPendingRemoveFromWrapperRepositoryQueue ) {
+        // Eliminate random spinnning beach ball by removing only a small batch
+        // of pending wrappers in each pass
+        for ( NSUInteger i = 0; i < AQUA11Y_MAX_REMOVE_BATCH_SIZE && [ pPendingRemoveFromWrapperRepositoryQueue count ]; i++ ) {
+            AquaA11yRemoveFromWrapperRepository *pRemoveFromWrapperRepository = [ pPendingRemoveFromWrapperRepositoryQueue objectAtIndex: 0 ];
             if ( pRemoveFromWrapperRepository && pRemoveFromWrapperRepository->mpElement ) {
                 try {
                     [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: pRemoveFromWrapperRepository->mpElement ];
@@ -354,8 +359,11 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
                     NSLog( @"Exception caught while in -[AquaA11yFactory removeFromWrapperRepositoryFor:]: %s", __PRETTY_FUNCTION__ );
                 }
             }
+
+            [ pPendingRemoveFromWrapperRepositoryQueue removeObjectAtIndex: 0 ];
+            if ( [ pPendingRemoveFromWrapperRepositoryQueue count ] )
+                [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.1f];
         }
-        [ pPendingRemoveFromWrapperRepositoryQueue removeAllObjects ];
     }
 
     aGuard.clear();
