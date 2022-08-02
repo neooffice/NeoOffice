@@ -73,11 +73,20 @@ AquaA11yEventListener::AquaA11yEventListener(id wrapperObject, sal_Int16 role) :
 AquaA11yEventListener::~AquaA11yEventListener()
 {
 #ifdef USE_JAVA
-    NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
+    if ( m_wrapperObject ) {
+        NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
 
-    osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), m_wrapperObject, NO );
+        if ( [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] ) {
+            [ (AquaA11yWrapper *)m_wrapperObject disposing ];
 
-    [ pPool release ]; 
+            AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: m_wrapperObject ];
+            osl_performSelectorOnMainThread( pAquaA11yRemoveFromWrapperRepository, @selector(removeFromWrapperRepository:), pAquaA11yRemoveFromWrapperRepository, NO );
+        }
+
+        osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), m_wrapperObject, NO );
+
+        [ pPool release ]; 
+    }
 #else	// USE_JAVA
     [ m_wrapperObject release ];
 #endif	// USE_JAVA
