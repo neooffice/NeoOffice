@@ -69,6 +69,7 @@ struct ReferenceWrapper
     BOOL mIsTableCell;
 #ifdef USE_JAVA
     NSView *mpAddingSubview;
+    BOOL mbDisposed;
 #endif	// USE_JAVA
 }
 // NSAccessibility Protocol
@@ -104,6 +105,10 @@ struct ReferenceWrapper
 -(id)initWithAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) anAccessibleContext;
 -(void) setDefaults: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 -(void) dealloc;
+#ifdef USE_JAVA
+-(void)disposing;
+-(BOOL)isDisposed;
+#endif	// USE_JAVA
 +(void)setPopupMenuOpen:(BOOL)popupMenuOpen;
 -(::com::sun::star::accessibility::XAccessibleAction *)accessibleAction;
 -(::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;

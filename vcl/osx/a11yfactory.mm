@@ -329,7 +329,7 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
                     [ AquaA11yFactory removeFromWrapperRepositoryFor: [ pRemoveFromWrapperRepository->mpElement accessibleContext ] ];
                 } catch ( const ::com::sun::star::lang::DisposedException& ) {
                 } catch ( ... ) {
-                    NSLog( @"Exception caught while in AquaA11yFocusListener::focusedObjectChanged: %s", __PRETTY_FUNCTION__ );
+                    NSLog( @"Exception caught while in -[AquaA11yFactory removeFromWrapperRepositoryFor:]: %s", __PRETTY_FUNCTION__ );
                 }
             }
         }
@@ -397,7 +397,7 @@ static BOOL bInPostPendingNotifications = NO;
 
 - (void)postNotification
 {
-    if ( mpElement && mpName )
+    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
         NSAccessibilityPostNotification( mpElement, mpName );
 }
 

@@ -57,6 +57,10 @@
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return isSettable;
+    }
     isSettable = [ super accessibilityIsAttributeSettable: attribute ];
     RELEASE_DRAGPRINTLOCK
     return isSettable;
@@ -73,6 +77,10 @@
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return [ NSArray array ];
+    }
     // Default Attributes
     attributeNames = [ NSMutableArray arrayWithArray: [ super accessibilityAttributeNames ] ];
 #else	// USE_JAVA

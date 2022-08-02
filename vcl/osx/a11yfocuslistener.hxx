@@ -33,6 +33,9 @@
 class AquaA11yFocusListener : public KeyboardFocusListener
 {
     id m_focusedObject;
+#ifdef USE_JAVA
+    ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible > mxFocusAccessible;
+#endif	// USE_JAVA
 
     static rtl::Reference< AquaA11yFocusListener > theListener;
 

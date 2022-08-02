@@ -115,6 +115,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     mIsTableCell = NO;
 #ifdef USE_JAVA
     mpAddingSubview = nil;
+    mbDisposed = NO;
 #endif	// USE_JAVA
     // Querying all supported interfaces
     try {
@@ -182,6 +183,18 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     }
     [ super dealloc ];
 }
+
+#ifdef USE_JAVA
+
+-(void)disposing {
+    mbDisposed = YES;
+}
+
+-(BOOL)isDisposed {
+    return mbDisposed;
+}
+
+#endif	// USE_JAVA
 
 #pragma mark -
 #pragma mark Utility Section
@@ -795,6 +808,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nil;
+    }
 #endif	// USE_JAVA
     // if we are no longer in the wrapper repository, we have been disposed
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ self accessibleContext ] createIfNotExists: NO ];
@@ -838,6 +855,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return ignored;
+    }
     XAccessibleContext *pAccessibleContext = [ self accessibleContext ];
     if ( pAccessibleContext ) {
         sal_Int16 nRole = pAccessibleContext -> getAccessibleRole();
@@ -880,6 +901,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nil;
+    }
 #endif	// USE_JAVA
     NSString * nativeSubrole = nil;
     NSString * title = nil;
@@ -1001,6 +1026,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return isSettable;
+    }
 #endif	// USE_JAVA
     if ( [ self accessibleText ] != nil ) {
         isSettable = [ AquaA11yTextWrapper isAttributeSettable: attribute forElement: self ];
@@ -1029,6 +1058,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return attributeNames;
+    }
 #else	// USE_JAVA
     NSMutableArray * attributeNames = [ [ NSMutableArray alloc ] init ];
 #endif	// USE_JAVA
@@ -1050,6 +1083,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nil;
+    }
 #endif	// USE_JAVA
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: YES withGetterParameter: YES ];
     if ( [ self respondsToSelector: methodSelector ] ) {
@@ -1083,6 +1120,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return;
+    }
 #endif	// USE_JAVA
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: NO withGetterParameter: NO ];
     if ( [ AquaA11yComponentWrapper respondsToSelector: methodSelector ] ) {
@@ -1115,6 +1156,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nil;
+    }
 #endif	// USE_JAVA
     // as this seems to be the first API call on a newly created SalFrameView object,
     // make sure self gets registered in the repository ..
@@ -1188,6 +1233,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return;
+    }
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
@@ -1207,6 +1256,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nil;
+    }
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
@@ -1313,6 +1366,10 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nil;
+    }
 #endif	// USE_JAVA
     if ( nil != wrapper ) {
         [ wrapper release ];
