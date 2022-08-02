@@ -90,7 +90,6 @@ id AquaA11yFocusListener::getFocusedUIElement()
     // call +[AquaA11yFactory wrapperForAccessibleContext:] without having to
     // release the application mutex
     if ( nil == m_focusedObject && CFRunLoopGetCurrent() == CFRunLoopGetMain() ) {
-        mxFocusAccessible.clear();
 #else	// USE_JAVA
     if ( nil == m_focusedObject ) {
 #endif	// USE_JAVA
@@ -101,7 +100,6 @@ id AquaA11yFocusListener::getFocusedUIElement()
                 if( xContext.is() )
 #ifdef USE_JAVA
                 {
-                    mxFocusAccessible = xAccessible;
 #endif	// USE_JAVA
                     m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
 #ifdef USE_JAVA
@@ -127,8 +125,6 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
     if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() ) {
         NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
 
-        mxFocusAccessible = xAccessible;
-
         AquaA11yFocusListenerFocusedObjectChanged *pAquaA11yFocusListenerFocusedObjectChanged = [ AquaA11yFocusListenerFocusedObjectChanged createWithFocusListener: this accessible: xAccessible ];
         osl_performSelectorOnMainThread( pAquaA11yFocusListenerFocusedObjectChanged, @selector(postPendingNotifications:), pAquaA11yFocusListenerFocusedObjectChanged, NO );
 
@@ -144,13 +140,16 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
 
     try {
 #ifdef USE_JAVA
-        // There is another accessible waiting to post a notification so skip
-        // this accessible as it may no longer be valid
-        if( xAccessible.is() && mxFocusAccessible == xAccessible ) {
+        // The focused object may have changed since this call was queued and
+        // so we can't trust that the passed in accessible reference is still
+        // valid so use the focus tracker's current focused reference
+        Reference< XAccessible > xFocusedAccessible( AquaA11yFocusTracker::get().getFocusedObject() );
+        if( xFocusedAccessible.is() ) {
+            Reference< XAccessibleContext > xContext(xFocusedAccessible->getAccessibleContext());
 #else	// USE_JAVA
         if( xAccessible.is() ) {
-#endif	// USE_JAVA
             Reference< XAccessibleContext > xContext(xAccessible->getAccessibleContext());
+#endif	// USE_JAVA
             if( xContext.is() )
             {
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
