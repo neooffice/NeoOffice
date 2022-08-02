@@ -40,6 +40,9 @@
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate;
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate asRadioGroup:(BOOL) asRadioGroup;
 +(void)removeFromWrapperRepositoryFor: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
+#ifdef USE_JAVA
++(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper;
+#endif	// USE_JAVA
 +(void)registerView: (NSView *) theView;
 +(void)revokeView: (NSView *) theViewt;
 @end

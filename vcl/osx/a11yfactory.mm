@@ -236,6 +236,28 @@ static bool enabled = false;
     }
 }
 
+#ifdef USE_JAVA
+
++(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper {
+    if ( ! theWrapper )
+        return;
+
+    if (![theWrapper isKindOfClass:[VCLView class]]) {
+        [theWrapper removeFromSuperviewWithoutNeedingDisplay];
+    }
+
+    NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
+    [ dAllWrapper removeObjectForKey: [ AquaA11yFactory keyForAccessibleContext: [ theWrapper accessibleContext ] ] ];
+
+    // The accessible context pointer may be NULL because this selector is
+    // called asynchronously so remove any orphaned wrappers in the dictionary
+    NSArray *pKeys = [ dAllWrapper allKeysForObject: theWrapper ];
+    if ( pKeys && [ pKeys count ] )
+        [ dAllWrapper removeObjectsForKeys: pKeys ];
+}
+
+#endif	// USE_JAVA
+
 +(void)registerView: (NSView *) theView {
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
         // insertIntoWrapperRepository gets called from SalFrameView itself to bootstrap the bridge initially
@@ -326,7 +348,7 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
         for ( AquaA11yRemoveFromWrapperRepository *pRemoveFromWrapperRepository : pPendingRemoveFromWrapperRepositoryQueue ) {
             if ( pRemoveFromWrapperRepository && pRemoveFromWrapperRepository->mpElement ) {
                 try {
-                    [ AquaA11yFactory removeFromWrapperRepositoryFor: [ pRemoveFromWrapperRepository->mpElement accessibleContext ] ];
+                    [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: pRemoveFromWrapperRepository->mpElement ];
                 } catch ( const ::com::sun::star::lang::DisposedException& ) {
                 } catch ( ... ) {
                     NSLog( @"Exception caught while in -[AquaA11yFactory removeFromWrapperRepositoryFor:]: %s", __PRETTY_FUNCTION__ );
