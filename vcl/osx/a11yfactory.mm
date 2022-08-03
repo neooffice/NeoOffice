@@ -300,8 +300,12 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     [ super init ];
 
     mpElement = pElement;
-    if ( mpElement )
+    if ( mpElement ) {
         [mpElement retain];
+
+        // Mark the element as disposed immediately
+        [mpElement disposing];
+    }
 
     ::osl::ClearableMutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
 
