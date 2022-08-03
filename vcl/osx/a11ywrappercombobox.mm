@@ -130,7 +130,7 @@ using namespace ::com::sun::star::uno;
     ACQUIRE_DRAGPRINTLOCK
     if ( [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
-        return [ NSArray array ];
+        return isSettable;
     }
 #endif	// USE_JAVA
     if ( [ self textArea ] != nil && (
