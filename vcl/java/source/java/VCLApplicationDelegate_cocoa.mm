@@ -40,6 +40,7 @@
 #import <apple_remote/RemoteControl.h>
 #include <postmac.h>
 
+#include <osl/objcutils.h>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
 
@@ -146,7 +147,12 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		while ( ImplApplicationIsRunning() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+		{
+			// Prioritize execution of any run on main thread calls that may
+			// be blocking shutdown
+			CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 			NSApplication_dispatchPendingEvents( NO, YES );
+		}
 		pEvent->release();
 	}
 
