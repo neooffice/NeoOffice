@@ -83,13 +83,32 @@ static bool enabled = false;
     return mdAllWrapper;
 }
 
+#ifdef USE_JAVA
+
++(NSMutableDictionary *)radioGroupWrapper {
+    if ( ! enabled )
+        [ AquaA11yFactory allWrapper ];
+
+    static NSMutableDictionary * mdRadioGroupWrapper = nil;
+    if ( mdRadioGroupWrapper == nil ) {
+        mdRadioGroupWrapper = [ [ [ NSMutableDictionary alloc ] init ] retain ];
+    }
+    return mdRadioGroupWrapper;
+}
+
+#endif	// USE_JAVA
+
 +(NSValue *)keyForAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
     return [ NSValue valueWithPointer: rxAccessibleContext.get() ];
 }
 
+#ifndef USE_JAVA
+
 +(NSValue *)keyForAccessibleContextAsRadioGroup: (Reference < XAccessibleContext >) rxAccessibleContext {
     return [ NSValue valueWithPointer: ( rxAccessibleContext.get() + 2 ) ];
 }
+
+#endif	// !USE_JAVA
 
 +(AquaA11yWrapper *)wrapperForAccessible: (Reference < XAccessible >) rxAccessible {
     if ( rxAccessible.is() ) {
@@ -110,6 +129,11 @@ static bool enabled = false;
 }
 
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate asRadioGroup:(BOOL) asRadioGroup{
+#ifdef USE_JAVA
+    NSValue * nKey = [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ];
+    NSMutableDictionary * dWrapper = ( asRadioGroup ? [ AquaA11yFactory radioGroupWrapper ] : [ AquaA11yFactory allWrapper ] );
+    AquaA11yWrapper * aWrapper = (AquaA11yWrapper *) [ dWrapper objectForKey: nKey ];
+#else	// USE_JAVA
     NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
     NSValue * nKey = nil;
     if ( asRadioGroup ) {
@@ -118,6 +142,7 @@ static bool enabled = false;
         nKey = [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ];
     }
     AquaA11yWrapper * aWrapper = (AquaA11yWrapper *) [ dAllWrapper objectForKey: nKey ];
+#endif	// USE_JAVA
 #ifdef USE_JAVA
     if ( !aWrapper && bCreate ) {
 #else	// USE_JAVA
@@ -180,7 +205,11 @@ static bool enabled = false;
         if ( ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
         #endif
         {
+#ifdef USE_JAVA
+            [ dWrapper setObject: aWrapper forKey: nKey ];
+#else	// USE_JAVA
             [ dAllWrapper setObject: aWrapper forKey: nKey ];
+#endif	// USE_JAVA
             /* fdo#67410: Accessibility notifications are not delivered on NSView subclasses that do not
                "reasonably" participate in NSView hierarchy (perhaps the only important point is
                that the view is a transitive subview of the NSWindow's content view, but I
@@ -249,13 +278,21 @@ static bool enabled = false;
     }
 
     NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
-    [ dAllWrapper removeObjectForKey: [ AquaA11yFactory keyForAccessibleContext: [ theWrapper accessibleContext ] ] ];
+    NSMutableDictionary * dRadioGroupWrapper = [ AquaA11yFactory radioGroupWrapper ];
+    NSValue * nKey = [ AquaA11yFactory keyForAccessibleContext: [ theWrapper accessibleContext ] ];
+    if ( [ theWrapper actsAsRadioGroup ] )
+        [ dRadioGroupWrapper removeObjectForKey: nKey ];
+    else
+        [ dAllWrapper removeObjectForKey: nKey ];
 
     // The accessible context pointer may be NULL because this selector is
-    // called asynchronously so remove any orphaned wrappers in the dictionary
+    // called asynchronously so remove any orphaned wrappers
     NSArray *pKeys = [ dAllWrapper allKeysForObject: theWrapper ];
     if ( pKeys && [ pKeys count ] )
         [ dAllWrapper removeObjectsForKeys: pKeys ];
+    pKeys = [ dRadioGroupWrapper allKeysForObject: theWrapper ];
+    if ( pKeys && [ pKeys count ] )
+        [ dRadioGroupWrapper removeObjectsForKeys: pKeys ];
 }
 
 #endif	// USE_JAVA
