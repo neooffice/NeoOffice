@@ -253,6 +253,7 @@ static bool enabled = false;
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessibleContext createIfNotExists: NO ];
     if ( theWrapper != nil ) {
 #ifdef USE_JAVA
+        NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
         if (![theWrapper isKindOfClass:[VCLView class]]) {
             [theWrapper removeFromSuperviewWithoutNeedingDisplay];
 #else	// USE_JAVA
@@ -273,6 +274,7 @@ static bool enabled = false;
     if ( ! theWrapper )
         return;
 
+    NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
     if (![theWrapper isKindOfClass:[VCLView class]]) {
         [theWrapper removeFromSuperviewWithoutNeedingDisplay];
     }

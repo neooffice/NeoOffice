@@ -1897,6 +1897,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     return NSZeroRect;
 }
 
+- (BOOL)accessibilityNotifiesWhenDestroyed
+{
+    return YES;
+}
+
 #endif	// USE_JAVA
 
 @end
