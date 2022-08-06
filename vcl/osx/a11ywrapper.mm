@@ -1536,7 +1536,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 -(void)addSubview:(NSView *)pView
 {
-    if ( !pView || [ pView isAccessibilityElement ] )
+    // Avoid the huge performance and memory usage from adding and removing
+    // thousands of these instances as subviews in the key window. Also, by
+    // not adding into the view hierarchy, disabled instances become ignored
+    // elements.
+    if ( !pView || [ pView isKindOfClass: [ VCLView class ] ] )
         return;
 
     [ super addSubview: pView ];
@@ -1544,7 +1548,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 -(void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView
 {
-    if ( !pView || [ pView isAccessibilityElement ] )
+    // Avoid the huge performance and memory usage from adding and removing
+    // thousands of these instances as subviews in the key window. Also, by
+    // not adding into the view hierarchy, disabled instances become ignored
+    // elements.
+    if ( !pView || [ pView isKindOfClass: [ VCLView class ] ] )
         return;
 
     [ super addSubview: pView positioned: nPlace relativeTo: pOtherView ];
@@ -1554,10 +1562,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (BOOL)isAccessibilityElement
 {
-    // Make instances of this class behave like NSAccessabilityElement instances
-    // to avoid the huge performance and memory usage from adding and removing
-    // thousands of these instances as subviews in the key window
-    return YES;
+    return ! [ self accessibilityIsIgnored ];
 }
 
 - (BOOL)isAccessibilityFocused
@@ -1581,12 +1586,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSArray *)accessibilityVisibleChildren
 {
-    return (NSArray *)[ self accessibilityChildren: [ super accessibilityVisibleChildren ] ];
+    return [ self accessibilityChildren: [ super accessibilityVisibleChildren ] ];
 }
 
 - (NSAccessibilitySubrole)accessibilitySubrole
 {
-    // return (NSAccessibilitySubrole)[ self accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
     return [ self accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
 }
 
@@ -1602,7 +1606,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSAccessibilityOrientation)accessibilityOrientation
 {
-    NSNumber *pNumber = (NSNumber *)[ self accessibilityAttributeValue: NSAccessibilityOrientationAttribute ];
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityOrientationAttribute ];
     if ( pNumber )
         return (NSAccessibilityOrientation)[ pNumber integerValue ];
     else
@@ -1616,12 +1620,69 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSAccessibilityRole)accessibilityRole
 {
-    return (NSAccessibilityRole)[ self accessibilityAttributeValue: NSAccessibilityRoleAttribute ];
+    return [ self accessibilityAttributeValue: NSAccessibilityRoleAttribute ];
+}
+
+- (NSString *)accessibilityRoleDescription
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityRoleDescriptionAttribute ];
+}
+
+- (BOOL)isAccessibilitySelected
+{
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilitySelectedAttribute ];
+    if ( pNumber )
+        return [ pNumber boolValue ];
+    else
+        return NO;
+}
+
+- (NSArray *)accessibilitySelectedChildren
+{
+    return [ self accessibilityAttributeValue: NSAccessibilitySelectedChildrenAttribute ];
+}
+
+- (NSArray *)accessibilityServesAsTitleForUIElements
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityServesAsTitleForUIElementsAttribute ];
+}
+
+- (id)accessibilityMinValue
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityMinValueAttribute ];
+}
+
+- (id)accessibilityMaxValue
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityMaxValueAttribute ];
+}
+
+- (id)accessibilityWindow
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityWindowAttribute ];
+}
+
+- (NSString *)accessibilityHelp
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityHelpAttribute ];
+}
+
+- (BOOL)isAccessibilityExpanded
+{
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityExpandedAttribute ];
+    if ( pNumber )
+        return [ pNumber boolValue ];
+    else
+        return NO;
 }
 
 - (BOOL)isAccessibilityEnabled
 {
-    return ! [ self accessibilityIsIgnored ];
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityEnabledAttribute ];
+    if ( pNumber )
+        return [ pNumber boolValue ];
+    else
+        return NO;
 }
 
 - (NSArray *)accessibilityChildren

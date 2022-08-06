@@ -126,9 +126,6 @@
 - (void)resetCursorRects;
 - (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)pSession;
 - (id)initWithFrame:(NSRect)aFrame;
-#ifdef USE_AQUA_A11Y
-- (BOOL)isAccessibilityElement;
-#endif	// !USE_AQUA_A11Y
 - (BOOL)isOpaque;
 - (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;

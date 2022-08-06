@@ -3099,15 +3099,6 @@ static CFDataRef aRTFSelection = nil;
 	return self;
 }
 
-#ifdef USE_AQUA_A11Y
-
-- (BOOL)isAccessibilityElement
-{
-    return NO;
-}
-
-#endif	// !USE_AQUA_A11Y
-
 - (BOOL)isOpaque
 {
 	return YES;
