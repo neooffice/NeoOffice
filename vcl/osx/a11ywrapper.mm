@@ -1707,9 +1707,150 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     return [ self accessibilityChildren: [ super accessibilityChildrenInNavigationOrder ] ];
 }
 
+- (NSArray *)accessibilityContents
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityContentsAttribute ];
+}
+
+- (NSString *)accessibilityLabel
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityDescriptionAttribute ];
+}
+
 - (id)accessibilityApplicationFocusedUIElement
 {
     return [ self accessibilityFocusedUIElement ];
+}
+
+- (BOOL)isAccessibilityDisclosed
+{
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityDisclosingAttribute ];
+    if ( pNumber )
+        return [ pNumber boolValue ];
+    else
+        return NO;
+}
+
+- (id)accessibilityHorizontalScrollBar
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityHorizontalScrollBarAttribute ];
+}
+
+- (id)accessibilityVerticalScrollBar
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityVerticalScrollBarAttribute ];
+}
+
+- (NSArray *)accessibilityTabs
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityTabsAttribute ];
+}
+
+- (NSArray *)accessibilityColumns
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityColumnsAttribute ];
+}
+
+- (NSArray *)accessibilityRows
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityRowsAttribute ];
+}
+
+- (NSRange)accessibilitySharedCharacterRange
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilitySharedCharacterRangeAttribute ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSArray *)accessibilitySharedTextUIElements
+{
+    return [ self accessibilityAttributeValue: NSAccessibilitySharedTextUIElementsAttribute ];
+}
+
+- (NSRange)accessibilityVisibleCharacterRange
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilityVisibleCharacterRangeAttribute ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSInteger)accessibilityNumberOfCharacters
+{
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityNumberOfCharactersAttribute ];
+    if ( pNumber )
+        return [ pNumber integerValue ];
+    else
+        return 0;
+}
+
+- (NSString *)accessibilitySelectedText
+{
+    return [ self accessibilityAttributeValue: NSAccessibilitySelectedTextAttribute ];
+}
+
+- (NSRange)accessibilitySelectedTextRange
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilitySelectedTextRangeAttribute ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSAttributedString *)accessibilityAttributedStringForRange:(NSRange)aRange
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityAttributedStringForRangeParameterizedAttribute forParameter: [ NSValue valueWithRange: aRange ] ];
+}
+
+- (NSRange)accessibilityRangeForLine:(NSInteger)nLine
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilityRangeForLineParameterizedAttribute forParameter: [NSNumber numberWithInteger: nLine ] ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSString *)accessibilityStringForRange:(NSRange)aRange
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityStringForRangeParameterizedAttribute forParameter: [ NSValue valueWithRange: aRange ] ];
+}
+
+- (NSRange)accessibilityRangeForPosition:(NSPoint)aPoint
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilityRangeForPositionParameterizedAttribute forParameter: [ NSValue valueWithPoint: aPoint ] ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSRange)accessibilityRangeForIndex:(NSInteger)nIndex
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilityRangeForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSRect)accessibilityFrameForRange:(NSRange)aRange
+{
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilityBoundsForRangeParameterizedAttribute forParameter: [ NSValue valueWithRange: aRange ] ];
+    if ( pValue )
+        return [ pValue rectValue ];
+    else
+        return NSZeroRect;
+}
+
+- (NSData *)accessibilityRTFForRange:(NSRange)aRange
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityRTFForRangeParameterizedAttribute forParameter: [ NSValue valueWithRange: aRange ] ];
 }
 
 - (NSRange)accessibilityStyleRangeForIndex:(NSInteger)nIndex
