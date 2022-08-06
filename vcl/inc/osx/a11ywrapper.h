@@ -68,7 +68,6 @@ struct ReferenceWrapper
     BOOL mActsAsRadioGroup;
     BOOL mIsTableCell;
 #ifdef USE_JAVA
-    NSView *mpAddingSubview;
     BOOL mbDisposed;
 #endif	// USE_JAVA
 }

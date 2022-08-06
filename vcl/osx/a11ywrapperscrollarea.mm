@@ -39,7 +39,11 @@
 
 @implementation AquaA11yWrapperScrollArea : AquaA11yWrapper
 
+#ifdef USE_JAVA
+-(id)scrollBarWithOrientation:(NSInteger)orientation {
+#else	// USE_JAVA
 -(id)scrollBarWithOrientation:(NSString *)orientation {
+#endif	// USE_JAVA
     AquaA11yWrapper * theScrollBar = nil;
     NSAutoreleasePool * pool = [ [ NSAutoreleasePool alloc ] init ];
     NSArray * elementChildren = [ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
@@ -50,7 +54,12 @@
             AquaA11yWrapper * element = ( AquaA11yWrapper * ) child;
             if ( [ element isKindOfClass: [ AquaA11yWrapperScrollBar class ] ] ) { 
                 AquaA11yWrapperScrollBar * scrollBar = (AquaA11yWrapperScrollBar *) element;
+#ifdef USE_JAVA
+                NSNumber * orientationAttribute = [ scrollBar orientationAttribute ];
+                if ( orientationAttribute && [ orientationAttribute integerValue ] == orientation ) {
+#else	// USE_JAVA
                 if ( [ [ scrollBar orientationAttribute ] isEqualToString: orientation ] ) {
+#endif	// USE_JAVA
                     theScrollBar = scrollBar;
                     break;
                 }
@@ -62,11 +71,19 @@
 }
 
 -(id)verticalScrollBarAttribute {
+#ifdef USE_JAVA
+    return [ self scrollBarWithOrientation: NSAccessibilityOrientationVertical ];
+#else	// USE_JAVA
     return [ self scrollBarWithOrientation: NSAccessibilityVerticalOrientationValue ];
+#endif	// USE_JAVA
 }
 
 -(id)horizontalScrollBarAttribute {
+#ifdef USE_JAVA
+    return [ self scrollBarWithOrientation: NSAccessibilityOrientationHorizontal ];
+#else	// USE_JAVA
     return [ self scrollBarWithOrientation: NSAccessibilityHorizontalOrientationValue ];
+#endif	// USE_JAVA
 }
 
 -(NSArray *)accessibilityAttributeNames {

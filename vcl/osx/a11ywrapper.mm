@@ -114,7 +114,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     mpReferenceWrapper -> rAccessibleContext = rxAccessibleContext;
     mIsTableCell = NO;
 #ifdef USE_JAVA
-    mpAddingSubview = nil;
     mbDisposed = NO;
 #endif	// USE_JAVA
     // Querying all supported interfaces
@@ -729,12 +728,26 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)orientationAttribute {
+#ifdef USE_JAVA
+    NSNumber * orientation = nil;
+#else	// USE_JAVA
     NSString * orientation = nil;
+#endif	// USE_JAVA
     Reference < XAccessibleStateSet > stateSet = [ self accessibleContext ] -> getAccessibleStateSet();
     if ( stateSet -> contains ( AccessibleStateType::HORIZONTAL ) ) {
+#ifdef USE_JAVA
+        orientation = [ NSNumber numberWithInteger: NSAccessibilityOrientationHorizontal ];
+#else	// USE_JAVA
         orientation = NSAccessibilityHorizontalOrientationValue;
+#endif	// USE_JAVA
     } else if ( stateSet -> contains ( AccessibleStateType::VERTICAL ) ) {
+#ifdef USE_JAVA
+        orientation = [ NSNumber numberWithInteger: NSAccessibilityOrientationVertical ];
+    } else {
+        orientation = [ NSNumber numberWithInteger: NSAccessibilityOrientationUnknown ];
+#else	// USE_JAVA
         orientation = NSAccessibilityVerticalOrientationValue;
+#endif	// USE_JAVA
     }
     return orientation;
 }
@@ -1384,8 +1397,13 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 #endif	// NO_LIBO_POINT_CASTING_FIX
     // check child windows first
     NSWindow * window = (NSWindow *) [ self accessibilityAttributeValue: NSAccessibilityWindowAttribute ];
+#ifdef USE_JAVA
+    NSArray * childWindows = ( window ? [ window childWindows ] : nil );
+    if ( childWindows && [ childWindows count ] > 0 ) {
+#else	// USE_JAVA
     NSArray * childWindows = [ window childWindows ];
     if ( [ childWindows count ] > 0 ) {
+#endif	// USE_JAVA
         NSWindow * element = nil;
         NSEnumerator * enumerator = [ childWindows objectEnumerator ];
         while ( ( element = [ enumerator nextObject ] ) && hitChild == nil ) {
@@ -1510,64 +1528,167 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 #ifdef USE_JAVA
 
+// NSView selectors
+
 -(void)addSubview:(NSView *)pView
 {
-    if ( !pView )
+    if ( !pView || [ pView isAccessibilityElement ] )
         return;
 
-    NSView *pOldAddingSubview = mpAddingSubview;
-    mpAddingSubview = pView;
-
     [ super addSubview: pView ];
-
-    mpAddingSubview = pOldAddingSubview;
 }
 
 -(void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView
 {
-    if ( !pView )
+    if ( !pView || [ pView isAccessibilityElement ] )
         return;
-
-    NSView *pOldAddingSubview = mpAddingSubview;
-    mpAddingSubview = pView;
 
     [ super addSubview: pView positioned: nPlace relativeTo: pOtherView ];
-
-    mpAddingSubview = pOldAddingSubview;
 }
 
-- (void)setNeedsDisplay:(BOOL)bDisplay
-{
-    // Since AquaA11yWrapper and all of its subclasses (except VCLView) do not
-    // draw, do not change a VCLView's needsDisplay property if an
-    // AquaA11yWrapper subview is being added
-    // so never needsDisplay property to YES
-    if ( [ self isKindOfClass: [ VCLView class ] ] ) {
-        if ( ! mpAddingSubview || ! [ mpAddingSubview isKindOfClass: [ AquaA11yWrapper class ] ] )
-            [ super setNeedsDisplay: bDisplay ];
-        return;
-    }
+// NSAccessibility selectors
 
-    // AquaA11yWrapper and all of its subclasses (except VCLView) do not draw
-    // so never needsDisplay property to YES
-    [ super setNeedsDisplay: NO ];
+- (BOOL)isAccessibilityElement
+{
+    // Make instances of this class behave like NSAccessabilityElement instances
+    // to avoid the huge performance and memory usage from adding and removing
+    // thousands of these instances as subviews in the key window
+    return YES;
 }
 
-- (void)setNeedsDisplayInRect:(NSRect)aRect
+- (BOOL)isAccessibilityFocused
 {
-    // Since AquaA11yWrapper and all of its subclasses (except VCLView) do not
-    // draw, do not change a VCLView's needsDisplay property if an
-    // AquaA11yWrapper subview is being added
-    // so never needsDisplay property to YES
-    if ( [ self isKindOfClass: [ VCLView class ] ] ) {
-        if ( ! mpAddingSubview || ! [ mpAddingSubview isKindOfClass: [ AquaA11yWrapper class ] ] )
-            [ super setNeedsDisplayInRect: aRect ];
-        return;
-    }
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityFocusedAttribute ];
+    if ( pNumber )
+        return [ pNumber boolValue ];
+    else
+        return NO;
+}
 
-    // AquaA11yWrapper and all of its subclasses (except VCLView) do not draw
-    // so never needsDisplay property to YES
-    [ super setNeedsDisplay: NO ];
+- (id)accessibilityTopLevelUIElement
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityTopLevelUIElementAttribute ];
+}
+
+- (id)accessibilityValue
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityValueAttribute ];
+}
+
+- (NSArray *)accessibilityVisibleChildren
+{
+    return (NSArray *)[ self accessibilityChildren: [ super accessibilityVisibleChildren ] ];
+}
+
+- (NSAccessibilitySubrole)accessibilitySubrole
+{
+    // return (NSAccessibilitySubrole)[ self accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
+    return [ self accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
+}
+
+- (NSString *)accessibilityTitle
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityTitleAttribute ];
+}
+
+- (id)accessibilityTitleUIElement
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityTitleUIElementAttribute ];
+}
+
+- (NSAccessibilityOrientation)accessibilityOrientation
+{
+    NSNumber *pNumber = (NSNumber *)[ self accessibilityAttributeValue: NSAccessibilityOrientationAttribute ];
+    if ( pNumber )
+        return (NSAccessibilityOrientation)[ pNumber integerValue ];
+    else
+        return NSAccessibilityOrientationUnknown;
+}
+
+- (id)accessibilityParent
+{
+    return [ self accessibilityAttributeValue: NSAccessibilityParentAttribute ];
+}
+
+- (NSAccessibilityRole)accessibilityRole
+{
+    return (NSAccessibilityRole)[ self accessibilityAttributeValue: NSAccessibilityRoleAttribute ];
+}
+
+- (BOOL)isAccessibilityEnabled
+{
+    return ! [ self accessibilityIsIgnored ];
+}
+
+- (NSArray *)accessibilityChildren
+{
+	return [ self accessibilityChildren: [super accessibilityChildren ] ];
+}
+
+- (NSArray *)accessibilityChildren:(NSArray *)pSuperChildren
+{
+    NSArray *pChildren = (NSArray *)[ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
+	if ( pSuperChildren && [ pSuperChildren count ] ) {
+        NSMutableArray *pMergedChildren = [ NSMutableArray arrayWithArray: pSuperChildren ];
+        if ( pChildren && [ pChildren count ] )
+            [ pMergedChildren addObjectsFromArray: pChildren ];
+        pChildren = pMergedChildren;
+    }
+    return pChildren;
+}
+
+- (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder
+{
+    return [ self accessibilityChildren: [ super accessibilityChildrenInNavigationOrder ] ];
+}
+
+- (id)accessibilityApplicationFocusedUIElement
+{
+    return [ self accessibilityFocusedUIElement ];
+}
+
+- (NSRange)accessibilityStyleRangeForIndex:(NSInteger)nIndex
+{
+    NSValue *pValue = (NSValue *)[ self accessibilityAttributeValue: NSAccessibilityStyleRangeForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
+    if ( pValue )
+        return [ pValue rangeValue ];
+    else
+        return NSMakeRange( NSNotFound, 0 );
+}
+
+- (NSInteger)accessibilityLineForIndex:(NSInteger)nIndex
+{
+    NSNumber *pNumber = (NSNumber *)[ self accessibilityAttributeValue: NSAccessibilityLineForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
+    if ( pNumber )
+        return [ pNumber integerValue ];
+    else
+        return 0;
+}
+
+// NSAccessibilityElement selectors
+
+- (NSRect)accessibilityFrame
+{
+    if ( !ImplApplicationIsRunning() )
+        return NSZeroRect;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return NSZeroRect;
+    }
+    XAccessibleComponent *pAccessibleComponent = [ self accessibleComponent ];
+    if ( pAccessibleComponent ) {
+        com::sun::star::awt::Point location = pAccessibleComponent->getLocationOnScreen();
+        com::sun::star::awt::Size size = pAccessibleComponent->getSize();
+        NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
+        NSRect frame = NSMakeRect( (float)location.X, (float)( screenRect.size.height - size.Height - location.Y ), (float)size.Width, (float)size.Height );
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return frame;
+    }
+    RELEASE_DRAGPRINTLOCK
+    return NSZeroRect;
 }
 
 #endif	// USE_JAVA
