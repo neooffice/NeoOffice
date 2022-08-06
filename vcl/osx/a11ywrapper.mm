@@ -1540,7 +1540,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // thousands of these instances as subviews in the key window. Also, by
     // not adding into the view hierarchy, disabled instances become ignored
     // elements.
-    if ( !pView || [ pView isKindOfClass: [ VCLView class ] ] )
+    if ( !pView || ! [ pView isKindOfClass: [ VCLView class ] ] )
         return;
 
     [ super addSubview: pView ];
@@ -1552,7 +1552,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // thousands of these instances as subviews in the key window. Also, by
     // not adding into the view hierarchy, disabled instances become ignored
     // elements.
-    if ( !pView || [ pView isKindOfClass: [ VCLView class ] ] )
+    if ( !pView || ! [ pView isKindOfClass: [ VCLView class ] ] )
         return;
 
     [ super addSubview: pView positioned: nPlace relativeTo: pOtherView ];
