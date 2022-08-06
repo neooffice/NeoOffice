@@ -29,6 +29,10 @@
 #include "a11yrolehelper.h"
 #include <com/sun/star/accessibility/AccessibleRole.hpp>
 
+#ifdef USE_JAVA
+#include "java/salframe.h"
+#endif	// USE_JAVA
+
 using namespace ::com::sun::star::accessibility;
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::uno;
@@ -38,7 +42,11 @@ using namespace ::com::sun::star::uno;
 @implementation AquaA11yComponentWrapper : NSObject
 
 +(id)sizeAttributeForElement:(AquaA11yWrapper *)wrapper {
+#ifdef USE_JAVA
+    ::com::sun::star::awt::Size size = [ wrapper accessibleComponent ] -> getSize();
+#else	// USE_JAVA
     Size size = [ wrapper accessibleComponent ] -> getSize();
+#endif	// USE_JAVA
     NSSize nsSize = NSMakeSize ( (float) size.Width, (float) size.Height );
     return [ NSValue valueWithSize: nsSize ];
 }
@@ -46,9 +54,15 @@ using namespace ::com::sun::star::uno;
 // TODO: should be merged with AquaSalFrame::VCLToCocoa... to a general helper method
 +(id)positionAttributeForElement:(AquaA11yWrapper *)wrapper {
     // VCL coordinates are in upper-left-notation, Cocoa likes it the Cartesian way (lower-left)
+#ifdef USE_JAVA
+    NSRect screenRect = JavaSalFrame::GetTotalScreenBounds();
+    ::com::sun::star::awt::Size size = [ wrapper accessibleComponent ] -> getSize();
+    ::com::sun::star::awt::Point location = [ wrapper accessibleComponent ] -> getLocationOnScreen();
+#else	// USE_JAVA
     NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
     Size size = [ wrapper accessibleComponent ] -> getSize();
     Point location = [ wrapper accessibleComponent ] -> getLocationOnScreen();
+#endif	// USE_JAVA
     NSPoint nsPoint = NSMakePoint ( (float) location.X, (float) ( screenRect.size.height - size.Height - location.Y ) );
     return [ NSValue valueWithPoint: nsPoint ];
 }

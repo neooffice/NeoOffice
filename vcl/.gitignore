@@ -606,7 +606,6 @@ osx/a11yfocustracker.cxx
 osx/a11ywrappergroup.h
 osx/OSXTransferable.cxx
 osx/DragSourceContext.cxx
-osx/a11yutil.mm
 osx/a11ytablewrapper.h
 osx/PictToBmpFlt.cxx
 osx/a11ywrapperscrollbar.h

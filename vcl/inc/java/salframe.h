@@ -45,6 +45,7 @@
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
+#include <AppKit/AppKit.h>
 #include <postmac.h>
 
 #include "salframe.hxx"
@@ -110,6 +111,7 @@ public:
 	static bool				GetSelectedControlTextColor( SalColor& rSalColor );
 	static bool				GetSelectedMenuItemTextColor( SalColor& rSalColor );
 	static bool				GetSelectedTabTextColor( SalColor& rSalColor );
+	static NSRect			GetTotalScreenBounds();
 	static void				UpdateColorsForIconTheme( OUString& rTheme );
 	static bool				UseNativeControlWithCurrentIconTheme( ControlType nType, ControlPart nPart );
 

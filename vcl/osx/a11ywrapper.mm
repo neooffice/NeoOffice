@@ -1389,7 +1389,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         wrapper = nil;
     }
     Reference < XAccessibleContext > hitChild;
+#ifdef USE_JAVA
+    NSRect screenRect = JavaSalFrame::GetTotalScreenBounds();
+#else	// USE_JAVA
     NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
+#endif	// USE_JAVA
 #ifdef NO_LIBO_POINT_CASTING_FIX
     com::sun::star::awt::Point hitPoint ( static_cast<long>(point.x) , static_cast<long>(screenRect.size.height - point.y) );
 #else	// NO_LIBO_POINT_CASTING_FIX
@@ -1627,7 +1631,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSArray *)accessibilityChildren:(NSArray *)pSuperChildren
 {
-    NSArray *pChildren = (NSArray *)[ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
+    NSArray *pChildren = [ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
 	if ( pSuperChildren && [ pSuperChildren count ] ) {
         NSMutableArray *pMergedChildren = [ NSMutableArray arrayWithArray: pSuperChildren ];
         if ( pChildren && [ pChildren count ] )
@@ -1649,7 +1653,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSRange)accessibilityStyleRangeForIndex:(NSInteger)nIndex
 {
-    NSValue *pValue = (NSValue *)[ self accessibilityAttributeValue: NSAccessibilityStyleRangeForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
+    NSValue *pValue = [ self accessibilityAttributeValue: NSAccessibilityStyleRangeForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
     if ( pValue )
         return [ pValue rangeValue ];
     else
@@ -1658,7 +1662,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSInteger)accessibilityLineForIndex:(NSInteger)nIndex
 {
-    NSNumber *pNumber = (NSNumber *)[ self accessibilityAttributeValue: NSAccessibilityLineForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
+    NSNumber *pNumber = [ self accessibilityAttributeValue: NSAccessibilityLineForIndexParameterizedAttribute forParameter: [ NSNumber numberWithInteger: nIndex ] ];
     if ( pNumber )
         return [ pNumber integerValue ];
     else
@@ -1682,7 +1686,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     if ( pAccessibleComponent ) {
         com::sun::star::awt::Point location = pAccessibleComponent->getLocationOnScreen();
         com::sun::star::awt::Size size = pAccessibleComponent->getSize();
-        NSRect screenRect = [ [ NSScreen mainScreen ] frame ];
+        NSRect screenRect = JavaSalFrame::GetTotalScreenBounds();
         NSRect frame = NSMakeRect( (float)location.X, (float)( screenRect.size.height - size.Height - location.Y ), (float)size.Width, (float)size.Height );
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return frame;

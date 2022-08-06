@@ -123,9 +123,11 @@ static bool IsRunningCatalinaOrLower()
 	return bIsRunningCatalinaOrLower;
 }
 
-static NSRect GetTotalScreenBounds()
+static NSRect ImplGetTotalScreenBounds()
 {
-	if ( NSIsEmptyRect( aTotalScreenBounds ) )
+	MutexGuard aGuard( aScreensMutex );
+
+	if ( NSIsEmptyRect( aTotalScreenBounds ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 	{
 		NSArray *pScreens = [NSScreen screens];
 		if ( pScreens )
@@ -162,7 +164,7 @@ static void HandleScreensChangedRequest()
 	if ( pScreens )
 	{
 		// Calculate the total combined screen so that we can flip coordinates
-		NSRect aTotalBounds = GetTotalScreenBounds();
+		NSRect aTotalBounds = ImplGetTotalScreenBounds();
 		NSRect aLastFullFrame = NSMakeRect( 0, 0, 0, 0 );
 		for ( NSScreen *pScreen in pScreens )
 		{
@@ -1840,7 +1842,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		}
 
 		// Flip to OOo coordinates
-		NSRect aTotalBounds = GetTotalScreenBounds();
+		NSRect aTotalBounds = ImplGetTotalScreenBounds();
 		aFrame.origin.y = aTotalBounds.size.height - aFrame.origin.y - aFrame.size.height;
 
 		[pArgs setResult:[NSValue valueWithRect:aFrame]];
@@ -2062,7 +2064,7 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 		}
 
 		// Flip to native coordinates
-		NSRect aTotalBounds = GetTotalScreenBounds();
+		NSRect aTotalBounds = ImplGetTotalScreenBounds();
 		aFrame.origin.y = aTotalBounds.size.height - aFrame.origin.y - aFrame.size.height;
 
 		BOOL bDisplay = NO;
@@ -3412,6 +3414,13 @@ bool JavaSalFrame::GetSelectedTabTextColor( SalColor& rSalColor )
 	}
 
 	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+NSRect JavaSalFrame::GetTotalScreenBounds()
+{
+	return ImplGetTotalScreenBounds();
 }
 
 // -----------------------------------------------------------------------
