@@ -1242,25 +1242,42 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     return wrapper;
 }
 
+#ifdef USE_JAVA
 -(void)accessibilityPerformAction:(NSString *)action {
+    [ self performAction: action ];
+}
+
+-(BOOL)performAction:(NSString *)action {
+    BOOL bRet = NO;
+#else	// USE_JAVA
+-(void)accessibilityPerformAction:(NSString *)action {
+#endif	// USE_JAVA
     SAL_INFO("vcl.a11y", "[" << self << " accessibilityPerformAction:" << action << "]");
 #ifdef USE_JAVA
     if ( !ImplApplicationIsRunning() )
-        return;
+        return bRet;
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
     if ( [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
-        return;
+        return bRet;
     }
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
     if ( actionResponder != nil ) {
+#ifdef USE_JAVA
+        bRet = YES;
+#endif	// USE_JAVA
         [ AquaA11yActionWrapper doAction: action ofElement: actionResponder ];
+#ifdef USE_JAVA
+    } else {
+        bRet = YES;
+#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK
+    return bRet;
 #endif	// USE_JAVA
 }
 
@@ -1841,6 +1858,16 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         return 0;
 }
 
+- (BOOL)accessibilityPerformIncrement
+{
+    return [ self performAction: NSAccessibilityIncrementAction ];
+}
+
+- (BOOL)accessibilityPerformDecrement
+{
+    return [ self performAction: NSAccessibilityDecrementAction ];
+}
+
 // NSAccessibilityElement selectors
 
 - (NSRect)accessibilityFrame
@@ -1870,6 +1897,13 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 - (BOOL)accessibilityNotifiesWhenDestroyed
 {
     return YES;
+}
+
+// NSAccessibilityButton selectors
+
+- (BOOL)accessibilityPerformPress
+{
+    return [ self performAction: NSAccessibilityPressAction ];
 }
 
 #endif	// USE_JAVA

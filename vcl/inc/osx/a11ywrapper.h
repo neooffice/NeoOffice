@@ -64,6 +64,14 @@ struct ReferenceWrapper
 
 #ifdef USE_JAVA
 @interface AquaA11yWrapper : NSAccessibilityElement
+    <NSAccessibilityElement,
+     NSAccessibilityGroup,
+     NSAccessibilityButton,
+     NSAccessibilitySwitch,
+     NSAccessibilityRadioButton,
+     NSAccessibilityCheckBox,
+     NSAccessibilityStaticText,
+     NSAccessibilityNavigableStaticText>
 #else	// USE_JAVA
 @interface AquaA11yWrapper : NSView
 #endif	// USE_JAVA
