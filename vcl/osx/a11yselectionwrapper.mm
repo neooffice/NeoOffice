@@ -54,7 +54,15 @@ using namespace ::com::sun::star::uno;
             NSMutableArray * children = [ NSMutableArray arrayWithCapacity: n ];
 #endif	// USE_JAVA
             for ( sal_Int32 i=0 ; i < n ; ++i ) {
+#ifdef USE_JAVA
+                // Eliminate exception thrown when opening the Tools > Options
+                // dialog by skipping NULL wrappers
+                AquaA11yWrapper * wrapper = [ AquaA11yFactory wrapperForAccessible: xAccessibleSelection -> getSelectedAccessibleChild( i ) ];
+                if ( wrapper )
+                    [ children addObject: wrapper ];
+#else	// USE_JAVA
                 [ children addObject: [ AquaA11yFactory wrapperForAccessible: xAccessibleSelection -> getSelectedAccessibleChild( i ) ] ];
+#endif	// USE_JAVA
             }
 
             return children;
