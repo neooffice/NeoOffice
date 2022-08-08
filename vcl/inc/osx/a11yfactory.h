@@ -34,7 +34,11 @@
 @interface AquaA11yFactory : NSObject
 {
 }
+#ifdef USE_JAVA
++(void)insertIntoWrapperRepository: (NSAccessibilityElement *) viewElement forAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
+#else	// USE_JAVA
 +(void)insertIntoWrapperRepository: (NSView *) viewElement forAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
+#endif	// USE_JAVA
 +(AquaA11yWrapper *)wrapperForAccessible: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessible >) rxAccessible;
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate;
@@ -42,9 +46,12 @@
 +(void)removeFromWrapperRepositoryFor: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 #ifdef USE_JAVA
 +(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper;
-#endif	// USE_JAVA
++(void)registerView: (AquaA11yWrapper *) theView;
++(void)revokeView: (AquaA11yWrapper *) theViewt;
+#else	// USE_JAVA
 +(void)registerView: (NSView *) theView;
 +(void)revokeView: (NSView *) theViewt;
+#endif	// USE_JAVA
 @end
 
 #ifdef USE_JAVA

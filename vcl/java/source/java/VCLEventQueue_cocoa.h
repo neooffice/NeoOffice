@@ -71,10 +71,26 @@
 @end
 
 #ifdef USE_AQUA_A11Y
-@interface VCLView : AquaA11yWrapper <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
-#else	// USE_AQUA_A11Y
-@interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
+
+@class VCLView;
+
+@interface VCLA11yWrapper : AquaA11yWrapper
+{
+	VCLView*				mpParentView;
+}
+- (id)initWithParent:(VCLView *)pParentView accessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >&)rxAccessibleContext;
+- (void)dealloc;
+- (id)accessibilityParent;
+- (id)accessibilityWindow;
+- (id)parentAttribute;
+- (void)setAcccessibilityParent:(id)pObject;
+- (id)windowAttribute;
+- (NSWindow *)windowForParent;
+@end
+
 #endif	// USE_AQUA_A11Y
+
+@interface VCLView : NSView <NSDraggingDestination, NSDraggingSource, NSTextInputClient>
 {
 	JavaSalFrame*			mpFrame;
 	BOOL					mbInKeyDown;
@@ -85,13 +101,14 @@
 	id						mpTextInput;
 	NSRange					maTextInputRange;
 	BOOL					mbTextInputWantsNonRepeatKeyDown;
+#ifdef USE_AQUA_A11Y
+	VCLA11yWrapper*			mpChildWrapper;
+#endif	// USE_AQUA_A11Y
 }
 - (BOOL)acceptsFirstResponder;
 - (void)abandonInput;
 #ifdef USE_AQUA_A11Y
-- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext;
-- (id)parentAttribute;
-- (NSWindow *)windowForParent;
+- (NSArray *)accessibilityChildren;
 #else	// USE_AQUA_A11Y
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
 #endif	// USE_AQUA_A11Y
@@ -130,6 +147,10 @@
 - (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
+#ifdef USE_AQUA_A11Y
+- (void)registerView;
+- (void)revokeView;
+#endif	// USE_AQUA_A11Y
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)updateDraggingItemsForDrag:(id <NSDraggingInfo>)pSender;

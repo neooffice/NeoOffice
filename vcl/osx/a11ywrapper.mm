@@ -95,7 +95,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 #endif
 
+#ifdef USE_JAVA
+@implementation AquaA11yWrapper
+#else	// USE_JAVA
 @implementation AquaA11yWrapper : NSView
+#endif	// USE_JAVA
 
 #pragma mark -
 #pragma mark Init and dealloc
@@ -1511,7 +1515,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 }
 
 -(NSWindow*)windowForParent {
+#ifdef USE_JAVA
+    return nil;
+#else	// USE_JAVA
     return [self window];
+#endif	// USE_JAVA
 }
 
 // These four are for AXTextAreas only. They are needed, because bold and italic
@@ -1531,32 +1539,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 }
 
 #ifdef USE_JAVA
-
-// NSView selectors
-
--(void)addSubview:(NSView *)pView
-{
-    // Avoid the huge performance and memory usage from adding and removing
-    // thousands of these instances as subviews in the key window. Also, by
-    // not adding into the view hierarchy, disabled instances become ignored
-    // elements.
-    if ( !pView || ! [ pView isKindOfClass: [ VCLView class ] ] )
-        return;
-
-    [ super addSubview: pView ];
-}
-
--(void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView
-{
-    // Avoid the huge performance and memory usage from adding and removing
-    // thousands of these instances as subviews in the key window. Also, by
-    // not adding into the view hierarchy, disabled instances become ignored
-    // elements.
-    if ( !pView || ! [ pView isKindOfClass: [ VCLView class ] ] )
-        return;
-
-    [ super addSubview: pView positioned: nPlace relativeTo: pOtherView ];
-}
 
 // NSAccessibility selectors
 
@@ -1586,7 +1568,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSArray *)accessibilityVisibleChildren
 {
-    return [ self accessibilityChildren: [ super accessibilityVisibleChildren ] ];
+    return [ self accessibilityChildren ];
 }
 
 - (NSAccessibilitySubrole)accessibilitySubrole
@@ -1687,24 +1669,12 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 - (NSArray *)accessibilityChildren
 {
-	return [ self accessibilityChildren: [super accessibilityChildren ] ];
-}
-
-- (NSArray *)accessibilityChildren:(NSArray *)pSuperChildren
-{
-    NSArray *pChildren = [ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
-	if ( pSuperChildren && [ pSuperChildren count ] ) {
-        NSMutableArray *pMergedChildren = [ NSMutableArray arrayWithArray: pSuperChildren ];
-        if ( pChildren && [ pChildren count ] )
-            [ pMergedChildren addObjectsFromArray: pChildren ];
-        pChildren = pMergedChildren;
-    }
-    return pChildren;
+    return [ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
 }
 
 - (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder
 {
-    return [ self accessibilityChildren: [ super accessibilityChildrenInNavigationOrder ] ];
+    return [ self accessibilityChildren ];
 }
 
 - (NSArray *)accessibilityContents

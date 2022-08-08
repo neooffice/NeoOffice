@@ -62,7 +62,11 @@ struct ReferenceWrapper
     ::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleTextMarkup > rAccessibleTextMarkup;
 };
 
+#ifdef USE_JAVA
+@interface AquaA11yWrapper : NSAccessibilityElement
+#else	// USE_JAVA
 @interface AquaA11yWrapper : NSView
+#endif	// USE_JAVA
 {
     ReferenceWrapper * mpReferenceWrapper;
     BOOL mActsAsRadioGroup;

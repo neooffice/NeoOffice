@@ -2170,6 +2170,79 @@ static NSUInteger nMouseMask = 0;
 - (void)markedTextAbandoned:(id)pSender;
 @end
 
+#ifdef USE_AQUA_A11Y
+
+@implementation VCLA11yWrapper
+
+- (id)initWithParent:(VCLView *)pParentView accessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >&)rxAccessibleContext
+{
+	[super initWithAccessibleContext:rxAccessibleContext];
+
+	mpParentView = pParentView;
+	if ( mpParentView )
+		[mpParentView retain];
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( mpParentView )
+		[mpParentView release];
+
+	[super dealloc];
+}
+
+- (id)accessibilityParent
+{
+	return [self parentAttribute];
+}
+
+- (id)accessibilityWindow
+{
+	return [self windowAttribute];
+}
+
+- (id)parentAttribute
+{
+	if ( mpParentView )
+		return NSAccessibilityUnignoredAncestor( mpParentView );
+	else
+		return nil;
+}
+
+- (void)setAcccessibilityParent:(id)pObject
+{
+	if ( mpParentView )
+	{
+		[mpParentView release];
+		mpParentView = nil;
+	}
+
+	if ( pObject && [pObject isKindOfClass:[VCLView class]] )
+	{
+		mpParentView = (VCLView *)pObject;
+		[mpParentView retain];
+	}
+}
+
+- (id)windowAttribute
+{
+	if ( mpParentView )
+		return [mpParentView window];
+	else
+		return nil;
+}
+
+- (NSWindow *)windowForParent
+{
+	return [self windowAttribute];
+}
+
+@end
+
+#endif	// USE_AQUA_A11Y
+
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
 
@@ -2192,37 +2265,12 @@ static CFDataRef aRTFSelection = nil;
 
 #ifdef USE_AQUA_A11Y
 
-- (::com::sun::star::accessibility::XAccessibleContext *)accessibleContext
+- (NSArray *)accessibilityChildren
 {
-	if ( !mpFrame )
-		return nullptr;
-
-	if ( !mpReferenceWrapper )
-	{
-		// some frames never become visible ..
-		vcl::Window *pWindow = mpFrame->GetWindow();
-		if ( !pWindow )
-			return nullptr;
-
-		if ( !mpReferenceWrapper )
-		{
-			mpReferenceWrapper = new ReferenceWrapper;
-			mpReferenceWrapper->rAccessibleContext = pWindow->GetAccessible()->getAccessibleContext();
-			[AquaA11yFactory insertIntoWrapperRepository:self forAccessibleContext:mpReferenceWrapper ->rAccessibleContext ];
-		}
-	}
-
-	return [super accessibleContext];
-}
-
-- (id)parentAttribute
-{
-	return [self window];
-}
-
-- (NSWindow *)windowForParent
-{
-	return [self window];
+	if ( mpChildWrapper )
+		return NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
+	else
+		return nil;
 }
 
 #else	// USE_AQUA_A11Y
@@ -2274,6 +2322,8 @@ static CFDataRef aRTFSelection = nil;
 
 	if ( mpTextInput )
 		[mpTextInput release];
+
+	[self revokeView];
 
 	[super dealloc];
 }
@@ -3095,6 +3145,9 @@ static CFDataRef aRTFSelection = nil;
 	mpTextInput = nil;
 	maTextInputRange = NSMakeRange( NSNotFound, 0 );
 	mbTextInputWantsNonRepeatKeyDown = NO;
+#ifdef USE_AQUA_A11Y
+	mpChildWrapper = nil;
+#endif	// USE_AQUA_A11Y
 
 	return self;
 }
@@ -3161,6 +3214,38 @@ static CFDataRef aRTFSelection = nil;
 
 	return bRet;
 }
+
+#ifdef USE_AQUA_A11Y
+
+- (void)registerView
+{
+	[self revokeView];
+
+	if ( !mpFrame )
+		return;
+
+	vcl::Window *pWindow = mpFrame->GetWindow();
+	if ( !pWindow )
+		return;
+
+	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > xAccessibleContext( pWindow->GetAccessible()->getAccessibleContext() );
+	mpChildWrapper = [[VCLA11yWrapper alloc] initWithParent:self accessibleContext:xAccessibleContext];
+	if ( mpChildWrapper )
+		[AquaA11yFactory insertIntoWrapperRepository:mpChildWrapper forAccessibleContext:xAccessibleContext];
+}
+
+- (void)revokeView
+{
+	if ( mpChildWrapper )
+	{
+		[mpChildWrapper setAccessibilityParent:nil];
+		[AquaA11yFactory revokeView:mpChildWrapper];
+		[mpChildWrapper release];
+		mpChildWrapper = nil;
+	}
+}
+
+#endif	// USE_AQUA_A11Y
 
 - (void)setDraggingDestinationDelegate:(id)pDelegate
 {

@@ -218,20 +218,30 @@ static bool enabled = false;
                So let the superview-subviews relationship mirror the AXParent-AXChildren relationship.
             */
             id parent = [aWrapper accessibilityAttributeValue:NSAccessibilityParentAttribute];
+#ifdef USE_JAVA
+            NSAccessibilityPostNotification( aWrapper, NSAccessibilityCreatedNotification );
+            if (parent && [aWrapper isKindOfClass:[NSView class]]) {
+#else	// USE_JAVA
             if (parent) {
+#endif	// USE_JAVA
                 if ([parent isKindOfClass:[NSView class]]) {
                     // SAL_DEBUG("Wrapper INIT: " << [[aWrapper description] UTF8String] << " ==> " << [[parent description] UTF8String]);
                     NSView *parentView = (NSView *)parent;
-                    [parentView addSubview:aWrapper positioned:NSWindowBelow relativeTo:nil];
 #ifdef USE_JAVA
+                    [parentView addSubview:(NSView *)aWrapper positioned:NSWindowBelow relativeTo:nil];
                 } else if ([parent isKindOfClass:[VCLPanel class]] || [parent isKindOfClass:[VCLWindow class]]) {
 #else	// USE_JAVA
+                    [parentView addSubview:aWrapper positioned:NSWindowBelow relativeTo:nil];
                 } else if ([parent isKindOfClass:NSClassFromString(@"SalFrameWindow")]) {
 #endif	// USE_JAVA
                     NSWindow *window = (NSWindow *)parent;
                     NSView *salView = [window contentView];
                     // SAL_DEBUG("Wrapper INIT SAL: " << [[aWrapper description] UTF8String] << " ==> " << [[salView description] UTF8String]);
+#ifdef USE_JAVA
+                    [salView addSubview:(NSView *)aWrapper positioned:NSWindowBelow relativeTo:nil];
+#else	// USE_JAVA
                     [salView addSubview:aWrapper positioned:NSWindowBelow relativeTo:nil];
+#endif	// USE_JAVA
                 } else {
                     // SAL_DEBUG("Wrapper INIT: !! " << [[aWrapper description] UTF8String] << " !==>! " << [[parent description] UTF8String] << "!!");
                 }
@@ -243,9 +253,16 @@ static bool enabled = false;
     return aWrapper;
 }
 
+#ifdef USE_JAVA
++(void)insertIntoWrapperRepository: (NSAccessibilityElement *) viewElement forAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
+#else	// USE_JAVA
 +(void)insertIntoWrapperRepository: (NSView *) viewElement forAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
+#endif	// USE_JAVA
     NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
     [ dAllWrapper setObject: viewElement forKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
+#ifdef USE_JAVA
+    NSAccessibilityPostNotification( viewElement, NSAccessibilityCreatedNotification );
+#endif	// USE_JAVA
 }
 
 +(void)removeFromWrapperRepositoryFor: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext {
@@ -254,8 +271,8 @@ static bool enabled = false;
     if ( theWrapper != nil ) {
 #ifdef USE_JAVA
         NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
-        if (![theWrapper isKindOfClass:[VCLView class]]) {
-            [theWrapper removeFromSuperviewWithoutNeedingDisplay];
+        if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
+            [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
 #else	// USE_JAVA
         if (![theWrapper isKindOfClass:NSClassFromString(@"SalFrameView")]) {
             [theWrapper removeFromSuperview];
@@ -275,8 +292,8 @@ static bool enabled = false;
         return;
 
     NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
-    if (![theWrapper isKindOfClass:[VCLView class]]) {
-        [theWrapper removeFromSuperviewWithoutNeedingDisplay];
+    if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
+        [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
     }
 
     NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
@@ -297,16 +314,21 @@ static bool enabled = false;
         [ dRadioGroupWrapper removeObjectsForKeys: pKeys ];
 }
 
-#endif	// USE_JAVA
-
++(void)registerView: (AquaA11yWrapper *) theView {
+#else	// USE_JAVA
 +(void)registerView: (NSView *) theView {
+#endif	// USE_JAVA
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
         // insertIntoWrapperRepository gets called from SalFrameView itself to bootstrap the bridge initially
         [ (AquaA11yWrapper *) theView accessibleContext ];
     }
 }
 
+#ifdef USE_JAVA
++(void)revokeView: (AquaA11yWrapper *) theView {
+#else	// USE_JAVA
 +(void)revokeView: (NSView *) theView {
+#endif	// USE_JAVA
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
 #ifdef USE_JAVA
         AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: (AquaA11yWrapper *)theView ];

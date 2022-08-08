@@ -1666,8 +1666,8 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	{
 #ifdef USE_AQUA_A11Y
 		NSView *pContentView = [mpWindow contentView];
-		if ( pContentView )
-			[AquaA11yFactory revokeView:pContentView];
+		if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+			[(VCLView *)pContentView revokeView];
 #endif	// USE_AQUA_A11Y
 
 		// Disconnect frame from native window as the frame may be deleted
@@ -2258,9 +2258,12 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 #ifdef USE_AQUA_A11Y
 			// Do not register show only menus windows since we are trying to
 			// behave as if this type of window does not exist
-			NSView *pContentView = [mpWindow contentView];
-			if ( pContentView && !mbShowOnlyMenus )
-				[AquaA11yFactory registerView:pContentView];
+			if ( !mbShowOnlyMenus )
+			{
+				NSView *pContentView = [mpWindow contentView];
+				if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+					[(VCLView *)pContentView registerView];
+			}
 #endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
@@ -2296,6 +2299,12 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[pParentWindow removeChildWindow:mpWindow];
 
 			CloseOrOrderOutWindow( mpWindow );
+
+#ifdef USE_AQUA_A11Y
+			NSView *pContentView = [mpWindow contentView];
+			if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+				[(VCLView *)pContentView revokeView];
+#endif	// USE_AQUA_A11Y
 
 			// Release cached cursor
 			::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( mpWindow );
