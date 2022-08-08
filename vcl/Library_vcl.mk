@@ -108,7 +108,7 @@ ifneq ($(strip $(GUIBASE)),java)
 $(eval $(call gb_Library_add_exception_objects,vcl,\
     vcl/osx/OpenGLWrapper \
 ))
-endif	# GUIBASE == java
+endif	# GUIBASE != java
 
 endif
 
@@ -435,6 +435,10 @@ $(eval $(call gb_Library_add_cxxflags,vcl,\
 ))
 
 ifeq ($(strip $(GUIBASE)),java)
+
+$(eval $(call gb_Library_add_objcxxflags,vcl,\
+    -Werror=protocol \
+))
 
 ifneq ($(and $(PRODUCT_NAME),$(PRODUCT_DOMAIN)),)
 ifneq ($(PRODUCT_DIR_NAME),)
