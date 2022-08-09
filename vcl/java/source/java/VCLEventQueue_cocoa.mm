@@ -2270,7 +2270,7 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpChildWrapper )
 		return NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
 	else
-		return nil;
+		return [super accessibilityChildren];
 }
 
 #else	// USE_AQUA_A11Y
