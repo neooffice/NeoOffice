@@ -2267,10 +2267,24 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSArray *)accessibilityChildren
 {
+    NSArray *pChildren = [super accessibilityChildren];
 	if ( mpChildWrapper )
-		return NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
+	{
+		NSMutableArray *pNewChildren = [NSMutableArray arrayWithCapacity:( pChildren ? [pChildren count] : 0 ) + 1];
+		if ( pNewChildren )
+		{
+			[pNewChildren addObject:mpChildWrapper];
+			return NSAccessibilityUnignoredChildren( pNewChildren );
+		}
+		else
+		{
+			return NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
+		}
+	}
 	else
-		return [super accessibilityChildren];
+	{
+		return pChildren;
+	}
 }
 
 #else	// USE_AQUA_A11Y
