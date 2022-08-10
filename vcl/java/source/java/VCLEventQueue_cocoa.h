@@ -80,12 +80,6 @@
 }
 - (id)initWithParent:(VCLView *)pParentView accessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >&)rxAccessibleContext;
 - (void)dealloc;
-- (id)accessibilityParent;
-- (id)accessibilityWindow;
-- (id)parentAttribute;
-- (void)setAcccessibilityParent:(id)pObject;
-- (id)windowAttribute;
-- (NSWindow *)windowForParent;
 @end
 
 #endif	// USE_AQUA_A11Y

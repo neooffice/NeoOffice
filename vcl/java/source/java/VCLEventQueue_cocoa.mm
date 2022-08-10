@@ -2176,11 +2176,17 @@ static NSUInteger nMouseMask = 0;
 
 - (id)initWithParent:(VCLView *)pParentView accessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >&)rxAccessibleContext
 {
-	[super initWithAccessibleContext:rxAccessibleContext];
+	[super init];
+
+	mpReferenceWrapper = new ReferenceWrapper;
+	mpReferenceWrapper->rAccessibleContext = rxAccessibleContext;
 
 	mpParentView = pParentView;
 	if ( mpParentView )
+	{
 		[mpParentView retain];
+		[self setAccessibilityParent:mpParentView];
+	}
 
 	return self;
 }
@@ -2191,11 +2197,6 @@ static NSUInteger nMouseMask = 0;
 		[mpParentView release];
 
 	[super dealloc];
-}
-
-- (id)accessibilityParent
-{
-	return [self parentAttribute];
 }
 
 - (id)accessibilityWindow
@@ -2211,7 +2212,7 @@ static NSUInteger nMouseMask = 0;
 		return nil;
 }
 
-- (void)setAcccessibilityParent:(id)pObject
+- (void)setAccessibilityParent:(id)pObject
 {
 	if ( mpParentView )
 	{
@@ -2224,6 +2225,8 @@ static NSUInteger nMouseMask = 0;
 		mpParentView = (VCLView *)pObject;
 		[mpParentView retain];
 	}
+
+	[super setAccessibilityParent:mpParentView];
 }
 
 - (id)windowAttribute
