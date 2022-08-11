@@ -1235,6 +1235,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	mpAVPlayerView = [[AVPlayerView alloc] initWithFrame:NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height )];
 	if ( mpAVPlayerView )
 	{
+		mpAVPlayerView.accessibilityElement = YES;
 		mpAVPlayerView.controlsStyle = AVPlayerViewControlsStyleNone;
 		[self addSubview:mpAVPlayerView];
 	}
