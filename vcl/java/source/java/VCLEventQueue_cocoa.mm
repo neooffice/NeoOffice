@@ -2267,7 +2267,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSArray *pRet = [super accessibilityChildren];
 
-	if ( mpChildWrapper )
+	if ( mpChildWrapper && ![mpChildWrapper isDisposed] )
 	{
 		NSArray *pUnignoredChildren = NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
 		if ( pUnignoredChildren && [pUnignoredChildren count] )
