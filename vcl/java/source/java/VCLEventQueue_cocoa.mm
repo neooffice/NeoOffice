@@ -2199,11 +2199,6 @@ static NSUInteger nMouseMask = 0;
 	[super dealloc];
 }
 
-- (id)accessibilityWindow
-{
-	return [self windowAttribute];
-}
-
 - (id)parentAttribute
 {
 	if ( mpParentView )
@@ -2270,24 +2265,28 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSArray *)accessibilityChildren
 {
-    NSArray *pChildren = [super accessibilityChildren];
+	NSArray *pRet = [super accessibilityChildren];
+
 	if ( mpChildWrapper )
 	{
-		NSMutableArray *pNewChildren = [NSMutableArray arrayWithCapacity:( pChildren ? [pChildren count] : 0 ) + 1];
-		if ( pNewChildren )
+		NSArray *pUnignoredChildren = NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
+		if ( pUnignoredChildren && [pUnignoredChildren count] )
 		{
-			[pNewChildren addObject:mpChildWrapper];
-			return NSAccessibilityUnignoredChildren( pNewChildren );
-		}
-		else
-		{
-			return NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
+			NSMutableArray *pNewChildren = [NSMutableArray arrayWithCapacity:( pRet ? [pRet count] : 0 ) + 1];
+			if ( pNewChildren )
+			{
+				[pNewChildren addObjectsFromArray:pRet];
+				[pNewChildren addObjectsFromArray:pUnignoredChildren];
+				pRet = pNewChildren;
+			}
+			else
+			{
+				pRet = pUnignoredChildren;
+			}
 		}
 	}
-	else
-	{
-		return pChildren;
-	}
+
+	return pRet;
 }
 
 #else	// USE_AQUA_A11Y
