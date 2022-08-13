@@ -546,8 +546,15 @@ static BOOL bInPostPendingNotifications = NO;
 
 - (void)postNotification
 {
-    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
-        NSAccessibilityPostNotification( mpElement, mpName );
+    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) ) {
+        // Set priority high to increase the odds that transient objects'
+        // notifications will get announced
+        NSDictionary *pDict = [ NSDictionary dictionaryWithObjects: [ NSArray arrayWithObject: [ NSNumber numberWithInteger: NSAccessibilityPriorityHigh ] ] forKeys: [ NSArray arrayWithObject: NSAccessibilityPriorityKey ] ];
+        if ( pDict )
+            NSAccessibilityPostNotificationWithUserInfo( mpElement, mpName, pDict );
+        else
+            NSAccessibilityPostNotification( mpElement, mpName );
+    }
 }
 
 - (void)postPendingNotifications:(id)pObject
