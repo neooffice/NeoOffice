@@ -1546,7 +1546,10 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 -(NSWindow*)windowForParent {
 #ifdef USE_JAVA
-    return nil;
+    if ( [ self isKindOfClass: [ NSView class ] ] )
+        return [(NSView *)self window];
+    else
+        return nil;
 #else	// USE_JAVA
     return [self window];
 #endif	// USE_JAVA

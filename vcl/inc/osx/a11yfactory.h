@@ -35,7 +35,7 @@
 {
 }
 #ifdef USE_JAVA
-+(void)insertIntoWrapperRepository: (NSAccessibilityElement *) viewElement forAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
++(void)insertIntoWrapperRepository: (id<NSAccessibility>) viewElement forAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 #else	// USE_JAVA
 +(void)insertIntoWrapperRepository: (NSView *) viewElement forAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 #endif	// USE_JAVA
@@ -46,8 +46,8 @@
 +(void)removeFromWrapperRepositoryFor: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 #ifdef USE_JAVA
 +(void)removeFromWrapperRepositoryForWrapper: (AquaA11yWrapper *) theWrapper;
-+(void)registerView: (AquaA11yWrapper *) theView;
-+(void)revokeView: (AquaA11yWrapper *) theViewt;
++(void)registerView: (id<NSAccessibility>) theView;
++(void)revokeView: (id<NSAccessibility>) theView;
 #else	// USE_JAVA
 +(void)registerView: (NSView *) theView;
 +(void)revokeView: (NSView *) theViewt;

@@ -258,7 +258,7 @@ static bool enabled = false;
 }
 
 #ifdef USE_JAVA
-+(void)insertIntoWrapperRepository: (NSAccessibilityElement *) viewElement forAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
++(void)insertIntoWrapperRepository: (id<NSAccessibility>) viewElement forAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
 #else	// USE_JAVA
 +(void)insertIntoWrapperRepository: (NSView *) viewElement forAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
 #endif	// USE_JAVA
@@ -322,7 +322,7 @@ static bool enabled = false;
         [ dRadioGroupWrapper removeObjectsForKeys: pKeys ];
 }
 
-+(void)registerView: (AquaA11yWrapper *) theView {
++(void)registerView: (id<NSAccessibility>) theView {
 #else	// USE_JAVA
 +(void)registerView: (NSView *) theView {
 #endif	// USE_JAVA
@@ -333,7 +333,7 @@ static bool enabled = false;
 }
 
 #ifdef USE_JAVA
-+(void)revokeView: (AquaA11yWrapper *) theView {
++(void)revokeView: (id<NSAccessibility>) theView {
 #else	// USE_JAVA
 +(void)revokeView: (NSView *) theView {
 #endif	// USE_JAVA

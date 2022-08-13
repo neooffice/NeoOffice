@@ -3248,15 +3248,24 @@ static CFDataRef aRTFSelection = nil;
 	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > xAccessibleContext( pWindow->GetAccessible()->getAccessibleContext() );
 	mpChildWrapper = [[VCLA11yWrapper alloc] initWithParent:self accessibleContext:xAccessibleContext];
 	if ( mpChildWrapper )
+	{
+		if ( [mpChildWrapper isKindOfClass:[NSView class]] )
+		{
+			[(NSView *)mpChildWrapper setFrame:[self bounds]];
+			[self addSubview:(NSView *)mpChildWrapper positioned:NSWindowBelow relativeTo:nil];
+		}
 		[AquaA11yFactory insertIntoWrapperRepository:mpChildWrapper forAccessibleContext:xAccessibleContext];
+}
 }
 
 - (void)revokeView
 {
 	if ( mpChildWrapper )
 	{
-		[mpChildWrapper setAccessibilityParent:nil];
 		[AquaA11yFactory revokeView:mpChildWrapper];
+		if ( [mpChildWrapper isKindOfClass:[NSView class]] )
+			[(NSView *)mpChildWrapper removeFromSuperviewWithoutNeedingDisplay];
+		[mpChildWrapper setAccessibilityParent:nil];
 		[mpChildWrapper release];
 		mpChildWrapper = nil;
 	}
