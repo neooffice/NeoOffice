@@ -369,9 +369,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( rxAccessible.is() && rxAccessible -> getAccessibleContext().is() ) {
             Reference < XAccessibleContext > rxAccessibleContext = rxAccessible -> getAccessibleContext();
             id parent_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessibleContext createIfNotExists: YES asRadioGroup: YES ];
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+            if ( parent_wrapper )
+#else	// USE_JAVA
             [ parent_wrapper autorelease ];
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
             return NSAccessibilityUnignoredAncestor( parent_wrapper );
         }
         return nil;
@@ -382,9 +384,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             Reference< XAccessibleContext > xContext( xParent -> getAccessibleContext() );
             if ( xContext.is() ) {
                 id parent_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+                if ( parent_wrapper )
+#else	// USE_JAVA
                 [ parent_wrapper autorelease ];
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
                 return NSAccessibilityUnignoredAncestor( parent_wrapper );
             }
         }
@@ -442,6 +446,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                 cnt = AQUA11Y_MAX_CHILD_COUNT;
 
             NSMutableArray * children = [ NSMutableArray arrayWithCapacity: cnt ];
+            if ( children ) {
 #endif	// USE_JAVA
             for ( sal_Int32 i = 0; i < cnt; i++ ) {
                 Reference< XAccessible > xChild( xContext -> getAccessibleChild( i ) );
@@ -477,11 +482,19 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             [ children autorelease ];
 #endif	// !USE_JAVA
             return NSAccessibilityUnignoredChildren( children );
+#ifdef USE_JAVA
+            }
+#endif	// USE_JAVA
         } catch (const Exception &e) {
+#ifndef USE_JAVA
             // TODO: Log
             return nil;
+#endif	// !USE_JAVA
         }
     }
+#ifdef USE_JAVA
+    return nil;
+#endif	// USE_JAVA
 }
 
 -(id)windowAttribute {
@@ -1583,11 +1596,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     return [ self accessibilityAttributeValue: NSAccessibilityValueAttribute ];
 }
 
-- (NSArray *)accessibilityVisibleChildren
-{
-    return [ self accessibilityChildren ];
-}
-
 - (NSAccessibilitySubrole)accessibilitySubrole
 {
     return [ self accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
@@ -1636,11 +1644,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         return NO;
 }
 
-- (NSArray *)accessibilitySelectedChildren
-{
-    return [ self accessibilityAttributeValue: NSAccessibilitySelectedChildrenAttribute ];
-}
-
 - (NSArray *)accessibilityServesAsTitleForUIElements
 {
     return [ self accessibilityAttributeValue: NSAccessibilityServesAsTitleForUIElementsAttribute ];
@@ -1687,11 +1690,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 - (NSArray *)accessibilityChildren
 {
     return [ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
-}
-
-- (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder
-{
-    return [ self accessibilityChildren ];
 }
 
 - (NSArray *)accessibilityContents

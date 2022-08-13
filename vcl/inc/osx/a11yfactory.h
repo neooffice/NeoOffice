@@ -56,6 +56,18 @@
 
 #ifdef USE_JAVA
 
+@interface AquaA11yWrapperForAccessibleContext : NSObject
+{
+    ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > mxAccessibleContext;
+    AquaA11yWrapper*        mpWrapper;
+}
++ (id)createWithAccessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)xAccessibleContext;
+- (id)initWithAccessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)xAccessibleContext;
+- (void)dealloc;
+- (void)wrapperForAccessibleContext:(id)pObject;
+- (AquaA11yWrapper *)wrapper;
+@end
+
 @interface AquaA11yRemoveFromWrapperRepository : NSObject
 {
     AquaA11yWrapper*        mpElement;

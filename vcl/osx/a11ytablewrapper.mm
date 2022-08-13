@@ -56,6 +56,8 @@ using namespace ::com::sun::star::uno;
                 // make all children visible to the hierarchy
 #ifdef USE_JAVA
                 cells = [ NSMutableArray arrayWithCapacity: nRows * nCols ];
+                if ( cells )
+                {
 #endif	// USE_JAVA
                 for ( sal_Int32 rowCount = 0; rowCount < nRows; rowCount++ )
                 {
@@ -71,6 +73,9 @@ using namespace ::com::sun::star::uno;
 #endif	// !USE_JAVA
                         }
                     }
+#ifdef USE_JAVA
+                }
+#endif	// USE_JAVA
                 }
             }
             else
@@ -96,6 +101,8 @@ using namespace ::com::sun::star::uno;
                     // create an array containing the visible cells
 #ifdef USE_JAVA
                     cells = [ NSMutableArray arrayWithCapacity: ( rowBottomRight - rowTopLeft + 1 ) * ( columnBottomRight - columnTopLeft + 1 ) ];
+                    if ( cells )
+                    {
 #endif	// USE_JAVA
                     for ( sal_Int32 rowCount = rowTopLeft; rowCount <= rowBottomRight; rowCount++ )
                     {
@@ -112,10 +119,14 @@ using namespace ::com::sun::star::uno;
                             }
                         }
                     }
+#ifdef USE_JAVA
+                    }
+#endif	// USE_JAVA
                 }
             }
 #ifdef USE_JAVA
-            pResult = NSAccessibilityUnignoredChildren( cells ? cells : [ NSArray array ] );
+            if ( cells )
+                pResult = NSAccessibilityUnignoredChildren( cells ? cells : [ NSArray array ] );
 #else	// USE_JAVA
             pResult = NSAccessibilityUnignoredChildren( cells );
 #endif	// USE_JAVA
@@ -168,6 +179,8 @@ using namespace ::com::sun::star::uno;
                 sal_Int32 nRows = accessibleTable->getAccessibleRowCount();
 #ifdef USE_JAVA
                 NSMutableArray * cells = [ NSMutableArray arrayWithCapacity: nRows ];
+                if ( cells )
+                {
 #endif	// USE_JAVA
                 for( sal_Int32 n = 0; n < nRows; n++ )
                 {
@@ -182,6 +195,9 @@ using namespace ::com::sun::star::uno;
                     }
                 }
                 pResult = NSAccessibilityUnignoredChildren( cells );
+#ifdef USE_JAVA
+                }
+#endif	// USE_JAVA
             }
             catch (const Exception &e) 
             {

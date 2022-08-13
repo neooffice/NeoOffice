@@ -248,6 +248,10 @@ static bool enabled = false;
             } else {
                 // SAL_DEBUG("Wrapper INIT: " << [[aWrapper description] UTF8String] << " ==> NO PARENT");
             }
+
+#ifdef USE_JAVA
+            [aWrapper setAccessibilityParent:parent];
+#endif	// USE_JAVA
         }
     }
     return aWrapper;
@@ -271,6 +275,8 @@ static bool enabled = false;
     if ( theWrapper != nil ) {
 #ifdef USE_JAVA
         NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
+        [theWrapper setAccessibilityParent:nil];
+
         if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
             [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
 #else	// USE_JAVA
@@ -292,6 +298,8 @@ static bool enabled = false;
         return;
 
     NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
+    [theWrapper setAccessibilityParent:nil];
+
     if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
         [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
     }
@@ -342,6 +350,52 @@ static bool enabled = false;
 @end
 
 #ifdef USE_JAVA
+
+@implementation AquaA11yWrapperForAccessibleContext
+
++ (id)createWithAccessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)xAccessibleContext
+{
+    AquaA11yWrapperForAccessibleContext *pRet = [ [ AquaA11yWrapperForAccessibleContext alloc ] initWithAccessibleContext: xAccessibleContext ];
+    [ pRet autorelease ];
+    return pRet;
+}
+
+- (id)initWithAccessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)xAccessibleContext
+{
+    [super init];
+
+    mxAccessibleContext = xAccessibleContext;
+
+    return self;
+}
+
+- (void)dealloc
+{
+    if ( mpWrapper )
+        [ mpWrapper release ];
+
+    [super dealloc];
+}
+
+- (void)wrapperForAccessibleContext:(id)pObject
+{
+    (void)pObject;
+
+    ACQUIRE_DRAGPRINTLOCK
+    if ( ! mpWrapper && mxAccessibleContext.is() ) {
+        mpWrapper = [ AquaA11yFactory wrapperForAccessibleContext: mxAccessibleContext ];
+        if ( mpWrapper )
+            [ mpWrapper retain ];
+    }
+    RELEASE_DRAGPRINTLOCK
+}
+
+- (AquaA11yWrapper *)wrapper
+{
+    return mpWrapper;
+}
+
+@end
 
 static NSMutableArray<AquaA11yRemoveFromWrapperRepository*> *pPendingRemoveFromWrapperRepositoryQueue = nil;
 static ::osl::Mutex aPendingRemoveFromWrapperRepositoryQueueMutex;
