@@ -2275,7 +2275,8 @@ static CFDataRef aRTFSelection = nil;
 			NSMutableArray *pNewChildren = [NSMutableArray arrayWithCapacity:( pRet ? [pRet count] : 0 ) + 1];
 			if ( pNewChildren )
 			{
-				[pNewChildren addObjectsFromArray:pRet];
+				if ( pRet )
+					[pNewChildren addObjectsFromArray:pRet];
 				[pNewChildren addObjectsFromArray:pUnignoredChildren];
 				pRet = pNewChildren;
 			}
