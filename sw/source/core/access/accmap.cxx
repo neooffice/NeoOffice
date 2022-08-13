@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified July 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <rtl/ref.hxx>
@@ -2554,8 +2561,17 @@ void SwAccessibleMap::InvalidatePosOrSize( const SwFrm *pFrm,
             else
             {
                 FireEvents();
+#if defined USE_JAVA && defined MACOSX
+                // Fix deadlock by releasing the mutex as the following calls
+                // AquaA11yFocusListener::focusedObjectChanged() which will
+                // call this instance from the main thread
+                maMutex.release();
+#endif	// USE_JAVA && MACOSX
                 xParentAccImpl->InvalidateChildPosOrSize( aFrmOrObj,
                                                           rOldBox );
+#if defined USE_JAVA && defined MACOSX
+                maMutex.acquire();
+#endif	// USE_JAVA && MACOSX
             }
         }
         else if(pParent)
