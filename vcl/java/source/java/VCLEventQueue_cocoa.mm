@@ -2277,7 +2277,12 @@ static CFDataRef aRTFSelection = nil;
 			{
 				if ( pRet )
 					[pNewChildren addObjectsFromArray:pRet];
-				[pNewChildren addObjectsFromArray:pUnignoredChildren];
+
+				for ( AquaA11yWrapper *pWrapper : pUnignoredChildren ) {
+					if ( pWrapper && ![pNewChildren containsObject:pWrapper] )
+						[pNewChildren addObject:pWrapper];
+				}
+
 				pRet = pNewChildren;
 			}
 			else
