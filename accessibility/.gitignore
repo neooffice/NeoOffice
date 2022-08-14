@@ -70,7 +70,6 @@ inc/accessibility/standard/vclxaccessibletoolboxitem.hxx
 inc/pch/precompiled_acc.cxx
 inc/pch/precompiled_acc.hxx
 source/extended/AccessibleBrowseBox.cxx
-source/extended/AccessibleBrowseBoxBase.cxx
 source/extended/AccessibleBrowseBoxCheckBoxCell.cxx
 source/extended/AccessibleBrowseBoxHeaderBar.cxx
 source/extended/AccessibleBrowseBoxHeaderCell.cxx
