@@ -1145,7 +1145,11 @@ void SwAccessibleMap::InvalidateShapeInParaSelection()
     //sal_uInt16 nSelShapes = pFESh ? pFESh->IsObjSelected() : 0;
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
         if( mpShapeMap )
             pShapes = mpShapeMap->Copy( nShapes, pFESh, &pSelShape );
     }
@@ -1467,7 +1471,11 @@ void SwAccessibleMap::DoInvalidateShapeSelection(bool bInvalidateFocusMode /*=fa
         return;
     }
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
         if( mpShapeMap )
             pShapes = mpShapeMap->Copy( nShapes, pFESh, &pSelShape );
     }
@@ -1636,7 +1644,11 @@ void SwAccessibleMap::DoInvalidateShapeFocus()
     size_t nShapes = 0;
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
         if( mpShapeMap )
             pShapes = mpShapeMap->Copy( nShapes, pFESh, &pSelShape );
     }
@@ -1686,7 +1698,11 @@ SwAccessibleMap::~SwAccessibleMap()
 {
     uno::Reference < XAccessible > xAcc;
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
         if( mpFrmMap )
         {
             const SwRootFrm *pRootFrm = GetShell()->GetLayout();
@@ -1734,7 +1750,11 @@ SwAccessibleMap::~SwAccessibleMap()
 #endif
 // #endif	// !NO_LIBO_BUG_58624_FIX
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 #if OSL_DEBUG_LEVEL > 0
 #ifdef NO_LIBO_BUG_58624_FIX
         OSL_ENSURE( !mpFrmMap || mpFrmMap->empty(),
@@ -1827,7 +1847,11 @@ uno::Reference< XAccessible > SwAccessibleMap::_GetDocumentView(
     bool bSetVisArea = false;
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         if( !mpFrmMap )
         {
@@ -1919,7 +1943,11 @@ uno::Reference< XAccessible> SwAccessibleMap::GetContext( const SwFrm *pFrm,
     bool bOldShapeSelected = false;
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         if( !mpFrmMap && bCreate )
             mpFrmMap = new SwAccessibleContextMap_Impl;
@@ -2103,7 +2131,11 @@ uno::Reference< XAccessible> SwAccessibleMap::GetContext(
     uno::Reference < XAccessible > xOldCursorAcc;
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         if( !mpShapeMap && bCreate )
             mpShapeMap = new SwAccessibleShapeMap_Impl( this );
@@ -2170,7 +2202,11 @@ bool SwAccessibleMap::IsInSameLevel(const SdrObject* pObj, const SwFEShell* pFES
 
 void SwAccessibleMap::AddShapeContext(const SdrObject *pObj, uno::Reference < XAccessible > xAccShape)
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
     if( mpShapeMap )
     {
@@ -2183,7 +2219,11 @@ void SwAccessibleMap::AddShapeContext(const SdrObject *pObj, uno::Reference < XA
 //Added by yanjun for sym2_6407
 void SwAccessibleMap::RemoveGroupContext(const SdrObject *pParentObj, ::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessible > xAccParent)
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
     if (mpShapeMap && pParentObj && pParentObj->IsGroupObject() && xAccParent.is())
     {
         uno::Reference < XAccessibleContext > xContext = xAccParent->getAccessibleContext();
@@ -2218,7 +2258,11 @@ void SwAccessibleMap::RemoveGroupContext(const SdrObject *pParentObj, ::com::sun
 
 void SwAccessibleMap::AddGroupContext(const SdrObject *pParentObj, uno::Reference < XAccessible > xAccParent)
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
     if( mpShapeMap )
     {
         //here get all the sub list.
@@ -2274,7 +2318,11 @@ void SwAccessibleMap::AddGroupContext(const SdrObject *pParentObj, uno::Referenc
 
 void SwAccessibleMap::RemoveContext( const SwFrm *pFrm )
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
     if( mpFrmMap )
     {
@@ -2311,7 +2359,11 @@ void SwAccessibleMap::RemoveContext( const SwFrm *pFrm )
 
 void SwAccessibleMap::RemoveContext( const SdrObject *pObj )
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
     if( mpShapeMap )
     {
@@ -2372,7 +2424,11 @@ void SwAccessibleMap::Dispose( const SwFrm *pFrm,
         ::rtl::Reference< ::accessibility::AccessibleShape > xShapeAccImpl;
         // get accessible context for frame
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             // First of all look for an accessible context for a frame
             if( aFrmOrObj.GetSwFrm() && mpFrmMap )
@@ -2494,7 +2550,11 @@ void SwAccessibleMap::InvalidatePosOrSize( const SwFrm *pFrm,
         ::rtl::Reference< SwAccessibleContext > xParentAccImpl;
         const SwFrm *pParent =NULL;
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             if( mpFrmMap )
             {
@@ -2565,12 +2625,12 @@ void SwAccessibleMap::InvalidatePosOrSize( const SwFrm *pFrm,
                 // Fix deadlock by releasing the mutex as the following calls
                 // AquaA11yFocusListener::focusedObjectChanged() which will
                 // call this instance from the main thread
-                maMutex.release();
+                sal_uInt32 nCount = maMutex.ReleaseMutex();
 #endif	// USE_JAVA && MACOSX
                 xParentAccImpl->InvalidateChildPosOrSize( aFrmOrObj,
                                                           rOldBox );
 #if defined USE_JAVA && defined MACOSX
-                maMutex.acquire();
+                maMutex.AcquireMutex( nCount );
 #endif	// USE_JAVA && MACOSX
             }
         }
@@ -2629,7 +2689,11 @@ void SwAccessibleMap::InvalidateContent( const SwFrm *pFrm )
     {
         uno::Reference < XAccessible > xAcc;
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             if( mpFrmMap )
             {
@@ -2667,7 +2731,11 @@ void SwAccessibleMap::InvalidateAttr( const SwTxtFrm& rTxtFrm )
     {
         uno::Reference < XAccessible > xAcc;
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             if( mpFrmMap )
             {
@@ -2737,7 +2805,11 @@ void SwAccessibleMap::InvalidateCursorPosition( const SwFrm *pFrm )
     bool bOldShapeSelected = false;
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         xOldAcc = mxCursorContext;
         mxCursorContext = xAcc; // clear reference
@@ -2932,7 +3004,11 @@ void SwAccessibleMap::InvalidateFocus()
     }
     uno::Reference < XAccessible > xAcc;
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         xAcc = mxCursorContext;
     }
@@ -2952,7 +3028,11 @@ void SwAccessibleMap::InvalidateFocus()
 void SwAccessibleMap::SetCursorContext(
         const ::rtl::Reference < SwAccessibleContext >& rCursorContext )
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
     uno::Reference < XAccessible > xAcc( rCursorContext.get() );
     mxCursorContext = xAcc;
 }
@@ -2995,7 +3075,11 @@ void SwAccessibleMap::_InvalidateRelationSet( const SwFrm* pFrm,
     {
         uno::Reference < XAccessible > xAcc;
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             if( mpFrmMap )
             {
@@ -3056,7 +3140,11 @@ void SwAccessibleMap::InvalidateParaTextSelection( const SwTxtFrm& _rTxtFrm )
     {
         uno::Reference < XAccessible > xAcc;
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             if( mpFrmMap )
             {
@@ -3102,7 +3190,11 @@ sal_Int32 SwAccessibleMap::GetChildIndex( const SwFrm& rParentFrm,
     {
         uno::Reference < XAccessible > xAcc;
         {
+#if defined USE_JAVA && defined MACOSX
+            osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
             osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
             if( mpFrmMap )
             {
@@ -3148,7 +3240,11 @@ void SwAccessibleMap::UpdatePreview( const std::vector<PreviewPage*>& _rPreviewP
     uno::Reference < XAccessible > xOldAcc;
     uno::Reference < XAccessible > xAcc;
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         xOldAcc = mxCursorContext;
 
@@ -3178,7 +3274,11 @@ void SwAccessibleMap::InvalidatePreviewSelection( sal_uInt16 nSelPage )
     uno::Reference < XAccessible > xOldAcc;
     uno::Reference < XAccessible > xAcc;
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         xOldAcc = mxCursorContext;
 
@@ -3222,7 +3322,11 @@ void SwAccessibleMap::FireEvents()
         }
     }
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
         if( mpShapes )
         {
             delete mpShapes;
@@ -3324,7 +3428,11 @@ bool SwAccessibleMap::ReplaceChild (
 {
     const SdrObject *pObj = 0;
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
         if( mpShapeMap )
         {
             SwAccessibleShapeMap_Impl::const_iterator aIter = mpShapeMap->cbegin();
@@ -3354,7 +3462,11 @@ bool SwAccessibleMap::ReplaceChild (
     Dispose( 0, pObj, 0 );
 
     {
+#if defined USE_JAVA && defined MACOSX
+        osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
         osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
         if( !mpShapeMap )
             mpShapeMap = new SwAccessibleShapeMap_Impl( this );
@@ -3615,7 +3727,11 @@ SwAccessibleSelectedParas_Impl* SwAccessibleMap::_BuildSelectedParas()
 
 void SwAccessibleMap::InvalidateTextSelectionOfAllParas()
 {
+#if defined USE_JAVA && defined MACOSX
+    osl::Guard< SwAccessibleMapMutex > aGuard( maMutex );
+#else	// USE_JAVA && MACOSX
     osl::MutexGuard aGuard( maMutex );
+#endif	// USE_JAVA && MACOSX
 
     // keep previously known selected paragraphs
     SwAccessibleSelectedParas_Impl* pPrevSelectedParas( mpSelectedParas );
@@ -3730,5 +3846,73 @@ bool SwAccessibleMap::IsDocumentSelAll()
 {
     return GetShell()->GetDoc()->IsPrepareSelAll();
 }
+
+#if defined USE_JAVA && defined MACOSX
+
+SwAccessibleMapMutex::SwAccessibleMapMutex() : mnCount( 0 ), mnThreadId( 0 )
+{
+}
+
+bool SwAccessibleMapMutex::acquire()
+{
+    bool bRet = maMutex.acquire();
+    mnThreadId = ::osl::Thread::getCurrentIdentifier();
+    mnCount++;
+    return bRet;
+}
+
+bool SwAccessibleMapMutex::release()
+{
+    if ( mnThreadId == ::osl::Thread::getCurrentIdentifier() )
+    {
+        if ( mnCount == 1 )
+            mnThreadId = 0;
+
+        if ( mnCount )
+            mnCount--;
+    }
+
+    return maMutex.release();
+}
+
+bool SwAccessibleMapMutex::tryToAcquire()
+{
+    bool bRet = maMutex.tryToAcquire();
+    if ( bRet )
+    {
+        mnThreadId = ::osl::Thread::getCurrentIdentifier();
+        mnCount++;
+    }
+
+    return bRet;
+}
+
+sal_uLong SwAccessibleMapMutex::ReleaseMutex()
+{
+    sal_uLong nRet = 0;
+
+    if ( mnThreadId == ::osl::Thread::getCurrentIdentifier() )
+    {
+        if ( mnCount )
+        {
+            nRet = mnCount;
+            while ( mnCount && mnThreadId == ::osl::Thread::getCurrentIdentifier() )
+                release();
+        }
+    }
+
+    return nRet;
+}
+
+void SwAccessibleMapMutex::AcquireMutex( sal_uLong nCount )
+{
+    while ( nCount )
+    {
+        acquire();
+        nCount--;
+    }
+}
+
+#endif	// USE_JAVA && MACOSX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

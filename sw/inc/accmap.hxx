@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified August 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef INCLUDED_SW_INC_ACCMAP_HXX
 #define INCLUDED_SW_INC_ACCMAP_HXX
@@ -35,6 +42,10 @@
 #include <memory>
 #endif	// !NO_LIBO_BUG_58624_FIX
 #include <set>
+#if defined USE_JAVA && defined MACOSX
+#include <osl/thread.hxx>
+#endif	// USE_JAVA && MACOSX
+
 class SwAccessibleParagraph;
 
 class SwViewShell;
@@ -77,13 +88,40 @@ namespace vcl { class Window; }
 
 typedef sal_uInt16 tAccessibleStates;
 
+#if defined USE_JAVA && defined MACOSX
+
+// Use a subclass of ::osl::Mutex to allow releasing and reacquiring
+// maMutex similar to SalYieldMutex as we need to release maMutex temporarily
+// whenever AquaA11yFocusListener::focusedObjectChanged() is called
+class SwAccessibleMapMutex
+{
+    ::osl::Mutex maMutex;
+    sal_uLong mnCount;
+    oslThreadIdentifier mnThreadId;
+
+public:
+	SwAccessibleMapMutex();
+	virtual ~SwAccessibleMapMutex() {}
+    bool acquire();
+    bool release();
+    bool tryToAcquire();
+    sal_uLong ReleaseMutex();
+    void AcquireMutex( sal_uLong nCount );
+};
+
+#endif	// USE_JAVA && MACOSX
+
 class SwAccessibleMap : public ::accessibility::IAccessibleViewForwarder,
                         public ::accessibility::IAccessibleParent
 #ifndef NO_LIBO_BUG_58624_FIX
                 , public std::enable_shared_from_this<SwAccessibleMap>
 #endif	// !NO_LIBO_BUG_58624_FIX
 {
+#if defined USE_JAVA && defined MACOSX
+    mutable SwAccessibleMapMutex maMutex;
+#else	// USE_JAVA && MACOSX
     mutable ::osl::Mutex maMutex;
+#endif	// USE_JAVA && MACOSX
     ::osl::Mutex maEventMutex;
     SwAccessibleContextMap_Impl *mpFrmMap;
     SwAccessibleShapeMap_Impl *mpShapeMap;
