@@ -57,7 +57,7 @@
 #include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
 
-#define AQUA11Y_MAX_REMOVE_BATCH_SIZE 100
+#define AQUA11Y_MAX_REMOVE_BATCH_SIZE 10000
 
 #endif	// USE_JAVA
 
@@ -74,7 +74,13 @@ static bool enabled = false;
 +(NSMutableDictionary *)allWrapper {
     static NSMutableDictionary * mdAllWrapper = nil;
     if ( mdAllWrapper == nil ) {
+#ifdef USE_JAVA
+        mdAllWrapper = [ NSMutableDictionary dictionaryWithCapacity: AQUA11Y_MAX_REMOVE_BATCH_SIZE * 10 ];
+        if ( mdAllWrapper )
+            [ mdAllWrapper retain ];
+#else	// USE_JAVA
         mdAllWrapper = [ [ [ NSMutableDictionary alloc ] init ] retain ];
+#endif	// USE_JAVA
         // initialize keyboard focus tracker
         rtl::Reference< AquaA11yFocusListener > listener( AquaA11yFocusListener::get() );
         AquaA11yFocusTracker::get().setFocusListener(listener.get());
@@ -91,9 +97,24 @@ static bool enabled = false;
 
     static NSMutableDictionary * mdRadioGroupWrapper = nil;
     if ( mdRadioGroupWrapper == nil ) {
-        mdRadioGroupWrapper = [ [ [ NSMutableDictionary alloc ] init ] retain ];
+        mdRadioGroupWrapper = [ NSMutableDictionary dictionaryWithCapacity: 100 ];
+        if ( mdRadioGroupWrapper )
+            [ mdRadioGroupWrapper retain ];
     }
     return mdRadioGroupWrapper;
+}
+
++(NSMutableDictionary *)reverseWrapper {
+    if ( ! enabled ) 
+        [ AquaA11yFactory allWrapper ];
+
+    static NSMutableDictionary * mdReverseWrapper = nil;
+    if ( mdReverseWrapper == nil ) {
+        mdReverseWrapper = [ NSMutableDictionary dictionaryWithCapacity: AQUA11Y_MAX_REMOVE_BATCH_SIZE * 10 ];
+        if ( mdReverseWrapper )
+            [ mdReverseWrapper retain ];
+    }
+    return mdReverseWrapper;
 }
 
 #endif	// USE_JAVA
@@ -102,13 +123,19 @@ static bool enabled = false;
     return [ NSValue valueWithPointer: rxAccessibleContext.get() ];
 }
 
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+
++(NSValue *)keyForElement: (id<NSAccessibility>) pElement {
+    return [ NSValue valueWithPointer: pElement ];
+}
+
+#else	// USE_JAVA
 
 +(NSValue *)keyForAccessibleContextAsRadioGroup: (Reference < XAccessibleContext >) rxAccessibleContext {
     return [ NSValue valueWithPointer: ( rxAccessibleContext.get() + 2 ) ];
 }
 
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
 
 +(AquaA11yWrapper *)wrapperForAccessible: (Reference < XAccessible >) rxAccessible {
     if ( rxAccessible.is() ) {
@@ -207,6 +234,7 @@ static bool enabled = false;
         {
 #ifdef USE_JAVA
             [ dWrapper setObject: aWrapper forKey: nKey ];
+            [ [ AquaA11yFactory reverseWrapper ] setObject: nKey forKey: [ AquaA11yFactory keyForElement: aWrapper ] ];
 #else	// USE_JAVA
             [ dAllWrapper setObject: aWrapper forKey: nKey ];
 #endif	// USE_JAVA
@@ -263,9 +291,13 @@ static bool enabled = false;
 +(void)insertIntoWrapperRepository: (NSView *) viewElement forAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
 #endif	// USE_JAVA
     NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
-    [ dAllWrapper setObject: viewElement forKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
 #ifdef USE_JAVA
+    NSValue * nKey = [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ];
+    [ dAllWrapper setObject: viewElement forKey: nKey ];
+    [ [ AquaA11yFactory reverseWrapper ] setObject: nKey forKey: [ AquaA11yFactory keyForElement: viewElement ] ];
     NSAccessibilityPostNotification( viewElement, NSAccessibilityCreatedNotification );
+#else	// USE_JAVA
+    [ dAllWrapper setObject: viewElement forKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
 #endif	// USE_JAVA
 }
 
@@ -304,22 +336,19 @@ static bool enabled = false;
         [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
     }
 
-    NSMutableDictionary * dAllWrapper = [ AquaA11yFactory allWrapper ];
-    NSMutableDictionary * dRadioGroupWrapper = [ AquaA11yFactory radioGroupWrapper ];
-    NSValue * nKey = [ AquaA11yFactory keyForAccessibleContext: [ theWrapper accessibleContext ] ];
-    if ( [ theWrapper actsAsRadioGroup ] )
-        [ dRadioGroupWrapper removeObjectForKey: nKey ];
-    else
-        [ dAllWrapper removeObjectForKey: nKey ];
-
     // The accessible context pointer may be NULL because this selector is
     // called asynchronously so remove any orphaned wrappers
-    NSArray *pKeys = [ dAllWrapper allKeysForObject: theWrapper ];
-    if ( pKeys && [ pKeys count ] )
-        [ dAllWrapper removeObjectsForKeys: pKeys ];
-    pKeys = [ dRadioGroupWrapper allKeysForObject: theWrapper ];
-    if ( pKeys && [ pKeys count ] )
-        [ dRadioGroupWrapper removeObjectsForKeys: pKeys ];
+    NSMutableDictionary * dReverseWrapper = [ AquaA11yFactory reverseWrapper ];
+    NSValue *nKey = [ AquaA11yFactory keyForElement: theWrapper ];
+    NSValue *pValue = [ dReverseWrapper objectForKey: nKey ];
+    if ( pValue ) {
+        NSMutableDictionary * dCurrentWrapper = ( [ theWrapper actsAsRadioGroup ] ? [ AquaA11yFactory radioGroupWrapper ] : [ AquaA11yFactory allWrapper ] );
+        id pCurrentValue = [ dCurrentWrapper objectForKey: pValue ];
+        if ( pCurrentValue && pCurrentValue == theWrapper )
+            [ dCurrentWrapper removeObjectForKey: pValue ];
+
+        [ dReverseWrapper removeObjectForKey: nKey ];
+    }
 }
 
 +(void)registerView: (id<NSAccessibility>) theView {
