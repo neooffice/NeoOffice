@@ -48,8 +48,8 @@ using namespace ::com::sun::star::uno;
 #ifdef USE_JAVA
             // Fix issue #11 by limiting the maximum number of child views that
             // can be attached to the window
-            if ( n > AQUA11Y_MAX_CHILD_COUNT )
-                n = AQUA11Y_MAX_CHILD_COUNT;
+            if ( n < 0 || n > SAL_MAX_UINT16 )
+                n = SAL_MAX_UINT16;
 
             NSMutableArray * children = [ NSMutableArray arrayWithCapacity: n ];
 #endif	// USE_JAVA

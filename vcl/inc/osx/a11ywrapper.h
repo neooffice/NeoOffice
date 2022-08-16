@@ -41,10 +41,6 @@
 #include <com/sun/star/accessibility/XAccessibleMultiLineText.hpp>
 #include <com/sun/star/accessibility/XAccessibleTextMarkup.hpp>
 
-#ifdef USE_JAVA
-#define AQUA11Y_MAX_CHILD_COUNT 100
-#endif	// USE_JAVA
-
 // rAccessibleXYZ as a field in an Objective-C-Class would not call Con-/Destructor, so use a struct instead
 struct ReferenceWrapper
 {
