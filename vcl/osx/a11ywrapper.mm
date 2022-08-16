@@ -442,8 +442,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #ifdef USE_JAVA
             // Fix issue #11 by limiting the maximum number of child views that
             // can be attached to the window
-            if ( cnt < 0 || cnt > SAL_MAX_UINT16 )
-                cnt = SAL_MAX_UINT16;
+            if ( cnt < 0 )
+                cnt = 0;
+            else if ( cnt > SAL_MAX_UINT8 )
+                cnt = SAL_MAX_UINT8;
 
             NSMutableArray * children = [ NSMutableArray arrayWithCapacity: cnt ];
             if ( children ) {
