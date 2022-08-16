@@ -107,6 +107,9 @@ struct ReferenceWrapper
 -(id)selectedTextRangeAttribute;
 -(id)visibleCharacterRangeAttribute;
 -(id)childrenAttribute;
+#ifdef USE_JAVA
+-(id)visibleChildrenAttribute;
+#endif	// USE_JAVA
 -(id)orientationAttribute;
 -(id)windowAttribute;
 // Wrapper-specific

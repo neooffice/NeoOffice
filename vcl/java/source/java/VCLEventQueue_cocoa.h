@@ -102,7 +102,23 @@
 - (BOOL)acceptsFirstResponder;
 - (void)abandonInput;
 #ifdef USE_AQUA_A11Y
+- (id)accessibilityAttributeValue:(NSString *)pAttribute;
+- (BOOL)accessibilityIsIgnored;
+- (NSArray *)accessibilityAttributeNames;
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute;
+- (NSArray *)accessibilityParameterizedAttributeNames;
+- (BOOL)accessibilitySetOverrideValue:(id)pValue forAttribute:(NSString *)pAttribute;
+- (void)accessibilitySetValue:(id)pValue forAttribute:(NSString *)pAttribute;
+- (id)accessibilityAttributeValue:(NSString *)pAttribute forParameter:(id)pParameter;
+- (id)accessibilityFocusedUIElement;
+- (NSString *)accessibilityActionDescription:(NSString *)pAction;
+- (void)accessibilityPerformAction:(NSString *)pAction;
+- (NSArray *)accessibilityActionNames;
+- (id)accessibilityHitTest:(NSPoint)aPoint;
+- (NSArray *)accessibilityVisibleChildren;
+- (NSArray *)accessibilitySelectedChildren;
 - (NSArray *)accessibilityChildren;
+- (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder;
 #else	// USE_AQUA_A11Y
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
 #endif	// USE_AQUA_A11Y

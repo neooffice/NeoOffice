@@ -567,6 +567,34 @@ static void PostSystemColorsDidChange()
 	}
 }
 
+static NSArray *MergeAccessibilityChildren( NSArray *pDefaultChildren, NSArray *pUnignoredChildrenToAdd )
+{
+	NSArray *pRet = pDefaultChildren;
+
+	if ( pUnignoredChildrenToAdd && [pUnignoredChildrenToAdd count] )
+	{
+		NSMutableArray *pNewChildren = [NSMutableArray arrayWithCapacity:( pRet ? [pRet count] : 0 ) + 1];
+		if ( pNewChildren )
+		{
+			if ( pRet )
+				[pNewChildren addObjectsFromArray:pRet];
+
+			for ( AquaA11yWrapper *pWrapper : pUnignoredChildrenToAdd ) {
+				if ( pWrapper && ![pNewChildren containsObject:pWrapper] )
+					[pNewChildren addObject:pWrapper];
+			}
+
+			pRet = pNewChildren;
+		}
+		else
+		{
+			pRet = pUnignoredChildrenToAdd;
+		}
+	}
+
+	return pRet;
+}
+
 static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
 static NSString *pAppleInterfaceStyleSwitchesAutomaticallyPref = @"AppleInterfaceStyleSwitchesAutomatically";
 static NSString *pDisableDarkModePref = @"DisableDarkMode";
@@ -2263,36 +2291,139 @@ static CFDataRef aRTFSelection = nil;
 
 #ifdef USE_AQUA_A11Y
 
+- (id)accessibilityAttributeValue:(NSString *)pAttribute
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityAttributeValue:pAttribute];
+	else
+		return nil;
+}
+
+- (BOOL)accessibilityIsIgnored
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityIsIgnored];
+	else
+		return YES;
+}
+
+- (NSArray *)accessibilityAttributeNames
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityAttributeNames];
+	else
+		return [NSArray array];
+}
+
+- (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityIsAttributeSettable:pAttribute];
+	else
+		return NO;
+}
+
+- (NSArray *)accessibilityParameterizedAttributeNames
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityParameterizedAttributeNames];
+	else
+		return [NSArray array];
+}
+
+- (BOOL)accessibilitySetOverrideValue:(id)pValue forAttribute:(NSString *)pAttribute
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilitySetOverrideValue:pValue forAttribute:pAttribute];
+	else
+		return NO;
+}
+
+- (void)accessibilitySetValue:(id)pValue forAttribute:(NSString *)pAttribute
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilitySetValue:pValue forAttribute:pAttribute];
+}
+
+- (id)accessibilityAttributeValue:(NSString *)pAttribute forParameter:(id)pParameter
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityAttributeValue:pAttribute forParameter:pParameter];
+	else
+		return nil;
+}
+
+- (id)accessibilityFocusedUIElement
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityFocusedUIElement];
+	else
+		return nil;
+}
+
+- (NSString *)accessibilityActionDescription:(NSString *)pAction
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityActionDescription:pAction];
+	else
+		return nil;
+}
+
+- (void)accessibilityPerformAction:(NSString *)pAction
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityPerformAction:pAction];
+}
+
+- (NSArray *)accessibilityActionNames
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityActionNames];
+	else
+		return [NSArray array];
+}
+
+- (id)accessibilityHitTest:(NSPoint)aPoint
+{
+	if ( mpChildWrapper )
+		return [mpChildWrapper accessibilityHitTest:aPoint];
+	else
+		return nil;
+}
+
+- (id)accessibilityParent
+{
+	return [self window];
+}
+
+- (NSArray *)accessibilityVisibleChildren
+{
+    return [self accessibilityChildren];
+}
+
+- (NSArray *)accessibilitySelectedChildren
+{
+	NSArray *pRet = [super accessibilityChildren];
+
+	if ( mpChildWrapper && ![mpChildWrapper isDisposed] )
+		pRet = MergeAccessibilityChildren( pRet, [mpChildWrapper accessibilitySelectedChildren] );
+
+	return pRet;
+}
+
 - (NSArray *)accessibilityChildren
 {
 	NSArray *pRet = [super accessibilityChildren];
 
 	if ( mpChildWrapper && ![mpChildWrapper isDisposed] )
-	{
-		NSArray *pUnignoredChildren = NSAccessibilityUnignoredChildren( [NSArray arrayWithObject:mpChildWrapper] );
-		if ( pUnignoredChildren && [pUnignoredChildren count] )
-		{
-			NSMutableArray *pNewChildren = [NSMutableArray arrayWithCapacity:( pRet ? [pRet count] : 0 ) + 1];
-			if ( pNewChildren )
-			{
-				if ( pRet )
-					[pNewChildren addObjectsFromArray:pRet];
-
-				for ( AquaA11yWrapper *pWrapper : pUnignoredChildren ) {
-					if ( pWrapper && ![pNewChildren containsObject:pWrapper] )
-						[pNewChildren addObject:pWrapper];
-				}
-
-				pRet = pNewChildren;
-			}
-			else
-			{
-				pRet = pUnignoredChildren;
-			}
-		}
-	}
+		pRet = MergeAccessibilityChildren( pRet, [mpChildWrapper accessibilityChildren] );
 
 	return pRet;
+}
+
+- (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder
+{
+    return [self accessibilityChildren];
 }
 
 #else	// USE_AQUA_A11Y

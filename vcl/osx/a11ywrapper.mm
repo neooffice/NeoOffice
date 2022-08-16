@@ -497,6 +497,14 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #endif	// USE_JAVA
 }
 
+#ifdef USE_JAVA
+
+-(id)visibleChildrenAttribute {
+    return [ self childrenAttribute ];
+}
+
+#endif	// USE_JAVA
+
 -(id)windowAttribute {
     // go upstairs until reaching the broken connection
     AquaA11yWrapper * aWrapper = self;
@@ -1599,6 +1607,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     return [ self accessibilityAttributeValue: NSAccessibilityValueAttribute ];
 }
 
+- (NSArray *)accessibilityVisibleChildren
+{
+    return [ self accessibilityChildren ];
+}
+
 - (NSAccessibilitySubrole)accessibilitySubrole
 {
     return [ self accessibilityAttributeValue: NSAccessibilitySubroleAttribute ];
@@ -1647,6 +1660,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         return NO;
 }
 
+- (NSArray *)accessibilitySelectedChildren
+{
+    return [ self accessibilityAttributeValue: NSAccessibilitySelectedChildrenAttribute ];
+}
+
 - (NSArray *)accessibilityServesAsTitleForUIElements
 {
     return [ self accessibilityAttributeValue: NSAccessibilityServesAsTitleForUIElementsAttribute ];
@@ -1693,6 +1711,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 - (NSArray *)accessibilityChildren
 {
     return [ self accessibilityAttributeValue: NSAccessibilityChildrenAttribute ];
+}
+
+- (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder
+{
+    return [ self accessibilityChildren ];
 }
 
 - (NSArray *)accessibilityContents
