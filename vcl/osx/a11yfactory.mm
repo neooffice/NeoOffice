@@ -247,7 +247,6 @@ static bool enabled = false;
             */
             id parent = [aWrapper accessibilityAttributeValue:NSAccessibilityParentAttribute];
 #ifdef USE_JAVA
-            NSAccessibilityPostNotification( aWrapper, NSAccessibilityCreatedNotification );
             if (parent && [aWrapper isKindOfClass:[NSView class]]) {
 #else	// USE_JAVA
             if (parent) {
@@ -295,7 +294,6 @@ static bool enabled = false;
     NSValue * nKey = [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ];
     [ dAllWrapper setObject: viewElement forKey: nKey ];
     [ [ AquaA11yFactory reverseWrapper ] setObject: nKey forKey: [ AquaA11yFactory keyForElement: viewElement ] ];
-    NSAccessibilityPostNotification( viewElement, NSAccessibilityCreatedNotification );
 #else	// USE_JAVA
     [ dAllWrapper setObject: viewElement forKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
 #endif	// USE_JAVA
@@ -515,10 +513,6 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     }
 
     aGuard.clear();
-
-    // Post all pending notifications while we have the drag print lock
-    [ AquaA11yPostNotification postPendingNotifications ];
-
     RELEASE_DRAGPRINTLOCK
 
     bInRemovePendingFromWrapperRepository = NO;
@@ -584,7 +578,7 @@ static NSDictionary *pPriorityDict = nil;
         // Set priority high to increase the odds that transient objects'
         // notifications will get announced
         if ( pPriorityDict ) {
-            pPriorityDict = [ NSDictionary dictionaryWithObjects: [ NSArray arrayWithObject: [ NSNumber numberWithInteger: NSAccessibilityPriorityHigh ] ] forKeys: [ NSArray arrayWithObject: NSAccessibilityPriorityKey ] ];
+            pPriorityDict = [ NSDictionary dictionaryWithObjects: [ NSArray arrayWithObject: [ NSNumber numberWithInteger: NSAccessibilityPriorityLow ] ] forKeys: [ NSArray arrayWithObject: NSAccessibilityPriorityKey ] ];
             if ( pPriorityDict )
                 [ pPriorityDict retain ];
         }
@@ -598,6 +592,9 @@ static NSDictionary *pPriorityDict = nil;
 
 - (void)postPendingNotifications:(id)pObject
 {
+    if ( bInPostPendingNotifications )
+        return;
+
     // Prevent posting of notification if we are already within an
     // NSAccessibility call
     if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
@@ -606,18 +603,6 @@ static NSDictionary *pPriorityDict = nil;
             [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
         return;
     }
-
-    [ AquaA11yPostNotification postPendingNotifications ];
-}
-
-+ (BOOL)postPendingNotifications
-{
-    BOOL bRet = NO;
-
-    // Prevent posting of notification if we are already within an
-    // NSAccessibility call
-    if ( bInPostPendingNotifications || VCLInstance_isInOrAcquiringDragPrintLock() )
-        return bRet;
 
     bInPostPendingNotifications = YES;
 
@@ -630,14 +615,12 @@ static NSDictionary *pPriorityDict = nil;
             // item notifications
             if ( pPostNotification ) {
                 @try {
-                	[ pPostNotification postNotification ];
+                    [ pPostNotification postNotification ];
                 }
                 @catch ( NSException *pExc ) {
                 }
             }
         }
-
-        bRet = [ pPendingPostNotificationQueue count ];
         [ pPendingPostNotificationQueue removeAllObjects ];
     }
 
@@ -645,8 +628,6 @@ static NSDictionary *pPriorityDict = nil;
     RELEASE_DRAGPRINTLOCK
 
     bInPostPendingNotifications = NO;
-
-    return bRet;
 }
 
 @end

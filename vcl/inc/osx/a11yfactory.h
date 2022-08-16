@@ -88,7 +88,6 @@
 - (void)dealloc;
 - (void)postNotification;
 - (void)postPendingNotifications:(id)pObject;
-+ (BOOL)postPendingNotifications;
 @end
 
 #endif	// USE_JAVA
