@@ -366,8 +366,7 @@ static bool enabled = false;
 #endif	// USE_JAVA
     if ( enabled && [ theView isKindOfClass: [ AquaA11yWrapper class ] ] ) {
 #ifdef USE_JAVA
-        AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: (AquaA11yWrapper *)theView ];
-        osl_performSelectorOnMainThread( pAquaA11yRemoveFromWrapperRepository, @selector(removeFromWrapperRepository:), pAquaA11yRemoveFromWrapperRepository, NO );
+        [ AquaA11yRemoveFromWrapperRepository addElementToPendingRemovalQueue: (AquaA11yWrapper *)theView ];
 #else	// USE_JAVA
         [ AquaA11yFactory removeFromWrapperRepositoryFor: [ (AquaA11yWrapper *) theView accessibleContext ] ];
 #endif	// USE_JAVA
@@ -430,7 +429,7 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
 
 @implementation AquaA11yRemoveFromWrapperRepository
 
-+ (id)createWithElement:(AquaA11yWrapper *)pElement
++ (id)addElementToPendingRemovalQueue:(AquaA11yWrapper *)pElement
 {
     AquaA11yRemoveFromWrapperRepository *pRet = [ [ AquaA11yRemoveFromWrapperRepository alloc ] initWithElement: pElement ];
     [ pRet autorelease ];
@@ -457,8 +456,11 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
             [ pPendingRemoveFromWrapperRepositoryQueue retain ];
     }
 
-    if ( pPendingRemoveFromWrapperRepositoryQueue )
+    // Post the removal asynchronously
+    if ( pPendingRemoveFromWrapperRepositoryQueue ) {
         [ pPendingRemoveFromWrapperRepositoryQueue addObject: self ];
+        osl_performSelectorOnMainThread( self, @selector(removeFromWrapperRepository:), self, NO );
+    }
 
     aGuard.clear();
 
@@ -527,7 +529,7 @@ static NSDictionary *pPriorityDict = nil;
 
 @implementation AquaA11yPostNotification
 
-+ (id)createWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName
++ (id)addElementToPendingNotificationQueue:(id)pElement name:(NSAccessibilityNotificationName)pName
 {
     AquaA11yPostNotification *pRet = [ [ AquaA11yPostNotification alloc ] initWithElement: pElement name: pName ];
     [ pRet autorelease ];
@@ -553,8 +555,11 @@ static NSDictionary *pPriorityDict = nil;
             [ pPendingPostNotificationQueue retain ];
     }
 
-    if ( pPendingPostNotificationQueue )
+    // Post the notification asynchronously
+    if ( pPendingPostNotificationQueue ) {
         [ pPendingPostNotificationQueue addObject: self ];
+        osl_performSelectorOnMainThread( self, @selector(postPendingNotifications:), self, NO );
+    }
 
     aGuard.clear();
 

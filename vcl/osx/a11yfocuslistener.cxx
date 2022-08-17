@@ -138,8 +138,7 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
                 if ( m_focusedObject ) {
                     [ m_focusedObject retain ];
 
-                    AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
-                    osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postPendingNotifications:), pAquaA11yPostNotification, NO );
+                    [ AquaA11yPostNotification addElementToPendingNotificationQueue: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
                 }
 #else	// USE_JAVA
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];

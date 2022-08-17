@@ -72,7 +72,7 @@
 {
     AquaA11yWrapper*        mpElement;
 }
-+ (id)createWithElement:(AquaA11yWrapper *)pElement;
++ (id)addElementToPendingRemovalQueue:(AquaA11yWrapper *)pElement;
 - (id)initWithElement:(AquaA11yWrapper *)pElement;
 - (void)dealloc;
 - (void)removeFromWrapperRepository:(id)pObject;
@@ -83,7 +83,7 @@
     id                      mpElement;
     NSAccessibilityNotificationName mpName;
 }
-+ (id)createWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
++ (id)addElementToPendingNotificationQueue:(id)pElement name:(NSAccessibilityNotificationName)pName;
 - (id)initWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
 - (void)dealloc;
 - (void)postNotification;

@@ -76,10 +76,8 @@ AquaA11yEventListener::~AquaA11yEventListener()
     if ( m_wrapperObject ) {
         NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
 
-        if ( [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] ) {
-            AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: m_wrapperObject ];
-            osl_performSelectorOnMainThread( pAquaA11yRemoveFromWrapperRepository, @selector(removeFromWrapperRepository:), pAquaA11yRemoveFromWrapperRepository, NO );
-        }
+        if ( [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
+            [ AquaA11yRemoveFromWrapperRepository addElementToPendingRemovalQueue: m_wrapperObject ];
 
         osl_performSelectorOnMainThread( m_wrapperObject, @selector(release), m_wrapperObject, NO );
 
@@ -96,10 +94,8 @@ AquaA11yEventListener::disposing( const EventObject& ) throw( RuntimeException, 
 #ifdef USE_JAVA
     NSAutoreleasePool *pPool = [ [ NSAutoreleasePool alloc ] init ];
 
-    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] ) {
-        AquaA11yRemoveFromWrapperRepository *pAquaA11yRemoveFromWrapperRepository = [ AquaA11yRemoveFromWrapperRepository createWithElement: m_wrapperObject ];
-        osl_performSelectorOnMainThread( pAquaA11yRemoveFromWrapperRepository, @selector(removeFromWrapperRepository:), pAquaA11yRemoveFromWrapperRepository, NO );
-    }
+    if ( m_wrapperObject && [ m_wrapperObject isKindOfClass:[ AquaA11yWrapper class ] ] )
+        [ AquaA11yRemoveFromWrapperRepository addElementToPendingRemovalQueue: m_wrapperObject ];
 
     [ pPool release ]; 
 #else	// USE_JAVA
@@ -161,16 +157,14 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
             bounds = [ element accessibleComponent ] -> getBounds();
             if ( m_oldBounds.X != 0 && ( bounds.X != m_oldBounds.X || bounds.Y != m_oldBounds.Y ) ) {
 #ifdef USE_JAVA
-                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityMovedNotification ];
-                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postPendingNotifications:), pAquaA11yPostNotification, NO );
+                [ AquaA11yPostNotification addElementToPendingNotificationQueue: element name: NSAccessibilityMovedNotification ];
 #else	// USE_JAVA
                 NSAccessibilityPostNotification(element, NSAccessibilityMovedNotification); // post directly since both cases can happen simultaneously
 #endif	// USE_JAVA
             }
             if ( m_oldBounds.X != 0 && ( bounds.Width != m_oldBounds.Width || bounds.Height != m_oldBounds.Height ) ) {
 #ifdef USE_JAVA
-                AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: NSAccessibilityResizedNotification ];
-                osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postPendingNotifications:), pAquaA11yPostNotification, NO );
+                [ AquaA11yPostNotification addElementToPendingNotificationQueue: element name: NSAccessibilityResizedNotification ];
 #else	// USE_JAVA
                 NSAccessibilityPostNotification(element, NSAccessibilityResizedNotification); // post directly since both cases can happen simultaneously
 #endif	// USE_JAVA
@@ -207,10 +201,7 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
 
     if( nil != notification )
 #ifdef USE_JAVA
-    {
-        AquaA11yPostNotification *pAquaA11yPostNotification = [ AquaA11yPostNotification createWithElement: element name: notification ];
-        osl_performSelectorOnMainThread( pAquaA11yPostNotification, @selector(postPendingNotifications:), pAquaA11yPostNotification, NO );
-    }
+        [ AquaA11yPostNotification addElementToPendingNotificationQueue: element name: notification ];
 
     [ pPool release ]; 
 #else	// USE_JAVA
