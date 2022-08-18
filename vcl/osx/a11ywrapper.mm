@@ -69,6 +69,12 @@ using namespace ::com::sun::star::uno;
 #ifdef USE_JAVA
 @interface NSObject (AquaA11yWrapper)
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
+- (id)_accessibilityValueForAttribute:(id)pAttribute clientError:(int *)pError;
+- (id)_accessibilityArrayAttributeValues:(id)pAttribute index:(NSUInteger)nIndex maxCount:(NSUInteger)nMaxCount clientError:(int *)pError;
+- (id)_accessibilityAttributeNamesClientError:(int *)pError;
+- (BOOL)_accessibilityCanSetValueForAttribute:(id)pAttribute clientError:(int *)pError;
+- (NSUInteger)_accessibilityIndexOfChild:(id)pChild clientError:(int *)pError;
+- (id)_accessibilityArrayAttributeCount:(id)pAttribute clientError:(int *)pError;
 @end
 #else	// USE_JAVA
 @interface SalFrameWindow : NSWindow
@@ -1938,6 +1944,126 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 - (BOOL)accessibilityNotifiesWhenDestroyed
 {
     return YES;
+}
+
+- (id)_accessibilityArrayAttributeCount:(id)pAttribute clientError:(int *)pError
+{
+    id pRet = nil;
+    if ( !ImplApplicationIsRunning() )
+        return pRet;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return pRet;
+    }
+
+    if ( [ super respondsToSelector: @selector(_accessibilityArrayAttributeCount:clientError:) ] )
+        pRet = [ super _accessibilityArrayAttributeCount: pAttribute clientError: pError ];
+
+    RELEASE_DRAGPRINTLOCK
+    return pRet;
+}
+
+- (id)_accessibilityArrayAttributeValues:(id)pAttribute index:(NSUInteger)nIndex maxCount:(NSUInteger)nMaxCount clientError:(int *)pError
+{
+    id pRet = nil;
+    if ( !ImplApplicationIsRunning() )
+        return pRet;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return pRet;
+    }
+
+    if ( [ super respondsToSelector: @selector(_accessibilityArrayAttributeValues:index:maxCount:clientError:) ] )
+        pRet = [ super _accessibilityArrayAttributeValues: pAttribute index: nIndex maxCount: nMaxCount clientError: pError ];
+
+    RELEASE_DRAGPRINTLOCK
+    return pRet;
+}
+
+- (id)_accessibilityAttributeNamesClientError:(int *)pError
+{
+    id pRet = nil;
+    if ( !ImplApplicationIsRunning() )
+        return pRet;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return pRet;
+    }
+
+    if ( [ super respondsToSelector: @selector(_accessibilityAttributeNamesClientError:) ] )
+        pRet = [ super _accessibilityAttributeNamesClientError: pError ];
+
+    RELEASE_DRAGPRINTLOCK
+    return pRet;
+}
+
+- (BOOL)_accessibilityCanSetValueForAttribute:(id)pAttribute clientError:(int *)pError
+{
+    BOOL bRet = NO;
+    if ( !ImplApplicationIsRunning() )
+        return bRet;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return bRet;
+    }
+
+    if ( [ super respondsToSelector: @selector(_accessibilityCanSetValueForAttribute:clientError:) ] )
+        bRet = [ super _accessibilityCanSetValueForAttribute: pAttribute clientError: pError ];
+
+    RELEASE_DRAGPRINTLOCK
+    return bRet;
+}
+
+- (NSUInteger)_accessibilityIndexOfChild:(id)pChild clientError:(int *)pError
+{
+    NSUInteger nRet = 0;
+    if ( !ImplApplicationIsRunning() )
+        return nRet;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return nRet;
+    }
+
+    if ( [ super respondsToSelector: @selector(_accessibilityIndexOfChild:clientError:) ] )
+        nRet = [ super _accessibilityIndexOfChild: pChild clientError: pError ];
+
+    RELEASE_DRAGPRINTLOCK
+    return nRet;
+}
+
+- (id)_accessibilityValueForAttribute:(id)pAttribute clientError:(int *)pError
+{
+    id pRet = nil;
+    if ( !ImplApplicationIsRunning() )
+        return pRet;
+    // Set drag lock if it has not already been set since dispatching native
+    // events to windows during an accessibility call can cause crashing
+    ACQUIRE_DRAGPRINTLOCK
+    if ( [ self isDisposed ] ) {
+        RELEASE_DRAGPRINTLOCKIFNEEDED
+        return pRet;
+    }
+
+    if ( [ super respondsToSelector: @selector(_accessibilityValueForAttribute:clientError:) ] )
+        pRet = [ super _accessibilityValueForAttribute: pAttribute clientError: pError ];
+
+    RELEASE_DRAGPRINTLOCK
+    return pRet;
 }
 
 #endif	// USE_JAVA
