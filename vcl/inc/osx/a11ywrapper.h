@@ -67,7 +67,11 @@ struct ReferenceWrapper
      NSAccessibilityRadioButton,
      NSAccessibilityCheckBox,
      NSAccessibilityStaticText,
-     NSAccessibilityNavigableStaticText>
+     NSAccessibilityNavigableStaticText,
+     NSAccessibilityProgressIndicator,
+     NSAccessibilityStepper,
+     NSAccessibilitySlider,
+     NSAccessibilityImage>
 #else	// USE_JAVA
 @interface AquaA11yWrapper : NSView
 #endif	// USE_JAVA

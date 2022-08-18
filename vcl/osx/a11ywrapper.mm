@@ -1884,14 +1884,29 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         return 0;
 }
 
-- (BOOL)accessibilityPerformIncrement
-{
-    return [ self performAction: NSAccessibilityIncrementAction ];
-}
-
 - (BOOL)accessibilityPerformDecrement
 {
     return [ self performAction: NSAccessibilityDecrementAction ];
+}
+
+- (BOOL)accessibilityPerformPick
+{
+    return [ self performAction: NSAccessibilityPickAction ];
+}
+
+- (BOOL)accessibilityPerformShowMenu
+{
+    return [ self performAction: NSAccessibilityShowMenuAction ];
+}
+
+- (BOOL)accessibilityPerformPress
+{
+    return [ self performAction: NSAccessibilityPressAction ];
+}
+
+- (BOOL)accessibilityPerformIncrement
+{
+    return [ self performAction: NSAccessibilityIncrementAction ];
 }
 
 // NSAccessibilityElement selectors
@@ -1923,13 +1938,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 - (BOOL)accessibilityNotifiesWhenDestroyed
 {
     return YES;
-}
-
-// NSAccessibilityButton selectors
-
-- (BOOL)accessibilityPerformPress
-{
-    return [ self performAction: NSAccessibilityPressAction ];
 }
 
 #endif	// USE_JAVA
