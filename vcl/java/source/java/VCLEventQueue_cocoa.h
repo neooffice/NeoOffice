@@ -185,10 +185,15 @@
 	BOOL					mbInVersionBrowser;
 	BOOL					mbCloseOnExitVersionBrowser;
 	NSRect					maNonFullScreenFrame;
+#ifdef USE_AQUA_A11Y
+    sal_uLong				mnStyle;
+#endif	// USE_AQUA_A11Y
 }
 - (void)_init;
 #ifdef USE_AQUA_A11Y
 - (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
+- (BOOL)accessibilityIsIgnored;
+- (id)accessibilityFocusedUIElement;
 #endif	// USE_AQUA_A11Y
 - (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
@@ -196,6 +201,9 @@
 - (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
+#ifdef USE_AQUA_A11Y
+- (void)setJavaStyle:(sal_uLong)nStyle;
+#endif	// USE_AQUA_A11Y
 @end
 
 @interface VCLWindow : NSWindow <NSWindowDelegate>

@@ -768,9 +768,11 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 
 @interface NSResponder (VCLResponder)
 - (void)abandonInput;
-#ifndef USE_AQUA_A11Y
+#ifdef USE_AQUA_A11Y
+- (BOOL)accessibilityIsIgnored;
+#else	// USE_AQUA_A11Y
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
-#endif	// !USE_AQUA_A11Y
+#endif	// USE_AQUA_A11Y
 - (void)copy:(id)pSender;
 - (void)cut:(id)pSender;
 - (void)paste:(id)pSender;
@@ -825,6 +827,9 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	mbInVersionBrowser = NO;
 	mbCloseOnExitVersionBrowser = NO;
 	maNonFullScreenFrame = NSMakeRect( 0, 0, 0, 0 );
+#ifdef USE_AQUA_A11Y
+	mnStyle = 0;
+#endif	// USE_AQUA_A11Y
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -845,6 +850,20 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	}
 
 	return aRet;
+}
+
+- (BOOL)accessibilityIsIgnored
+{
+	// Treat unfocusable tooltip windows as ignored
+	if ( mnStyle & SAL_FRAME_STYLE_TOOLTIP && ![self canBecomeKeyWindow] )
+		return YES;
+
+	return [super accessibilityIsIgnored];
+}
+
+- (id)accessibilityFocusedUIElement
+{
+	return [NSNumber numberWithBool:( [self accessibilityIsIgnored] ? NO : YES )];
 }
 
 #endif	// USE_AQUA_A11Y
@@ -888,6 +907,15 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 {
 	maNonFullScreenFrame = aFrame;
 }
+
+#ifdef USE_AQUA_A11Y
+
+- (void)setJavaStyle:(sal_uLong)nStyle
+{
+	mnStyle = nStyle;
+}
+
+#endif	// USE_AQUA_A11Y
 
 @end
 

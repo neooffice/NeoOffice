@@ -1564,9 +1564,14 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			}
 
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			{
 				[(VCLPanel *)mpWindow setJavaFrame:mpFrame];
+				[(VCLPanel *)mpWindow setJavaStyle:mnStyle];
+			}
 			else
+			{
 				[(VCLWindow *)mpWindow setJavaFrame:mpFrame];
+			}
 
 			// Cache the window's insets
 			NSRect aContentRect = NSMakeRect( 0, 0, 1, 1 );
