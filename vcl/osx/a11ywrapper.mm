@@ -1301,7 +1301,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         [ AquaA11yActionWrapper doAction: action ofElement: actionResponder ];
 #ifdef USE_JAVA
     } else {
-        bRet = YES;
+        bRet = NO;
 #endif	// USE_JAVA
     }
 #ifdef USE_JAVA
