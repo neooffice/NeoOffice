@@ -74,7 +74,7 @@
 // Increase adjustment factor slightly to increase height in text fields in the
 // Preference dialog's User Data panel.
 #define EDITBOX_HEIGHT					( Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() * 3 )
-#define EDITBOX_HEIGHT_SLOP				( IsRunningHighSierraOrLower() ? 0 : 1 )
+#define EDITBOX_HEIGHT_SLOP				1
 #define EDITFRAMEPADDING_WIDTH			1
 #define FOCUSRING_WIDTH					3
 #define FRAME_TRIMWIDTH					1
@@ -123,10 +123,6 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
-static bool bIsRunningHighSierraOrLowerInitizalized  = false;
-static bool bIsRunningHighSierraOrLower = false;
-static bool bIsRunningMojaveOrLowerInitizalized  = false;
-static bool bIsRunningMojaveOrLower = false;
 static bool bIsRunningCatalinaOrLowerInitizalized  = false;
 static bool bIsRunningCatalinaOrLower = false;
 
@@ -152,50 +148,6 @@ static VCLBitmapBuffer aSharedCheckboxBuffer;
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
-
-static bool IsRunningHighSierraOrLower()
-{
-	if ( !bIsRunningHighSierraOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
-				bIsRunningHighSierraOrLower = true;
-		}
-
-		bIsRunningHighSierraOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningHighSierraOrLower;
-}
-
-static bool IsRunningMojaveOrLower()
-{
-	if ( !bIsRunningMojaveOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 14 )
-				bIsRunningMojaveOrLower = true;
-		}
-
-		bIsRunningMojaveOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningMojaveOrLower;
-}
 
 static bool IsRunningCatalinaOrLower()
 {
@@ -248,7 +200,7 @@ static VCLNativeControlWindow *pSharedNativeControlWindow = nil;
 		// Fix slowness on macOS 11 by only attaching inactive views as active
 		// views don't need to be attached on macOS 10.14 and higher
 		BOOL bInactive = ( nControlState & CTRL_STATE_INACTIVE ? YES : NO );
-		if ( !bInactive && !IsRunningHighSierraOrLower() && ![pView isKindOfClass:[NSProgressIndicator class]] )
+		if ( !bInactive && ![pView isKindOfClass:[NSProgressIndicator class]] )
 			return pRet;
 
 		// [NSApplication windows] seems to flush all windows on macOS 11 so
@@ -679,59 +631,47 @@ static NSComboBox *pSharedComboBox = nil;
 
 - (NSControl *)comboBox
 {
-	NSComboBox *pComboBox;
-	if ( IsRunningHighSierraOrLower() )
+	// Fix slowness on macOS 11 by reusing the same combobox. Make sure
+	// that the combobox is not still attached to a superview or window.
+	if ( pSharedComboBox )
 	{
-		pComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
-		if ( !pComboBox )
-			return nil;
-
-		[pComboBox autorelease];
-	}
-	else
-	{
-		// Fix slowness on macOS 11 by reusing the same combobox. Make sure
-		// that the combobox is not still attached to a superview or window.
-		if ( pSharedComboBox )
+		NSWindow *pWindow = [pSharedComboBox window];
+		if ( pWindow || [pSharedComboBox superview] )
 		{
-			NSWindow *pWindow = [pSharedComboBox window];
-			if ( pWindow || [pSharedComboBox superview] )
+			@try
 			{
-				@try
+				if ( pWindow )
 				{
-					if ( pWindow )
-					{
-						NSView *pContentView = [pWindow contentView];
-						if ( pContentView && pContentView == pSharedComboBox )
-							[pWindow setContentView:nil];
-					}
-
-					[pSharedComboBox removeFromSuperview];
-					[pSharedComboBox prepareForReuse];
-
-					// Release the content view's layer now
-					if ( pSharedComboBox.layer )
-						pSharedComboBox.layer = nil;
+					NSView *pContentView = [pWindow contentView];
+					if ( pContentView && pContentView == pSharedComboBox )
+						[pWindow setContentView:nil];
 				}
-				@catch ( NSException *pExc )
-				{
-					// Something has gone wrong so dispose of the combobox
-					NSComboBox *pOldSharedComboBox = pSharedComboBox;
-					pSharedComboBox = nil;
-					[pOldSharedComboBox release];
-				}
+
+				[pSharedComboBox removeFromSuperview];
+				[pSharedComboBox prepareForReuse];
+
+				// Release the content view's layer now
+				if ( pSharedComboBox.layer )
+					pSharedComboBox.layer = nil;
+			}
+			@catch ( NSException *pExc )
+			{
+				// Something has gone wrong so dispose of the combobox
+				NSComboBox *pOldSharedComboBox = pSharedComboBox;
+				pSharedComboBox = nil;
+				[pOldSharedComboBox release];
 			}
 		}
-
-		if ( !pSharedComboBox )
-			pSharedComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
-
-		pComboBox = pSharedComboBox;
-		if ( !pComboBox )
-			return nil;
-
-		[pComboBox setFrame:NSMakeRect( 0, 0, 1, 1 )];
 	}
+
+	if ( !pSharedComboBox )
+		pSharedComboBox = [[NSComboBox alloc] initWithFrame:NSMakeRect( 0, 0, 1, 1 )];
+
+	NSComboBox *pComboBox = pSharedComboBox;
+	if ( !pComboBox )
+		return nil;
+
+	[pComboBox setFrame:NSMakeRect( 0, 0, 1, 1 )];
 
 	NSCell *pCell = [pComboBox cell];
 	if ( !pCell )
@@ -1918,17 +1858,14 @@ static NSComboBox *pSharedComboBox = nil;
 		BOOL mbMoveDown = ( mpSpinbuttonValue->mnLowerState & CTRL_STATE_PRESSED );
 		if ( mbMoveUp || mbMoveDown )
 		{
-			if ( !IsRunningMojaveOrLower() )
+			// Fix slowness on macOS 10.15 and higher by posting an empty
+			// event so that the moveUp: and moveDown: calls do not block
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
 			{
-				// Fix slowness on macOS 10.15 and higher by posting an empty
-				// event so that the moveUp: and moveDown: calls do not block
-				NSApplication *pApp = [NSApplication sharedApplication];
-				if ( pApp )
-				{
-					NSEvent* pEvent = [NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0];
-					if ( pEvent )
-						[pApp postEvent:pEvent atStart:YES];
-				}
+				NSEvent* pEvent = [NSEvent otherEventWithType:NSEventTypeApplicationDefined location:NSZeroPoint modifierFlags:0 timestamp:0 windowNumber:0 context:nil subtype:0 data1:0 data2:0];
+				if ( pEvent )
+					[pApp postEvent:pEvent atStart:YES];
 			}
 
 			if ( mbMoveUp )
