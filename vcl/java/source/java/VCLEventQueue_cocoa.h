@@ -186,24 +186,28 @@
 	BOOL					mbCloseOnExitVersionBrowser;
 	NSRect					maNonFullScreenFrame;
 #ifdef USE_AQUA_A11Y
-    sal_uLong				mnStyle;
+	BOOL					mbShowOnlyMenus;
+	sal_uLong				mnStyle;
 #endif	// USE_AQUA_A11Y
 }
 - (void)_init;
 #ifdef USE_AQUA_A11Y
 - (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
-- (BOOL)accessibilityIsIgnored;
+- (id)accessibilityApplicationFocusedUIElement;
 - (id)accessibilityFocusedUIElement;
+- (BOOL)accessibilityIsIgnored;
+- (BOOL)isAccessibilityElement;
 #endif	// USE_AQUA_A11Y
 - (BOOL)canBecomeKeyWindow;
 - (void)dealloc;
 - (NSRect)nonFullScreenFrame;
 - (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
-- (void)setNonFullScreenFrame:(NSRect)aFrame;
 #ifdef USE_AQUA_A11Y
+- (void)setJavaShowOnlyMenus:(BOOL)bShowOnlyMenus;
 - (void)setJavaStyle:(sal_uLong)nStyle;
 #endif	// USE_AQUA_A11Y
+- (void)setNonFullScreenFrame:(NSRect)aFrame;
 @end
 
 @interface VCLWindow : NSWindow <NSWindowDelegate>
@@ -216,6 +220,10 @@
 	BOOL					mbInVersionBrowser;
 	BOOL					mbCloseOnExitVersionBrowser;
 	NSRect					maNonFullScreenFrame;
+#ifdef USE_AQUA_A11Y
+	BOOL					mbShowOnlyMenus;
+	sal_uLong				mnStyle;
+#endif	// USE_AQUA_A11Y
 }
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
@@ -223,6 +231,10 @@
 - (void)_init;
 #ifdef USE_AQUA_A11Y
 - (::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)accessibleContext;
+- (id)accessibilityApplicationFocusedUIElement;
+- (id)accessibilityFocusedUIElement;
+- (BOOL)accessibilityIsIgnored;
+- (BOOL)isAccessibilityElement;
 #endif	// USE_AQUA_A11Y
 - (void)becomeKeyWindow;
 - (BOOL)canBecomeKeyWindow;
@@ -240,6 +252,10 @@
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setCanBecomeKeyWindow:(BOOL)bCanBecomeKeyWindow;
 - (void)setJavaFrame:(JavaSalFrame *)pFrame;
+#ifdef USE_AQUA_A11Y
+- (void)setJavaShowOnlyMenus:(BOOL)bShowOnlyMenus;
+- (void)setJavaStyle:(sal_uLong)nStyle;
+#endif	// USE_AQUA_A11Y
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (IBAction)toggleTabBar:(id)pSender;

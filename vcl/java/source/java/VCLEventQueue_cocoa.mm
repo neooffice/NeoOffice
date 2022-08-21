@@ -828,6 +828,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	mbCloseOnExitVersionBrowser = NO;
 	maNonFullScreenFrame = NSMakeRect( 0, 0, 0, 0 );
 #ifdef USE_AQUA_A11Y
+	mbShowOnlyMenus = NO;
 	mnStyle = 0;
 #endif	// USE_AQUA_A11Y
 
@@ -852,18 +853,32 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 	return aRet;
 }
 
+- (id)accessibilityApplicationFocusedUIElement
+{
+	return [ self accessibilityFocusedUIElement ];
+}
+
+- (id)accessibilityFocusedUIElement
+{
+	// Treat show only menus and tooltip windows as ignored
+	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+		return nil;
+
+	return [super accessibilityFocusedUIElement];
+}
+
 - (BOOL)accessibilityIsIgnored
 {
-	// Treat unfocusable tooltip windows as ignored
-	if ( mnStyle & SAL_FRAME_STYLE_TOOLTIP && ![self canBecomeKeyWindow] )
+	// Treat show only menus and tooltip windows as ignored
+	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
 		return YES;
 
 	return [super accessibilityIsIgnored];
 }
 
-- (id)accessibilityFocusedUIElement
+- (BOOL)isAccessibilityElement
 {
-	return [NSNumber numberWithBool:( [self accessibilityIsIgnored] ? NO : YES )];
+	return ! [ self accessibilityIsIgnored ];
 }
 
 #endif	// USE_AQUA_A11Y
@@ -903,12 +918,12 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
-- (void)setNonFullScreenFrame:(NSRect)aFrame
-{
-	maNonFullScreenFrame = aFrame;
-}
-
 #ifdef USE_AQUA_A11Y
+
+- (void)setJavaShowOnlyMenus:(BOOL)bShowOnlyMenus
+{
+	mbShowOnlyMenus = bShowOnlyMenus;
+}
 
 - (void)setJavaStyle:(sal_uLong)nStyle
 {
@@ -916,6 +931,11 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 }
 
 #endif	// USE_AQUA_A11Y
+
+- (void)setNonFullScreenFrame:(NSRect)aFrame
+{
+	maNonFullScreenFrame = aFrame;
+}
 
 @end
 
@@ -1067,6 +1087,10 @@ static NSUInteger nMouseMask = 0;
 	mbInVersionBrowser = NO;
 	mbCloseOnExitVersionBrowser = NO;
 	maNonFullScreenFrame = NSMakeRect( 0, 0, 0, 0 );
+#ifdef USE_AQUA_A11Y
+	mbShowOnlyMenus = NO;
+	mnStyle = 0;
+#endif	// USE_AQUA_A11Y
 
 	[self setReleasedWhenClosed:NO];
 	[self setDelegate:self];
@@ -1087,6 +1111,34 @@ static NSUInteger nMouseMask = 0;
 	}
 
 	return aRet;
+}
+
+- (id)accessibilityApplicationFocusedUIElement
+{
+	return [ self accessibilityFocusedUIElement ];
+}
+
+- (id)accessibilityFocusedUIElement
+{
+	// Treat show only menus and tooltip windows as ignored
+	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+		return nil;
+
+	return [super accessibilityFocusedUIElement];
+}
+
+- (BOOL)accessibilityIsIgnored
+{
+	// Treat show only menus and tooltip windows as ignored
+	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+		return YES;
+
+	return [super accessibilityIsIgnored];
+}
+
+- (BOOL)isAccessibilityElement
+{
+	return ! [ self accessibilityIsIgnored ];
 }
 
 #endif	// USE_AQUA_A11Y
@@ -1981,6 +2033,20 @@ static NSUInteger nMouseMask = 0;
 		[(VCLView *)pContentView setJavaFrame:pFrame];
 }
 
+#ifdef USE_AQUA_A11Y
+
+- (void)setJavaShowOnlyMenus:(BOOL)bShowOnlyMenus
+{
+	mbShowOnlyMenus = bShowOnlyMenus;
+}
+
+- (void)setJavaStyle:(sal_uLong)nStyle
+{
+	mnStyle = nStyle;
+}
+
+#endif	// USE_AQUA_A11Y
+
 - (void)setNonFullScreenFrame:(NSRect)aFrame
 {
 	maNonFullScreenFrame = aFrame;
@@ -2426,7 +2492,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSArray *)accessibilityVisibleChildren
 {
-    return [self accessibilityChildren];
+	return [self accessibilityChildren];
 }
 
 - (NSArray *)accessibilitySelectedChildren
@@ -2451,7 +2517,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder
 {
-    return [self accessibilityChildren];
+	return [self accessibilityChildren];
 }
 
 #else	// USE_AQUA_A11Y

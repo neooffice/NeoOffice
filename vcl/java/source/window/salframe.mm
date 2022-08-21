@@ -1566,11 +1566,14 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 			{
 				[(VCLPanel *)mpWindow setJavaFrame:mpFrame];
+				[(VCLPanel *)mpWindow setJavaShowOnlyMenus:mbShowOnlyMenus];
 				[(VCLPanel *)mpWindow setJavaStyle:mnStyle];
 			}
 			else
 			{
 				[(VCLWindow *)mpWindow setJavaFrame:mpFrame];
+				[(VCLPanel *)mpWindow setJavaShowOnlyMenus:mbShowOnlyMenus];
+				[(VCLPanel *)mpWindow setJavaStyle:mnStyle];
 			}
 
 			// Cache the window's insets
@@ -2261,14 +2264,9 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[self adjustCornerRadius];
 
 #ifdef USE_AQUA_A11Y
-			// Do not register show only menus windows since we are trying to
-			// behave as if this type of window does not exist
-			if ( !mbShowOnlyMenus )
-			{
-				NSView *pContentView = [mpWindow contentView];
-				if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-					[(VCLView *)pContentView registerView];
-			}
+			NSView *pContentView = [mpWindow contentView];
+			if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+				[(VCLView *)pContentView registerView];
 #endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
