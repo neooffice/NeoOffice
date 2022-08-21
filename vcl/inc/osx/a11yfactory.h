@@ -90,6 +90,27 @@
 - (void)postPendingNotifications:(id)pObject;
 @end
 
+@interface AquaA11yDoAction : AquaA11yPostNotification
+{
+    NSAccessibilityActionName mpAction;
+}
++ (id)addElementToPendingNotificationQueue:(id)pElement action:(NSAccessibilityActionName)pAction;
+- (id)initWithElement:(id)pElement action:(NSAccessibilityActionName)pAction;
+- (void)dealloc;
+- (void)postNotification;
+@end
+
+@interface AquaA11ySetValue : AquaA11yPostNotification
+{
+    id mpValue;
+    NSAccessibilityAttributeName mpAttribute;
+}
++ (id)addElementToPendingNotificationQueue:(id)pElement value:(id)pValue attribute:(NSAccessibilityAttributeName)pAttribute;
+- (id)initWithElement:(id)pElement value:(id)pValue attribute:(NSAccessibilityAttributeName)pAttribute;
+- (void)dealloc;
+- (void)postNotification;
+@end
+
 #endif	// USE_JAVA
 
 #endif // INCLUDED_VCL_INC_OSX_A11YFACTORY_H

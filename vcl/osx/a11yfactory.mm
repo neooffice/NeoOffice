@@ -54,6 +54,8 @@
 
 #include <osl/objcutils.h>
 
+#include "a11yactionwrapper.h"
+
 #include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
 
@@ -633,6 +635,84 @@ static NSDictionary *pPriorityDict = nil;
     RELEASE_DRAGPRINTLOCK
 
     bInPostPendingNotifications = NO;
+}
+
+@end
+
+@implementation AquaA11yDoAction
+
++ (id)addElementToPendingNotificationQueue:(id)pElement action:(NSAccessibilityActionName)pAction
+{
+    AquaA11yDoAction *pRet = [ [ AquaA11yDoAction alloc ] initWithElement: pElement action: pAction ];
+    [ pRet autorelease ];
+    return pRet;
+}
+
+- (id)initWithElement:(id)pElement action:(NSAccessibilityActionName)pAction
+{
+    [super initWithElement: pElement name: nil ];
+
+    mpAction = pAction;
+    if ( mpAction )
+        [ mpAction retain ];
+
+    return self;
+}
+
+- (void)dealloc
+{
+    if ( mpAction )
+        [ mpAction release ];
+
+    [ super dealloc ];
+}
+
+- (void)postNotification
+{
+    if ( mpElement && mpAction && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
+        [ AquaA11yActionWrapper doAction: mpAction ofElement: mpElement ];
+}
+
+@end
+
+@implementation AquaA11ySetValue
+
++ (id)addElementToPendingNotificationQueue:(id)pElement value:(id)pValue attribute:(NSAccessibilityAttributeName)pAttribute
+{
+    AquaA11ySetValue *pRet = [ [ AquaA11ySetValue alloc ] initWithElement: pElement value: pValue attribute: pAttribute ];
+    [ pRet autorelease ];
+    return pRet;
+}
+
+- (id)initWithElement:(id)pElement value:(id)pValue attribute:(NSAccessibilityAttributeName)pAttribute
+{
+    [super initWithElement: pElement name: nil ];
+
+    mpValue = pValue;
+    if ( mpValue )
+        [ mpValue retain ];
+    mpAttribute = pAttribute;
+    if ( mpAttribute )
+        [ mpAttribute retain ];
+
+    return self;
+}
+
+- (void)dealloc
+{
+    if ( mpValue )
+        [ mpValue release ];
+
+    if ( mpAttribute )
+        [ mpAttribute release ];
+
+    [ super dealloc ];
+}
+
+- (void)postNotification
+{
+    if ( mpElement && mpAttribute && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
+        [ (AquaA11yWrapper *)mpElement setValue: mpValue forAttribute: mpAttribute ];
 }
 
 @end

@@ -91,10 +91,16 @@ struct ReferenceWrapper
 -(NSArray *)accessibilityParameterizedAttributeNames;
 -(BOOL)accessibilitySetOverrideValue:(id)value forAttribute:(NSString *)attribute;
 -(void)accessibilitySetValue:(id)value forAttribute:(NSString *)attribute;
+#ifdef USE_JAVA
+-(void)setValue:(id)value forAttribute:(NSString *)attribute;
+#endif	// USE_JAVA
 -(id)accessibilityAttributeValue:(NSString *)attribute forParameter:(id)parameter;
 -(id)accessibilityFocusedUIElement;
 -(NSString *)accessibilityActionDescription:(NSString *)action;
 -(void)accessibilityPerformAction:(NSString *)action;
+#ifdef USE_JAVA
+-(BOOL)performAction:(NSString *)action;
+#endif	// USE_JAVA
 -(NSArray *)accessibilityActionNames;
 -(id)accessibilityHitTest:(NSPoint)point;
 // Attribute values

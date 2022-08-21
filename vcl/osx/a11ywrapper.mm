@@ -1170,6 +1170,15 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return;
     }
+
+    // Fix hang when setting a value that displays a modal dialog by setting
+    // the value in the post notification queue
+    [ AquaA11ySetValue addElementToPendingNotificationQueue: self value: value attribute: attribute ];
+
+    RELEASE_DRAGPRINTLOCK
+}
+
+-(void)setValue:(id)value forAttribute:(NSString *)attribute {
 #endif	// USE_JAVA
     SEL methodSelector = [ self selectorForAttribute: attribute asGetter: NO withGetterParameter: NO ];
     if ( [ AquaA11yComponentWrapper respondsToSelector: methodSelector ] ) {
@@ -1184,9 +1193,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( [ AquaA11yValueWrapper respondsToSelector: methodSelector ] ) {
         [ AquaA11yValueWrapper performSelector: methodSelector withObject: self withObject: value ];
     }
-#ifdef USE_JAVA
-    RELEASE_DRAGPRINTLOCK
-#endif	// USE_JAVA
 }
 
 -(id)accessibilityFocusedUIElement {
@@ -1294,14 +1300,17 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     }
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
-    if ( actionResponder != nil ) {
 #ifdef USE_JAVA
+    if ( actionResponder != nil && ! [ actionResponder isDisposed ] ) {
+        // Fix hang when performing an action that displays a modal dialog by
+        // performing the action in the post notification queue
+        [ AquaA11yDoAction addElementToPendingNotificationQueue: actionResponder action: action ];
         bRet = YES;
-#endif	// USE_JAVA
-        [ AquaA11yActionWrapper doAction: action ofElement: actionResponder ];
-#ifdef USE_JAVA
     } else {
         bRet = NO;
+#else	// USE_JAVA
+    if ( actionResponder != nil ) {
+        [ AquaA11yActionWrapper doAction: action ofElement: actionResponder ];
 #endif	// USE_JAVA
     }
 #ifdef USE_JAVA
