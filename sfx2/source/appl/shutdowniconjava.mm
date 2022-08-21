@@ -81,9 +81,6 @@
 
 typedef sal_Bool Application_canSave_Type();
 
-static bool bIsRunningHighSierraOrLowerInitizalized  = false;
-static bool bIsRunningHighSierraOrLower = false;
-
 static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
@@ -98,28 +95,6 @@ static Application_canSave_Type *pApplication_canSave = NULL;
 
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
-
-static bool IsRunningHighSierraOrLower()
-{
-	if ( !bIsRunningHighSierraOrLowerInitizalized )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSProcessInfo *pProcessInfo = [NSProcessInfo processInfo];
-		if ( pProcessInfo )
-		{
-			NSOperatingSystemVersion aVersion = pProcessInfo.operatingSystemVersion;
-			if ( aVersion.majorVersion <= 10 && aVersion.minorVersion <= 13 )
-				bIsRunningHighSierraOrLower = true;
-		}
-
-		bIsRunningHighSierraOrLowerInitizalized = true;
-
-		[pPool release];
-	}
-
-	return bIsRunningHighSierraOrLower;
-}
 
 static OUString GetDktResString( int nId )
 {
@@ -982,12 +957,9 @@ extern "C" void java_init_systray()
 		aDesc = aDesc.replaceAll( "~", "" );
 		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, NO ) );
 
-		if ( !IsRunningHighSierraOrLower() )
-		{
-			aDesc = SfxResId( STR_DISABLEDARKMODE );
-			aDesc = aDesc.replaceAll( "~", "" );
-			aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, NO ) );
-		}
+		aDesc = SfxResId( STR_DISABLEDARKMODE );
+		aDesc = aDesc.replaceAll( "~", "" );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableDarkMode" ), kCFBooleanTrue, NO ) );
 	}
 
 	// Insert the Mac OS X submenu
