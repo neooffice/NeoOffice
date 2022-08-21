@@ -91,6 +91,29 @@
     }
 }
 
+#ifdef USE_JAVA
+
++(NSAccessibilityActionName)actionNameForSelector:(SEL)aSelector
+{
+    NSAccessibilityActionName pRet = nil;
+
+    if ( aSelector == @selector(accessibilityPerformDecrement) ) {
+        pRet = NSAccessibilityDecrementAction;
+    } else if ( aSelector == @selector(accessibilityPerformIncrement) ) {
+        pRet = NSAccessibilityIncrementAction;
+    } else if ( aSelector == @selector(accessibilityPerformPick) ) {
+        pRet = NSAccessibilityPickAction;
+    } else if ( aSelector == @selector(accessibilityPerformPress) ) {
+        pRet = NSAccessibilityPressAction;
+    } else if ( aSelector == @selector(accessibilityPerformShowMenu) ) {
+        pRet = NSAccessibilityShowMenuAction;
+    }
+
+    return pRet;
+}
+
+#endif	// USE_JAVA
+
 @end
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

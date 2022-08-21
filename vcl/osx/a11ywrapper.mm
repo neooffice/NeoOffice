@@ -2066,6 +2066,39 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     return pRet;
 }
 
+- (BOOL)isAccessibilitySelectorAllowed:(SEL)aSelector
+{
+    if ( ! aSelector )
+        return NO;
+
+    if ( [ self respondsToSelector: aSelector ] ) {
+        // Ignore actions if action is not supported
+        NSAccessibilityActionName pActionName = [ AquaA11yActionWrapper actionNameForSelector: aSelector ];
+        if ( pActionName ) {
+            NSArray *pActionNames = [ self accessibilityActionNames ];
+            if ( ! pActionNames || ! [ pActionNames containsObject: pActionName ] )
+                return NO;
+        } else {
+            // Ignore "setAccessibility" selectors if attribute is not settable
+            static NSString *pSetPrefix = @"setAccessibility";
+            NSString *pSelName = NSStringFromSelector( aSelector );
+            if ( pSelName && [ pSelName hasPrefix: pSetPrefix ] && [ pSelName hasSuffix: @":" ] ) {
+                NSAccessibilityAttributeName pAttrName = [ pSelName substringToIndex: [ pSelName length ] - 1 ];
+                if ( pAttrName && [ pAttrName length ] > [ pSetPrefix length ] ) {
+                    pAttrName = [ pAttrName substringFromIndex: [ pSetPrefix length ] ];
+                    if ( pAttrName && [ pAttrName length ] ) {
+                        pAttrName = [ @"AX" stringByAppendingString: pAttrName ];
+                        if ( pAttrName && [ pAttrName length ] && ! [ self accessibilityIsAttributeSettable: pAttrName ] )
+                                return NO;
+                    }
+                }
+            }
+        }
+    }
+
+    return [ super isAccessibilitySelectorAllowed: aSelector ];
+}
+
 #endif	// USE_JAVA
 
 @end

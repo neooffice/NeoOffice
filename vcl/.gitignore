@@ -614,7 +614,6 @@ osx/a11yvaluewrapper.mm
 osx/a11ywrappercheckbox.h
 osx/a11ywrapperbutton.h
 osx/salnstimer.mm
-osx/a11yactionwrapper.h
 osx/salnativewidgets.cxx
 osx/a11ywrappersplitter.h
 osx/a11yselectionwrapper.h
