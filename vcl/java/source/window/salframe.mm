@@ -1673,9 +1673,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 	if ( mpWindow )
 	{
 #ifdef USE_AQUA_A11Y
-		NSView *pContentView = [mpWindow contentView];
-		if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-			[(VCLView *)pContentView revokeView];
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow revokeWindow];
+		else
+			[(VCLWindow *)mpWindow revokeWindow];
 #endif	// USE_AQUA_A11Y
 
 		// Disconnect frame from native window as the frame may be deleted
@@ -2264,9 +2265,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[self adjustCornerRadius];
 
 #ifdef USE_AQUA_A11Y
-			NSView *pContentView = [mpWindow contentView];
-			if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-				[(VCLView *)pContentView registerView];
+			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+				[(VCLPanel *)mpWindow registerWindow];
+			else
+				[(VCLWindow *)mpWindow registerWindow];
 #endif	// USE_AQUA_A11Y
 
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
@@ -2304,9 +2306,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			CloseOrOrderOutWindow( mpWindow );
 
 #ifdef USE_AQUA_A11Y
-			NSView *pContentView = [mpWindow contentView];
-			if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
-				[(VCLView *)pContentView revokeView];
+			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+				[(VCLPanel *)mpWindow revokeWindow];
+			else
+				[(VCLWindow *)mpWindow revokeWindow];
 #endif	// USE_AQUA_A11Y
 
 			// Release cached cursor

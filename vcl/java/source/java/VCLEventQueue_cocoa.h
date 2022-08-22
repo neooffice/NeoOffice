@@ -206,6 +206,9 @@
 #ifdef USE_AQUA_A11Y
 - (void)setJavaShowOnlyMenus:(BOOL)bShowOnlyMenus;
 - (void)setJavaStyle:(sal_uLong)nStyle;
+- (BOOL)isIgnoredWindow;
+- (void)registerWindow;
+- (void)revokeWindow;
 #endif	// USE_AQUA_A11Y
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
 @end
@@ -255,6 +258,9 @@
 #ifdef USE_AQUA_A11Y
 - (void)setJavaShowOnlyMenus:(BOOL)bShowOnlyMenus;
 - (void)setJavaStyle:(sal_uLong)nStyle;
+- (BOOL)isIgnoredWindow;
+- (void)registerWindow;
+- (void)revokeWindow;
 #endif	// USE_AQUA_A11Y
 - (void)setNonFullScreenFrame:(NSRect)aFrame;
 - (void)setDraggingSourceDelegate:(id)pDelegate;

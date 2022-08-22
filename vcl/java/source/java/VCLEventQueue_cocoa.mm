@@ -861,7 +861,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 - (id)accessibilityFocusedUIElement
 {
 	// Treat show only menus and tooltip windows as ignored
-	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+	if ( [self isIgnoredWindow] )
 		return nil;
 
 	return [super accessibilityFocusedUIElement];
@@ -870,7 +870,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 - (BOOL)accessibilityIsIgnored
 {
 	// Treat show only menus and tooltip windows as ignored
-	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+	if ( [self isIgnoredWindow] )
 		return YES;
 
 	return [super accessibilityIsIgnored];
@@ -928,6 +928,31 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 - (void)setJavaStyle:(sal_uLong)nStyle
 {
 	mnStyle = nStyle;
+}
+
+- (BOOL)isIgnoredWindow
+{
+	// Treat show only menus and tooltip windows as ignored
+	return ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP );
+}
+
+- (void)registerWindow
+{
+	[self revokeWindow];
+
+	if ( ![self isIgnoredWindow] )
+	{
+		VCLView *pContentView = [self contentView];
+		if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+			[pContentView registerView];
+	}
+}
+
+- (void)revokeWindow
+{
+	VCLView *pContentView = [self contentView];
+	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+		[pContentView revokeView];
 }
 
 #endif	// USE_AQUA_A11Y
@@ -1121,7 +1146,7 @@ static NSUInteger nMouseMask = 0;
 - (id)accessibilityFocusedUIElement
 {
 	// Treat show only menus and tooltip windows as ignored
-	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+	if ( [self isIgnoredWindow] )
 		return nil;
 
 	return [super accessibilityFocusedUIElement];
@@ -1130,7 +1155,7 @@ static NSUInteger nMouseMask = 0;
 - (BOOL)accessibilityIsIgnored
 {
 	// Treat show only menus and tooltip windows as ignored
-	if ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+	if ( [self isIgnoredWindow] )
 		return YES;
 
 	return [super accessibilityIsIgnored];
@@ -2043,6 +2068,31 @@ static NSUInteger nMouseMask = 0;
 - (void)setJavaStyle:(sal_uLong)nStyle
 {
 	mnStyle = nStyle;
+}
+
+- (BOOL)isIgnoredWindow
+{
+	// Treat show only menus and tooltip windows as ignored
+	return ( mbShowOnlyMenus || mnStyle & SAL_FRAME_STYLE_TOOLTIP );
+}
+
+- (void)registerWindow
+{
+	[self revokeWindow];
+
+	if ( ![self isIgnoredWindow] )
+	{
+		VCLView *pContentView = [self contentView];
+		if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+			[pContentView registerView];
+	}
+}
+
+- (void)revokeWindow
+{
+	VCLView *pContentView = [self contentView];
+	if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
+		[pContentView revokeView];
 }
 
 #endif	// USE_AQUA_A11Y
