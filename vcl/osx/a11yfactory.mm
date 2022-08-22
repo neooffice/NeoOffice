@@ -614,6 +614,11 @@ static NSDictionary *pPriorityDict = nil;
     bInPostPendingNotifications = YES;
 
     ACQUIRE_DRAGPRINTLOCK
+
+    // Prioritize pending macOS accessiblity calls
+    while ( CFRunLoopRunInMode( kCFRunLoopDefaultMode, 0, false ) == kCFRunLoopRunHandledSource )
+        ;
+
     ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
 
     if ( pPendingPostNotificationQueue ) {
