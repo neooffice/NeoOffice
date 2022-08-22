@@ -619,9 +619,16 @@ static NSDictionary *pPriorityDict = nil;
         return;
     }
 
+    if ( !ImplApplicationIsRunning() )
+        return;
+
     bInPostPendingNotifications = YES;
 
-    ACQUIRE_DRAGPRINTLOCK
+    // Fix hanging when notifications cause a modal dialog to appear by
+    // using application mutex instead of the drag print lock when
+    // posting notifications
+    comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
+    rSolarMutex.acquire();
 
     // Prioritize pending macOS accessiblity calls
     CFRunLoopRef aRunLoop = CFRunLoopGetCurrent();
@@ -655,7 +662,7 @@ static NSDictionary *pPriorityDict = nil;
     }
 
     aGuard.clear();
-    RELEASE_DRAGPRINTLOCK
+    rSolarMutex.release();
 
     bInPostPendingNotifications = NO;
 }
