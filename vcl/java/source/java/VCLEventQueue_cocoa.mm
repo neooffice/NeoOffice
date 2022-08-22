@@ -3471,6 +3471,12 @@ static CFDataRef aRTFSelection = nil;
 	if ( !mpFrame )
 		return;
 
+	// Exclude tootip and show only menus windows by not register windows
+	// that are not accessibility elements
+	NSWindow *pNSWindow = [self window];
+	if ( !pNSWindow || ![pNSWindow isAccessibilityElement] )
+		return;
+
 	vcl::Window *pWindow = mpFrame->GetWindow();
 	if ( !pWindow )
 		return;
