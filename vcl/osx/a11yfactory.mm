@@ -277,10 +277,6 @@ static bool enabled = false;
             } else {
                 // SAL_DEBUG("Wrapper INIT: " << [[aWrapper description] UTF8String] << " ==> NO PARENT");
             }
-
-#ifdef USE_JAVA
-            [aWrapper setAccessibilityParent:parent];
-#endif	// USE_JAVA
         }
     }
     return aWrapper;
@@ -307,7 +303,6 @@ static bool enabled = false;
     if ( theWrapper != nil ) {
 #ifdef USE_JAVA
         NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
-        [theWrapper setAccessibilityParent:nil];
 
         if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
             [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
@@ -330,7 +325,6 @@ static bool enabled = false;
         return;
 
     NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
-    [theWrapper setAccessibilityParent:nil];
 
     if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
         [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
