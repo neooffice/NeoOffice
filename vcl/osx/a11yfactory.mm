@@ -488,6 +488,20 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     bInRemovePendingFromWrapperRepository = YES;
 
     ACQUIRE_DRAGPRINTLOCK
+
+    // Prioritize pending macOS accessiblity calls
+    CFRunLoopRef aRunLoop = CFRunLoopGetCurrent();
+    if ( aRunLoop )
+    {
+        CFRunLoopMode aMode = CFRunLoopCopyCurrentMode( aRunLoop );
+        if ( aMode )
+        {
+            while ( CFRunLoopRunInMode( aMode, 0, false ) == kCFRunLoopRunHandledSource )
+                ;
+            CFRelease( aMode );
+        }
+    }
+
     ::osl::ClearableMutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
 
     if ( pPendingRemoveFromWrapperRepositoryQueue ) {
@@ -576,7 +590,7 @@ static NSDictionary *pPriorityDict = nil;
 - (void)postNotification
 {
     if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) ) {
-        // Set priority high to increase the odds that transient objects'
+        // Set priority low to increase the odds that transient objects'
         // notifications will get announced
         if ( pPriorityDict ) {
             pPriorityDict = [ NSDictionary dictionaryWithObjects: [ NSArray arrayWithObject: [ NSNumber numberWithInteger: NSAccessibilityPriorityLow ] ] forKeys: [ NSArray arrayWithObject: NSAccessibilityPriorityKey ] ];
@@ -610,24 +624,34 @@ static NSDictionary *pPriorityDict = nil;
     ACQUIRE_DRAGPRINTLOCK
 
     // Prioritize pending macOS accessiblity calls
-    while ( CFRunLoopRunInMode( kCFRunLoopDefaultMode, 0, false ) == kCFRunLoopRunHandledSource )
-        ;
+    CFRunLoopRef aRunLoop = CFRunLoopGetCurrent();
+    if ( aRunLoop )
+    {
+        CFRunLoopMode aMode = CFRunLoopCopyCurrentMode( aRunLoop );
+        if ( aMode )
+        {
+            while ( CFRunLoopRunInMode( aMode, 0, false ) == kCFRunLoopRunHandledSource )
+                ;
+            CFRelease( aMode );
+        }
+    }
 
     ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
 
-    if ( pPendingPostNotificationQueue ) {
-        for ( AquaA11yPostNotification *pPostNotification : pPendingPostNotificationQueue ) {
-            // Do not coalesce notifications as it appears to suppress selected
-            // item notifications
-            if ( pPostNotification ) {
-                @try {
-                    [ pPostNotification postNotification ];
-                }
-                @catch ( NSException *pExc ) {
-                }
+    if ( pPendingPostNotificationQueue && [ pPendingPostNotificationQueue count ] ) {
+        AquaA11yPostNotification *pPostNotification = [ pPendingPostNotificationQueue objectAtIndex: 0 ];
+        // Do not coalesce notifications as it appears to suppress selected
+        // item notifications
+        if ( pPostNotification ) {
+            @try {
+                [ pPostNotification postNotification ];
+            }
+            @catch ( NSException *pExc ) {
             }
         }
-        [ pPendingPostNotificationQueue removeAllObjects ];
+        [ pPendingPostNotificationQueue removeObjectAtIndex: 0 ];
+        if ( [ pPendingPostNotificationQueue count ] )
+            [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
     }
 
     aGuard.clear();
