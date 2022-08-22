@@ -4929,6 +4929,28 @@ void ToolBox::TriggerItem( sal_uInt16 nItemId, bool bShift, bool bCtrl )
     ImplActivateItem( aKeyCode );
 }
 
+#if defined USE_JAVA && defined MACOSX
+
+bool ToolBox::ItemHasDropdown( sal_uInt16 nItemId )
+{
+    if( IsMenuEnabled() && mpData->mbMenubuttonSelected )
+        return true;
+    else if( ImplGetItem( nItemId ) &&
+        (ImplGetItem( nItemId )->mnBits & ToolBoxItemBits::DROPDOWN) )
+        return true;
+    else
+        return false;
+}
+
+void ToolBox::TriggerItemDropdown( sal_uInt16 nItemId )
+{
+    mnHighItemId = nItemId;
+    vcl::KeyCode aKeyCode( 0, 0 );
+    ImplOpenItem( aKeyCode );
+}
+
+#endif	// USE_JAVA && MACOSX
+
 // calls the button's action handler
 // returns true if action was called
 bool ToolBox::ImplActivateItem( vcl::KeyCode aKeyCode )
