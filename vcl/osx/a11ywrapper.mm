@@ -1248,7 +1248,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     NSString * role = (NSString *) [ self accessibilityAttributeValue: NSAccessibilityRoleAttribute ];
     id enabledAttr = [ self enabledAttribute ];
     BOOL enabled = [ enabledAttr boolValue ];
+#ifdef USE_JAVA
+    NSAccessibilityElement * parent = (NSAccessibilityElement *) [ self accessibilityAttributeValue: NSAccessibilityParentAttribute ];
+#else	// USE_JAVA
     NSView * parent = (NSView *) [ self accessibilityAttributeValue: NSAccessibilityParentAttribute ];
+#endif	// USE_JAVA
     AquaA11yWrapper * parentAsWrapper = nil;
     if ( [ parent isKindOfClass: [ AquaA11yWrapper class ] ] ) {
         parentAsWrapper = (AquaA11yWrapper *) parent;
@@ -1571,10 +1575,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 -(NSWindow*)windowForParent {
 #ifdef USE_JAVA
-    if ( [ self isKindOfClass: [ NSView class ] ] )
-        return [(NSView *)self window];
-    else
-        return nil;
+    return nil;
 #else	// USE_JAVA
     return [self window];
 #endif	// USE_JAVA

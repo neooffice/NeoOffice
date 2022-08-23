@@ -247,36 +247,29 @@ static bool enabled = false;
 
                So let the superview-subviews relationship mirror the AXParent-AXChildren relationship.
             */
+#ifndef USE_JAVA
             id parent = [aWrapper accessibilityAttributeValue:NSAccessibilityParentAttribute];
-#ifdef USE_JAVA
-            if (parent && [aWrapper isKindOfClass:[NSView class]]) {
-#else	// USE_JAVA
             if (parent) {
-#endif	// USE_JAVA
                 if ([parent isKindOfClass:[NSView class]]) {
                     // SAL_DEBUG("Wrapper INIT: " << [[aWrapper description] UTF8String] << " ==> " << [[parent description] UTF8String]);
                     NSView *parentView = (NSView *)parent;
+                    [parentView addSubview:aWrapper positioned:NSWindowBelow relativeTo:nil];
 #ifdef USE_JAVA
-                    [parentView addSubview:(NSView *)aWrapper positioned:NSWindowBelow relativeTo:nil];
                 } else if ([parent isKindOfClass:[VCLPanel class]] || [parent isKindOfClass:[VCLWindow class]]) {
 #else	// USE_JAVA
-                    [parentView addSubview:aWrapper positioned:NSWindowBelow relativeTo:nil];
                 } else if ([parent isKindOfClass:NSClassFromString(@"SalFrameWindow")]) {
 #endif	// USE_JAVA
                     NSWindow *window = (NSWindow *)parent;
                     NSView *salView = [window contentView];
                     // SAL_DEBUG("Wrapper INIT SAL: " << [[aWrapper description] UTF8String] << " ==> " << [[salView description] UTF8String]);
-#ifdef USE_JAVA
-                    [salView addSubview:(NSView *)aWrapper positioned:NSWindowBelow relativeTo:nil];
-#else	// USE_JAVA
                     [salView addSubview:aWrapper positioned:NSWindowBelow relativeTo:nil];
-#endif	// USE_JAVA
                 } else {
                     // SAL_DEBUG("Wrapper INIT: !! " << [[aWrapper description] UTF8String] << " !==>! " << [[parent description] UTF8String] << "!!");
                 }
             } else {
                 // SAL_DEBUG("Wrapper INIT: " << [[aWrapper description] UTF8String] << " ==> NO PARENT");
             }
+#endif	// !USE_JAVA
         }
     }
     return aWrapper;
@@ -303,14 +296,11 @@ static bool enabled = false;
     if ( theWrapper != nil ) {
 #ifdef USE_JAVA
         NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
-
-        if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
-            [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
 #else	// USE_JAVA
         if (![theWrapper isKindOfClass:NSClassFromString(@"SalFrameView")]) {
             [theWrapper removeFromSuperview];
-#endif	// USE_JAVA
         }
+#endif	// USE_JAVA
         [ [ AquaA11yFactory allWrapper ] removeObjectForKey: [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ] ];
 #ifndef USE_JAVA
         [ theWrapper release ];
@@ -325,10 +315,6 @@ static bool enabled = false;
         return;
 
     NSAccessibilityPostNotification( theWrapper, NSAccessibilityUIElementDestroyedNotification );
-
-    if ([theWrapper isKindOfClass:[NSView class]] && ![theWrapper isKindOfClass:[VCLView class]]) {
-        [(NSView *)theWrapper removeFromSuperviewWithoutNeedingDisplay];
-    }
 
     // The accessible context pointer may be NULL because this selector is
     // called asynchronously so remove any orphaned wrappers
