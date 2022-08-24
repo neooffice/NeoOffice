@@ -359,6 +359,8 @@ static bool enabled = false;
 
 #ifdef USE_JAVA
 
+#ifdef USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
+
 @implementation AquaA11yWrapperForAccessibleContext
 
 + (id)createWithAccessibleContext:(::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext >)xAccessibleContext
@@ -404,6 +406,8 @@ static bool enabled = false;
 }
 
 @end
+
+#endif // USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
 
 static NSMutableArray<AquaA11yRemoveFromWrapperRepository*> *pPendingRemoveFromWrapperRepositoryQueue = nil;
 static ::osl::Mutex aPendingRemoveFromWrapperRepositoryQueueMutex;
@@ -613,8 +617,7 @@ static NSDictionary *pPriorityDict = nil;
     // Fix hanging when notifications cause a modal dialog to appear by
     // using application mutex instead of the drag print lock when
     // posting notifications
-    comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-    rSolarMutex.acquire();
+    ACQUIRE_SOLARMUTEX
 
     // Prioritize pending macOS accessiblity calls
     CFRunLoopRef aRunLoop = CFRunLoopGetCurrent();
@@ -648,7 +651,7 @@ static NSDictionary *pPriorityDict = nil;
     }
 
     aGuard.clear();
-    rSolarMutex.release();
+    RELEASE_SOLARMUTEX
 
     bInPostPendingNotifications = NO;
 }

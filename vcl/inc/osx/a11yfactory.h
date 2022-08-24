@@ -31,6 +31,10 @@
 #include "a11ywrapper.h"
 #include <com/sun/star/accessibility/XAccessibleContext.hpp>
 
+#ifdef USE_JAVA
+#include <vcl/a11y.h>
+#endif	// USE_JAVA
+
 @interface AquaA11yFactory : NSObject
 {
 }
@@ -56,6 +60,8 @@
 
 #ifdef USE_JAVA
 
+#ifdef USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
+
 @interface AquaA11yWrapperForAccessibleContext : NSObject
 {
     ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > mxAccessibleContext;
@@ -67,6 +73,8 @@
 - (void)wrapperForAccessibleContext:(id)pObject;
 - (AquaA11yWrapper *)wrapper;
 @end
+
+#endif // USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
 
 @interface AquaA11yRemoveFromWrapperRepository : NSObject
 {

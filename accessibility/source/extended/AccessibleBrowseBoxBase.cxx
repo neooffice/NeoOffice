@@ -33,6 +33,10 @@
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
 #include <unotools/accessiblerelationsethelper.hxx>
 
+#if defined USE_JAVA && defined MACOSX
+#include <vcl/a11y.h>
+#endif	// USE_JAVA && MACOSX
+
 
 
 using ::com::sun::star::uno::Reference;
@@ -457,12 +461,12 @@ void AccessibleBrowseBoxBase::commitEvent(
 
     // let the notifier handle this event
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
     // Fix deadlock by releasing the mutex as the following calls
     // AquaA11yFocusListener::focusedObjectChanged() which will
     // call this instance from the main thread
     aGuard.clear();
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
 
     AccessibleEventNotifier::addEvent( getClientId( ), aEvent );
 }

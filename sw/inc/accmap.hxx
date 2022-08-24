@@ -44,6 +44,7 @@
 #include <set>
 #if defined USE_JAVA && defined MACOSX
 #include <osl/thread.hxx>
+#include <vcl/a11y.h>
 #endif	// USE_JAVA && MACOSX
 
 class SwAccessibleParagraph;
@@ -117,11 +118,11 @@ class SwAccessibleMap : public ::accessibility::IAccessibleViewForwarder,
                 , public std::enable_shared_from_this<SwAccessibleMap>
 #endif	// !NO_LIBO_BUG_58624_FIX
 {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
     mutable SwAccessibleMapMutex maMutex;
-#else	// USE_JAVA && MACOSX
+#else	// USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
     mutable ::osl::Mutex maMutex;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
     ::osl::Mutex maEventMutex;
     SwAccessibleContextMap_Impl *mpFrmMap;
     SwAccessibleShapeMap_Impl *mpShapeMap;

@@ -130,11 +130,18 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
                 // are transient objects and if creation of the wrapper's
                 // underlying C++ objects are not done immmediately, posted
                 // notifications will almost always be ignored by VoiceOver
+#ifdef USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
                 AquaA11yWrapperForAccessibleContext *pAquaA11yWrapperForAccessibleContext = [ AquaA11yWrapperForAccessibleContext createWithAccessibleContext: xContext ];
                 sal_uLong nCount = Application::ReleaseSolarMutex();
                 osl_performSelectorOnMainThread( pAquaA11yWrapperForAccessibleContext, @selector(wrapperForAccessibleContext:), pAquaA11yWrapperForAccessibleContext, YES );
                 Application::AcquireSolarMutex( nCount );
                 m_focusedObject = [pAquaA11yWrapperForAccessibleContext wrapper];
+#else	// USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
+                // There are no known NSWindow, NSView, etc. calls when
+                // creating an AquaA11yWrapper instance so we do not need to
+                // create it on the main thread
+                m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
+#endif	// USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
                 if ( m_focusedObject ) {
                     [ m_focusedObject retain ];
 
