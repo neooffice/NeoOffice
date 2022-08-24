@@ -475,6 +475,9 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
         return;
     }
 
+    if ( !ImplApplicationIsRunning() )
+        return;
+
     bInRemovePendingFromWrapperRepository = YES;
 
     ACQUIRE_DRAGPRINTLOCK
@@ -497,8 +500,7 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     if ( pPendingRemoveFromWrapperRepositoryQueue ) {
         // Eliminate random spinnning beach ball by removing only a small batch
         // of pending wrappers in each pass
-        for ( NSUInteger i = 0; i < AQUA11Y_MAX_REMOVE_BATCH_SIZE && [ pPendingRemoveFromWrapperRepositoryQueue count ]; i++ ) {
-            AquaA11yRemoveFromWrapperRepository *pRemoveFromWrapperRepository = [ pPendingRemoveFromWrapperRepositoryQueue objectAtIndex: 0 ];
+        for ( AquaA11yRemoveFromWrapperRepository *pRemoveFromWrapperRepository : pPendingRemoveFromWrapperRepositoryQueue ) {
             if ( pRemoveFromWrapperRepository && pRemoveFromWrapperRepository->mpElement ) {
                 try {
                     [ AquaA11yFactory removeFromWrapperRepositoryForWrapper: pRemoveFromWrapperRepository->mpElement ];
@@ -507,11 +509,9 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
                     NSLog( @"Exception caught while in -[AquaA11yFactory removeFromWrapperRepositoryFor:]: %s", __PRETTY_FUNCTION__ );
                 }
             }
-
-            [ pPendingRemoveFromWrapperRepositoryQueue removeObjectAtIndex: 0 ];
-            if ( [ pPendingRemoveFromWrapperRepositoryQueue count ] )
-                [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.1f];
         }
+
+        [ pPendingRemoveFromWrapperRepositoryQueue removeAllObjects ];
     }
 
     aGuard.clear();
