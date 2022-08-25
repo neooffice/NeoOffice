@@ -619,6 +619,10 @@ static NSDictionary *pPriorityDict = nil;
     // posting notifications
     ACQUIRE_SOLARMUTEX
 
+    // Give the LibO code a chance to catch up and synchronize its state to the
+    // native state so that the notifications will be announced by VoiceOver
+    Application::Yield();
+
     // Prioritize pending macOS accessiblity calls
     CFRunLoopRef aRunLoop = CFRunLoopGetCurrent();
     if ( aRunLoop )
@@ -634,20 +638,20 @@ static NSDictionary *pPriorityDict = nil;
 
     ::osl::ClearableMutexGuard aGuard( aPendingPostNotificationQueueMutex );
 
-    if ( pPendingPostNotificationQueue && [ pPendingPostNotificationQueue count ] ) {
-        AquaA11yPostNotification *pPostNotification = [ pPendingPostNotificationQueue objectAtIndex: 0 ];
-        // Do not coalesce notifications as it appears to suppress selected
-        // item notifications
-        if ( pPostNotification ) {
-            @try {
-                [ pPostNotification postNotification ];
-            }
-            @catch ( NSException *pExc ) {
+    if ( pPendingPostNotificationQueue ) {
+        for ( AquaA11yPostNotification *pPostNotification : pPendingPostNotificationQueue ) {
+            // Do not coalesce notifications as it appears to suppress selected
+            // item notifications
+            if ( pPostNotification ) {
+                @try {
+                    [ pPostNotification postNotification ];
+                }
+                @catch ( NSException *pExc ) {
+                }
             }
         }
-        [ pPendingPostNotificationQueue removeObjectAtIndex: 0 ];
-        if ( [ pPendingPostNotificationQueue count ] )
-            [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
+
+        [ pPendingPostNotificationQueue removeAllObjects ];
     }
 
     aGuard.clear();
