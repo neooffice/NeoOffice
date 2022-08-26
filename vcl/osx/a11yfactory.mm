@@ -410,6 +410,7 @@ static bool enabled = false;
 #endif // USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
 
 static NSMutableArray<AquaA11yRemoveFromWrapperRepository*> *pPendingRemoveFromWrapperRepositoryQueue = nil;
+static NSTimer *pPendingRemoveFromWrapperRepositoryQueueTimer = nil;
 static ::osl::Mutex aPendingRemoveFromWrapperRepositoryQueueMutex;
 static BOOL bInRemovePendingFromWrapperRepository = NO;
 
@@ -445,7 +446,18 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     // Post the removal asynchronously
     if ( pPendingRemoveFromWrapperRepositoryQueue ) {
         [ pPendingRemoveFromWrapperRepositoryQueue addObject: self ];
-        osl_performSelectorOnMainThread( self, @selector(removeFromWrapperRepository:), self, NO );
+
+        if ( ! pPendingRemoveFromWrapperRepositoryQueueTimer || ! [ pPendingRemoveFromWrapperRepositoryQueueTimer isValid ] ) {
+            if ( pPendingRemoveFromWrapperRepositoryQueueTimer )
+                [ pPendingRemoveFromWrapperRepositoryQueueTimer release ];
+            pPendingRemoveFromWrapperRepositoryQueueTimer = [ NSTimer timerWithTimeInterval: 1.0f repeats: YES block: ^(NSTimer *) {
+                [ AquaA11yRemoveFromWrapperRepository removeFromWrapperRepository ];
+            } ];
+            if ( pPendingRemoveFromWrapperRepositoryQueueTimer ) {
+                [ pPendingRemoveFromWrapperRepositoryQueueTimer retain ];
+                [ [ NSRunLoop mainRunLoop ] addTimer: pPendingRemoveFromWrapperRepositoryQueueTimer forMode: NSDefaultRunLoopMode ];
+            }
+        }
     }
 
     aGuard.clear();
@@ -461,21 +473,11 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     [ super dealloc ];
 }
 
-- (void)removeFromWrapperRepository:(id)pObject
++ (void)removeFromWrapperRepository
 {
-    if ( bInRemovePendingFromWrapperRepository )
-        return;
-
     // Prevent posting of notification if we are already within an
     // NSAccessibility call
-    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
-        ::osl::MutexGuard aGuard( aPendingRemoveFromWrapperRepositoryQueueMutex );
-        if ( pPendingRemoveFromWrapperRepositoryQueue && [ pPendingRemoveFromWrapperRepositoryQueue count ] )
-            [self performSelector:@selector(removeFromWrapperRepository:) withObject:pObject afterDelay:0.1f];
-        return;
-    }
-
-    if ( !ImplApplicationIsRunning() )
+    if ( bInRemovePendingFromWrapperRepository || ! ImplApplicationIsRunning() || VCLInstance_isInOrAcquiringDragPrintLock() )
         return;
 
     bInRemovePendingFromWrapperRepository = YES;
@@ -514,6 +516,12 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
         [ pPendingRemoveFromWrapperRepositoryQueue removeAllObjects ];
     }
 
+    if ( pPendingRemoveFromWrapperRepositoryQueueTimer ) {
+        [ pPendingRemoveFromWrapperRepositoryQueueTimer invalidate ];
+        [ pPendingRemoveFromWrapperRepositoryQueueTimer release ];
+        pPendingRemoveFromWrapperRepositoryQueueTimer = nil;
+    }
+
     aGuard.clear();
     RELEASE_DRAGPRINTLOCK
 
@@ -523,9 +531,9 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
 @end
 
 static NSMutableArray<AquaA11yPostNotification*> *pPendingPostNotificationQueue = nil;
+static NSTimer *pPendingPostNotificationQueueTimer = nil;
 static ::osl::Mutex aPendingPostNotificationQueueMutex;
 static BOOL bInPostPendingNotifications = NO;
-static NSDictionary *pPriorityDict = nil;
 
 @implementation AquaA11yPostNotification
 
@@ -558,7 +566,18 @@ static NSDictionary *pPriorityDict = nil;
     // Post the notification asynchronously
     if ( pPendingPostNotificationQueue ) {
         [ pPendingPostNotificationQueue addObject: self ];
-        osl_performSelectorOnMainThread( self, @selector(postPendingNotifications:), self, NO );
+
+        if ( ! pPendingPostNotificationQueueTimer || ! [ pPendingPostNotificationQueueTimer isValid ] ) {
+            if ( pPendingPostNotificationQueueTimer )
+                [ pPendingPostNotificationQueueTimer release ];
+            pPendingPostNotificationQueueTimer = [ NSTimer timerWithTimeInterval: 0.5f repeats: YES block: ^(NSTimer *) {
+                [ AquaA11yPostNotification postPendingNotifications ];
+            } ];
+            if ( pPendingPostNotificationQueueTimer ) {
+                [ pPendingPostNotificationQueueTimer retain ];
+                [ [ NSRunLoop mainRunLoop ] addTimer: pPendingPostNotificationQueueTimer forMode: NSDefaultRunLoopMode ];
+            }
+        }
     }
 
     aGuard.clear();
@@ -579,37 +598,15 @@ static NSDictionary *pPriorityDict = nil;
 
 - (void)postNotification
 {
-    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) ) {
-        // Set priority low to increase the odds that transient objects'
-        // notifications will get announced
-        if ( pPriorityDict ) {
-            pPriorityDict = [ NSDictionary dictionaryWithObjects: [ NSArray arrayWithObject: [ NSNumber numberWithInteger: NSAccessibilityPriorityLow ] ] forKeys: [ NSArray arrayWithObject: NSAccessibilityPriorityKey ] ];
-            if ( pPriorityDict )
-                [ pPriorityDict retain ];
-        }
-
-        if ( pPriorityDict )
-            NSAccessibilityPostNotificationWithUserInfo( mpElement, mpName, pPriorityDict );
-        else
-            NSAccessibilityPostNotification( mpElement, mpName );
-    }
+    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
+        NSAccessibilityPostNotification( mpElement, mpName );
 }
 
-- (void)postPendingNotifications:(id)pObject
++ (void)postPendingNotifications
 {
-    if ( bInPostPendingNotifications )
-        return;
-
     // Prevent posting of notification if we are already within an
     // NSAccessibility call
-    if ( VCLInstance_isInOrAcquiringDragPrintLock() ) {
-        ::osl::MutexGuard aGuard( aPendingPostNotificationQueueMutex );
-        if ( pPendingPostNotificationQueue && [ pPendingPostNotificationQueue count ] )
-            [self performSelector:@selector(postPendingNotifications:) withObject:pObject afterDelay:0.01f];
-        return;
-    }
-
-    if ( !ImplApplicationIsRunning() )
+    if ( bInPostPendingNotifications || ! ImplApplicationIsRunning() || VCLInstance_isInOrAcquiringDragPrintLock() )
         return;
 
     bInPostPendingNotifications = YES;
@@ -652,6 +649,12 @@ static NSDictionary *pPriorityDict = nil;
         }
 
         [ pPendingPostNotificationQueue removeAllObjects ];
+    }
+
+    if ( pPendingPostNotificationQueueTimer ) {
+        [ pPendingPostNotificationQueueTimer invalidate ];
+        [ pPendingPostNotificationQueueTimer release ];
+        pPendingPostNotificationQueueTimer = nil;
     }
 
     aGuard.clear();

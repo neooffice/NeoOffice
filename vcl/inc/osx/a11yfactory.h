@@ -83,7 +83,7 @@
 + (id)addElementToPendingRemovalQueue:(AquaA11yWrapper *)pElement;
 - (id)initWithElement:(AquaA11yWrapper *)pElement;
 - (void)dealloc;
-- (void)removeFromWrapperRepository:(id)pObject;
++ (void)removeFromWrapperRepository;
 @end
 
 @interface AquaA11yPostNotification : NSObject
@@ -95,7 +95,7 @@
 - (id)initWithElement:(id)pElement name:(NSAccessibilityNotificationName)pName;
 - (void)dealloc;
 - (void)postNotification;
-- (void)postPendingNotifications:(id)pObject;
++ (void)postPendingNotifications;
 @end
 
 @interface AquaA11yDoAction : AquaA11yPostNotification
