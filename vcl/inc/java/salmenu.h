@@ -55,7 +55,8 @@ public:
 	// Generic data
 	JavaSalFrame*			mpParentFrame;		// pointer to the parent frame
 	bool					mbIsMenuBarMenu;	// true for menu bars
-	Menu*					mpParentVCLMenu;
+	Menu*					mpVCLMenu;
+	JavaSalMenu*			mpParentSalMenu;
 
 							JavaSalMenu();
 	virtual					~JavaSalMenu();
@@ -71,6 +72,7 @@ public:
 	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage ) SAL_OVERRIDE;
 	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& rKeyName ) SAL_OVERRIDE;
 	virtual void			GetSystemMenuData( SystemMenuData* pData ) SAL_OVERRIDE;
+	virtual bool			ShowNativePopupMenu( FloatingWindow *pWin, const Rectangle& rRect, sal_uLong nFlags ) SAL_OVERRIDE;
 };
 
 enum JavaSalMenuItemType
@@ -86,6 +88,7 @@ public:
 	id						mpMenuItem;
 	JavaSalMenuItemType		meMenuType;
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
+	JavaSalMenu*			mpParentSalMenu;
 
 							JavaSalMenuItem();
 	virtual					~JavaSalMenuItem();
@@ -95,5 +98,9 @@ public:
 
 SAL_DLLPRIVATE void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus );
 SAL_DLLPRIVATE void VCLMenu_updateNativeWindowsMenu();
+
+#ifdef __OBJC__
+SAL_DLLPRIVATE BOOL VCLMenu_isPopUpMenu( NSMenu *pMenu );
+#endif	// __OBJC__
 
 #endif // _SV_SALMENU_H

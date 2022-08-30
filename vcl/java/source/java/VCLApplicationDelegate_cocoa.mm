@@ -47,6 +47,7 @@
 #include "svids.hrc"
 #include "java/saldata.hxx"
 #include "java/salframe.h"
+#include "java/salmenu.h"
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
@@ -641,6 +642,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
 {
+	// Skip if this is a popup menu
+	if ( VCLMenu_isPopUpMenu( pMenu ) )
+		return;
+
 	if ( !mbAppMenuInitialized )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
