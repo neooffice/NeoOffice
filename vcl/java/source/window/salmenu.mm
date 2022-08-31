@@ -46,6 +46,7 @@
 #include "java/salframe.h"
 #include "java/salinst.h"
 #include "java/salmenu.h"
+#include "osx/a11ywrapper.h"
 
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
@@ -442,16 +443,19 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
-	NSValue *pUnflippedPoint = (NSValue *)[pArgArray objectAtIndex:0];
-	if ( !pUnflippedPoint )
+	NSValue *pUnflippedRect = (NSValue *)[pArgArray objectAtIndex:0];
+	if ( !pUnflippedRect )
 		return;
 
     NSView *pView = (NSView *)[pArgArray objectAtIndex:1];
     if ( !pView )
         return;
 
-	// TODO: flip and adjust coordinates for RTL
-	NSPoint aUnflippedPoint = [pUnflippedPoint pointValue];
+	NSRect aRect = [pUnflippedRect rectValue];
+	aRect.origin.y = [pView frame].size.height - aRect.origin.y;
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp && [pApp userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft )
+		aRect.origin.x += aRect.size.width;
 
 	NSMenu *pMenu = [self menu];
 	if ( pMenu )
@@ -485,15 +489,19 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 			[pAppDelegate setInPerformKeyEquivalent:YES];
 		}
 
+		[AquaA11yWrapper setPopupMenuOpen:YES];
+
 		@try
 		{
-			[pMenu popUpMenuPositioningItem:nil atLocation:aUnflippedPoint inView:pView];
+			[pMenu popUpMenuPositioningItem:nil atLocation:aRect.origin inView:pView];
 		}
 		@catch ( NSException *pExc )
 		{
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
+
+		[AquaA11yWrapper setPopupMenuOpen:NO];
 
 		if ( pAppDelegate )
 			[pAppDelegate setInPerformKeyEquivalent:bOldInPerformKeyEquivalent];
@@ -1483,13 +1491,15 @@ bool JavaSalMenu::ShowNativePopupMenu( FloatingWindow *pWin, const Rectangle& rR
 	if ( !pContentView )
 		return false;
 
-	NSPoint aUnflippedPoint = NSMakePoint( rRect.Left(), rRect.Top() );
+	sal_uInt16 nArrangeIndex;
+	pWin->SetPosPixel( FloatingWindow::ImplCalcPos( pWin, rRect, nFlags, nArrangeIndex ) );
+	NSRect aUnflippedRect = NSMakeRect( pWin->ImplGetFrame()->maGeometry.nX - pFrame->maGeometry.nX, pWin->ImplGetFrame()->maGeometry.nY - pFrame->maGeometry.nY, rRect.GetWidth(), rRect.GetHeight() );
 
 	// Display and dispatch selection of a native popup must be done
 	// synchronously since the C++ popup menu will be deleted immmediately
 	// this method returns
 	UpdateMenusForFrame( pFrame, this, true );
-	VCLMenuWrapperArgs *pPopUpMenuPositioningItem = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithPoint:aUnflippedPoint], pContentView, nil]];
+	VCLMenuWrapperArgs *pPopUpMenuPositioningItem = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithRect:aUnflippedRect], pContentView, nil]];
 	sal_uLong nCount = Application::ReleaseSolarMutex();
 	osl_performSelectorOnMainThread( mpMenu, @selector(popUpMenuPositioningItem:), pPopUpMenuPositioningItem, YES );
 	Application::AcquireSolarMutex( nCount );
