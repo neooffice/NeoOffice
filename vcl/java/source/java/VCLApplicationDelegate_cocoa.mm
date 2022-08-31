@@ -144,7 +144,11 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	if ( ImplApplicationIsRunning() )
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
-		// application mutex on the main thread
+		// application mutex on the main thread. Fix deadlock when this is
+		// called from within an NSAccessibiity call by temporarily releasing
+		// the application mutex.
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+
 		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		while ( ImplApplicationIsRunning() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
@@ -155,6 +159,9 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 			NSApplication_dispatchPendingEvents( NO, YES );
 		}
 		pEvent->release();
+
+		if ( ImplApplicationIsRunning() )
+			Application::AcquireSolarMutex( nCount );
 	}
 
 	return nRet;
