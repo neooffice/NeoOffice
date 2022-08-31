@@ -616,11 +616,7 @@ static BOOL bInPostPendingNotifications = NO;
     // posting notifications
     ACQUIRE_SOLARMUTEX
 
-    // Give the LibO code a chance to catch up and synchronize its state to the
-    // native state so that the notifications will be announced by VoiceOver
-    Application::Yield();
-
-    // Prioritize pending macOS accessiblity calls
+    // Prioritize pending macOS accessibility calls
     CFRunLoopRef aRunLoop = CFRunLoopGetCurrent();
     if ( aRunLoop )
     {
