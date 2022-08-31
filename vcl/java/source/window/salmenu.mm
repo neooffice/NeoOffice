@@ -316,7 +316,10 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 
 	[self removeMenuAsMainMenu:self];
 	if ( pPopUpMenu == self )
+	{
+		[pPopUpMenu release];
 		pPopUpMenu = nil;
+	}
 
 	if ( mpMenu )
 	{
