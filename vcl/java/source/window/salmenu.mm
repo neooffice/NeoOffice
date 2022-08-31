@@ -49,7 +49,6 @@
 
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
-#include "../../../osx/salmenu.cxx"
 
 // Comment out the following line to disable using the native windows menu
 #define USE_NATIVE_WINDOWS_MENU
@@ -142,7 +141,6 @@ using namespace vcl;
 	VCLMenu*				mpMenu;
 	BOOL					mbMenuBar;
 	NSMutableArray*			mpMenuItems;
-	NSMenu*					mpPopUpMenu;
 }
 - (id)init:(BOOL)bMenuBar;
 - (void)checkMenuItem:(VCLMenuWrapperArgs *)pArgs;
@@ -150,7 +148,6 @@ using namespace vcl;
 - (void)enableMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)insertMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (VCLMenu *)menu;
-- (NSMenu *)popUpMenu;
 - (void)popUpMenuPositioningItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)removeMenuAsMainMenu:(id)pObject;
 - (void)removeMenuItem:(VCLMenuWrapperArgs *)pArgs;
@@ -159,7 +156,6 @@ using namespace vcl;
 - (void)setMenuItemKeyEquivalent:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuItemSubmenu:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuItemTitle:(VCLMenuWrapperArgs *)pArgs;
-- (void)setPopUpMenu:(NSMenu *)pMenu;
 @end
 
 static NSTimeInterval nLastMenuItemSelectedTime = 0;
@@ -356,12 +352,6 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 		[mpMenuItems release];
 		mpMenuItems = nil;
 	}
-
-	if ( mpPopUpMenu )
-	{
-		[mpPopUpMenu release];
-		mpPopUpMenu = nil;
-	}
 }
 
 - (void)enableMenuItem:(VCLMenuWrapperArgs *)pArgs
@@ -446,11 +436,6 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 	return mpMenu;
 }
 
-- (NSMenu *)popUpMenu
-{
-	return mpPopUpMenu;
-}
-
 - (void)popUpMenuPositioningItem:(VCLMenuWrapperArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -473,53 +458,50 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 	{
 		if ( pPopUpMenu )
 		{
-			NSMenu *pCurPopUpMenu = [pPopUpMenu popUpMenu];
-			if ( pCurPopUpMenu )
-				[pCurPopUpMenu cancelTracking];
-			[pPopUpMenu setPopUpMenu:nil];
+			if ( pPopUpMenu->mpMenu )
+				[pPopUpMenu->mpMenu cancelTracking];
 			[pPopUpMenu release];
 		}
 
-		// Filter out disabled items
-		NSMenu *pCopiedMenu = [pMenu copy];
-		if ( pCopiedMenu )
+		// Hide disabled items
+		NSArray *pElements = [pMenu itemArray];
+		if ( pElements )
 		{
-			if ( removeUnusedItemsRunner( pCopiedMenu ) )
+			for ( NSMenuItem *pElement : pElements )
 			{
-				[self setPopUpMenu:pCopiedMenu];
-				pPopUpMenu = self;
-				[pPopUpMenu retain];
-
-				BOOL bOldInPerformKeyEquivalent = NO;
-				VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
-				if ( pAppDelegate )
-				{
-					bOldInPerformKeyEquivalent = [pAppDelegate isInPerformKeyEquivalent];
-					[pAppDelegate setInPerformKeyEquivalent:YES];
-				}
-
-				@try
-				{
-					[pCopiedMenu popUpMenuPositioningItem:nil atLocation:aUnflippedPoint inView:pView];
-				}
-				@catch ( NSException *pExc )
-				{
-					if ( pExc )
-						NSLog( @"%@", [pExc callStackSymbols] );
-				}
-
-				if ( pAppDelegate )
-					[pAppDelegate setInPerformKeyEquivalent:bOldInPerformKeyEquivalent];
-
-				if ( pPopUpMenu == self )
-				{
-					[pPopUpMenu setPopUpMenu:nil];
-					[pPopUpMenu release];
-					pPopUpMenu = nil;
-				}
+				if( pElement && ![pElement isSeparatorItem] )
+					[pElement setHidden: ![pElement isEnabled]];
 			}
+		}
 
-			[pCopiedMenu release];
+		pPopUpMenu = self;
+		[pPopUpMenu retain];
+
+		BOOL bOldInPerformKeyEquivalent = NO;
+		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+		if ( pAppDelegate )
+		{
+			bOldInPerformKeyEquivalent = [pAppDelegate isInPerformKeyEquivalent];
+			[pAppDelegate setInPerformKeyEquivalent:YES];
+		}
+
+		@try
+		{
+			[pMenu popUpMenuPositioningItem:nil atLocation:aUnflippedPoint inView:pView];
+		}
+		@catch ( NSException *pExc )
+		{
+			if ( pExc )
+				NSLog( @"%@", [pExc callStackSymbols] );
+		}
+
+		if ( pAppDelegate )
+			[pAppDelegate setInPerformKeyEquivalent:bOldInPerformKeyEquivalent];
+
+		if ( pPopUpMenu == self )
+		{
+			[pPopUpMenu release];
+			pPopUpMenu = nil;
 		}
 	}
 }
@@ -856,15 +838,6 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 	NSMenu *pSubmenu = [pMenuItem submenu];
 	if ( pSubmenu )
 		[pSubmenu setTitle:pTitle];
-}
-
-- (void)setPopUpMenu:(NSMenu *)pMenu
-{
-	if ( mpPopUpMenu )
-		[mpPopUpMenu release];
-	mpPopUpMenu = pMenu;
-	if ( mpPopUpMenu )
-		[mpPopUpMenu retain];
 }
 
 @end
@@ -1822,7 +1795,7 @@ BOOL VCLMenu_isPopUpMenu( NSMenu *pMenu )
 	if ( !pMenu || !pPopUpMenu )
 		return bRet;
 
-	NSMenu *pCurPopUpMenu = [pPopUpMenu popUpMenu];
+	NSMenu *pCurPopUpMenu = [pPopUpMenu menu];
 	if ( !pCurPopUpMenu )
 		return bRet;
 
