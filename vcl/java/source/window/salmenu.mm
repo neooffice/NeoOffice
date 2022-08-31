@@ -144,6 +144,7 @@ using namespace vcl;
 	NSMutableArray*			mpMenuItems;
 }
 - (id)init:(BOOL)bMenuBar;
+- (void)cancelTracking;
 - (void)checkMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)destroy:(id)pObject;
 - (void)enableMenuItem:(VCLMenuWrapperArgs *)pArgs;
@@ -272,6 +273,12 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 		[mpMenuItems retain];
 
 	return self;
+}
+
+- (void)cancelTracking
+{
+	if ( mpMenu )
+		[mpMenu cancelTracking];
 }
 
 - (void)checkMenuItem:(VCLMenuWrapperArgs *)pArgs
@@ -462,8 +469,7 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 	{
 		if ( pPopUpMenu )
 		{
-			if ( pPopUpMenu->mpMenu )
-				[pPopUpMenu->mpMenu cancelTracking];
+			[pPopUpMenu cancelTracking];
 			[pPopUpMenu release];
 		}
 
@@ -1794,6 +1800,14 @@ void VCLMenu_updateNativeWindowsMenu()
 		}
 	}
 #endif	// USE_NATIVE_WINDOWS_MENU
+}
+
+//-----------------------------------------------------------------------------
+
+void VCLMenu_cancelPopUpMenu()
+{
+	if ( pPopUpMenu )
+		[pPopUpMenu cancelTracking];
 }
 
 //-----------------------------------------------------------------------------

@@ -100,6 +100,7 @@ SAL_DLLPRIVATE void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMen
 SAL_DLLPRIVATE void VCLMenu_updateNativeWindowsMenu();
 
 #ifdef __OBJC__
+SAL_DLLPRIVATE void VCLMenu_cancelPopUpMenu();
 SAL_DLLPRIVATE BOOL VCLMenu_isPopUpMenu( NSMenu *pMenu );
 #endif	// __OBJC__
 
