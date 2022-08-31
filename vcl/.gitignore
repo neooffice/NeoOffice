@@ -618,7 +618,6 @@ osx/salnativewidgets.cxx
 osx/a11ywrappersplitter.h
 osx/a11yselectionwrapper.h
 osx/cuidraw.hxx
-osx/salmenu.cxx
 osx/DragSourceContext.hxx
 osx/a11ywrapperradiogroup.h
 osx/OSXTransferable.hxx
