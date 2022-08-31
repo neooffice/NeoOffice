@@ -913,11 +913,6 @@ void NSApplication_dispatchPendingEvents( sal_Bool bInNativePrintDrag, sal_Bool 
 	if ( CFRunLoopGetCurrent() != CFRunLoopGetMain() )
 		return;
 
-	// Fix deadlock when displaying a native popup menu by cancelling the
-	// popup menu immediately so that the LibO dispatch thread does not get
-	// stuck waiting for the main thread
-	VCLMenu_cancelPopUpMenu();
-
 	// Do not dispatch any native events in a native drag session as it causes
 	// the [NSView dragImage:at:offset:event:pasteboard:source:slideBack:]
 	// selector to never return

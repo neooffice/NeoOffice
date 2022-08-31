@@ -139,6 +139,11 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 {
 	NSApplicationTerminateReply nRet = NSTerminateCancel;
 
+	// Fix deadlock when displaying a native popup menu by cancelling the
+	// popup menu immediately so that the LibO dispatch thread does not get
+	// stuck waiting for the main thread
+	VCLMenu_cancelPopUpMenu();
+
 	// If no application mutex exists yet, ignore event as we are likely to
 	// crash
 	if ( ImplApplicationIsRunning() )
