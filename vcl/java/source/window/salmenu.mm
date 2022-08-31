@@ -46,7 +46,6 @@
 #include "java/salframe.h"
 #include "java/salinst.h"
 #include "java/salmenu.h"
-#include "osx/a11ywrapper.h"
 
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
@@ -495,8 +494,6 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 			[pAppDelegate setInPerformKeyEquivalent:YES];
 		}
 
-		[AquaA11yWrapper setPopupMenuOpen:YES];
-
 		@try
 		{
 			[pMenu popUpMenuPositioningItem:nil atLocation:aRect.origin inView:pView];
@@ -506,8 +503,6 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 			if ( pExc )
 				NSLog( @"%@", [pExc callStackSymbols] );
 		}
-
-		[AquaA11yWrapper setPopupMenuOpen:NO];
 
 		if ( pAppDelegate )
 			[pAppDelegate setInPerformKeyEquivalent:bOldInPerformKeyEquivalent];
