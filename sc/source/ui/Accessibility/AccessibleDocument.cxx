@@ -1631,10 +1631,16 @@ void ScAccessibleDocument::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                 {
 #endif	// !NO_LIBO_BUG_125982_FIX
                     mpTempAccEdit->LostFocus();
-
 #ifdef NO_LIBO_BUG_125982_FIX
+
                 mpTempAccEdit = NULL;
 #else	// NO_LIBO_BUG_125982_FIX
+                }
+#endif	// !NO_LIBO_BUG_125982_FIX
+                RemoveChild(mxTempAcc, true);
+#ifndef NO_LIBO_BUG_125982_FIX
+                if (mpTempAccEdit)
+                {
                     // tdf#125982 a11y use-after-free of editengine by
                     // ScAccessibleEditObjectTextData living past the
                     // the editengine of the editview passed in above
@@ -1642,8 +1648,7 @@ void ScAccessibleDocument::Notify( SfxBroadcaster& rBC, const SfxHint& rHint )
                     mpTempAccEdit->dispose();
                     mpTempAccEdit = nullptr;
                 }
-#endif	// NO_LIBO_BUG_125982_FIX
-                RemoveChild(mxTempAcc, true);
+#endif	// !NO_LIBO_BUG_125982_FIX
                 if (mpAccessibleSpreadsheet && mpViewShell && mpViewShell->IsActive())
                     mpAccessibleSpreadsheet->GotFocus();
                 else if( mpViewShell && mpViewShell->IsActive())
