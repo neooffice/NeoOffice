@@ -759,7 +759,6 @@ source/accessibility/svxpixelctlaccessiblecontext.cxx
 source/accessibility/ChildrenManagerImpl.hxx
 source/accessibility/AccessibleFrameSelector.cxx
 source/accessibility/AccessibleShapeTreeInfo.cxx
-source/accessibility/AccessibleShape.cxx
 source/accessibility/SvxShapeTypes.cxx
 source/accessibility/AccessibleEmptyEditSource.hxx
 source/accessibility/lookupcolorname.hxx
