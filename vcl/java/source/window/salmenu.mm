@@ -153,6 +153,7 @@ using namespace vcl;
 - (void)removeMenuAsMainMenu:(id)pObject;
 - (void)removeMenuItem:(VCLMenuWrapperArgs *)pArgs;
 - (void)setFrame:(VCLMenuWrapperArgs *)pArgs;
+- (void)setJavaSalPopUpMenu:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuAsMainMenu:(id)pObject;
 - (void)setMenuItemKeyEquivalent:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuItemSubmenu:(VCLMenuWrapperArgs *)pArgs;
@@ -165,6 +166,7 @@ static VCLMenuWrapper *pMenuBarMenu = nil;
 static VCLMenuWrapper *pPendingSetMenuAsMainMenu = nil;
 static BOOL bRemovePendingSetMenuAsMainMenu = NO;
 static VCLMenuWrapper *pPopUpMenu = nil;
+static JavaSalMenu *pJavaSalPopUpMenu = nil;
 
 @implementation VCLMenu
 
@@ -466,15 +468,17 @@ static VCLMenuWrapper *pPopUpMenu = nil;
 	if ( pApp && [pApp userInterfaceLayoutDirection] == NSUserInterfaceLayoutDirectionRightToLeft )
 		aRect.origin.x += aRect.size.width;
 
-	NSMenu *pMenu = [self menu];
-	if ( pMenu )
+	if ( pPopUpMenu )
 	{
-		if ( pPopUpMenu )
-		{
-			[pPopUpMenu cancelTracking];
-			[pPopUpMenu release];
-		}
+		[pPopUpMenu cancelTracking];
+		[pPopUpMenu release];
+	}
 
+	// Create menu if it does not exist yet
+	NSMenu *pMenu = [self menu];
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pMenu && pAppDelegate && ![pAppDelegate isInTermination] )
+	{
 		// Hide disabled items
 		NSArray *pElements = [pMenu itemArray];
 		if ( pElements )
@@ -623,6 +627,32 @@ static VCLMenuWrapper *pPopUpMenu = nil;
         return;
 
 	mpFrame = (JavaSalFrame *)[pValue pointerValue];
+}
+
+- (void)setJavaSalPopUpMenu:(VCLMenuWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+    NSValue *pValue = (NSValue *)[pArgArray objectAtIndex:0];
+    if ( !pValue )
+        return;
+
+	JavaSalMenu *pJavaSalMenu = (JavaSalMenu *)[pValue pointerValue];
+	if ( pJavaSalMenu && !pJavaSalPopUpMenu )
+	{
+		VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+		if ( pAppDelegate && ![pAppDelegate isInTermination] )
+		{
+			pJavaSalPopUpMenu = pJavaSalMenu;
+    		[pArgs setResult:[NSNumber numberWithBool:YES]];
+		}
+	}
+	else if ( !pJavaSalMenu )
+	{
+		pJavaSalPopUpMenu = NULL;
+	}
 }
 
 - (void)setMenuAsMainMenu:(id)pObject
@@ -1480,35 +1510,48 @@ bool JavaSalMenu::ShowNativePopupMenu( FloatingWindow *pWin, const Rectangle& rR
 #ifdef NO_NATIVE_MENUS
 	return false;
 #else	// NO_NATIVE_MENUS
+	bool bRet = true;
+
 	if ( !pWin || !mpMenu )
-		return false;
+		return bRet;
 
 	Window *pParentWindow = pWin->ImplGetWindowImpl()->mpRealParent;
 	if ( !pParentWindow )
-		return false;
+		return bRet;
 
 	JavaSalFrame *pFrame = (JavaSalFrame *)pParentWindow->ImplGetFrame();
 	if ( !pFrame )
-		return false;
+		return bRet;
 
     NSView *pContentView = pFrame->GetSystemData()->mpNSView;
 	if ( !pContentView )
-		return false;
+		return bRet;
 
 	sal_uInt16 nArrangeIndex;
 	pWin->SetPosPixel( FloatingWindow::ImplCalcPos( pWin, rRect, nFlags, nArrangeIndex ) );
 	NSRect aUnflippedRect = NSMakeRect( pWin->ImplGetFrame()->maGeometry.nX - pFrame->maGeometry.nX, pWin->ImplGetFrame()->maGeometry.nY - pFrame->maGeometry.nY, rRect.GetWidth(), rRect.GetHeight() );
 
+	// Check if it is safe to display a native popup
+	VCLMenuWrapperArgs *pSetJavaSalPopUpMenu = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithPointer:this]]];
+	osl_performSelectorOnMainThread( mpMenu, @selector(setJavaSalPopUpMenu:), pSetJavaSalPopUpMenu, YES );
+    NSNumber *pPopUpMenuSet = (NSNumber *)[pSetJavaSalPopUpMenu result];
+	if ( !pPopUpMenuSet || ![(NSNumber *)pPopUpMenuSet boolValue] )
+		return bRet;
+
 	// Display and dispatch selection of a native popup must be done
 	// synchronously since the C++ popup menu will be deleted immmediately
 	// this method returns
 	UpdateMenusForFrame( pFrame, this, true );
+
 	VCLMenuWrapperArgs *pPopUpMenuPositioningItem = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSValue valueWithRect:aUnflippedRect], pContentView, nil]];
 	sal_uLong nCount = Application::ReleaseSolarMutex();
 	osl_performSelectorOnMainThread( mpMenu, @selector(popUpMenuPositioningItem:), pPopUpMenuPositioningItem, YES );
 	Application::AcquireSolarMutex( nCount );
 
-	return true;
+	pSetJavaSalPopUpMenu = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObject:[NSValue valueWithPointer:nullptr]]];
+	osl_performSelectorOnMainThread( mpMenu, @selector(setJavaSalPopUpMenu:), pSetJavaSalPopUpMenu, YES );
+
+	return bRet;
 #endif	// NO_NATIVE_MENUS
 }
 
@@ -1802,14 +1845,6 @@ void VCLMenu_updateNativeWindowsMenu()
 
 //-----------------------------------------------------------------------------
 
-void VCLMenu_cancelPopUpMenu()
-{
-	if ( pPopUpMenu )
-		[pPopUpMenu cancelTracking];
-}
-
-//-----------------------------------------------------------------------------
-
 BOOL VCLMenu_isPopUpMenu( NSMenu *pMenu )
 {
 	BOOL bRet = NO;
@@ -1834,4 +1869,11 @@ BOOL VCLMenu_isPopUpMenu( NSMenu *pMenu )
 	}
 
 	return bRet;
+}
+
+//-----------------------------------------------------------------------------
+
+BOOL VCLMenu_isShowingPopUpMenu()
+{
+	return ( pPopUpMenu || pJavaSalPopUpMenu );
 }

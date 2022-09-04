@@ -75,6 +75,7 @@
 - (void)dealloc;
 - (id)init;
 - (BOOL)isInPerformKeyEquivalent;
+- (BOOL)isInTermination;
 - (BOOL)isInTracking;
 - (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (void)setDelegate:(id)pDelegate;

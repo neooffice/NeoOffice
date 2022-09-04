@@ -135,18 +135,14 @@ static void HandlePreferencesRequest()
 	}
 }
 
-static NSApplicationTerminateReply HandleTerminationRequest()
+static void HandleTerminationRequest()
 {
-	NSApplicationTerminateReply nRet = NSTerminateCancel;
-
-	// Fix deadlock when displaying a native popup menu by cancelling the
-	// popup menu immediately so that the LibO dispatch thread does not get
-	// stuck waiting for the main thread
-	VCLMenu_cancelPopUpMenu();
-
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash
-	if ( ImplApplicationIsRunning() )
+	// crash. Also, ignore event if the drag print lock is locked. Lastly,
+	// fix deadlock when displaying a native popup menu by cancelling the
+	// popup menu immediately so that the LibO dispatch thread does not get
+	// stuck waiting for the main thread.
+    if ( ImplApplicationIsRunning() && !VCLInstance_isInOrAcquiringDragPrintLock() && !VCLMenu_isShowingPopUpMenu() )
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
 		// application mutex on the main thread
@@ -161,8 +157,6 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 		}
 		pEvent->release();
 	}
-
-	return nRet;
 }
 
 static void HandleDidChangeScreenParametersRequest()
@@ -501,11 +495,16 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
+	NSApplicationTerminateReply nRet = NSTerminateCancel;
 	if ( mbInTermination || ( pApplication && [pApplication modalWindow] ) )
-		return NSTerminateCancel;
+		return nRet;
 
 	mbInTermination = YES;
-	return HandleTerminationRequest();
+	// This call will only return if the shutdown is cancelled
+	HandleTerminationRequest();
+	mbInTermination = NO;
+
+	return nRet;
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)pNotification
@@ -636,6 +635,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 - (BOOL)isInPerformKeyEquivalent
 {
 	return mbInPerformKeyEquivalent;
+}
+
+- (BOOL)isInTermination
+{
+	return mbInTermination;
 }
 
 - (BOOL)isInTracking
