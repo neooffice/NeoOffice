@@ -802,6 +802,12 @@ void SAL_CALL AccessibleShape::addAccessibleEventListener (
         if (mpText != NULL)
             mpText->AddEventListener (rxListener);
     }
+
+#ifdef USE_JAVA
+    // Just to be safe, refetch the shape pointer as it may have changed if an
+    // accessible listener was previously removed
+    m_pShape = GetSdrObjectFromXShape(mxShape);
+#endif	// USE_JAVA
 }
 
 
