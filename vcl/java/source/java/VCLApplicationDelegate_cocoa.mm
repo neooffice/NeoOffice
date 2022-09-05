@@ -142,7 +142,7 @@ static void HandleTerminationRequest()
 	// fix deadlock when displaying a native popup menu by cancelling the
 	// popup menu immediately so that the LibO dispatch thread does not get
 	// stuck waiting for the main thread.
-    if ( ImplApplicationIsRunning() && !VCLInstance_isInOrAcquiringDragPrintLock() && !VCLMenu_isShowingPopUpMenu() )
+    if ( ImplApplicationIsRunning() && !VCLInstance_isInDragPrintLock() && !VCLMenu_isShowingPopUpMenu() )
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
 		// application mutex on the main thread
