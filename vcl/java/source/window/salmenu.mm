@@ -36,12 +36,15 @@
 #include <map>
 
 #include <osl/objcutils.h>
+#include <vcl/virdev.hxx>
 #include <vcl/window.hxx>
 #include <framework/menuconfiguration.hxx>
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 
+#include "impbmp.hxx"
 #include "window.h"
 
+#include "java/salbmp.h"
 #include "java/saldata.hxx"
 #include "java/salframe.h"
 #include "java/salinst.h"
@@ -155,6 +158,7 @@ using namespace vcl;
 - (void)setFrame:(VCLMenuWrapperArgs *)pArgs;
 - (void)setJavaSalPopUpMenu:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuAsMainMenu:(id)pObject;
+- (void)setMenuItemImage:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuItemKeyEquivalent:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuItemSubmenu:(VCLMenuWrapperArgs *)pArgs;
 - (void)setMenuItemTitle:(VCLMenuWrapperArgs *)pArgs;
@@ -774,6 +778,29 @@ static JavaSalMenu *pJavaSalPopUpMenu = nil;
 		[pPendingSetMenuAsMainMenu release];
 		pPendingSetMenuAsMainMenu = nil;
 		bRemovePendingSetMenuAsMainMenu = NO;
+	}
+}
+
+- (void)setMenuItemImage:(VCLMenuWrapperArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+    NSNumber *pPos = (NSNumber *)[pArgArray objectAtIndex:0];
+    if ( !pPos )
+        return;
+
+	NSImage *pImage = (NSImage *)[pArgArray objectAtIndex:1];
+	if ( !pImage )
+		return;
+
+    unsigned int nPos = [pPos unsignedIntValue];
+	if ( mpMenuItems && nPos < [mpMenuItems count] )
+	{
+		NSMenuItem *pMenuItem = [mpMenuItems objectAtIndex:nPos];
+		if ( pMenuItem )
+			[pMenuItem setImage:pImage];
 	}
 }
 
@@ -1434,10 +1461,86 @@ void JavaSalMenu::EnableItem( unsigned nPos, bool bEnable )
 
 //-----------------------------------------------------------------------------
 
-void JavaSalMenu::SetItemImage( unsigned /* nPos */, SalMenuItem* /* pSalMenuItem */, const Image& /* rImage */ )
+void JavaSalMenu::SetItemImage( unsigned nPos, SalMenuItem* /* pSalMenuItem */, const Image& rImage )
 {
-	// for now we'll ignore putting icons in AWT menus.  Most Mac apps don't
-	// have them, so they're kind of extraneous on the platform anyhow.
+	if ( !mpMenu )
+		return;
+
+	BitmapEx aBmpEx( rImage.GetBitmapEx() );
+	Size aSize( aBmpEx.GetSizePixel() );
+	if ( aSize.Width() <= 0 || aSize.Height() <= 0 )
+		return;
+
+	SystemGraphicsData aData;
+	memset( &aData, 0, sizeof( SystemGraphicsData ) );
+	aData.nSize = sizeof( SystemGraphicsData );
+	aData.rCGContext = NULL;
+
+	// Construct virtual device with empty SystemGraphicsData and resize
+	// without erasing to ensure that the underlying buffer is transparent
+	VirtualDevice aVirDev( &aData, aSize, 0 );
+	aVirDev.SetOutputSize( aSize, false );
+	aVirDev.DrawBitmapEx( Point(), aBmpEx );
+
+	Bitmap aBmp( aVirDev.GetBitmap( Point(), aSize ) );
+	ImpBitmap *pImpBmp = aBmp.ImplGetImpBitmap();
+	if ( !pImpBmp )
+		return;
+
+	SalBitmap *pSalBitmap = pImpBmp->ImplGetSalBitmap();
+	if ( !pSalBitmap )
+		return;
+
+	JavaSalBitmap *pJavaSalBitmap = dynamic_cast< JavaSalBitmap* >( pSalBitmap );
+	if ( !pJavaSalBitmap )
+		return;
+
+	BitmapBuffer *pBuffer = pJavaSalBitmap->AcquireBuffer( BITMAP_READ_ACCESS );
+	if ( !pBuffer )
+		return;
+
+	// Copy the buffer's bits so that CGImageProvider owns the bits
+	sal_uInt8 *pBits = new sal_uInt8[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
+	if ( pBits )
+	{
+		memcpy( pBits, pBuffer->mpBits, pBuffer->mnScanlineSize * pBuffer->mnHeight );
+		CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pBits, pBuffer->mnScanlineSize * pBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
+		if ( aProvider )
+		{
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
+			{
+				CGImageRef aImage = CGImageCreate( pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnBitCount, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
+				if ( aImage )
+				{
+					NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+					NSImage *pImage = [[NSImage alloc] initWithCGImage:aImage size:NSZeroSize];
+					if ( pImage )
+					{
+						[pImage autorelease];
+
+						VCLMenuWrapperArgs *pSetMenuItemImageArgs = [VCLMenuWrapperArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithUnsignedInt:nPos], pImage, nil]];
+						osl_performSelectorOnMainThread( mpMenu, @selector(setMenuItemImage:), pSetMenuItemImageArgs, NO );
+					}
+
+					[pPool release];
+
+					CGImageRelease( aImage );
+				}
+
+				CGColorSpaceRelease( aColorSpace );
+			}
+
+			CGDataProviderRelease( aProvider );
+		}
+		else
+		{
+			delete[] pBits;
+		}
+	}
+
+	pJavaSalBitmap->ReleaseBuffer( pBuffer, BITMAP_READ_ACCESS );
 }
 
 //-----------------------------------------------------------------------------
