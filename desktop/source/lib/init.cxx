@@ -55,6 +55,9 @@
 #include <unotools/mediadescriptor.hxx>
 #include <osl/module.hxx>
 
+#ifndef NO_LIBO_NEW_COMMAND_LINE_ARGS
+#include <app.hxx>
+#endif	// !NO_LIBO_NEW_COMMAND_LINE_ARGS
 #include <salinst.hxx>
 
 // Tiled Rendering is Linux only for now.
@@ -65,6 +68,10 @@
 
 #include <basebmp/bitmapdevice.hxx>
 #endif
+
+#ifndef NO_LIBO_NEW_COMMAND_LINE_ARGS
+#include "../app/cmdlineargs.hxx"
+#endif	// !NO_LIBO_NEW_COMMAND_LINE_ARGS
 
 using namespace css;
 using namespace vcl;
@@ -691,6 +698,15 @@ static int lo_initialize(LibreOfficeKit* pThis, const char* pAppPath)
 
         // Force headless
         rtl::Bootstrap::set("SAL_USE_VCLPLUGIN", "svp");
+
+
+#ifndef NO_LIBO_NEW_COMMAND_LINE_ARGS
+        // We specifically need to make sure we have the "headless"
+        // command arg set (various code specifically checks via
+        // CommandLineArgs):
+        desktop::Desktop::GetCommandLineArgs().setHeadless();
+#endif	// !NO_LIBO_NEW_COMMAND_LINE_ARGS
+
         InitVCL();
         Application::EnableHeadlessMode(true);
 

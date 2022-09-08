@@ -17,7 +17,6 @@ inc/migration.hxx
 inc/app.hxx
 WinResTarget_soffice.mk
 unx/source/file_image_unx.c
-unx/source/args.c
 unx/source/pagein.c
 unx/source/splashx.h
 unx/source/args.h
@@ -400,17 +399,14 @@ source/app/configinit.cxx
 source/app/officeipcthread.hxx
 source/app/desktopresid.cxx
 source/app/desktopcontext.cxx
-source/app/cmdlineargs.hxx
 source/app/userinstall.hxx
 source/app/sofficemain.h
 source/app/configinit.hxx
 source/app/desktopresid.hxx
 source/app/desktopcontext.hxx
 source/app/desktop.src
-source/app/cmdlineargs.cxx
 source/app/desktop.hrc
 source/app/langselect.cxx
-source/app/cmdlinehelp.cxx
 source/app/lockfile2.cxx
 source/pkgchk/unopkg/unopkg_main.h
 source/pkgchk/unopkg/unopkg_shared.h

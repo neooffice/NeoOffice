@@ -251,7 +251,12 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
              aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
              aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+#ifdef NO_LIBO_NEW_COMMAND_LINE_ARGS
              aDispatchRequest.aRequestType == REQUEST_CONVERSION)
+#else	// NO_LIBO_NEW_COMMAND_LINE_ARGS
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
+             aDispatchRequest.aRequestType == REQUEST_CAT)
+#endif	// NO_LIBO_NEW_COMMAND_LINE_ARGS
             nCount++;
 
         Sequence < PropertyValue > aArgs( nCount );
@@ -263,7 +268,12 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
              aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
              aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+#ifdef NO_LIBO_NEW_COMMAND_LINE_ARGS
              aDispatchRequest.aRequestType == REQUEST_CONVERSION)
+#else	// NO_LIBO_NEW_COMMAND_LINE_ARGS
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
+             aDispatchRequest.aRequestType == REQUEST_CAT)
+#endif	// NO_LIBO_NEW_COMMAND_LINE_ARGS
         {
             aArgs[1].Name = "ReadOnly";
             aArgs[2].Name = "OpenNewView";
@@ -299,7 +309,12 @@ bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequ
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
              aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
              aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+#ifdef NO_LIBO_NEW_COMMAND_LINE_ARGS
              aDispatchRequest.aRequestType == REQUEST_CONVERSION)
+#else	// NO_LIBO_NEW_COMMAND_LINE_ARGS
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
+             aDispatchRequest.aRequestType == REQUEST_CAT)
+#endif	// NO_LIBO_NEW_COMMAND_LINE_ARGS
         {
             // documents opened for printing are opened readonly because they must be opened as a new document and this
             // document could be open already
