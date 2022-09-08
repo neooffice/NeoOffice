@@ -86,7 +86,6 @@ source/sidebar/EnumContext.cxx
 source/sidebar/SidebarController.cxx
 source/sidebar/MenuButton.hxx
 source/notify/hintpost.cxx
-source/inc/macroloader.hxx
 source/inc/nochaos.hxx
 source/inc/eventsupplier.hxx
 source/inc/workwin.hxx
@@ -152,7 +151,6 @@ source/appl/appmain.cxx
 source/appl/openuriexternally.cxx
 source/appl/module.cxx
 source/appl/imestatuswindow.cxx
-source/appl/macroloader.cxx
 source/appl/app.hrc
 source/appl/impldde.cxx
 source/appl/appdde.cxx
@@ -282,7 +280,6 @@ source/doc/graphhelp.cxx
 source/doc/doc.src
 source/doc/syspath.hxx
 source/doc/printhelper.hxx
-source/doc/iframe.cxx
 source/doc/doc.hrc
 source/doc/sfxacldetect.cxx
 source/doc/objcont.cxx
