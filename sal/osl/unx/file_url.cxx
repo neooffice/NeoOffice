@@ -446,6 +446,20 @@ namespace
 
         if (!*failed)
         {
+#ifdef USE_JAVA
+            // Use osl::realpath to resolve macOS aliases
+            rtl::OUString unresolvedPath( path );
+            rtl::OUString resolvedPath;
+            if (osl::realpath(unresolvedPath, resolvedPath) && resolvedPath.getLength() < PATH_MAX)
+            {
+                memcpy(path, resolvedPath.getStr(), resolvedPath.getLength() * sizeof(sal_Unicode));
+                path[resolvedPath.getLength()] = '\0';
+            }
+            else
+            {
+                *failed = true;
+            }
+#else	// USE_JAVA
             char unresolved_path[PATH_MAX];
             if (!UnicodeToText(unresolved_path, sizeof(unresolved_path), path, rtl_ustr_getLength(path)))
                 return oslTranslateFileError(OSL_FET_ERROR, ENAMETOOLONG);
@@ -464,6 +478,7 @@ namespace
                 else
                     ferr = oslTranslateFileError(OSL_FET_ERROR, errno);
             }
+#endif	// USE_JAVA
         }
 
         return ferr;

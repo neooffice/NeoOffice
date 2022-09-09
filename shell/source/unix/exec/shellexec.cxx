@@ -143,6 +143,20 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException, std::exception)
 {
 #if defined USE_JAVA && defined MACOSX
+    // Resolve any macOS aliases in command
+    OUString aResolvedCommand;
+    const auto e0 = FileBase::getAbsoluteFileURL(OUString(), aCommand, aResolvedCommand);
+    if (e0 != osl::FileBase::E_None) {
+        throw RuntimeException(
+            OUString("Cannot resolve file URI: ")
+             + aCommand,
+            static_cast< cppu::OWeakObject * >(this));
+    }
+    else if (!aResolvedCommand.isEmpty() && aCommand != aResolvedCommand) {
+        execute(aResolvedCommand, aParameter, nFlags);
+        return;
+    }
+
     OStringBuffer aBuffer;
 #else	// USE_JAVA && MACOSX
     OStringBuffer aBuffer, aLaunchBuffer;
