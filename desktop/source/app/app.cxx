@@ -2676,8 +2676,21 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                 ProcessDocumentsRequest* pDocsRequest = new ProcessDocumentsRequest(
                     rCmdLine.getCwdUrl());
                 std::vector<OUString> const & data(rAppEvent.GetStringsData());
+#if defined USE_JAVA && defined MACOSX
+                for ( std::vector<OUString>::const_iterator it = data.begin(); it != data.end(); ++it )
+                {
+                    // Resolve any macOS aliases in path
+                    OUString resolvedData;
+                    const auto err = osl::FileBase::getAbsoluteFileURL(OUString(), *it, resolvedData);
+                    if ( err == osl::FileBase::E_None && !resolvedData.isEmpty() )
+                        pDocsRequest->aOpenList.push_back( resolvedData );
+                    else
+                        pDocsRequest->aOpenList.push_back( *it );
+                }
+#else	// USE_JAVA && MACOSX
                 pDocsRequest->aOpenList.insert(
                     pDocsRequest->aOpenList.end(), data.begin(), data.end());
+#endif	// USE_JAVA && MACOSX
                 pDocsRequest->pcProcessed = NULL;
 
 #if defined USE_JAVA && defined MACOSX
@@ -2707,8 +2720,21 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                 ProcessDocumentsRequest* pDocsRequest = new ProcessDocumentsRequest(
                     rCmdLine.getCwdUrl());
                 std::vector<OUString> const & data(rAppEvent.GetStringsData());
+#if defined USE_JAVA && defined MACOSX
+                for ( std::vector<OUString>::const_iterator it = data.begin(); it != data.end(); ++it )
+                {
+                    // Resolve any macOS aliases in path
+                    OUString resolvedData;
+                    const auto err = osl::FileBase::getAbsoluteFileURL(OUString(), *it, resolvedData);
+                    if ( err == osl::FileBase::E_None && !resolvedData.isEmpty() )
+                        pDocsRequest->aPrintList.push_back( resolvedData );
+                    else
+                        pDocsRequest->aPrintList.push_back( *it );
+                }
+#else	// USE_JAVA && MACOSX
                 pDocsRequest->aPrintList.insert(
                     pDocsRequest->aPrintList.end(), data.begin(), data.end());
+#endif	// USE_JAVA && MACOSX
                 pDocsRequest->pcProcessed = NULL;
 
 #if defined USE_JAVA && defined MACOSX
