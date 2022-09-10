@@ -143,9 +143,23 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException, std::exception)
 {
 #if defined USE_JAVA && defined MACOSX
+    // Fix failure to resolve aliases by obtaining a security scoped bookmark
+    // before opening the URL
+    id pSecurityScopedURL = NULL;
+    if ( !pApplication_acquireSecurityScopedURLFromOUString )
+        pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+    if ( !pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+        if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+            pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aCommand, sal_True, NULL );
+
     // Resolve any macOS aliases in command
     OUString aResolvedCommand;
     const auto e0 = FileBase::getAbsoluteFileURL(OUString(), aCommand, aResolvedCommand);
+
+    if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+
     if (e0 != osl::FileBase::E_None) {
         throw RuntimeException(
             OUString("Cannot resolve file URI: ")
@@ -248,16 +262,9 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 #ifdef USE_JAVA
         // Fix failure to open file URL hyperlinks by obtaining a security
         // scoped bookmark before opening the URL
-        id pSecurityScopedURL = NULL;
-        if ( 0 == aURL.startsWith("file://") )
-        {
-            if ( !pApplication_acquireSecurityScopedURLFromOUString )
-                pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
-            if ( !pApplication_releaseSecurityScopedURL )
-                pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
-            if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
-                pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aURL, sal_True, NULL );
-        }
+        pSecurityScopedURL = NULL;
+        if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+            pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aURL, sal_True, NULL );
 
         // Fix bug 3584 by not throwing an exception if we can't open a URL
         sal_Bool bOpened = ShellExec_openURL( aURL, dir );

@@ -146,6 +146,19 @@
 #define GETPID getpid
 #endif
 
+#if defined USE_JAVA && defined MACOSX
+
+#include <dlfcn.h>
+
+typedef void* id;
+typedef id Application_acquireSecurityScopedURLFromOUString_Type( const OUString *pNonSecurityScopedURL, unsigned char bMustShowDialogIfNoBookmark, const OUString *pDialogTitle );
+typedef void Application_releaseSecurityScopedURL_Type( id pSecurityScopedURLs );
+
+static Application_acquireSecurityScopedURLFromOUString_Type *pApplication_acquireSecurityScopedURLFromOUString = NULL;
+static Application_releaseSecurityScopedURL_Type *pApplication_releaseSecurityScopedURL = NULL;
+
+#endif	// USE_JAVA && MACOSX
+
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::util;
@@ -2609,6 +2622,15 @@ OUString GetURL_Impl(
 
 void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
 {
+#if defined USE_JAVA && defined MACOSX
+    // Fix failure to resolve aliases by obtaining a security scoped bookmark
+    // before opening the file
+    if ( !pApplication_acquireSecurityScopedURLFromOUString )
+        pApplication_acquireSecurityScopedURLFromOUString = (Application_acquireSecurityScopedURLFromOUString_Type *)dlsym( RTLD_DEFAULT, "Application_acquireSecurityScopedURLFromOUString" );
+    if ( !pApplication_releaseSecurityScopedURL )
+        pApplication_releaseSecurityScopedURL = (Application_releaseSecurityScopedURL_Type *)dlsym( RTLD_DEFAULT, "Application_releaseSecurityScopedURL" );
+#endif	// USE_JAVA && MACOSX
+
     switch ( rAppEvent.GetEvent() )
     {
     case ApplicationEvent::TYPE_ACCEPT:
@@ -2679,13 +2701,21 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
 #if defined USE_JAVA && defined MACOSX
                 for ( std::vector<OUString>::const_iterator it = data.begin(); it != data.end(); ++it )
                 {
+                    OUString unresolvedData = *it;
+                    id pSecurityScopedURL = NULL;
+                    if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+                        pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &unresolvedData, sal_True, NULL );
+
                     // Resolve any macOS aliases in path
                     OUString resolvedData;
-                    const auto err = osl::FileBase::getAbsoluteFileURL(OUString(), *it, resolvedData);
+                    const auto err = osl::FileBase::getAbsoluteFileURL(OUString(), unresolvedData, resolvedData);
                     if ( err == osl::FileBase::E_None && !resolvedData.isEmpty() )
                         pDocsRequest->aOpenList.push_back( resolvedData );
                     else
-                        pDocsRequest->aOpenList.push_back( *it );
+                        pDocsRequest->aOpenList.push_back( unresolvedData );
+
+                    if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+                        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
                 }
 #else	// USE_JAVA && MACOSX
                 pDocsRequest->aOpenList.insert(
@@ -2723,13 +2753,21 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
 #if defined USE_JAVA && defined MACOSX
                 for ( std::vector<OUString>::const_iterator it = data.begin(); it != data.end(); ++it )
                 {
+                    OUString unresolvedData = *it;
+                    id pSecurityScopedURL = NULL;
+                    if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
+                        pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &unresolvedData, sal_True, NULL );
+
                     // Resolve any macOS aliases in path
                     OUString resolvedData;
-                    const auto err = osl::FileBase::getAbsoluteFileURL(OUString(), *it, resolvedData);
+                    const auto err = osl::FileBase::getAbsoluteFileURL(OUString(), unresolvedData, resolvedData);
                     if ( err == osl::FileBase::E_None && !resolvedData.isEmpty() )
                         pDocsRequest->aPrintList.push_back( resolvedData );
                     else
-                        pDocsRequest->aPrintList.push_back( *it );
+                        pDocsRequest->aPrintList.push_back( unresolvedData );
+
+                    if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+                        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
                 }
 #else	// USE_JAVA && MACOSX
                 pDocsRequest->aPrintList.insert(

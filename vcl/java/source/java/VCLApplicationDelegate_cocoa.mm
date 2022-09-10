@@ -111,13 +111,20 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 		// crash
 		if ( ImplApplicationIsRunning() )
 		{
-			// Resolve any macOS aliases in path
 			OUString aUnresolvedPath = OStringToOUString( rPath, RTL_TEXTENCODING_UTF8 );
+			// Fix failure to resolve aliases by obtaining a security scoped
+			// bookmark before opening the file
+			id pSecurityScopedURL = Application_acquireSecurityScopedURLFromOUString( &aUnresolvedPath, sal_True, NULL );
+
+			// Resolve any macOS aliases in path
 			OUString aResolvedPath;
 			OString aPath( rPath );
 			const auto err = osl::FileBase::getAbsoluteFileURL( OUString(), aUnresolvedPath, aResolvedPath );
 			if ( err == osl::FileBase::E_None && !aResolvedPath.isEmpty() )
 				aPath = OUStringToOString( aResolvedPath, RTL_TEXTENCODING_UTF8 );
+			if ( pSecurityScopedURL )
+				Application_releaseSecurityScopedURL( pSecurityScopedURL );
+
 			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, aPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
