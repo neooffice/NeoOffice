@@ -46,9 +46,8 @@ static NSURL *macxp_resolveAliasImpl( NSURL *url )
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:url error:nil];
 		if ( pData )
 		{
-			BOOL bStale = NO;
-			NSURL *pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-			if ( !bStale && pURL )
+			NSURL *pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+			if ( pURL )
 			{
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )

@@ -324,9 +324,8 @@ static NSURL *ResolveAliasURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, NS
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
 		if ( pData )
 		{
-			BOOL bStale = NO;
-			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-			if ( !bStale && pURL )
+			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+			if ( pURL )
 			{
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
@@ -433,9 +432,8 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
 							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
 							{
-								BOOL bStale = NO;
-								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-								if ( !bStale && pSecurityScopedURL )
+								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+								if ( pSecurityScopedURL )
 								{
 									if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
 									{
@@ -800,9 +798,8 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 								if ( pData )
 								{
-									BOOL bStale = NO;
-									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+									if ( pResolvedURL && [pResolvedURL isFileURL] )
 									{
 										pResolvedURL = [pResolvedURL URLByStandardizingPath];
 										if ( pResolvedURL )
@@ -1143,9 +1140,8 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
-					BOOL bStale = NO;
-					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-					if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+					if ( pResolvedURL && [pResolvedURL isFileURL] )
 					{
 						pResolvedURL = [pResolvedURL URLByStandardizingPath];
 						if ( pResolvedURL )
