@@ -57,6 +57,7 @@
 #include "a11yactionwrapper.h"
 
 #include "../java/source/app/salinst_cocoa.h"
+#include "../java/source/java/VCLApplicationDelegate_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
 
 #define AQUA11Y_MAX_REMOVE_BATCH_SIZE 10000
@@ -478,6 +479,11 @@ static BOOL bInRemovePendingFromWrapperRepository = NO;
     // Prevent posting of notification if we are already within an
     // NSAccessibility call
     if ( bInRemovePendingFromWrapperRepository || ! ImplApplicationIsRunning() || VCLInstance_isInOrAcquiringDragPrintLock() )
+        return;
+
+    // Eliminate potential delay at shutdown
+    VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+    if ( !pAppDelegate || [pAppDelegate isInTermination] )
         return;
 
     bInRemovePendingFromWrapperRepository = YES;
