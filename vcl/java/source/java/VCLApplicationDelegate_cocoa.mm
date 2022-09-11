@@ -44,6 +44,7 @@
 #include <osl/objcutils.h>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/VCLApplicationDelegate.h>
 
 #include "svids.hrc"
 #include "java/saldata.hxx"
@@ -888,3 +889,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 }
 
 @end
+
+BOOL VCLApplicationDelegate_isInTermination()
+{
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	return ( !pAppDelegate || [pAppDelegate isInTermination] );
+}

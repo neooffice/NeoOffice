@@ -44,6 +44,7 @@
 #include <sfx2/viewfrm.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/syswin.hxx>
+#include <vcl/VCLApplicationDelegate.h>
 
 #include <premac.h>
 #import <objc/objc-runtime.h>
@@ -792,9 +793,16 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 		else
 		{
 			ACQUIRE_SOLARMUTEX
-			// Fix Mac App Store crash by not reloading if SfxGetpApp() returns
-			// NULL as that means we are already in DeInitVCL()
-			if ( SfxGetpApp() )
+
+			// Fix Mac App Store crash by not reloading during the native
+			// termination handler. Apparently, deletion of the SfxApplication
+			// instance is not guarded by the application mutex so we cannot
+			// rely on SfxGetpApp() to determine if we are terminating.
+			if ( VCLApplicationDelegate_isInTermination() )
+			{
+				[self performSelector:@selector(reloadFrame:) withObject:pSilent afterDelay:0];
+			}
+			else
 			{
 				SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
 				if ( pDoc == self )
@@ -805,6 +813,7 @@ static NSRect aLastVersionBrowserDocumentFrame = NSZeroRect;
 					SFXDocument_reload( mpFrame, bSilent );
 				}
 			}
+
 			RELEASE_SOLARMUTEX
 		}
 	}
