@@ -43,6 +43,8 @@ static NSURL *macxp_resolveAliasImpl( NSURL *url )
 
 	if ( url )
 	{
+		NSURL *pOriginalURL = url;
+
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:url error:nil];
 		if ( pData )
 		{
@@ -52,12 +54,16 @@ static NSURL *macxp_resolveAliasImpl( NSURL *url )
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
 				{
-					// Recurse to check if the URL is also an alias
-					NSURL *pRecursedURL = macxp_resolveAliasImpl( pURL );
-					if ( pRecursedURL )
-						pRet = pRecursedURL;
-					else
-						pRet = pURL;
+					// Recurse if the URL is also an alias
+					NSNumber *pAlias = nil;
+					if ( ![pURL isEqual:pOriginalURL] && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+					{
+						NSURL *pRecursedURL = macxp_resolveAliasImpl( pURL );
+						if ( pRecursedURL )
+							pURL = pRecursedURL;
+					}
+
+					pRet = pURL;
 				}
 			}
 		}

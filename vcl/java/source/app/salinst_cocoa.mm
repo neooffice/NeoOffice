@@ -318,6 +318,8 @@ static NSURL *ResolveAliasURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, NS
 
 	if ( pURL )
 	{
+		NSURL *pOriginalURL = pURL;
+
 		if ( pSecurityScopedURLs )
 			AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO, pTitle, pSecurityScopedURLs );
 
@@ -333,12 +335,16 @@ static NSURL *ResolveAliasURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, NS
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( pURL )
 					{
-						// Recurse to check if the URL is also an alias
-						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
-						if ( pRecursedURL )
-							pRet = pRecursedURL;
-						else
-							pRet = pURL;
+						// Recurse if the URL is also an alias
+						NSNumber *pAlias = nil;
+						if ( ![pURL isEqual:pOriginalURL] && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+						{
+							NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
+							if ( pRecursedURL )
+								pURL = pRecursedURL;
+						}
+
+						pRet = pURL;
 					}
 				}
 			}
