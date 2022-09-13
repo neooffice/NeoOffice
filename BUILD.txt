@@ -1,7 +1,7 @@
 Intructions for Building NeoOffice
 ----------------------------------
 
-This git branch - NeoOffice-2021_branch - contains code for building the latest NeoOffice 2022 releases on macOS 11 Big Sur or macOS 12 Monterey on either an Intel or Silicon Mac.
+This git branch - NeoOffice-2021_branch - contains code for building the latest NeoOffice 2022 releases on macOS 12 Monterey on either an Intel or Silicon Mac.
 
 All of the official NeoOffice 2022 releases are built from this branch.
 
@@ -10,20 +10,16 @@ Important: In order to build NeoOffice, all of the steps below must be followed.
 If any third party tools are not installed or the build is run on a different version of macOS or with a different version of Xcode, the build will likely fail.
 
 
-Steps for building on macOS 11 Big Sur or macOS 12 Monterey
------------------------------------------------------------
+Steps for building on macOS 12 Monterey
+---------------------------------------
 
-At this time, NeoOffice will only build on macOS 11 Big Sur or macOS 12 Monterey.
+At this time, NeoOffice will only build on macOS 12 Monterey. The resulting build should run on macOS 11 Big Sur, macOS 12 Monterey, and macOS 13 Ventura.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   macOS 11.6.3 Big Sur:
-     Xcode v13.2.1
-     Command Line Tools for Xcode v13.2
-
-   macOS 12.4 Monterey:
-     Xcode v13.4.1
-     Command Line Tools for Xcode v13.4
+   macOS 12.6 Monterey:
+     Xcode v14
+     Command Line Tools for Xcode v14
 
 2. Download and install Oracle's Java 8 Development Kit (JDK) from the following URL:
 
