@@ -341,6 +341,19 @@ static void ImplFontListChanged()
 							aMapName += aFontSeparator + "Cambria Italic" + aFontSeparator + "Cambria-Italic";
 						}
 
+						// Fix cases where the family name is different from
+						// the display name such as the Pfeffer Mediaeval font
+						// in LibreOffice bug 145563 and the font was selected
+						// and saved in OpenOffice or LibreOffice by adding the
+						// family name to the map list. Both OpenOffice and 
+						// LibreOffice save the family name, not the actual
+						// font name.
+						if ( !aDisplayName.startsWith( aFamilyName ) )
+{
+							aMapName += aFontSeparator + aFamilyName;
+fprintf( stderr, "Here: %s %s\n", OUStringToOString( aDisplayName, RTL_TEXTENCODING_UTF8 ).getStr(), OUStringToOString( aMapName, RTL_TEXTENCODING_UTF8 ).getStr() );
+}
+
 						// Skip the font if we already have it
 						::std::map< OUString, JavaPhysicalFontFace* >::iterator it = pSalData->maFontNameMapping.find( aDisplayName );
 						if ( it != pSalData->maFontNameMapping.end() )
