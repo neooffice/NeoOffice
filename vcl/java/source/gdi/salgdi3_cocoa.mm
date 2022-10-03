@@ -39,19 +39,36 @@
 
 #include "salgdi3_cocoa.h"
 
-static void AddFontToFontsDict( NSFont *pFont, NSMutableDictionary *pFontDict )
+static void AddFontToFontsDictWithFamily( NSFont *pFont, NSMutableDictionary *pFontDict, NSString *pFamilyName )
 {
 	if ( !pFont || !pFontDict )
 		return;
 
-	NSString *pFontName = [pFont fontName];
-	if ( !pFontName || ![pFontName length] || [pFontDict valueForKey:pFontName] )
+	NSString *pKey = nil;
+	if ( pFamilyName )
+	{
+		if ( [pFamilyName length] && ![pFontDict valueForKey:pFamilyName] )
+			pKey = pFamilyName;
+	}
+	else
+	{
+		NSString *pFontName = [pFont fontName];
+		if ( pFontName && [pFontName length] && ![pFontDict valueForKey:pFontName] )
+			pKey = pFontName;
+	}
+
+	if ( !pKey )
 		return;
 
 	// Fix bug 3097 by using the printer font when the font is a bitmap font
 	NSFont *pPrinterFont = [pFont printerFont];
 	if ( pPrinterFont )
-		[pFontDict setObject:pPrinterFont forKey:pFontName];
+		[pFontDict setObject:pPrinterFont forKey:pKey];
+}
+
+static void AddFontToFontsDict( NSFont *pFont, NSMutableDictionary *pFontDict )
+{
+	AddFontToFontsDictWithFamily( pFont, pFontDict, nil );
 }
 
 NSFont *NSFont_findPlainFont( NSFont *pNSFont )
@@ -80,9 +97,9 @@ NSFont *NSFont_findPlainFont( NSFont *pNSFont )
 	return pRet;
 }
 
-NSArray *NSFontManager_getAllFonts()
+NSDictionary *NSFontManager_getAllFonts()
 {
-	NSArray *pRet = nil;
+	NSDictionary *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -90,10 +107,11 @@ NSArray *NSFontManager_getAllFonts()
 	if ( pFontManager )
 	{
 		NSArray<NSString *> *pFontNames = [pFontManager availableFonts];
-		if ( pFontNames )
+		NSArray<NSString *> *pFamilyNames = [pFontManager availableFontFamilies];
+		if ( pFontNames && pFamilyNames )
 		{
 			NSDictionary *pEmptyDict = [NSDictionary dictionary];
-			NSMutableDictionary *pFontDict = [NSMutableDictionary dictionaryWithCapacity:[pFontNames count]];
+			NSMutableDictionary *pFontDict = [NSMutableDictionary dictionaryWithCapacity:[pFontNames count] + [pFamilyNames count]];
 			if ( pEmptyDict && pFontDict )
 			{
 				CGFloat aSystemFontSizes[ 7 ];
@@ -166,22 +184,46 @@ NSArray *NSFontManager_getAllFonts()
 					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleTitle3 options:pEmptyDict], pFontDict );
 
 					// All other fonts
-					for ( NSString *pFontName in pFontNames )
+					for ( NSString *pFontName : pFontNames )
 					{
 						// Suppress CoreText messages when compiled on
 						// macOS 10.15 or higher by excluding font names that
 						// start with "."
 						if ( pFontName && [pFontName length] && ![pFontName hasPrefix:@"."] )
-							AddFontToFontsDict( [NSFont fontWithName:pFontName size:fFontSize], pFontDict );
+						{
+							NSFont *pFont = [NSFont fontWithName:pFontName size:fFontSize];
+							if ( pFont )
+								AddFontToFontsDict( pFont, pFontDict );
+						}
+					}
+
+					// Fix LibreOffice bug 145563 by creating a separate
+					// font with the family name set to the display name so
+					// that when opening a document saved by OpenOffice or
+					// LibreOffice, we can match the font. Also, the user
+					// can select the font with family name so that
+					// OpenOffice and LibreOffice can match the font when
+					// opening a document saved by NeoOffice.
+					for ( NSString *pFamilyName : pFamilyNames )
+					{
+						// Suppress CoreText messages when compiled on
+						// macOS 10.15 or higher by excluding font names that
+						// start with "."
+						if ( pFamilyName && [pFamilyName length] && ![pFamilyName hasPrefix:@"."] )
+						{
+							NSFont *pFont = [NSFont fontWithName:pFamilyName size:fFontSize];
+							if ( pFont )
+							{
+								NSString *pFontName = [pFont fontName];
+								if ( pFontName && ![pFontName hasPrefix:pFamilyName] )
+									AddFontToFontsDictWithFamily( pFont, pFontDict, pFamilyName );
+							}
+						}
 					}
 				}
 
-				NSArray *pFontArray = [pFontDict allValues];
-				if ( pFontArray )
-				{
-					[pFontArray retain];
-					pRet = pFontArray;
-				}
+				pRet = pFontDict;
+				[pRet retain];
 			}
 		}
 	}

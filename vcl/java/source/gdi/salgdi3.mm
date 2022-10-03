@@ -187,8 +187,8 @@ static void ImplFontListChanged()
 				NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 				// Update cached fonts
-				NSArray *pFonts = NSFontManager_getAllFonts();
-				if ( pFonts )
+				NSDictionary *pFontDict = NSFontManager_getAllFonts();
+				if ( pFontDict )
 				{
 					const OUString aCourier( "Courier" );
 					const OUString aFontSeparator( ";" );
@@ -218,13 +218,10 @@ static void ImplFontListChanged()
 					const OUString aTimesNewRomanItalicPS( "TimesNewRomanPS-ItalicMT" );
 					const OUString aTimesRoman( "Times Roman" );
 
-					unsigned int i = 0;
-					unsigned int nCount = [pFonts count];
-
 					sal_uInt32 nActualCount = 0;
-					for ( i = 0; i < nCount; i++ )
+					for ( id pKey : pFontDict )
 					{
-						NSFont *pNSFont = [pFonts objectAtIndex:i];
+						NSFont *pNSFont = [pFontDict objectForKey:pKey];
 						if ( !pNSFont )
 							continue;
 						CTFontRef aFont = (CTFontRef)pNSFont;
@@ -274,6 +271,20 @@ static void ImplFontListChanged()
 						{
 							aDisplayName = OUString( aDisplayName.getStr(), nColon );
 							aMapName += aFontSeparator + aDisplayName;
+						}
+
+						// Fix LibreOffice bug 145563 by creating a separate
+						// font with the family name set to the display name so
+						// that when opening a document saved by OpenOffice or
+						// LibreOffice, we can match the font. Also, the user
+						// can select the font with family name so that
+						// OpenOffice and LibreOffice can match the font when
+						// opening a document saved by NeoOffice.
+						OUString aKey = GetOUString( (CFStringRef)pKey );
+						if ( aPSName != aKey && !aDisplayName.startsWith( aKey ) )
+						{
+							aMapName += aFontSeparator + aDisplayName;
+							aDisplayName = aFamilyName;
 						}
 
 						// Ignore empty font names or font names that start
@@ -341,19 +352,6 @@ static void ImplFontListChanged()
 							aMapName += aFontSeparator + "Cambria Italic" + aFontSeparator + "Cambria-Italic";
 						}
 
-						// Fix cases where the family name is different from
-						// the display name such as the Pfeffer Mediaeval font
-						// in LibreOffice bug 145563 and the font was selected
-						// and saved in OpenOffice or LibreOffice by adding the
-						// family name to the map list. Both OpenOffice and 
-						// LibreOffice save the family name, not the actual
-						// font name.
-						if ( !aDisplayName.startsWith( aFamilyName ) )
-{
-							aMapName += aFontSeparator + aFamilyName;
-fprintf( stderr, "Here: %s %s\n", OUStringToOString( aDisplayName, RTL_TEXTENCODING_UTF8 ).getStr(), OUStringToOString( aMapName, RTL_TEXTENCODING_UTF8 ).getStr() );
-}
-
 						// Skip the font if we already have it
 						::std::map< OUString, JavaPhysicalFontFace* >::iterator it = pSalData->maFontNameMapping.find( aDisplayName );
 						if ( it != pSalData->maFontNameMapping.end() )
@@ -417,9 +415,9 @@ fprintf( stderr, "Here: %s %s\n", OUStringToOString( aDisplayName, RTL_TEXTENCOD
 					}
 
 					// Cache matching bold, italic, and bold italic fonts
-					for ( i = 0; i < nCount; i++ )
+					for ( id pKey : pFontDict )
 					{
-						NSFont *pNSFont = [pFonts objectAtIndex:i];
+						NSFont *pNSFont = [pFontDict objectForKey:pKey];
 						if ( !pNSFont )
 							continue;
 
@@ -428,7 +426,7 @@ fprintf( stderr, "Here: %s %s\n", OUStringToOString( aDisplayName, RTL_TEXTENCOD
 						ImplCachePlainFontMappings( pNSFont );
 					}
 
-					[pFonts release];
+					[pFontDict release];
 				}
 
 				// Cache system font

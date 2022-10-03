@@ -39,7 +39,7 @@
 #include "java/salgdi.h"
 
 SAL_DLLPRIVATE NSFont *NSFont_findPlainFont( NSFont *pNSFont );
-SAL_DLLPRIVATE NSArray *NSFontManager_getAllFonts();
+SAL_DLLPRIVATE NSDictionary *NSFontManager_getAllFonts();
 SAL_DLLPRIVATE sal_Bool NSFontManager_isFixedPitch( NSFont *pNSFont );
 SAL_DLLPRIVATE sal_Bool NSFontManager_isItalic( NSFont *pNSFont );
 SAL_DLLPRIVATE FontWidth NSFontManager_widthOfFont( NSFont *pNSFont );
