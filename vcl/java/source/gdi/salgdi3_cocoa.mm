@@ -37,18 +37,23 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include <vcl/settings.hxx>
+#include <vcl/svapp.hxx>
+
+#include "quartz/utils.h"
+
 #include "salgdi3_cocoa.h"
 
-static void AddFontToFontsDictWithFamily( NSFont *pFont, NSMutableDictionary *pFontDict, NSString *pFamilyName )
+static void AddFontToFontsDictWithAltName( NSFont *pFont, NSMutableDictionary *pFontDict, NSString *pAltName, BOOL bLocalization )
 {
 	if ( !pFont || !pFontDict )
 		return;
 
 	NSString *pKey = nil;
-	if ( pFamilyName )
+	if ( pAltName )
 	{
-		if ( [pFamilyName length] && ![pFontDict valueForKey:pFamilyName] )
-			pKey = pFamilyName;
+		if ( [pAltName length] && ![pFontDict valueForKey:pAltName] )
+			pKey = pAltName;
 	}
 	else
 	{
@@ -64,11 +69,31 @@ static void AddFontToFontsDictWithFamily( NSFont *pFont, NSMutableDictionary *pF
 	NSFont *pPrinterFont = [pFont printerFont];
 	if ( pPrinterFont )
 		[pFontDict setObject:pPrinterFont forKey:pKey];
+
+	// Prevent infinite recursion
+	if ( bLocalization )
+		return;
+
+	CFStringRef aUILang = CreateCFString( Application::GetSettings().GetUILanguageTag().getLanguage() );
+	if ( aUILang )
+	{
+		CFStringRef aLang = nullptr;
+		CFStringRef aLocalizedName = CTFontCopyLocalizedName( (CTFontRef)pFont, pAltName ? kCTFontFamilyNameKey : kCTFontFullNameKey, &aLang );
+		if ( aLocalizedName )
+		{
+			if ( aLang && CFStringCompare( aUILang, aLang, 0 ) == kCFCompareEqualTo )
+				AddFontToFontsDictWithAltName( pFont, pFontDict, (NSString *)aLocalizedName, YES );
+
+			CFRelease( aLocalizedName );
+		}
+
+		CFRelease( aUILang );
+	}
 }
 
 static void AddFontToFontsDict( NSFont *pFont, NSMutableDictionary *pFontDict )
 {
-	AddFontToFontsDictWithFamily( pFont, pFontDict, nil );
+	AddFontToFontsDictWithAltName( pFont, pFontDict, nil, NO );
 }
 
 NSFont *NSFont_findPlainFont( NSFont *pNSFont )
@@ -111,7 +136,7 @@ NSDictionary *NSFontManager_getAllFonts()
 		if ( pFontNames && pFamilyNames )
 		{
 			NSDictionary *pEmptyDict = [NSDictionary dictionary];
-			NSMutableDictionary *pFontDict = [NSMutableDictionary dictionaryWithCapacity:[pFontNames count] + [pFamilyNames count]];
+			NSMutableDictionary *pFontDict = [NSMutableDictionary dictionaryWithCapacity:( [pFontNames count] + [pFamilyNames count] ) * 2];
 			if ( pEmptyDict && pFontDict )
 			{
 				CGFloat aSystemFontSizes[ 7 ];
@@ -216,7 +241,7 @@ NSDictionary *NSFontManager_getAllFonts()
 							{
 								NSString *pFontName = [pFont fontName];
 								if ( pFontName && ![pFontName hasPrefix:pFamilyName] )
-									AddFontToFontsDictWithFamily( pFont, pFontDict, pFamilyName );
+									AddFontToFontsDictWithAltName( pFont, pFontDict, pFamilyName, NO );
 							}
 						}
 					}

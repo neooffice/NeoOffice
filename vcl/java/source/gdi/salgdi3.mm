@@ -266,25 +266,26 @@ static void ImplFontListChanged()
 							continue;
 
 						OUString aMapName( aPSName );
+
+						// Fix LibreOffice bug 145563 by creating a separate
+						// font with the family name or localized font name set
+						// to the display name so that when opening a document
+						// saved by OpenOffice or LibreOffice, we can match the
+						// font. Also, the user can select the font with family
+						// name so that OpenOffice and LibreOffice can match
+						// the font when opening a document saved by NeoOffice.
+						OUString aKey = GetOUString( (CFStringRef)pKey );
+						if ( aPSName != aKey && aDisplayName != aKey )
+						{
+							aMapName += aFontSeparator + aDisplayName;
+							aDisplayName = aKey;
+						}
+
 						sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
 						if ( nColon >= 0 )
 						{
 							aDisplayName = OUString( aDisplayName.getStr(), nColon );
 							aMapName += aFontSeparator + aDisplayName;
-						}
-
-						// Fix LibreOffice bug 145563 by creating a separate
-						// font with the family name set to the display name so
-						// that when opening a document saved by OpenOffice or
-						// LibreOffice, we can match the font. Also, the user
-						// can select the font with family name so that
-						// OpenOffice and LibreOffice can match the font when
-						// opening a document saved by NeoOffice.
-						OUString aKey = GetOUString( (CFStringRef)pKey );
-						if ( aPSName != aKey && !aDisplayName.startsWith( aKey ) )
-						{
-							aMapName += aFontSeparator + aDisplayName;
-							aDisplayName = aFamilyName;
 						}
 
 						// Ignore empty font names or font names that start
