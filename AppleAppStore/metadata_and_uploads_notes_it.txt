@@ -34,7 +34,7 @@ Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto O
 
 
 What's New in this Version:
-Prima di acquistare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
+Prima di scaricare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
 
 This version of NeoOffice adds the following new features:
 • VoiceOver support: We have finally succeeded in making the LibreOffice accessibility code work within NeoOffice's multithreaded architecture. With this change, NeoOffice now has support for VoiceOver and possibly other macOS accessibility features. Also, we have upgraded the LibreOffice accessibility code to use Apple's newer, more efficient NSAccessibilityElement class to significantly reduce memory usage.
