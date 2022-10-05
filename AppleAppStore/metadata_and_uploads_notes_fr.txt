@@ -36,16 +36,18 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 What's New in this Version:
 Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
 
-This version of NeoOffice fixes the following bugs:
-• When using the Sifr icons while in Dark Mode, most Sifr icons were nearly impossible to see against the color of NeoOffice's toolbar background
-• When using mail merge, NeoOffice would unexpectedly quit when transitioning between some of the panels in the Mail Merge Wizard and would fail to save the mail merge results
-• When pasting HTML into a Writer document, NeoOffice would sometimes crash
-• When undoing text that has been changed using the Chinese conversion dialog, LibreOffice bug #91995 would occur in NeoOffice
-• When dragging images from the Finder, dropping the image into NeoOffice would fail
+This version of NeoOffice adds the following new features:
+• VoiceOver support: We have finally succeeded in making the LibreOffice accessibility code work within NeoOffice's multithreaded architecture. With this change, NeoOffice now has support for VoiceOver and possibly other macOS accessibility features. Also, we have upgraded the LibreOffice accessibility code to use Apple's newer, more efficient NSAccessibilityElement class to significantly reduce memory usage.
+• Native popup menus: NeoOffice's underlying LibreOffice code does not support accessibility in its non-native popup menus so we have replaced most non-native popup menus with native menus.
+
+Also, this version of NeoOffice fixes the following bugs:
+• Fixed LibreOffice bug 145563 by adding separate fonts for each font's localized and unlocalized family and font names. This increases the likelihood of matching the family name in documents saved by OpenOffice and LibreOffice to an actual font.
+• Fixed LibreOffice bug 150873 by adding code that resolves any macOS aliases in a file path before a file path is opened by NeoOffice's underlying LibreOffice code.
+• Fixed a crash when quitting while NeoOffice is reloading a document by delaying document reloading when NeoOffice's quit handler code is running.
 
 
 Promotional Text:
-NeoOffice fonctionne désormais nativement sur Apple Silicon.
+NeoOffice supporte maintenant VoiceOver.
 
 
 Keywords:
