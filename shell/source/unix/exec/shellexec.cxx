@@ -153,24 +153,6 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         if ( pApplication_acquireSecurityScopedURLFromOUString && pApplication_releaseSecurityScopedURL )
             pSecurityScopedURL = pApplication_acquireSecurityScopedURLFromOUString( &aCommand, sal_True, NULL );
 
-    // Resolve any macOS aliases in command
-    OUString aResolvedCommand;
-    const auto e0 = FileBase::getAbsoluteFileURL(OUString(), aCommand, aResolvedCommand);
-
-    if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
-        pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
-
-    if (e0 != osl::FileBase::E_None) {
-        throw RuntimeException(
-            OUString("Cannot resolve file URI: ")
-             + aCommand,
-            static_cast< cppu::OWeakObject * >(this));
-    }
-    else if (!aResolvedCommand.isEmpty() && aCommand != aResolvedCommand) {
-        execute(aResolvedCommand, aParameter, nFlags);
-        return;
-    }
-
     OStringBuffer aBuffer;
 #else	// USE_JAVA && MACOSX
     OStringBuffer aBuffer, aLaunchBuffer;
@@ -203,6 +185,22 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 #ifndef NO_LIBO_OPEN_EXECUTABLE_FIX
         bool dir = false;
         if (uri->getScheme().equalsIgnoreAsciiCase("file")) {
+#ifdef USE_JAVA
+            // Resolve any macOS aliases in command. Fix fatal error when
+            // handling by non-file URLs by silently ignoring any errors 
+            // returned by FileBase::getAbsoluteFileURL().
+            OUString aResolvedCommand;
+            const auto e0 = FileBase::getAbsoluteFileURL(OUString(), aCommand, aResolvedCommand);
+
+            if ( pSecurityScopedURL && pApplication_releaseSecurityScopedURL )
+                pApplication_releaseSecurityScopedURL( pSecurityScopedURL );
+
+            if (e0 == osl::FileBase::E_None && !aResolvedCommand.isEmpty() && aCommand != aResolvedCommand) {
+                execute(aResolvedCommand, aParameter, nFlags);
+                return;
+            }
+#endif	// USE_JAVA
+
             OUString pathname;
             auto const e1 = osl::FileBase::getSystemPathFromFileURL(aCommand, pathname);
             if (e1 != osl::FileBase::E_None) {
