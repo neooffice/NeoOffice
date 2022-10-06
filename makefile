@@ -70,10 +70,12 @@ OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
 # the LibreOffice build
 JDK_HOME:=$(shell /usr/libexec/java_home -V 2>&1 | grep '"Oracle Corporation" - "Java SE 8"' | awk '{ print $$NF }')
 CODESIGN_EXTRA_OPTIONS:=--timestamp
-CODESIGN_FOR_DEBUGGING=true
+# Set to true to enable connecting from the Instruments application
+CODESIGN_FOR_DEBUGGING=<key>com.apple.security.get-task-allow</key><true/>
 ifndef NO_HARDENED_RUNTIME
 CODESIGN_EXTRA_OPTIONS+=--options runtime
-CODESIGN_FOR_DEBUGGING=false
+# Set to empty to disable connecting from the Instruments application
+CODESIGN_FOR_DEBUGGING=
 endif
 TARGET_MACHINE:=$(shell uname -m)
 ifeq ($(TARGET_MACHINE),arm64)
