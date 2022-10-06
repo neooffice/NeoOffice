@@ -36,14 +36,8 @@ Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto O
 What's New in this Version:
 Prima di scaricare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
 
-This version of NeoOffice adds the following new features:
-• VoiceOver support: We have finally succeeded in making the LibreOffice accessibility code work within NeoOffice's multithreaded architecture. With this change, NeoOffice now has support for VoiceOver and possibly other macOS accessibility features. Also, we have upgraded the LibreOffice accessibility code to use Apple's newer, more efficient NSAccessibilityElement class to significantly reduce memory usage.
-• Native popup menus: NeoOffice's underlying LibreOffice code does not support accessibility in its non-native popup menus so we have replaced most non-native popup menus with native menus.
-
-Also, this version of NeoOffice fixes the following bugs:
-• Fixed LibreOffice bug 145563 by adding separate fonts for each font's localized and unlocalized family and font names. This increases the likelihood of matching the family name in documents saved by OpenOffice and LibreOffice to an actual font.
-• Fixed LibreOffice bug 150873 by adding code that resolves any macOS aliases in a file path before a file path is opened by NeoOffice's underlying LibreOffice code.
-• Fixed a crash when quitting while NeoOffice is reloading a document by delaying document reloading when NeoOffice's quit handler code is running.
+This version of NeoOffice fixes the following bug:
+• Command-clicking on a hyperlink in a document would display a "fatal error" dialog and then crash if the hyperlink does not point to a local file. This bug was caused by our fix for LibreOffice bug 150873 that was added in the previous release to resolve any macOS aliases in a file path.
 
 
 Promotional Text:
