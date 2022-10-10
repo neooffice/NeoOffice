@@ -1,9 +1,9 @@
 Intructions for Building NeoOffice
 ----------------------------------
 
-This git branch - NeoOffice-2021_branch - contains code for building the latest NeoOffice 2022 releases on macOS 12 Monterey on either an Intel or Silicon Mac.
+This git branch - master - contains unfinished code for building NeoOffice with the LibreOffice 5.4 code on macOS Mojave for Intel. No work on this git branch has been done recently so this branch may no longer build.
 
-All of the official NeoOffice 2022 releases are built from this branch.
+None of the official NeoOffice releases are built from this branch. If you want to build the latest official NeoOffice release, switch to the NeoOffice-2021_branch git branch.
 
 Important: In order to build NeoOffice, all of the steps below must be followed. These steps install several third party tools that are needed by NeoOffice's underlying LibreOffice code. Also, these steps will install the git LFS extension so that several very large files needed by the build can be downloaded from GitHub's LFS repository.
 
@@ -18,16 +18,16 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
    macOS 12.6 Monterey:
-     Xcode v14
+     Xcode v14.0.1
      Command Line Tools for Xcode v14
 
-2. Download and install Oracle's Java 8 Development Kit (JDK) from the following URL:
+2. Download and install Oracle's Java 17 Development Kit (JDK) from the following URL:
 
    http://www.neooffice.org/neojava/javadownload.php
 
-   Important: the build will fail if Oracle's Java 9 or later are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
+   Important: the build may fail if other versions of Oracle's JDK are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
 
-3. If you are building on an Apple Silicon machine, you will need Apple's Rosetta to run Oracle's JDK 8 so run the following command to ensure that Rosetta is installed:
+3. If you are building on an Apple Silicon machine, you may need Apple's Rosetta to run Oracle's JDK 17 so run the following command to ensure that Rosetta is installed:
 
    sudo softwareupdate --install-rosetta --agree-to-license
 
@@ -35,7 +35,9 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
    sudo /opt/local/bin/port install autoconf -x11 +universal
    sudo /opt/local/bin/port install automake -x11 +universal
+   sudo /opt/local/bin/port install gmake -x11 +universal
    sudo /opt/local/bin/port install gnutar -x11 +universal
+   sudo /opt/local/bin/port install gperf -x11 +universal
    sudo /opt/local/bin/port install xz -x11 +universal
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
@@ -68,7 +70,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 10. Start the build by invoking the following commands:
 
    cd "<source folder>"
-   make
+   gmake
 
    A successful build will create the following 2 "<source folder>/build/install*/*.dmg" files:
 
@@ -80,7 +82,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 11. After a successful build, you can optionally build patch installers by invoking the following commands:
 
    cd "<source folder>"
-   make build.all_patches
+   gmake build.all_patches
 
    A successful build will create the following 2 "<source folder>/build/patch_install*/*.dmg" files:
 
@@ -89,28 +91,28 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
 12. You can notarize and staple the installer .dmg files built in the previous step using Apple's notarization service by executing the following command:
 
-   make build.staple_all
+   gmake build.staple_all
 
    If you built patch installers, also invoke the following command:
 
-   make build.staple_all_patches
+   gmake build.staple_all_patches
 
    Important: if the installer build fails with a "notarytool store-credentials" error, you will need to execute the following command once in a Terminal to cache your Apple developer ID's password in the macOS Keychain Access application so that Xcode's notarytool can fetch it and use it to upload the installer to Apple's notarization servers:
 
-   make APPLEDEVELOPERID=<e-mail of your Apple Developer account> build.store_notarytool_credentials
+   gmake APPLEDEVELOPERID=<e-mail of your Apple Developer account> build.store_notarytool_credentials
 
 13. There are several make rules to clean build files. To clean only the NeoOffice installers and patch installers execute the following commmand:
 
-    make build.clean_neo_installers
+    gmake build.clean_neo_installers
 
     To clean only the NeoOffice unit tests and preserve the both the LibreoOffice build and custom NeoOffice code build, execute the following commmand:
 
-    make build.clean_neo_tests
+    gmake build.clean_neo_tests
 
     To clean only the custom NeoOffice code and preserve the LibreOffice build, execute the following commmand:
 
-    make build.clean_neo
+    gmake build.clean_neo
 
     To completely clean all build files, execute the following command:
 
-    make build.clean_all
+    gmake build.clean_all

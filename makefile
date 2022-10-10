@@ -43,6 +43,10 @@ PRODUCT_TRADEMARKED_NAME=NeoOffice® Developer Build
 PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8 Developer Build
 PRODUCT_DIR_PATCH_VERSION_EXTRA=
 
+# Overridable gmake and gperf paths
+GNUMAKE=/opt/local/bin/gmake
+GPERF=/opt/local/bin/gperf
+
 # Custom overrides go in the following file. For builds with the NeoOffice
 # trademark, copy custom.neo.mk to custom.mk.
 -include custom.mk
@@ -206,12 +210,11 @@ PRODUCT_COMPONENT_MODULES=
 PRODUCT_COMPONENT_PATCH_MODULES=
 endif
 
-# CVS macros
+# Other macros
 ANT_PACKAGE=apache-ant-1.9.6
 ANT_SOURCE_FILENAME=apache-ant-1.9.6-bin.tar.gz
 YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
-NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=NeoOffice-2023_Developer_Build
 NEO_TAG2:=$(NEO_TAG)
@@ -313,10 +316,7 @@ build.libo_checkout: \
 	build.libo_src_checkout \
 	build.ant_checkout \
 	build.libo_external_tarballs_checkout \
-	build.libo_bridges_patches_checkout \
-	build.libo_dbaccess_patches_checkout \
-	build.libo_external_patches_checkout \
-	build.libo_include_patches_checkout
+	build.libo_external_patches_checkout
 	touch "$@"
 
 build.libo_patches: \
@@ -396,7 +396,7 @@ build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
 # Check that JDK_HOME is set to something reasonable
 	@sh -e -c 'if [ ! -d "$(JDK_HOME)" -o ! -x "$(JDK_HOME)/bin/java" ] ; then echo "JDK_HOME is invalid Java SDK path: $(JDK_HOME)" ; exit 1 ; fi'
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; autoconf ; ./configure $(CONFIGURE_EXTRA_OPTIONS) --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; GNUMAKE="$(GNUMAKE)" ; export GNUMAKE ; GPERF="$(GPERF)" ; export GPERF ; autoconf ; ./configure $(CONFIGURE_EXTRA_OPTIONS) --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
 else
 	@echo "$@ not implemented" ; exit 1
 endif
@@ -404,7 +404,7 @@ endif
 
 build.libo_all: build.libo_configure
 ifeq ("$(OS_TYPE)","macOS")
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; make
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; "$(GNUMAKE)"
 else
 	@echo "$@ not implemented" ; exit 1
 endif
@@ -1193,25 +1193,25 @@ build.clean_all:
 
 clean:
 	@echo ""
-	@echo "Error: make $@ does nothing."
+	@echo "Error: $(GNUMAKE) $@ does nothing."
 	@echo ""
 	@echo "To clean only the NeoOffice installers and patch installers execute"
 	@echo "the following commmand:"
 	@echo ""
-	@echo "  make build.clean_neo_installers"
+	@echo "  $(GNUMAKE) build.clean_neo_installers"
 	@echo ""
 	@echo "To clean only the NeoOffice unit tests and preserve the both the LibreoOffice"
 	@echo "build and custom NeoOffice code build, execute the following commmand:"
 	@echo ""
-	@echo "  make build.clean_neo_tests"
+	@echo "  $(GNUMAKE) build.clean_neo_tests"
 	@echo ""
 	@echo "To clean only the custom NeoOffice code and preserve the LibreOffice build,"
 	@echo "execute the following commmand:"
 	@echo ""
-	@echo "  make build.clean_neo"
+	@echo "  $(GNUMAKE) build.clean_neo"
 	@echo ""
 	@echo "To completely clean all build files, execute the following command:"
 	@echo ""
-	@echo "  make build.clean_all"
+	@echo "  $(GNUMAKE) build.clean_all"
 	@echo ""
 	@exit 1
