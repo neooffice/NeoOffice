@@ -29,7 +29,7 @@
 #include <vcl/layout.hxx>
 #include <vcl/lstbox.hxx>
 #include <vcl/msgbox.hxx>
-#include <vcl/slider.hxx>
+#include <vcl/scrbar.hxx>
 #include <com/sun/star/document/XExporter.hpp>
 #include <com/sun/star/drawing/XShape.hpp>
 #include <com/sun/star/drawing/XShapes.hpp>
@@ -49,56 +49,56 @@ class ExportDialog : public ModalDialog
 {
 private:
 
-    FltCallDialogParameter&    mrFltCallPara;
+    FltCallDialogParameter& mrFltCallPara;
 
-    const css::uno::Reference< css::uno::XComponentContext >
-                               mxContext;
-    const css::uno::Reference< css::lang::XComponent >&
-                               mxSourceDocument;
+    const com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext >
+        mxContext;
+    const com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >&
+        mxSourceDocument;
 
-    VclPtr<NumericField>       mpMfSizeX;
-    VclPtr<ListBox>            mpLbSizeX;
-    VclPtr<NumericField>       mpMfSizeY;
-    VclPtr<FixedText>          mpFtResolution;
-    VclPtr<NumericField>       mpNfResolution;
-    VclPtr<ListBox>            mpLbResolution;
+    NumericField*       mpMfSizeX;
+    ListBox*            mpLbSizeX;
+    NumericField*       mpMfSizeY;
+    FixedText*          mpFtResolution;
+    NumericField*       mpNfResolution;
+    ListBox*            mpLbResolution;
 
-    VclPtr<VclContainer>       mpColorDepth;
-    VclPtr<ListBox>            mpLbColorDepth;
+    VclContainer*       mpColorDepth;
+    ListBox*            mpLbColorDepth;
 
-    VclPtr<VclContainer>       mpJPGQuality;
-    VclPtr<VclContainer>       mpPNGCompression;
+    VclContainer*       mpJPGQuality;
+    VclContainer*       mpPNGCompression;
 
-    VclPtr<Slider>             mpSbCompression;
-    VclPtr<NumericField>       mpNfCompression;
+    ScrollBar*          mpSbCompression;
+    NumericField*       mpNfCompression;
 
-    VclPtr<VclContainer>       mpMode;
-    VclPtr<CheckBox>           mpCbInterlaced;
+    VclContainer*       mpMode;
+    CheckBox*           mpCbInterlaced;
 
-    VclPtr<VclContainer>       mpBMPCompression;
-    VclPtr<CheckBox>           mpCbRLEEncoding;
+    VclContainer*       mpBMPCompression;
+    CheckBox*           mpCbRLEEncoding;
 
-    VclPtr<VclContainer>       mpDrawingObjects;
-    VclPtr<CheckBox>           mpCbSaveTransparency;
+    VclContainer*       mpDrawingObjects;
+    CheckBox*           mpCbSaveTransparency;
 
-    VclPtr<VclContainer>       mpEncoding;
-    VclPtr<RadioButton>        mpRbBinary;
-    VclPtr<RadioButton>        mpRbText;
+    VclContainer*       mpEncoding;
+    RadioButton*        mpRbBinary;
+    RadioButton*        mpRbText;
 
-    VclPtr<VclContainer>       mpEPSGrid;
-    VclPtr<CheckBox>           mpCbEPSPreviewTIFF;
-    VclPtr<CheckBox>           mpCbEPSPreviewEPSI;
-    VclPtr<RadioButton>        mpRbEPSLevel1;
-    VclPtr<RadioButton>        mpRbEPSLevel2;
-    VclPtr<RadioButton>        mpRbEPSColorFormat1;
-    VclPtr<RadioButton>        mpRbEPSColorFormat2;
-    VclPtr<RadioButton>        mpRbEPSCompressionLZW;
-    VclPtr<RadioButton>        mpRbEPSCompressionNone;
+    VclContainer*       mpEPSGrid;
+    CheckBox*           mpCbEPSPreviewTIFF;
+    CheckBox*           mpCbEPSPreviewEPSI;
+    RadioButton*        mpRbEPSLevel1;
+    RadioButton*        mpRbEPSLevel2;
+    RadioButton*        mpRbEPSColorFormat1;
+    RadioButton*        mpRbEPSColorFormat2;
+    RadioButton*        mpRbEPSCompressionLZW;
+    RadioButton*        mpRbEPSCompressionNone;
 
-    VclPtr<VclContainer>       mpInfo;
-    VclPtr<FixedText>          mpFtEstimatedSize;
+    VclContainer*       mpInfo;
+    FixedText*          mpFtEstimatedSize;
 
-    VclPtr<OKButton>           mpBtnOK;
+    OKButton*           mpBtnOK;
 
     OUString            msEstimatedSizePix1;
     OUString            msEstimatedSizePix2;
@@ -112,10 +112,13 @@ private:
     OUString            ms8BitColorPalette;
     OUString            ms24BitColor;
 
+    Size                maDialogSize;
+
     FilterConfigItem*   mpOptionsItem;
     FilterConfigItem*   mpFilterOptionsItem;
 
     OUString            maExt;
+    OUString            maEstimatedSizeText;
     sal_Int16           mnFormat;
     sal_Int32           mnMaxFilesizeForRealtimePreview;
 
@@ -126,34 +129,37 @@ private:
 #endif	// NO_LIBO_TEMP_STREAM_LEAK_FIX
     Bitmap              maBitmap;
 
-    css::awt::Size      maOriginalSize;     // the original graphic size in 1/100mm
-    css::awt::Size      maSize;             // for vector graphics it always contains the logical size in 1/100mm
+    com::sun::star::awt::Size
+                        maOriginalSize;     // the original graphic size in 1/100mm
+    com::sun::star::awt::Size
+                        maSize;             // for vector graphics it always contains the logical size in 1/100mm
 
-    bool                mbIsPixelFormat;
-    bool                mbExportSelection;
+    bool            mbIsPixelFormat;
+    bool            mbExportSelection;
+    bool            mbPreserveAspectRatio;
 
     sal_Int32           mnInitialResolutionUnit;
 
     // for pixel graphics it always contains the pixel count
-    css::awt::Size      maResolution;       // it always contains the number of pixels per meter
+    com::sun::star::awt::Size
+                        maResolution;       // it always contains the number of pixels per meter
 
-    css::uno::Reference< css::drawing::XShape >
+    com::sun::star::uno::Reference< com::sun::star::drawing::XShape >
                         mxShape;
-    css::uno::Reference< css::drawing::XShapes >
+    com::sun::star::uno::Reference< com::sun::star::drawing::XShapes >
                         mxShapes;
-    css::uno::Reference< css::drawing::XDrawPage >
+    com::sun::star::uno::Reference< com::sun::star::drawing::XDrawPage >
                         mxPage;
 
 
-                        DECL_LINK( UpdateHdl, Button*, void );
-                        DECL_LINK( SelectListBoxHdl, ListBox&, void );
-                        DECL_LINK( SelectHdl, Edit&, void );
-                        DECL_LINK( UpdateHdlMtfSizeX, Edit&, void );
-                        DECL_LINK( UpdateHdlMtfSizeY, Edit&, void );
-                        DECL_LINK( UpdateHdlNfResolution, Edit&, void );
-                        DECL_LINK( SbCompressionUpdateHdl, Slider*, void );
+                        DECL_LINK( UpdateHdl,void* p );
+                        DECL_LINK( UpdateHdlMtfSizeX,void* p );
+                        DECL_LINK( UpdateHdlMtfSizeY,void* p );
+                        DECL_LINK( UpdateHdlNfResolution,void* p );
+                        DECL_LINK( SbCompressionUpdateHdl,void* p );
+                        DECL_LINK( NfCompressionUpdateHdlX,void* p );
 
-                        DECL_LINK( OK, Button*, void );
+                        DECL_LINK( OK, void* p );
 
                         void setupSizeControls();
                         void createFilterOptions();
@@ -161,27 +167,27 @@ private:
                         void updateControls();
 
                         void GetGraphicSource();
-                        void GetGraphicStream();
-                        static Bitmap GetGraphicBitmap( SvStream& rStream );
-                        css::uno::Sequence< css::beans::PropertyValue >
+                        bool GetGraphicStream();
+                        Bitmap GetGraphicBitmap( SvStream& rStream );
+                        ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >
                             GetFilterData( bool bUpdateConfig );
 
                         sal_uInt32 GetRawFileSize() const;
                         bool IsTempExportAvailable() const;
 
-                        css::awt::Size
+                        com::sun::star::awt::Size
                             GetOriginalSize();
 
                         sal_Int32 GetDefaultUnit();
 
 public:
                         ExportDialog( FltCallDialogParameter& rPara,
-                            const css::uno::Reference< css::uno::XComponentContext >& rxContext,
-                            const css::uno::Reference< css::lang::XComponent >& rxSourceDocument,
-                            bool bExportSelection, bool bIsExportVectorFormat );
-                        virtual ~ExportDialog() override;
-                        virtual void dispose() override;
+                            const com::sun::star::uno::Reference< com::sun::star::uno::XComponentContext >& rxContext,
+                                const com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent >& rxSourceDocument,
+                                    bool bExportSelection, bool bIsExportVectorFormat );
+                        virtual ~ExportDialog();
 };
+
 
 
 #endif // INCLUDED_SVTOOLS_SOURCE_FILTER_EXPORTDIALOG_HXX

@@ -46,9 +46,9 @@ MacabHeader::MacabHeader(const sal_Int32 _size, macabfield **_fields)
     fields = new macabfield *[size];
     for(i = 0; i < size; i++)
     {
-        if(_fields[i] == nullptr)
+        if(_fields[i] == NULL)
         {
-            fields[i] = nullptr;
+            fields[i] = NULL;
         }
         else
         {
@@ -69,7 +69,7 @@ MacabHeader::MacabHeader(const sal_Int32 _size, macabfield **_fields)
 MacabHeader::MacabHeader()
 {
     size = 0;
-    fields = nullptr;
+    fields = NULL;
 }
 
 
@@ -158,11 +158,11 @@ OUString MacabHeader::getString(const sal_Int32 i) const
     if(i < size)
 #endif	// USE_JAVA
     {
-        if(fields[i] == nullptr || fields[i]->value == nullptr || CFGetTypeID(fields[i]->value) != CFStringGetTypeID())
+        if(fields[i] == NULL || fields[i]->value == NULL || CFGetTypeID(fields[i]->value) != CFStringGetTypeID())
             return OUString();
         try
         {
-            nRet = CFStringToOUString(static_cast<CFStringRef>(fields[i]->value));
+            nRet = CFStringToOUString( (CFStringRef) fields[i]->value);
         }
         catch(...){ }
     }
@@ -210,9 +210,11 @@ macabfield **MacabHeader::sortRecord(const sal_Int32 _start, const sal_Int32 _le
         sal_Int32 halfLength = floor(_length/2);
         sal_Int32 fp = 0, lp = 0;
         sal_Int32 i;
-        macabfield **firstHalf = sortRecord(_start, halfLength);
-        macabfield **lastHalf = sortRecord(_start+halfLength, _length-halfLength);
+        macabfield **firstHalf = new macabfield *[halfLength];
+        macabfield **lastHalf = new macabfield *[_length - halfLength];
 
+        firstHalf = sortRecord(_start, halfLength);
+        lastHalf = sortRecord(_start+halfLength, _length-halfLength);
         for(i = 0; i < _length; i++)
         {
             if(compareFields(firstHalf[fp],lastHalf[lp]) < 0)
@@ -244,8 +246,6 @@ macabfield **MacabHeader::sortRecord(const sal_Int32 _start, const sal_Int32 _le
         {
             fields = sorted;
         }
-        delete firstHalf;
-        delete lastHalf;
     }
     return sorted;
 }
@@ -262,14 +262,14 @@ sal_Int32 MacabHeader::compareFields(const macabfield *_field1, const macabfield
      */
     if(_field1 == _field2)
         return 0;
-    if(_field1 == nullptr)
+    if(_field1 == NULL)
         return 1;
-    if(_field2 == nullptr)
+    if(_field2 == NULL)
         return -1;
 
     CFComparisonResult result = CFStringCompare(
-        static_cast<CFStringRef>(_field1->value),
-        static_cast<CFStringRef>(_field2->value),
+        (CFStringRef) _field1->value,
+        (CFStringRef) _field2->value,
         0); // 0 = no options (like ignore case)
 
     return (sal_Int32) result;

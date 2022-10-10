@@ -93,7 +93,7 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 		rtl_uString *pMountPackageArgs[ 3 ];
 		pMountPackageArgs[ 0 ] = aMountPackageAttachArg.pData;
 		pMountPackageArgs[ 1 ] = aMountPackagePlistArg.pData;
-		pMountPackageArgs[ 2 ] = nullptr;
+		pMountPackageArgs[ 2 ] = NULL;
 #endif	// MACOSX
 
 		// Remove first batch of package paths. Note that we assume that any
@@ -148,8 +148,8 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 					{
 						pMountPackageArgs[ 2 ] = dit->second.pData;
 
-						oslProcess aProcess = nullptr;
-						if (osl_executeProcess(aMountPackageExeURL.pData, pMountPackageArgs, 3, 0, nullptr, nullptr, nullptr, 0, &aProcess) == osl_Process_E_None)
+						oslProcess aProcess = NULL;
+						if (osl_executeProcess(aMountPackageExeURL.pData, pMountPackageArgs, 3, 0, NULL, NULL, NULL, 0, &aProcess) == osl_Process_E_None)
 							aMountPackageProcessList.push_back(aProcess);
 					}
 				}
@@ -170,7 +170,7 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 #ifdef MACOSX
 			rtl_uString *pArgs[nPaths];
 #else	// MACOSX
-			rtl_uString **pArgs = static_cast< rtl_uString** >(rtl_allocateMemory(nPaths * sizeof(rtl_uString*)));
+			rtl_uString **pArgs = (rtl_uString **)rtl_allocateMemory(nPaths * sizeof(rtl_uString*));
 #endif	// MACOSX
 			sal_uInt32 nCurrentItem = 0;
 			for (std::list< OUString >::const_iterator rit = aPackagePathsRunList.begin(); rit != aPackagePathsRunList.end() && nCurrentItem < nPaths; ++rit)
@@ -179,9 +179,9 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 			// Open a stdin pipe to the subprocess and don't close it and let
 			// it leak to force the subprocess to not run the installers until
 			// after the application has quit
-			oslProcess aProcess = nullptr;
-			oslFileHandle aStdinHandle = nullptr;
-			if (osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, nullptr, nullptr, nullptr, 0, &aProcess, &aStdinHandle, nullptr, nullptr) == osl_Process_E_None)
+			oslProcess aProcess = NULL;
+			oslFileHandle aStdinHandle = NULL;
+			if (osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, NULL, NULL, NULL, 0, &aProcess, &aStdinHandle, NULL, NULL) == osl_Process_E_None)
 			{
 				bJoin = true;
 				osl_freeProcessHandle(aProcess);

@@ -38,7 +38,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-sal_Bool ShellExec_openURL( OUString &rURL );
+sal_Bool ShellExec_openURL( OUString &rURL, sal_Bool bSelectInFinder );
 #endif
 #ifdef __cplusplus
 }

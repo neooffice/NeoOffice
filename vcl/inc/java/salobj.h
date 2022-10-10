@@ -51,7 +51,7 @@ class JavaSalObject : public SalObject
 {
 	Size					maSize;
 	id						mpChildView;
-	tools::Rectangle		maClipRect;
+	Rectangle				maClipRect;
 	sal_Bool				mbInFlush;
 	JavaSalFrame*			mpParent;
 	SystemEnvData			maSysData;
@@ -64,13 +64,16 @@ public:
 	void					Destroy();
 	void					Flush();
 
-	virtual void			ResetClipRegion() override;
-	virtual void			BeginSetClipRegion( sal_uLong nRects ) override;
-	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) override;
-	virtual void			EndSetClipRegion() override;
-	virtual void			SetPosSize( long nX, long nY, long nWidth, long nHeight ) override;
-	virtual void			Show( bool bVisible ) override;
-	virtual const SystemEnvData*	GetSystemData() const override;
+	virtual void			ResetClipRegion() SAL_OVERRIDE;
+	virtual sal_uInt16		GetClipRegionType() SAL_OVERRIDE;
+	virtual void			BeginSetClipRegion( sal_uLong nRects ) SAL_OVERRIDE;
+	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight ) SAL_OVERRIDE;
+	virtual void			EndSetClipRegion() SAL_OVERRIDE;
+	virtual void			SetPosSize( long nX, long nY, long nWidth, long nHeight ) SAL_OVERRIDE;
+	virtual void			Show( bool bVisible ) SAL_OVERRIDE;
+	virtual void			SetBackground() SAL_OVERRIDE;
+	virtual void			SetBackground( SalColor nSalColor ) SAL_OVERRIDE;
+	virtual const SystemEnvData*	GetSystemData() const SAL_OVERRIDE;
 };
 
 #endif // _SV_SALOBJ_H

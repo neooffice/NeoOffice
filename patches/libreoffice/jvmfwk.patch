@@ -1,21 +1,335 @@
---- distributions/OpenOfficeorg/javavendors_macosx.xml	2018-05-09 05:27:29.000000000 -0500
-+++ distributions/OpenOfficeorg/javavendors_macosx.xml	2018-12-30 16:05:42.000000000 -0600
-@@ -20,16 +20,8 @@
-   <updated>2013-04-09</updated>
-   <vendorInfos>
-     <vendor name="Oracle Corporation">
--      <minVersion>1.7.0</minVersion>
--    </vendor>
--    <vendor name="Apple Computer, Inc.">
--      <minVersion>1.5.0</minVersion>
--    </vendor>
--    <vendor name="Apple Inc.">
--      <minVersion>1.5.0</minVersion>
--    </vendor>
--    <vendor name="Azul Systems, Inc.">
--      <minVersion>1.6.0</minVersion>
-+      <minVersion>1.8.0</minVersion>
-+      <maxVersion>1.8.999</maxVersion>
-     </vendor>
-   </vendorInfos>
- </javaSelection>
+--- distributions/OpenOfficeorg/javavendors_macosx.xml	2015-11-25 04:55:38.000000000 -0800
++++ distributions/OpenOfficeorg/javavendors_macosx.xml	2018-05-08 17:18:19.000000000 -0700
+@@ -23,17 +23,9 @@
+  <updated>2013-04-09</updated>
+ 
+  <vendorInfos>
+-  <vendor name="Apple Computer, Inc.">
+-    <minVersion>1.5.0</minVersion>
+-  </vendor>
+- <vendor name="Apple Inc.">
+-  <minVersion>1.5.0</minVersion>
+- </vendor>
+  <vendor name="Oracle Corporation">
+-  <minVersion>1.7.0</minVersion>
+- </vendor>
+- <vendor name="Azul Systems, Inc.">
+-  <minVersion>1.6.0</minVersion>
++  <minVersion>1.8.0</minVersion>
++  <maxVersion>1.8.999</maxVersion>
+  </vendor>
+ </vendorInfos>
+ 
+--- plugins/sunmajor/pluginlib/sunversion.cxx
++++ plugins/sunmajor/pluginlib/sunversion.cxx
+@@ -135,9 +135,9 @@ bool SunVersion::init(const char *szVersion)
+             {
+                 if ( ! isdigit(*pCur))
+                 {
+-                    //1.4.1_01-, 1.4.1_01a, the numerical part may only be 2 chars.
+-                    int len = pCur - pLast;
+-                    if (len > 2)
++                    //1.8.0_102-, 1.8.0_01a,
++                    size_t len = pCur - pLast;
++                    if (len > sizeof(buf) - 1)
+                         return false;
+                     //we've got the update: 01, 02 etc
+                     strncpy(buf, pLast, len);
+--- Library_jvmfwk.mk
++++ Library_jvmfwk.mk
+@@ -54,6 +54,20 @@ $(eval $(call gb_Library_use_externals,jvmfwk,\
+     valgrind \
+ ))
+ 
++ifeq ($(OS),MACOSX)
++$(eval $(call gb_Library_add_cxxflags,jvmfwk,\
++    $(gb_OBJCXXFLAGS) \
++))
++
++$(eval $(call gb_Library_add_objcxxobjects,jvmfwk,\
++    jvmfwk/plugins/sunmajor/pluginlib/util_cocoa \
++))
++
++$(eval $(call gb_Library_add_libs,jvmfwk,\
++    -framework Foundation \
++))
++endif
++
+ $(eval $(call gb_Library_add_exception_objects,jvmfwk,\
+     jvmfwk/plugins/sunmajor/pluginlib/gnujre \
+     jvmfwk/plugins/sunmajor/pluginlib/otherjre \
+--- plugins/sunmajor/pluginlib/sunjavaplugin.cxx
++++ plugins/sunmajor/pluginlib/sunjavaplugin.cxx
+@@ -54,6 +54,10 @@
+ #include "vendorlist.hxx"
+ #include "diagnostics.h"
+ 
++#ifdef MACOSX
++#include "util_cocoa.hxx"
++#endif
++
+ #ifdef ANDROID
+ #include <osl/detail/android-bootstrap.h>
+ #else
+@@ -655,7 +659,16 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
+     //Check if the Vendor (pInfo->sVendor) is supported by this plugin
+     if ( ! isVendorSupported(pInfo->sVendor))
+         return JFW_PLUGIN_E_WRONG_VENDOR;
++#ifdef MACOSX
++    rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( OUString( pInfo->sLocation ) );
++    if ( !aVendorInfo.is() || aVendorInfo->compareVersions( OUString( pInfo->sVersion ) ) < 0 )
++        return JFW_PLUGIN_E_VM_CREATION_FAILED;
++#endif
+     OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
++#ifdef MACOSX
++    if ( !JvmfwkUtil_isLoadableJVM( sRuntimeLib ) )
++        return JFW_PLUGIN_E_VM_CREATION_FAILED;
++#endif
+     JFW_TRACE2("Using Java runtime library: " << sRuntimeLib);
+ 
+ #ifndef ANDROID
+--- plugins/sunmajor/pluginlib/sunjre.cxx
++++ plugins/sunmajor/pluginlib/sunjre.cxx
+@@ -62,7 +62,8 @@ char const* const* SunInfo::getRuntimePaths(int * size)
+         "/bin/server/jvm.dll"
+ #elif defined MACOSX && defined X86_64
+         // Oracle Java 7, under /Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home
+-        "/lib/server/libjvm.dylib"
++        "/lib/server/libjvm.dylib",
++        "/lib/jli/libjli.dylib"
+ #elif defined UNX
+         "/lib/" JFW_PLUGIN_ARCH "/client/libjvm.so",
+         "/lib/" JFW_PLUGIN_ARCH "/server/libjvm.so",
+--- plugins/sunmajor/pluginlib/util.cxx
++++ plugins/sunmajor/pluginlib/util.cxx
+@@ -54,6 +54,9 @@
+ #include "sunjre.hxx"
+ #include "vendorlist.hxx"
+ #include "diagnostics.h"
++#ifdef MACOSX
++#include "util_cocoa.hxx"
++#endif
+ 
+ using namespace osl;
+ using namespace std;
+@@ -403,6 +406,8 @@
+     }
+ 
+ #ifdef MACOSX
++    if (!JvmfwkUtil_isLoadableJVM(exePath))
++        return false;
+     if (sClassPath.endsWith("/"))
+         sClassPath += "../Resources/java/";
+     else
+@@ -1176,17 +1181,34 @@
+     getJREInfoByPath("file:////usr/jdk/latest", vecInfos);
+ }
+ 
+-#elif defined MACOSX && defined X86_64
+-
+-void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
+-{
+-    // Oracle Java 7
+-    getJREInfoByPath("file:///Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home", vecInfos);
+-}
+-
+ #else
+ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
+ {
++#ifdef MACOSX
++    // Ignore all but Oracle's JDK as loading Apple's Java and Oracle's JRE
++    // will cause OS X's JavaVM framework to display a dialog and invoke
++    // exit() when loaded via JNI on OS X 10.10
++    Directory aDir("file:///Library/Java/JavaVirtualMachines");
++    if (aDir.open() == File::E_None)
++    {
++        DirectoryItem aItem;
++        while (aDir.getNextItem(aItem) == File::E_None)
++        {
++            FileStatus aStatus(osl_FileStatus_Mask_FileURL);
++            if (aItem.getFileStatus(aStatus) == File::E_None)
++            {
++                OUString aItemURL( aStatus.getFileURL() );
++                if (aItemURL.getLength())
++                {
++                    aItemURL += "/Contents/Home";
++                    if (DirectoryItem::get(aItemURL, aItem) == File::E_None)
++                        getJREInfoByPath(aItemURL, vecInfos);
++                }
++            }
++        }
++        aDir.close();
++    }
++#else // MACOSX
+     OUString excMessage = "[Java framework] sunjavaplugin: "
+                           "Error in function createJavaInfoDirScan in util.cxx.";
+     int cJavaNames= sizeof(g_arJavaNames) / sizeof(char*);
+@@ -1298,6 +1320,7 @@
+             }
+         }
+     }
++#endif // MACOSX
+ }
+ #endif // ifdef SOLARIS
+ #endif // ifdef UNX
+--- /dev/null	2020-12-17 19:19:58.000000000 -0500
++++ plugins/sunmajor/pluginlib/util_cocoa.hxx	2020-12-17 19:05:21.000000000 -0500
+@@ -0,0 +1,6 @@
++#ifndef __UTIL_COCOA_H__
++#define __UTIL_COCOA_H__
++
++bool JvmfwkUtil_isLoadableJVM( OUString aURL );
++
++#endif
+--- /dev/null	2020-12-17 19:19:58.000000000 -0500
++++ plugins/sunmajor/pluginlib/util_cocoa.mm	2020-12-17 19:05:21.000000000 -0500
+@@ -0,0 +1,129 @@
++#include <rtl/ustring.hxx>
++
++#include <premac.h>
++#import <Foundation/Foundation.h>
++#include <postmac.h>
++
++#import "util_cocoa.hxx"
++
++using namespace rtl;
++
++bool JvmfwkUtil_isLoadableJVM( OUString aURL )
++{
++    bool bRet = false;
++
++    if ( aURL.getLength() )
++    {
++        NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
++
++        NSString *pString = [NSString stringWithCharacters:aURL.getStr() length:aURL.getLength()];
++        if ( pString )
++        {
++            NSURL *pURL = nil;
++
++            // Ignore all but Oracle's JDK as loading Apple's Java and Oracle's
++            // JRE will cause OS X's JavaVM framework to display a dialog and
++            // invoke exit() when loaded via JNI on OS X 10.10
++            NSURL *pTmpURL = [NSURL URLWithString:pString];
++            if ( pTmpURL )
++                pTmpURL = [pTmpURL filePathURL];
++            if ( pTmpURL )
++                pTmpURL = [pTmpURL URLByStandardizingPath];
++            if ( pTmpURL )
++                pTmpURL = [pTmpURL URLByResolvingSymlinksInPath];
++            if ( pTmpURL )
++            {
++                NSURL *pJVMsDirURL = [NSURL URLWithString:@"file:///Library/Java/JavaVirtualMachines/"];
++                if ( pJVMsDirURL )
++                    pJVMsDirURL= [pJVMsDirURL filePathURL];
++                if ( pJVMsDirURL )
++                    pJVMsDirURL = [pJVMsDirURL URLByStandardizingPath];
++                // The JVM directory must not contain softlinks or the JavaVM
++                // framework bug will occur so don't resolve softlinks in the
++                // JVM directory
++                if ( pJVMsDirURL )
++                {
++                    NSString *pTmpURLString = [pTmpURL absoluteString];
++                    NSString *pJVMsDirURLString = [pJVMsDirURL absoluteString];
++                    if ( pTmpURLString && pJVMsDirURLString && [pJVMsDirURLString length] )
++                    {
++                        NSRange aJVMsDirURLRange = [pTmpURLString rangeOfString:pJVMsDirURLString];
++                        if ( !aJVMsDirURLRange.location && aJVMsDirURLRange.length )
++                            pURL = pTmpURL;
++                    }
++                }
++            }
++
++            while ( pURL )
++            {
++                // Check if this is a valid bundle
++                NSNumber *pDir = nil;
++                NSURL *pContentsURL = [pURL URLByAppendingPathComponent:@"Contents"];
++                if ( pContentsURL && [pContentsURL getResourceValue:&pDir forKey:NSURLIsDirectoryKey error:nil] && pDir && [pDir boolValue] )
++                {
++                    NSBundle *pBundle = [NSBundle bundleWithURL:pURL];
++                    if ( pBundle )
++                    {
++                        // Make sure that this bundle's Info.plist has the
++                        // proper JVM keys to supports loading via JNI. If
++                        // this bundle is a valid JVM and these keys
++                        // are missing, loading the JVM will cause OS X's
++                        // JavaVM framework to display a dialog and invoke
++                        // exit() when loaded via JNI on OS X 10.10.
++                        NSDictionary *pInfo = [pBundle infoDictionary];
++                        if ( pInfo )
++                        {
++                            NSDictionary *pJavaVM = [pInfo objectForKey:@"JavaVM"];
++                            if ( pJavaVM && [pJavaVM isKindOfClass:[NSDictionary class]] )
++                            {
++                                NSArray *pJVMCapabilities = [pJavaVM objectForKey:@"JVMCapabilities"];
++                                if ( pJVMCapabilities )
++                                {
++                                    if ( [pJVMCapabilities indexOfObjectIdenticalTo:@"JNI"] == NSNotFound )
++                                    {
++                                        if ( [pJVMCapabilities isKindOfClass:[NSMutableArray class]] )
++                                        {
++                                            [(NSMutableArray *)pJVMCapabilities addObject:@"JNI"];
++                                            bRet = true;
++                                        }
++                                        else if ( [pJavaVM isKindOfClass:[NSMutableDictionary class]] )
++                                        {
++                                            NSMutableArray *pNewJVMCapabilities = [NSMutableArray arrayWithCapacity:[pJVMCapabilities count] + 1];
++                                            if ( pNewJVMCapabilities )
++                                            {
++                                                [pNewJVMCapabilities addObject:@"JNI"];
++                                                [(NSMutableDictionary *)pJavaVM setObject:pNewJVMCapabilities forKey:@"JVMCapabilities"];
++                                                bRet = true;
++                                            }
++                                        }
++                                    }
++                                    else
++                                    {
++                                        bRet = true;
++                                    }
++                                }
++                            }
++                        }
++                    }
++                }
++
++                NSURL *pOldURL = pURL;
++                pURL = [pURL URLByDeletingLastPathComponent];
++                if ( pURL )
++                {
++                    pURL = [pURL URLByStandardizingPath];
++                    if ( pURL )
++                    {
++                        pURL = [pURL URLByResolvingSymlinksInPath];
++                        if ( pURL && [pURL isEqual:pOldURL] )
++                            pURL = nil;
++                    }
++                }
++            }
++        }
++
++        [pPool release];
++    }
++
++    return bRet;
++}
+--- source/framework.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/framework.cxx	2021-05-12 07:31:24.000000000 -0400
+@@ -134,7 +134,7 @@
+                     //the same JRE
+                     it_info it_duplicate =
+                         std::find_if(vecInfoManual.begin(), vecInfoManual.end(),
+-                                std::bind2nd(std::ptr_fun(areEqualJavaInfo), aInfo));
++                                     std::bind(areEqualJavaInfo, std::placeholders::_1, aInfo));
+                     if (it_duplicate == vecInfoManual.end())
+                         vecInfoManual.push_back(aInfo);
+                 }
+@@ -163,7 +163,7 @@
+         {
+             it_info it_duplicate =
+                 std::find_if(vecInfoManual2.begin(), vecInfoManual2.end(),
+-                            std::bind2nd(std::ptr_fun(areEqualJavaInfo), *j));
++                             std::bind(areEqualJavaInfo, std::placeholders::_1, *j));
+             if (it_duplicate != vecInfoManual2.end())
+                 vecInfoManual2.erase(it_duplicate);
+         }

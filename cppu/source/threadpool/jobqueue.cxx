@@ -47,9 +47,17 @@ namespace cppu_threadpool {
     JobQueue::JobQueue() :
         m_nToDo( 0 ),
         m_bSuspended( false ),
-        m_DisposedCallerAdmin( DisposedCallerAdmin::getInstance() )
+        m_cndWait( osl_createCondition() )
     {
+        osl_resetCondition( m_cndWait );
+        m_DisposedCallerAdmin = DisposedCallerAdmin::getInstance();
     }
+
+    JobQueue::~JobQueue()
+    {
+        osl_destroyCondition( m_cndWait );
+    }
+
 
     void JobQueue::add( void *pThreadSpecificData, RequestFun * doRequest )
     {
@@ -58,20 +66,20 @@ namespace cppu_threadpool {
         m_lstJob.push_back( job );
         if( ! m_bSuspended )
         {
-            m_cndWait.set();
+            osl_setCondition( m_cndWait );
         }
         m_nToDo ++;
     }
 
     void *JobQueue::enter( sal_Int64 nDisposeId , bool bReturnWhenNoJob )
     {
-        void *pReturn = nullptr;
+        void *pReturn = 0;
         {
             // synchronize with the dispose calls
             MutexGuard guard( m_mutex );
             if( m_DisposedCallerAdmin->isDisposed( nDisposeId ) )
             {
-                return nullptr;
+                return 0;
             }
             m_lstCallstack.push_front( nDisposeId );
         }
@@ -81,8 +89,8 @@ namespace cppu_threadpool {
         // Fix deadlocks when using Java or Python-based extensions, such as
         // cadlo, immediately after installation:
         // https://extensions.libreoffice.org/extensions/cadlo
-        Application_acquireAllSolarMutexFunc *pAcquireAllFunc = reinterpret_cast< Application_acquireAllSolarMutexFunc* >( dlsym( RTLD_DEFAULT, "Application_acquireAllSolarMutex" ) );
-        Application_releaseAllSolarMutexFunc *pReleaseAllFunc = reinterpret_cast< Application_releaseAllSolarMutexFunc* >( dlsym( RTLD_DEFAULT, "Application_releaseAllSolarMutex" ) );
+        Application_acquireAllSolarMutexFunc *pAcquireAllFunc = (Application_acquireAllSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireAllSolarMutex" );
+        Application_releaseAllSolarMutexFunc *pReleaseAllFunc = (Application_releaseAllSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseAllSolarMutex" );
 #endif  // USE_JAVA && MACOSX
 
         while( true )
@@ -101,13 +109,13 @@ namespace cppu_threadpool {
             if ( pAcquireAllFunc && pReleaseAllFunc )
                 nCount = pReleaseAllFunc();
 #endif  // USE_JAVA && MACOSX
-            m_cndWait.wait();
+            osl_waitCondition( m_cndWait , 0 );
 #if defined USE_JAVA && defined MACOSX
             if ( pAcquireAllFunc && pReleaseAllFunc )
                 pAcquireAllFunc( nCount );
 #endif  // USE_JAVA && MACOSX
 
-            struct Job job={nullptr,nullptr};
+            struct Job job={0,0};
             {
                 // synchronize with add and dispose calls
                 MutexGuard guard( m_mutex );
@@ -119,7 +127,7 @@ namespace cppu_threadpool {
                         && (m_lstCallstack.empty()
                             || m_lstCallstack.front() != 0) )
                     {
-                        m_cndWait.reset();
+                        osl_resetCondition( m_cndWait );
                     }
                     break;
                 }
@@ -133,7 +141,7 @@ namespace cppu_threadpool {
                 if( m_lstJob.empty()
                     && (m_lstCallstack.empty() || m_lstCallstack.front() != 0) )
                 {
-                    m_cndWait.reset();
+                    osl_resetCondition( m_cndWait );
                 }
             }
 
@@ -164,7 +172,7 @@ namespace cppu_threadpool {
     void JobQueue::dispose( sal_Int64 nDisposeId )
     {
         MutexGuard guard( m_mutex );
-        for( auto ii = m_lstCallstack.begin() ;
+        for( CallStackList::iterator ii = m_lstCallstack.begin() ;
              ii != m_lstCallstack.end() ;
              ++ii )
         {
@@ -177,7 +185,7 @@ namespace cppu_threadpool {
         if( !m_lstCallstack.empty()  && ! m_lstCallstack.front() )
         {
             // The thread is waiting for a disposed pCallerId, let it go
-            m_cndWait.set();
+            osl_setCondition( m_cndWait );
         }
     }
 
@@ -193,7 +201,7 @@ namespace cppu_threadpool {
         m_bSuspended = false;
         if( ! m_lstJob.empty() )
         {
-            m_cndWait.set();
+            osl_setCondition( m_cndWait );
         }
     }
 

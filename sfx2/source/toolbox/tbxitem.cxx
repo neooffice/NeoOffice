@@ -25,7 +25,7 @@
  */
 
 
-#ifdef __sun
+#ifdef SOLARIS
 #include <ctime>
 #endif
 
@@ -73,17 +73,18 @@
 #include <framework/sfxhelperfunctions.hxx>
 #include <vcl/taskpanelist.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
-#include <tools/globname.hxx>
 #include <svtools/menuoptions.hxx>
 #include <svtools/miscopt.hxx>
 
 #include <sfx2/tbxctrl.hxx>
+#include <sfx2/mnumgr.hxx>
 #include <sfx2/dispatch.hxx>
 #include <sfx2/msg.hxx>
 #include <sfx2/msgpool.hxx>
 #include "statcach.hxx"
 #include <sfx2/viewfrm.hxx>
 #include "sfxtypes.hxx"
+#include <sfx2/genlink.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/sfx.hrc>
 #include <sfx2/module.hxx>
@@ -94,7 +95,9 @@
 #include <sfx2/unoctitm.hxx>
 #include "helpid.hrc"
 #include "workwin.hxx"
-#include <ctrlfactoryimpl.hxx>
+#include <sfx2/imgmgr.hxx>
+#include "virtmenu.hxx"
+#include <sfx2/imagemgr.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
@@ -107,7 +110,9 @@ using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::ui;
 
 
+
 SFX_IMPL_TOOLBOX_CONTROL_ARG(SfxToolBoxControl, SfxStringItem, true);
+SFX_IMPL_TOOLBOX_CONTROL(SfxRecentFilesToolBoxControl, SfxStringItem);
 
 static vcl::Window* GetTopMostParentSystemWindow( vcl::Window* pWindow )
 {
@@ -117,7 +122,7 @@ static vcl::Window* GetTopMostParentSystemWindow( vcl::Window* pWindow )
         // ->manually search topmost system window
         // required because their might be another system window between this and the top window
         pWindow = pWindow->GetParent();
-        SystemWindow* pTopMostSysWin = nullptr;
+        SystemWindow* pTopMostSysWin = NULL;
         while ( pWindow )
         {
             if ( pWindow->IsSystemWindow() )
@@ -129,7 +134,7 @@ static vcl::Window* GetTopMostParentSystemWindow( vcl::Window* pWindow )
         return pWindow;
     }
 
-    return nullptr;
+    return NULL;
 }
 
 svt::ToolboxController* SAL_CALL SfxToolBoxControllerFactory( const Reference< XFrame >& rFrame, ToolBox* pToolbox, unsigned short nID, const OUString& aCommandURL )
@@ -141,9 +146,9 @@ svt::ToolboxController* SAL_CALL SfxToolBoxControllerFactory( const Reference< X
     Reference < XURLTransformer > xTrans( URLTransformer::create( ::comphelper::getProcessComponentContext() ) );
     xTrans->parseStrict( aTargetURL );
     if ( !aTargetURL.Arguments.isEmpty() )
-        return nullptr;
+        return NULL;
 
-    SfxObjectShell* pObjShell = nullptr;
+    SfxObjectShell* pObjShell = NULL;
     Reference < XController > xController;
     Reference < XModel > xModel;
     if ( rFrame.is() )
@@ -156,23 +161,23 @@ svt::ToolboxController* SAL_CALL SfxToolBoxControllerFactory( const Reference< X
     if ( xModel.is() )
     {
         // Get tunnel from model to retrieve the SfxObjectShell pointer from it
-        css::uno::Reference < css::lang::XUnoTunnel > xObj( xModel, UNO_QUERY );
+        ::com::sun::star::uno::Reference < ::com::sun::star::lang::XUnoTunnel > xObj( xModel, UNO_QUERY );
         if ( xObj.is() )
         {
-            css::uno::Sequence < sal_Int8 > aSeq = SvGlobalName( SFX_GLOBAL_CLASSID ).GetByteSequence();
+            ::com::sun::star::uno::Sequence < sal_Int8 > aSeq = SvGlobalName( SFX_GLOBAL_CLASSID ).GetByteSequence();
             sal_Int64 nHandle = xObj->getSomething( aSeq );
             if ( nHandle )
                 pObjShell = reinterpret_cast< SfxObjectShell* >( sal::static_int_cast< sal_IntPtr >( nHandle ));
         }
     }
 
-    SfxModule*     pModule   = pObjShell ? pObjShell->GetModule() : nullptr;
-    SfxSlotPool*   pSlotPool = nullptr;
+    SfxModule*     pModule   = pObjShell ? pObjShell->GetModule() : NULL;
+    SfxSlotPool*   pSlotPool = 0;
 
     if ( pModule )
         pSlotPool = pModule->GetSlotPool();
     else
-        pSlotPool = &(SfxSlotPool::GetSlotPool());
+        pSlotPool = &(SfxSlotPool::GetSlotPool( NULL ));
 
     const SfxSlot* pSlot = pSlotPool->GetUnoSlot( aTargetURL.Path );
     if ( pSlot )
@@ -182,34 +187,42 @@ svt::ToolboxController* SAL_CALL SfxToolBoxControllerFactory( const Reference< X
             return SfxToolBoxControl::CreateControl( nSlotId, nID, pToolbox, pModule );
     }
 
-    return nullptr;
+    return NULL;
 }
 
 struct SfxToolBoxControl_Impl
 {
-    VclPtr<ToolBox>         pBox;
+    ToolBox*                pBox;
     bool                    bShowString;
     SfxTbxCtrlFactory*      pFact;
     sal_uInt16              nTbxId;
     sal_uInt16              nSlotId;
-    VclPtr<SfxPopupWindow>  mpFloatingWindow;
-    VclPtr<SfxPopupWindow>  mpPopupWindow;
-    DECL_LINK( WindowEventListener, VclWindowEvent&, void );
+    SfxPopupWindow*         mpFloatingWindow;
+    SfxPopupWindow*         mpPopupWindow;
+    Reference< XUIElement > mxUIElement;
+
+    DECL_LINK( WindowEventListener, VclSimpleEvent* );
 };
 
-IMPL_LINK( SfxToolBoxControl_Impl, WindowEventListener, VclWindowEvent&, rEvent, void )
+IMPL_LINK( SfxToolBoxControl_Impl, WindowEventListener, VclSimpleEvent*, pEvent )
 {
-    if ( ( rEvent.GetId() == VclEventId::WindowMove ) ||
-         ( rEvent.GetId() == VclEventId::WindowActivate ))
+    if ( pEvent &&
+         pEvent->ISA( VclWindowEvent ) &&
+         (( pEvent->GetId() == VCLEVENT_WINDOW_MOVE ) ||
+          ( pEvent->GetId() == VCLEVENT_WINDOW_ACTIVATE )))
     {
-        vcl::Window* pWindow( rEvent.GetWindow() );
+        vcl::Window* pWindow( static_cast<VclWindowEvent*>(pEvent)->GetWindow() );
         if (( pWindow == mpFloatingWindow ) &&
-            ( mpPopupWindow != nullptr ))
+            ( mpPopupWindow != 0 ))
         {
-            mpPopupWindow.disposeAndClear();
+            delete mpPopupWindow;
+            mpPopupWindow = 0;
         }
     }
+
+    return 1;
 }
+
 
 
 SfxToolBoxControl::SfxToolBoxControl(
@@ -217,21 +230,31 @@ SfxToolBoxControl::SfxToolBoxControl(
     sal_uInt16      nID,
     ToolBox&        rBox,
     bool            bShowStringItems     )
-    : pImpl( new SfxToolBoxControl_Impl )
 {
+    pImpl = new SfxToolBoxControl_Impl;
+
     pImpl->pBox = &rBox;
     pImpl->bShowString = bShowStringItems;
-    pImpl->pFact = nullptr;
+    pImpl->pFact = 0;
     pImpl->nTbxId = nID;
     pImpl->nSlotId = nSlotID;
-    pImpl->mpFloatingWindow = nullptr;
-    pImpl->mpPopupWindow = nullptr;
+    pImpl->mpFloatingWindow = 0;
+    pImpl->mpPopupWindow = 0;
 }
+
 
 
 SfxToolBoxControl::~SfxToolBoxControl()
 {
+    if ( pImpl->mxUIElement.is() )
+    {
+        Reference< XComponent > xComponent( pImpl->mxUIElement, UNO_QUERY );
+        xComponent->dispose();
+    }
+    pImpl->mxUIElement = 0;
+    delete pImpl;
 }
+
 
 
 ToolBox& SfxToolBoxControl::GetToolBox() const
@@ -248,7 +271,8 @@ unsigned short SfxToolBoxControl::GetSlotId() const
 }
 
 
-void SAL_CALL SfxToolBoxControl::dispose()
+
+void SAL_CALL SfxToolBoxControl::dispose() throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     if ( m_bDisposed )
         return;
@@ -257,19 +281,34 @@ void SAL_CALL SfxToolBoxControl::dispose()
 
     // Remove and destroy our item window at our toolbox
     SolarMutexGuard aGuard;
-    VclPtr< vcl::Window > pWindow = pImpl->pBox->GetItemWindow( pImpl->nTbxId );
-    pImpl->pBox->SetItemWindow( pImpl->nTbxId, nullptr );
-    pWindow.disposeAndClear();
+    vcl::Window* pWindow = pImpl->pBox->GetItemWindow( pImpl->nTbxId );
+    pImpl->pBox->SetItemWindow( pImpl->nTbxId, 0 );
+    delete pWindow;
+
+    // Dispose an open sub toolbar. It's possible that we have an open
+    // sub toolbar while we get disposed. Therefore we have to dispose
+    // it now! Not doing so would result in a crash. The sub toolbar
+    // gets destroyed asynchronously and would access a non-existing
+    // parent toolbar!
+    if ( pImpl->mxUIElement.is() )
+    {
+        Reference< XComponent > xComponent( pImpl->mxUIElement, UNO_QUERY );
+        xComponent->dispose();
+    }
+    pImpl->mxUIElement = 0;
 
     // Delete my popup windows
-    pImpl->mpFloatingWindow.disposeAndClear();
-    pImpl->mpPopupWindow.disposeAndClear();
+    delete pImpl->mpFloatingWindow;
+    delete pImpl->mpPopupWindow;
+
+    pImpl->mpFloatingWindow = 0;
+    pImpl->mpPopupWindow = 0;
 }
 
 
-void SfxToolBoxControl::RegisterToolBoxControl( SfxModule* pMod, const SfxTbxCtrlFactory& rFact)
+void SfxToolBoxControl::RegisterToolBoxControl( SfxModule* pMod, SfxTbxCtrlFactory* pFact)
 {
-    SfxGetpApp()->RegisterToolBoxControl_Impl( pMod, rFact );
+    SfxGetpApp()->RegisterToolBoxControl_Impl( pMod, pFact );
 }
 
 SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uInt16 nTbxId, ToolBox *pBox, SfxModule* pMod  )
@@ -283,7 +322,7 @@ SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uIn
         pSlotPool = pMod->GetSlotPool();
     else
         pSlotPool = &SfxSlotPool::GetSlotPool();
-    const std::type_info* aSlotType = pSlotPool->GetSlotType( nSlotId );
+    TypeId aSlotType = pSlotPool->GetSlotType( nSlotId );
     if ( aSlotType )
     {
         SfxToolBoxControl *pCtrl;
@@ -298,7 +337,7 @@ SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uIn
 
                 // search for a factory with the given slot id
                 for( nFactory = 0; nFactory < nCount; ++nFactory )
-                    if( (rFactories[nFactory].nTypeId == *aSlotType) && (rFactories[nFactory].nSlotId == nSlotId) )
+                    if( (rFactories[nFactory].nTypeId == aSlotType) && (rFactories[nFactory].nSlotId == nSlotId) )
                         break;
 
                 if( nFactory == nCount )
@@ -306,7 +345,7 @@ SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uIn
                     // if no factory exists for the given slot id, see if we
                     // have a generic factory with the correct slot type and slot id == 0
                     for ( nFactory = 0; nFactory < nCount; ++nFactory )
-                        if( (rFactories[nFactory].nTypeId == *aSlotType) && (rFactories[nFactory].nSlotId == 0) )
+                        if( (rFactories[nFactory].nTypeId == aSlotType) && (rFactories[nFactory].nSlotId == 0) )
                             break;
                 }
 
@@ -324,7 +363,7 @@ SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uIn
         const sal_uInt16 nCount = rFactories.size();
 
         for( nFactory = 0; nFactory < nCount; ++nFactory )
-            if( (rFactories[nFactory].nTypeId == *aSlotType) && (rFactories[nFactory].nSlotId == nSlotId) )
+            if( (rFactories[nFactory].nTypeId == aSlotType) && (rFactories[nFactory].nSlotId == nSlotId) )
                 break;
 
         if( nFactory == nCount )
@@ -332,7 +371,7 @@ SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uIn
             // if no factory exists for the given slot id, see if we
             // have a generic factory with the correct slot type and slot id == 0
             for( nFactory = 0; nFactory < nCount; ++nFactory )
-                if( (rFactories[nFactory].nTypeId == *aSlotType) && (rFactories[nFactory].nSlotId == 0) )
+                if( (rFactories[nFactory].nTypeId == aSlotType) && (rFactories[nFactory].nSlotId == 0) )
                     break;
         }
 
@@ -344,7 +383,7 @@ SfxToolBoxControl* SfxToolBoxControl::CreateControl( sal_uInt16 nSlotId, sal_uIn
         }
     }
 
-    return nullptr;
+    return NULL;
 }
 
 SfxItemState SfxToolBoxControl::GetItemState(
@@ -381,7 +420,7 @@ SfxItemState SfxToolBoxControl::GetItemState(
                 ? SfxItemState::DISABLED
                 : IsInvalidItem(pState)
                     ? SfxItemState::DONTCARE
-                    : pState->IsVoidItem() && !pState->Which()
+                    : pState->ISA(SfxVoidItem) && !pState->Which()
                         ? SfxItemState::UNKNOWN
                         : SfxItemState::DEFAULT;
 }
@@ -393,7 +432,7 @@ void SfxToolBoxControl::Dispatch(
 {
     if ( rProvider.is() )
     {
-        css::util::URL aTargetURL;
+        ::com::sun::star::util::URL aTargetURL;
         aTargetURL.Complete = rCommand;
         Reference < XURLTransformer > xTrans( URLTransformer::create( ::comphelper::getProcessComponentContext() ) );
         xTrans->parseStrict( aTargetURL );
@@ -418,7 +457,7 @@ void SfxToolBoxControl::Dispatch(
     }
 }
 
-void SfxToolBoxControl::Dispatch( const OUString& aCommand, css::uno::Sequence< css::beans::PropertyValue >& aArgs )
+void SfxToolBoxControl::Dispatch( const OUString& aCommand, ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aArgs )
 {
     Reference < XController > xController;
 
@@ -429,7 +468,7 @@ void SfxToolBoxControl::Dispatch( const OUString& aCommand, css::uno::Sequence< 
     Reference < XDispatchProvider > xProvider( xController, UNO_QUERY );
     if ( xProvider.is() )
     {
-        css::util::URL aTargetURL;
+        ::com::sun::star::util::URL aTargetURL;
         aTargetURL.Complete = aCommand;
         getURLTransformer()->parseStrict( aTargetURL );
 
@@ -453,10 +492,17 @@ void SfxToolBoxControl::Dispatch( const OUString& aCommand, css::uno::Sequence< 
     }
 }
 
+void SAL_CALL SfxToolBoxControl::disposing( const ::com::sun::star::lang::EventObject& aEvent )
+throw( ::com::sun::star::uno::RuntimeException, std::exception )
+{
+    svt::ToolboxController::disposing( aEvent );
+}
+
 // XStatusListener
 void SAL_CALL SfxToolBoxControl::statusChanged( const FeatureStateEvent& rEvent )
+throw ( ::com::sun::star::uno::RuntimeException, std::exception )
 {
-    SfxViewFrame* pViewFrame = nullptr;
+    SfxViewFrame* pViewFrame = NULL;
     Reference < XController > xController;
 
     SolarMutexGuard aGuard;
@@ -470,7 +516,7 @@ void SAL_CALL SfxToolBoxControl::statusChanged( const FeatureStateEvent& rEvent 
         if ( xDisp.is() )
         {
             Reference< XUnoTunnel > xTunnel( xDisp, UNO_QUERY );
-            SfxOfficeDispatch* pDisp = nullptr;
+            SfxOfficeDispatch* pDisp = NULL;
             if ( xTunnel.is() )
             {
                 sal_Int64 nImplementation = xTunnel->getSomething(SfxOfficeDispatch::impl_getStaticIdentifier());
@@ -497,42 +543,42 @@ void SAL_CALL SfxToolBoxControl::statusChanged( const FeatureStateEvent& rEvent 
         else
         {
             SfxItemState eState = SfxItemState::DISABLED;
-            SfxPoolItem* pItem = nullptr;
+            SfxPoolItem* pItem = NULL;
             if ( rEvent.IsEnabled )
             {
                 eState = SfxItemState::DEFAULT;
-                css::uno::Type aType = rEvent.State.getValueType();
+                ::com::sun::star::uno::Type pType = rEvent.State.getValueType();
 
-                if ( aType == cppu::UnoType<void>::get() )
+                if ( pType == ::getVoidCppuType() )
                 {
                     pItem = new SfxVoidItem( nSlotId );
                     eState = SfxItemState::UNKNOWN;
                 }
-                else if ( aType == cppu::UnoType<bool>::get() )
+                else if ( pType == ::getBooleanCppuType() )
                 {
                     bool bTemp = false;
                     rEvent.State >>= bTemp ;
                     pItem = new SfxBoolItem( nSlotId, bTemp );
                 }
-                else if ( aType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
+                else if ( pType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
                 {
                     sal_uInt16 nTemp = 0;
                     rEvent.State >>= nTemp ;
                     pItem = new SfxUInt16Item( nSlotId, nTemp );
                 }
-                else if ( aType == cppu::UnoType<sal_uInt32>::get() )
+                else if ( pType == cppu::UnoType<sal_uInt32>::get() )
                 {
                     sal_uInt32 nTemp = 0;
                     rEvent.State >>= nTemp ;
                     pItem = new SfxUInt32Item( nSlotId, nTemp );
                 }
-                else if ( aType == cppu::UnoType<OUString>::get() )
+                else if ( pType == cppu::UnoType<OUString>::get() )
                 {
                     OUString sTemp ;
                     rEvent.State >>= sTemp ;
                     pItem = new SfxStringItem( nSlotId, sTemp );
                 }
-                else if ( aType == cppu::UnoType< css::frame::status::ItemStatus>::get() )
+                else if ( pType == cppu::UnoType< ::com::sun::star::frame::status::ItemStatus>::get() )
                 {
                     ItemStatus aItemStatus;
                     rEvent.State >>= aItemStatus;
@@ -541,11 +587,11 @@ void SAL_CALL SfxToolBoxControl::statusChanged( const FeatureStateEvent& rEvent 
                     if (tmpState != SfxItemState::UNKNOWN && tmpState != SfxItemState::DISABLED &&
                         tmpState != SfxItemState::READONLY && tmpState != SfxItemState::DONTCARE &&
                         tmpState != SfxItemState::DEFAULT && tmpState != SfxItemState::SET)
-                        throw css::uno::RuntimeException("unknown status");
+                        throw ::com::sun::star::uno::RuntimeException("unknown status");
                     eState = tmpState;
                     pItem = new SfxVoidItem( nSlotId );
                 }
-                else if ( aType == cppu::UnoType< css::frame::status::Visibility>::get() )
+                else if ( pType == cppu::UnoType< ::com::sun::star::frame::status::Visibility>::get() )
                 {
                     Visibility aVisibilityStatus;
                     rEvent.State >>= aVisibilityStatus;
@@ -558,7 +604,7 @@ void SAL_CALL SfxToolBoxControl::statusChanged( const FeatureStateEvent& rEvent 
                     if ( pItem )
                     {
                         pItem->SetWhich( nSlotId );
-                        pItem->PutValue( rEvent.State, 0 );
+                        pItem->PutValue( rEvent.State );
                     }
                     else
                         pItem = new SfxVoidItem( nSlotId );
@@ -571,40 +617,273 @@ void SAL_CALL SfxToolBoxControl::statusChanged( const FeatureStateEvent& rEvent 
     }
 }
 
+// XSubToolbarController
+sal_Bool SAL_CALL SfxToolBoxControl::opensSubToolbar() throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    return sal_False;
+}
+
+OUString SAL_CALL SfxToolBoxControl::getSubToolbarName() throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    return OUString();
+}
+
+void SAL_CALL SfxToolBoxControl::functionSelected( const OUString& /*aCommand*/ ) throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    // must be implemented by sub-class
+}
+
+void SAL_CALL SfxToolBoxControl::updateImage() throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    // must be implemented by sub-class
+}
+
 // XToolbarController
-void SAL_CALL SfxToolBoxControl::execute( sal_Int16 KeyModifier )
+void SAL_CALL SfxToolBoxControl::execute( sal_Int16 KeyModifier ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
     Select( (sal_uInt16)KeyModifier );
 }
 
-void SAL_CALL SfxToolBoxControl::click()
+void SAL_CALL SfxToolBoxControl::click() throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
     Click();
 }
 
-void SAL_CALL SfxToolBoxControl::doubleClick()
+void SAL_CALL SfxToolBoxControl::doubleClick() throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
     DoubleClick();
 }
 
-Reference< css::awt::XWindow > SAL_CALL SfxToolBoxControl::createPopupWindow()
+Reference< ::com::sun::star::awt::XWindow > SAL_CALL SfxToolBoxControl::createPopupWindow() throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
-    VclPtr<vcl::Window> pWindow = CreatePopupWindow();
+    vcl::Window* pWindow = CreatePopupWindow();
     if ( pWindow )
         return VCLUnoHelper::GetInterface( pWindow );
     else
-        return Reference< css::awt::XWindow >();
+        return Reference< ::com::sun::star::awt::XWindow >();
 }
 
-Reference< css::awt::XWindow > SAL_CALL SfxToolBoxControl::createItemWindow( const Reference< css::awt::XWindow >& rParent )
+Reference< ::com::sun::star::awt::XWindow > SAL_CALL SfxToolBoxControl::createItemWindow( const Reference< ::com::sun::star::awt::XWindow >& rParent ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aGuard;
     return VCLUnoHelper::GetInterface( CreateItemWindow( VCLUnoHelper::GetWindow( rParent )));
 }
+
+// XDockableWindowListener
+void SAL_CALL SfxToolBoxControl::startDocking( const ::com::sun::star::awt::DockingEvent& )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+}
+::com::sun::star::awt::DockingData SAL_CALL SfxToolBoxControl::docking( const ::com::sun::star::awt::DockingEvent& )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    return ::com::sun::star::awt::DockingData();
+}
+
+void SAL_CALL SfxToolBoxControl::endDocking( const ::com::sun::star::awt::EndDockingEvent& )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+}
+
+sal_Bool SAL_CALL SfxToolBoxControl::prepareToggleFloatingMode( const ::com::sun::star::lang::EventObject& )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    return sal_False;
+}
+
+void SAL_CALL SfxToolBoxControl::toggleFloatingMode( const ::com::sun::star::lang::EventObject& )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+}
+
+void SAL_CALL SfxToolBoxControl::closed( const ::com::sun::star::lang::EventObject& )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+}
+
+void SAL_CALL SfxToolBoxControl::endPopupMode( const ::com::sun::star::awt::EndPopupModeEvent& aEvent )
+throw (::com::sun::star::uno::RuntimeException, std::exception)
+{
+    SolarMutexGuard aGuard;
+
+    OUString aSubToolBarResName;
+    if ( pImpl->mxUIElement.is() )
+    {
+        Reference< XPropertySet > xPropSet( pImpl->mxUIElement, UNO_QUERY );
+        if ( xPropSet.is() )
+        {
+            try
+            {
+                xPropSet->getPropertyValue("ResourceURL") >>= aSubToolBarResName;
+            }
+            catch ( com::sun::star::beans::UnknownPropertyException& )
+            {
+            }
+            catch ( com::sun::star::lang::WrappedTargetException& )
+            {
+            }
+        }
+
+        Reference< XComponent > xComponent( pImpl->mxUIElement, UNO_QUERY );
+        xComponent->dispose();
+    }
+    pImpl->mxUIElement = 0;
+
+    // if the toolbar was teared-off recreate it and place it at the given position
+    if( aEvent.bTearoff )
+    {
+        Reference< XUIElement >     xUIElement;
+        Reference< XLayoutManager > xLayoutManager = getLayoutManager();
+
+        if ( !xLayoutManager.is() )
+            return;
+
+        xLayoutManager->createElement( aSubToolBarResName );
+        xUIElement = xLayoutManager->getElement( aSubToolBarResName );
+        if ( xUIElement.is() )
+        {
+            Reference< ::com::sun::star::awt::XWindow > xParent = getFrameInterface()->getContainerWindow();
+
+            Reference< ::com::sun::star::awt::XWindow > xSubToolBar( xUIElement->getRealInterface(), UNO_QUERY );
+            Reference< ::com::sun::star::beans::XPropertySet > xProp( xUIElement, UNO_QUERY );
+            if ( xSubToolBar.is() && xProp.is() )
+            {
+                OUString aPersistentString( "Persistent" );
+                try
+                {
+                    vcl::Window*  pTbxWindow = VCLUnoHelper::GetWindow( xSubToolBar );
+                    if ( pTbxWindow && pTbxWindow->GetType() == WINDOW_TOOLBOX )
+                    {
+                        Any a;
+                        a = xProp->getPropertyValue( aPersistentString );
+                        xProp->setPropertyValue( aPersistentString, makeAny( sal_False ));
+
+                        xLayoutManager->hideElement( aSubToolBarResName );
+                        xLayoutManager->floatWindow( aSubToolBarResName );
+
+                        xLayoutManager->setElementPos( aSubToolBarResName, aEvent.FloatingPosition );
+                        xLayoutManager->showElement( aSubToolBarResName );
+
+                        xProp->setPropertyValue("Persistent", a );
+                    }
+                }
+                catch ( ::com::sun::star::uno::RuntimeException& )
+                {
+                    throw;
+                }
+                catch ( ::com::sun::star::uno::Exception& )
+                {
+                }
+            }
+        }
+    }
+}
+
+::Size  SfxToolBoxControl::getPersistentFloatingSize( const Reference< XFrame >& /*xFrame*/, const OUString& /*rSubToolBarResName*/ )
+{
+    ::Size  aToolboxSize;
+    return aToolboxSize;
+}
+
+bool SfxToolBoxControl::hasBigImages() const
+{
+    return (GetToolBox().GetToolboxButtonSize() == TOOLBOX_BUTTONSIZE_LARGE);
+}
+
+void SfxToolBoxControl::createAndPositionSubToolBar( const OUString& rSubToolBarResName )
+{
+    SolarMutexGuard aGuard;
+
+    if ( pImpl->pBox )
+    {
+        static WeakReference< XUIElementFactoryManager > xWeakUIElementFactory;
+
+        sal_uInt16 nItemId = pImpl->pBox->GetDownItemId();
+
+        if ( !nItemId )
+            return;
+
+        // create element with factory
+        Reference< XFrame >                 xFrame          = getFrameInterface();
+        Reference< XUIElement >             xUIElement;
+        Reference< XUIElementFactoryManager >  xUIElementFactory;
+
+        xUIElementFactory = xWeakUIElementFactory;
+        if ( !xUIElementFactory.is() )
+        {
+            xUIElementFactory = theUIElementFactoryManager::get( m_xContext );
+            xWeakUIElementFactory = xUIElementFactory;
+        }
+
+        Sequence< PropertyValue > aPropSeq( 3 );
+        aPropSeq[0].Name = "Frame";
+        aPropSeq[0].Value <<= xFrame;
+        aPropSeq[1].Name = "Persistent";
+        aPropSeq[1].Value <<= sal_False;
+        aPropSeq[2].Name = "PopupMode";
+        aPropSeq[2].Value <<= sal_True;
+
+        try
+        {
+            xUIElement = xUIElementFactory->createUIElement( rSubToolBarResName, aPropSeq );
+        }
+        catch ( ::com::sun::star::container::NoSuchElementException& )
+        {
+        }
+        catch ( IllegalArgumentException& )
+        {
+        }
+
+        if ( xUIElement.is() )
+        {
+            Reference< ::com::sun::star::awt::XWindow > xParent = getFrameInterface()->getContainerWindow();
+
+            Reference< ::com::sun::star::awt::XWindow > xSubToolBar( xUIElement->getRealInterface(), UNO_QUERY );
+            if ( xSubToolBar.is() )
+            {
+                Reference< ::com::sun::star::awt::XDockableWindow > xDockWindow( xSubToolBar, UNO_QUERY );
+                xDockWindow->addDockableWindowListener( Reference< ::com::sun::star::awt::XDockableWindowListener >(
+                    static_cast< OWeakObject * >( this ), UNO_QUERY ));
+                xDockWindow->enableDocking( sal_True );
+
+                // keep refererence to UIElement to avoid its destruction
+                if ( pImpl->mxUIElement.is() )
+                {
+                    Reference< XComponent > xComponent( pImpl->mxUIElement, UNO_QUERY );
+                    xComponent->dispose();
+                }
+                pImpl->mxUIElement = xUIElement;
+
+                vcl::Window*  pTbxWindow = VCLUnoHelper::GetWindow( xSubToolBar );
+                ToolBox* pToolBar( 0 );
+                if ( pTbxWindow && pTbxWindow->GetType() == WINDOW_TOOLBOX )
+                    pToolBar = static_cast<ToolBox *>(pTbxWindow);
+
+                if ( pToolBar )
+                {
+                    vcl::Window*  pParentTbxWindow( pImpl->pBox );
+                    pToolBar->SetParent( pParentTbxWindow );
+                    ::Size aSize = getPersistentFloatingSize( xFrame, rSubToolBarResName );
+                    if ( aSize.Width() == 0 || aSize.Height() == 0 )
+                    {
+                        // calc and set size for popup mode
+                        aSize = pToolBar->CalcPopupWindowSizePixel();
+                    }
+                    pToolBar->SetSizePixel( aSize );
+
+                    // open subtoolbox in popup mode
+                    vcl::Window::GetDockingManager()->StartPopupMode( pImpl->pBox, pToolBar );
+                }
+            }
+        }
+    }
+}
+
+
 
 void SfxToolBoxControl::SetPopupWindow( SfxPopupWindow* pWindow )
 {
@@ -632,7 +911,8 @@ void SfxToolBoxControl::SetPopupWindow( SfxPopupWindow* pWindow )
 }
 
 
-IMPL_LINK_NOARG(SfxToolBoxControl, PopupModeEndHdl, FloatingWindow*, void)
+
+IMPL_LINK_NOARG(SfxToolBoxControl, PopupModeEndHdl)
 {
 #ifdef USE_JAVA
     // Fix crash when rapidly toggling new table popup window button in the
@@ -644,29 +924,34 @@ IMPL_LINK_NOARG(SfxToolBoxControl, PopupModeEndHdl, FloatingWindow*, void)
     {
         // Replace floating window with popup window and destroy
         // floating window instance.
-        pImpl->mpFloatingWindow.disposeAndClear();
+        delete pImpl->mpFloatingWindow;
         pImpl->mpFloatingWindow = pImpl->mpPopupWindow;
-        pImpl->mpPopupWindow.clear();
+        pImpl->mpPopupWindow    = 0;
         // We also need to know when the user tries to use the
         // floating window.
-        pImpl->mpFloatingWindow->AddEventListener( LINK( pImpl.get(), SfxToolBoxControl_Impl, WindowEventListener ));
+        pImpl->mpFloatingWindow->AddEventListener( LINK( pImpl, SfxToolBoxControl_Impl, WindowEventListener ));
     }
     else
     {
         // Popup window has been closed by the user. No replacement, instance
         // will destroy itself.
-        pImpl->mpPopupWindow.clear();
+        pImpl->mpPopupWindow = 0;
     }
+
+    return 1;
 }
 
 
-IMPL_LINK( SfxToolBoxControl, ClosePopupWindow, SfxPopupWindow *, pWindow, void )
+IMPL_LINK( SfxToolBoxControl, ClosePopupWindow, SfxPopupWindow *, pWindow )
 {
     if ( pWindow == pImpl->mpFloatingWindow )
-        pImpl->mpFloatingWindow = nullptr;
+        pImpl->mpFloatingWindow = 0;
     else
-        pImpl->mpPopupWindow = nullptr;
+        pImpl->mpPopupWindow = 0;
+
+    return 1;
 }
+
 
 
 void SfxToolBoxControl::StateChanged
@@ -676,7 +961,10 @@ void SfxToolBoxControl::StateChanged
     const SfxPoolItem*  pState
 )
 {
-    DBG_ASSERT( pImpl->pBox != nullptr, "setting state to dangling ToolBox" );
+    DBG_ASSERT( pImpl->pBox != 0, "setting state to dangling ToolBox" );
+
+    if ( GetId() >= SID_OBJECTMENU0 && GetId() <= SID_OBJECTMENU_LAST )
+        return;
 
     // enabled/disabled-Flag correcting the lump sum
     pImpl->pBox->EnableItem( GetId(), eState != SfxItemState::DISABLED );
@@ -689,14 +977,14 @@ void SfxToolBoxControl::StateChanged
         case SfxItemState::DEFAULT:
         if ( pState )
         {
-            if ( dynamic_cast< const SfxBoolItem* >(pState) !=  nullptr )
+            if ( pState->ISA(SfxBoolItem) )
             {
                 // BoolItem for checking
                 if ( static_cast<const SfxBoolItem*>(pState)->GetValue() )
                     eTri = TRISTATE_TRUE;
                 nItemBits |= ToolBoxItemBits::CHECKABLE;
             }
-            else if ( dynamic_cast< const SfxEnumItemInterface *>( pState ) !=  nullptr &&
+            else if ( pState->ISA(SfxEnumItemInterface) &&
                 static_cast<const SfxEnumItemInterface *>(pState)->HasBoolValue())
             {
                 // EnumItem is handled as Bool
@@ -704,7 +992,7 @@ void SfxToolBoxControl::StateChanged
                     eTri = TRISTATE_TRUE;
                 nItemBits |= ToolBoxItemBits::CHECKABLE;
             }
-            else if ( pImpl->bShowString && dynamic_cast< const SfxStringItem *>( pState ) !=  nullptr )
+            else if ( pImpl->bShowString && pState->ISA(SfxStringItem) )
                 pImpl->pBox->SetItemText(nId, static_cast<const SfxStringItem*>(pState)->GetValue() );
         }
         break;
@@ -724,10 +1012,12 @@ void SfxToolBoxControl::StateChanged
 }
 
 
+
 void SfxToolBoxControl::Select( sal_uInt16 nSelectModifier )
 {
     svt::ToolboxController::execute( nSelectModifier );
 }
+
 
 
 void SfxToolBoxControl::DoubleClick()
@@ -735,47 +1025,175 @@ void SfxToolBoxControl::DoubleClick()
 }
 
 
+
 void SfxToolBoxControl::Click()
 {
 }
 
 
-VclPtr<SfxPopupWindow> SfxToolBoxControl::CreatePopupWindow()
+
+SfxPopupWindowType SfxToolBoxControl::GetPopupWindowType() const
 {
-    return nullptr;
+    return SFX_POPUPWINDOW_NONE;
 }
 
-VclPtr<vcl::Window> SfxToolBoxControl::CreateItemWindow( vcl::Window * )
+
+
+SfxPopupWindow* SfxToolBoxControl::CreatePopupWindow()
 {
-    return VclPtr<vcl::Window>();
+    return 0;
 }
 
-class SfxFrameStatusListener : public svt::FrameStatusListener
+SfxPopupWindow* SfxToolBoxControl::CreatePopupWindowCascading()
 {
-    public:
-        SfxFrameStatusListener( const css::uno::Reference< css::uno::XComponentContext >& rxContext,
-                                const css::uno::Reference< css::frame::XFrame >& xFrame,
-                                SfxPopupWindow* pCallee );
+    return 0;
+}
 
-        // XStatusListener
-        virtual void SAL_CALL statusChanged( const css::frame::FeatureStateEvent& Event ) override;
 
-    private:
-        VclPtr<SfxPopupWindow> m_pCallee;
-};
+
+vcl::Window* SfxToolBoxControl::CreateItemWindow( vcl::Window * )
+{
+    return 0;
+}
+
+
+
 SfxFrameStatusListener::SfxFrameStatusListener(
     const Reference< XComponentContext >& rxContext,
     const Reference< XFrame >& xFrame,
-    SfxPopupWindow* pCallee ) :
+    SfxStatusListenerInterface* pCallee ) :
     svt::FrameStatusListener( rxContext, xFrame ),
     m_pCallee( pCallee )
 {
 }
 
-// XStatusListener
-void SAL_CALL SfxFrameStatusListener::statusChanged( const css::frame::FeatureStateEvent& rEvent )
+
+
+SfxFrameStatusListener::~SfxFrameStatusListener()
 {
-    m_pCallee->statusChanged( rEvent );
+}
+
+
+
+// XStatusListener
+void SAL_CALL SfxFrameStatusListener::statusChanged( const ::com::sun::star::frame::FeatureStateEvent& rEvent )
+throw ( ::com::sun::star::uno::RuntimeException, std::exception )
+{
+    SfxViewFrame* pViewFrame = NULL;
+    Reference < XController > xController;
+
+    SolarMutexGuard aGuard;
+    if ( m_xFrame.is() )
+        xController = m_xFrame->getController();
+
+    Reference < XDispatchProvider > xProvider( xController, UNO_QUERY );
+    if ( xProvider.is() )
+    {
+        Reference < XDispatch > xDisp = xProvider->queryDispatch( rEvent.FeatureURL, OUString(), 0 );
+        if ( xDisp.is() )
+        {
+            Reference< XUnoTunnel > xTunnel( xDisp, UNO_QUERY );
+            SfxOfficeDispatch* pDisp = NULL;
+            if ( xTunnel.is() )
+            {
+                sal_Int64 nImplementation = xTunnel->getSomething(SfxOfficeDispatch::impl_getStaticIdentifier());
+                pDisp = reinterpret_cast< SfxOfficeDispatch* >( sal::static_int_cast< sal_IntPtr >( nImplementation ));
+            }
+
+            if ( pDisp )
+                pViewFrame = pDisp->GetDispatcher_Impl()->GetFrame();
+        }
+    }
+
+    sal_uInt16 nSlotId = 0;
+    SfxSlotPool& rPool = SfxSlotPool::GetSlotPool( pViewFrame );
+    const SfxSlot* pSlot = rPool.GetUnoSlot( rEvent.FeatureURL.Path );
+    if ( pSlot )
+        nSlotId = pSlot->GetSlotId();
+
+    if ( nSlotId > 0 )
+    {
+        if ( rEvent.Requery )
+        {
+            // requery for the notified state
+            addStatusListener( rEvent.FeatureURL.Complete );
+        }
+        else
+        {
+            SfxItemState eState = SfxItemState::DISABLED;
+            SfxPoolItem* pItem = NULL;
+            if ( rEvent.IsEnabled )
+            {
+                eState = SfxItemState::DEFAULT;
+                ::com::sun::star::uno::Type pType = rEvent.State.getValueType();
+
+                if ( pType == ::getVoidCppuType() )
+                {
+                    pItem = new SfxVoidItem( nSlotId );
+                    eState = SfxItemState::UNKNOWN;
+                }
+                else if ( pType == ::getBooleanCppuType() )
+                {
+                    bool bTemp = false;
+                    rEvent.State >>= bTemp ;
+                    pItem = new SfxBoolItem( nSlotId, bTemp );
+                }
+                else if ( pType == ::cppu::UnoType< ::cppu::UnoUnsignedShortType >::get())
+                {
+                    sal_uInt16 nTemp = 0;
+                    rEvent.State >>= nTemp ;
+                    pItem = new SfxUInt16Item( nSlotId, nTemp );
+                }
+                else if ( pType == cppu::UnoType<sal_uInt32>::get() )
+                {
+                    sal_uInt32 nTemp = 0;
+                    rEvent.State >>= nTemp ;
+                    pItem = new SfxUInt32Item( nSlotId, nTemp );
+                }
+                else if ( pType == cppu::UnoType<OUString>::get() )
+                {
+                    OUString sTemp ;
+                    rEvent.State >>= sTemp ;
+                    pItem = new SfxStringItem( nSlotId, sTemp );
+                }
+                else if ( pType == cppu::UnoType< ::com::sun::star::frame::status::ItemStatus>::get() )
+                {
+                    ItemStatus aItemStatus;
+                    rEvent.State >>= aItemStatus;
+                    SfxItemState tmpState = (SfxItemState) aItemStatus.State;
+                    // make sure no-one tries to send us a combination of states
+                    if (tmpState != SfxItemState::UNKNOWN && tmpState != SfxItemState::DISABLED &&
+                        tmpState != SfxItemState::READONLY && tmpState != SfxItemState::DONTCARE &&
+                        tmpState != SfxItemState::DEFAULT && tmpState != SfxItemState::SET)
+                        throw ::com::sun::star::uno::RuntimeException("unknown status");
+                    eState = tmpState;
+                    pItem = new SfxVoidItem( nSlotId );
+                }
+                else if ( pType == cppu::UnoType< ::com::sun::star::frame::status::Visibility>::get() )
+                {
+                    Visibility aVisibilityStatus;
+                    rEvent.State >>= aVisibilityStatus;
+                    pItem = new SfxVisibilityItem( nSlotId, aVisibilityStatus.bVisible );
+                }
+                else
+                {
+                    if ( pSlot )
+                        pItem = pSlot->GetType()->CreateItem();
+                    if ( pItem )
+                    {
+                        pItem->SetWhich( nSlotId );
+                        pItem->PutValue( rEvent.State );
+                    }
+                    else
+                        pItem = new SfxVoidItem( nSlotId );
+                }
+            }
+
+            if ( m_pCallee )
+                m_pCallee->StateChanged( nSlotId, eState, pItem );
+            delete pItem;
+        }
+    }
 }
 
 SfxPopupWindow::SfxPopupWindow(
@@ -787,6 +1205,7 @@ SfxPopupWindow::SfxPopupWindow(
     , m_bCascading( false )
     , m_nId( nId )
     , m_xFrame( rFrame )
+    , m_pStatusListener( 0 )
 {
     vcl::Window* pWindow = GetTopMostParentSystemWindow( this );
     if ( pWindow )
@@ -800,6 +1219,7 @@ SfxPopupWindow::SfxPopupWindow(sal_uInt16 nId, const OString& rID, const OUStrin
     , m_bCascading( false )
     , m_nId( nId )
     , m_xFrame( rFrame )
+    , m_pStatusListener( 0 )
 {
     vcl::Window* pWindow = GetTopMostParentSystemWindow( this );
     if ( pWindow )
@@ -816,6 +1236,7 @@ SfxPopupWindow::SfxPopupWindow(
     , m_bCascading( false )
     , m_nId( nId )
     , m_xFrame( rFrame )
+    , m_pStatusListener( 0 )
 {
     vcl::Window* pWindow = GetTopMostParentSystemWindow( this );
     if ( pWindow )
@@ -832,6 +1253,7 @@ SfxPopupWindow::SfxPopupWindow(
     , m_bCascading( false )
     , m_nId( nId )
     , m_xFrame( rFrame )
+    , m_pStatusListener( 0 )
 {
     vcl::Window* pWindow = GetTopMostParentSystemWindow( this );
     if ( pWindow )
@@ -839,11 +1261,6 @@ SfxPopupWindow::SfxPopupWindow(
 }
 
 SfxPopupWindow::~SfxPopupWindow()
-{
-    disposeOnce();
-}
-
-void SfxPopupWindow::dispose()
 {
     if ( m_xStatusListener.is() )
     {
@@ -854,22 +1271,52 @@ void SfxPopupWindow::dispose()
     vcl::Window* pWindow = GetTopMostParentSystemWindow( this );
     if ( pWindow )
         static_cast<SystemWindow *>(pWindow)->GetTaskPaneList()->RemoveWindow( this );
-    FloatingWindow::dispose();
 }
+
+
+
+SfxFrameStatusListener* SfxPopupWindow::GetOrCreateStatusListener()
+{
+    if ( !m_xStatusListener.is() )
+    {
+        m_pStatusListener = new SfxFrameStatusListener(
+                                    ::comphelper::getProcessComponentContext(),
+                                    m_xFrame,
+                                    this );
+        m_xStatusListener = Reference< XComponent >( static_cast< cppu::OWeakObject* >(
+                                                        m_pStatusListener ), UNO_QUERY );
+    }
+
+    return m_pStatusListener;
+}
+
+
+
+void SfxPopupWindow::BindListener()
+{
+    GetOrCreateStatusListener();
+    if ( m_xStatusListener.is() )
+        m_pStatusListener->bindListener();
+}
+
+
+
+void SfxPopupWindow::UnbindListener()
+{
+    GetOrCreateStatusListener();
+    if ( m_xStatusListener.is() )
+        m_pStatusListener->unbindListener();
+}
+
 
 
 void SfxPopupWindow::AddStatusListener( const OUString& rCommandURL )
 {
-    if ( !m_xStatusListener.is() )
-    {
-        m_xStatusListener = new SfxFrameStatusListener(
-                                    ::comphelper::getProcessComponentContext(),
-                                    m_xFrame,
-                                    this );
-    }
+    GetOrCreateStatusListener();
     if ( m_xStatusListener.is() )
-        m_xStatusListener->addStatusListener( rCommandURL );
+        m_pStatusListener->addStatusListener( rCommandURL );
 }
+
 
 
 bool SfxPopupWindow::Close()
@@ -882,6 +1329,7 @@ bool SfxPopupWindow::Close()
 }
 
 
+
 void SfxPopupWindow::PopupModeEnd()
 {
     //! to allow PopupModeEndHdl to be called
@@ -890,16 +1338,24 @@ void SfxPopupWindow::PopupModeEnd()
     if ( IsVisible() )
     {
         // was teared-off
-        if ( m_bFloating )
-        {
-            Hide();
-            Delete();
-        }
+        DeleteFloatingWindow();
         m_bFloating = true;
     }
     else
         Close();
 }
+
+
+
+void SfxPopupWindow::DeleteFloatingWindow()
+{
+    if ( m_bFloating )
+    {
+        Hide();
+        Delete();
+    }
+}
+
 
 
 void SfxPopupWindow::MouseMove( const ::MouseEvent& rMEvt )
@@ -927,30 +1383,115 @@ void SfxPopupWindow::MouseMove( const ::MouseEvent& rMEvt )
 }
 
 
+
 void SfxPopupWindow::StartCascading()
 {
     m_bCascading = true;
 }
 
 
-void SfxPopupWindow::statusChanged( const css::frame::FeatureStateEvent& rEvent )
+
+SfxPopupWindow* SfxPopupWindow::Clone() const
+
+/*  [Description]
+
+    This method must be overloaded to show this Popup also in the
+    Presentation-mode. It is called when a Show() would be meaningless
+    since the parent is no presentation window.
+    When create a new window the bew Top-Window will be used automatically,
+    so that the Parent becomes the presentation window and that the new
+    Popup therefore becomes visible.
+*/
+
 {
-    if ( !rEvent.IsEnabled )
+    return 0;
+}
+
+
+
+void SfxPopupWindow::StateChanged(
+    sal_uInt16 /*nSID*/,
+    SfxItemState eState,
+    const SfxPoolItem* /*pState*/ )
+/*  [Description]
+
+    See also <SfxControllerItem::StateChanged()>. In addition the Popup
+    will become hidden when eState==SfxItemState::DISABLED and in all other
+    cases it will be shown again if it is floating. In general this requires
+    to call the Base class.
+
+    Due to the parent the presentation mode is handled in a special way.
+*/
+
+{
+    if ( SfxItemState::DISABLED == eState )
     {
         Hide();
     }
     else if ( m_bFloating )
     {
-        Show( true, ShowFlags::NoFocusChange | ShowFlags::NoActivate );
+        Show( true, SHOW_NOFOCUSCHANGE | SHOW_NOACTIVATE );
     }
 }
 
 
+
 void SfxPopupWindow::Delete()
 {
-    VclPtr<SfxPopupWindow> xThis(this);
-    m_aDeleteLink.Call( this );
-    disposeOnce();
+    if ( m_aDeleteLink.IsSet() )
+        m_aDeleteLink.Call( this );
+    delete this;
+}
+
+
+
+SfxRecentFilesToolBoxControl::SfxRecentFilesToolBoxControl( sal_uInt16 nSlotId, sal_uInt16 nId, ToolBox& rBox )
+    : SfxToolBoxControl( nSlotId, nId, rBox )
+{
+    rBox.SetItemBits( nId, rBox.GetItemBits( nId ) | ToolBoxItemBits::DROPDOWN);
+}
+
+SfxRecentFilesToolBoxControl::~SfxRecentFilesToolBoxControl()
+{
+}
+
+SfxPopupWindow* SfxRecentFilesToolBoxControl::CreatePopupWindow()
+{
+    ToolBox& rBox = GetToolBox();
+    sal_uInt16 nItemId = GetId();
+    ::Rectangle aRect( rBox.GetItemRect( nItemId ) );
+
+    Sequence< Any > aArgs( 2 );
+    PropertyValue aPropValue;
+
+    aPropValue.Name = "CommandURL";
+    aPropValue.Value <<= OUString( ".uno:RecentFileList" );
+    aArgs[0] <<= aPropValue;
+
+    aPropValue.Name = "Frame";
+    aPropValue.Value <<= m_xFrame;
+    aArgs[1] <<= aPropValue;
+
+    uno::Reference< frame::XPopupMenuController > xPopupController( m_xContext->getServiceManager()->createInstanceWithArgumentsAndContext(
+                "com.sun.star.comp.framework.RecentFilesMenuController", aArgs, m_xContext ), UNO_QUERY );
+
+    uno::Reference< awt::XPopupMenu > xPopupMenu( m_xContext->getServiceManager()->createInstanceWithContext(
+                "com.sun.star.awt.PopupMenu", m_xContext ), uno::UNO_QUERY );
+
+    if ( xPopupController.is() && xPopupMenu.is() )
+    {
+        xPopupController->setPopupMenu( xPopupMenu );
+
+        rBox.SetItemDown( nItemId, true );
+        Reference< awt::XWindowPeer > xPeer( getParent(), uno::UNO_QUERY );
+
+        if ( xPeer.is() )
+            xPopupMenu->execute( xPeer, VCLUnoHelper::ConvertToAWTRect( aRect ), 0 );
+
+        rBox.SetItemDown( nItemId, false );
+    }
+
+    return 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

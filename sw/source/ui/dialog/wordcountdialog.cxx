@@ -41,37 +41,19 @@
 #include <vcl/msgbox.hxx>
 #include <vcl/settings.hxx>
 
-IMPL_STATIC_LINK_NOARG(SwWordCountFloatDlg, CloseHdl, Button*, void)
+IMPL_LINK_NOARG(SwWordCountFloatDlg, CloseHdl)
 {
     SfxViewFrame* pVFrame = ::GetActiveView()->GetViewFrame();
-    if (pVFrame != nullptr)
+    if (pVFrame != NULL)
     {
         pVFrame->ToggleChildWindow(FN_WORDCOUNT_DIALOG);
     }
+    return 0;
 }
 
 SwWordCountFloatDlg::~SwWordCountFloatDlg()
 {
-    disposeOnce();
-}
-
-void SwWordCountFloatDlg::dispose()
-{
-    SwViewShell::SetCareWin( nullptr );
-    m_pCurrentWordFT.clear();
-    m_pCurrentCharacterFT.clear();
-    m_pCurrentCharacterExcludingSpacesFT.clear();
-    m_pCurrentCjkcharsFT.clear();
-    m_pCurrentStandardizedPagesFT.clear();
-    m_pDocWordFT.clear();
-    m_pDocCharacterFT.clear();
-    m_pDocCharacterExcludingSpacesFT.clear();
-    m_pDocCjkcharsFT.clear();
-    m_pDocStandardizedPagesFT.clear();
-    m_pCjkcharsLabelFT.clear();
-    m_pStandardizedPagesLabelFT.clear();
-    m_pClosePB.clear();
-    SfxModelessDialog::dispose();
+    SwViewShell::SetCareWin( 0 );
 }
 
 namespace
@@ -162,6 +144,11 @@ SwWordCountFloatDlg::SwWordCountFloatDlg(SfxBindings* _pBindings,
 
     m_pClosePB->SetClickHdl(LINK(this, SwWordCountFloatDlg, CloseHdl));
     m_pClosePB->GrabFocus();
+}
+
+void SwWordCountFloatDlg::Activate()
+{
+    SfxModelessDialog::Activate();
 }
 
 void SwWordCountFloatDlg::UpdateCounts()

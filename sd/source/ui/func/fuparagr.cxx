@@ -38,14 +38,14 @@
 #include "app.hrc"
 #include "View.hxx"
 #include "ViewShell.hxx"
-#include "Window.hxx"
 #include "drawdoc.hxx"
 #include "sdabstdlg.hxx"
 #include "sdattr.hrc"
-#include <memory>
+#include <boost/scoped_ptr.hpp>
 
 namespace sd {
 
+TYPEINIT1( FuParagraph, FuPoor );
 
 FuParagraph::FuParagraph (
     ViewShell* pViewSh,
@@ -73,7 +73,7 @@ void FuParagraph::DoExecute( SfxRequest& rReq )
     // Attempt to fix Mac App Store crash by detecting if the outliner view has
     // been deleted
     if ( pOutlView && !ImplIsValidOutlinerView( pOutlView ) )
-        pOutlView = nullptr;
+        pOutlView = NULL;
 #endif	// USE_JAVA
     ::Outliner* pOutliner = mpView->GetTextEditOutliner();
 
@@ -91,7 +91,7 @@ void FuParagraph::DoExecute( SfxRequest& rReq )
         aNewAttr.Put( aEditAttr );
 
         // left border is offset
-        const long nOff = static_cast<const SvxLRSpaceItem&>(aNewAttr.Get( EE_PARA_LRSPACE ) ).GetTextLeft();
+        const long nOff = static_cast<const SvxLRSpaceItem&>(aNewAttr.Get( EE_PARA_LRSPACE ) ).GetTxtLeft();
         // conversion since TabulatorTabPage always uses Twips!
         SfxInt32Item aOff( SID_ATTR_TABSTOP_OFFSET, nOff );
         aNewAttr.Put( aOff );
@@ -104,7 +104,7 @@ void FuParagraph::DoExecute( SfxRequest& rReq )
         }
 
         SdAbstractDialogFactory* pFact = SdAbstractDialogFactory::Create();
-        ScopedVclPtr<SfxAbstractTabDialog> pDlg(pFact ? pFact->CreateSdParagraphTabDlg(mpViewShell->GetActiveWindow(), &aNewAttr) : nullptr);
+        boost::scoped_ptr<SfxAbstractTabDialog> pDlg(pFact ? pFact->CreateSdParagraphTabDlg(NULL, &aNewAttr ) : 0);
         if (!pDlg)
             return;
 
@@ -130,10 +130,10 @@ void FuParagraph::DoExecute( SfxRequest& rReq )
     {
         ESelection eSelection = pOutlView->GetSelection();
 
-        const SfxPoolItem *pItem = nullptr;
+        const SfxPoolItem *pItem = 0;
         if( SfxItemState::SET == pArgs->GetItemState( ATTR_NUMBER_NEWSTART, false, &pItem ) )
         {
-            const bool bNewStart = static_cast<const SfxBoolItem*>(pItem)->GetValue();
+            const bool bNewStart = static_cast<const SfxBoolItem*>(pItem)->GetValue() ? sal_True : sal_False;
             pOutliner->SetParaIsNumberingRestart( eSelection.nStartPara, bNewStart );
         }
 
@@ -145,7 +145,7 @@ void FuParagraph::DoExecute( SfxRequest& rReq )
     }
 
     // invalidate slots
-    static const sal_uInt16 SidArray[] = {
+    static sal_uInt16 SidArray[] = {
         SID_ATTR_TABSTOP,
         SID_ATTR_PARA_ADJUST_LEFT,
         SID_ATTR_PARA_ADJUST_RIGHT,

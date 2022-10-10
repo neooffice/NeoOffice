@@ -24,19 +24,16 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sal/config.h>
-
-#include <config_dbus.h>
 #include <config_features.h>
+#include <config_version.h>
 
 #include "app.hxx"
 #include "officeipcthread.hxx"
 #include "cmdlineargs.hxx"
 #include "dispatchwatcher.hxx"
+#include <boost/scoped_ptr.hpp>
 #include <stdio.h>
-#include <com/sun/star/frame/TerminationVetoException.hpp>
 #include <osl/process.h>
-#include <sal/log.hxx>
 #include <unotools/bootstrap.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/help.hxx>
@@ -47,28 +44,27 @@
 #include <rtl/instance.hxx>
 #include <osl/conditn.hxx>
 #include <unotools/moduleoptions.hxx>
+#include <rtl/bootstrap.hxx>
 #include <rtl/strbuf.hxx>
 #include <comphelper/processfactory.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <osl/file.hxx>
 #include <rtl/process.h>
-
-#include <algorithm>
-#include <cassert>
-#include <cstdlib>
-#include <memory>
-
-#if ENABLE_DBUS
-#include <dbus/dbus.h>
-#include <sys/socket.h>
-#endif
+#include <tools/getprocessworkingdir.hxx>
+#include <boost/scoped_array.hpp>
 
 using namespace desktop;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::frame;
 
+
+const char  *OfficeIPCThread::sc_aShowSequence = "-tofront";
+const int OfficeIPCThread::sc_nShSeqLength = 5;
+
 namespace {
+
+#if HAVE_FEATURE_DESKTOP
 
 static char const ARGUMENT_PREFIX[] = "InternalIPC::Arguments";
 static char const SEND_ARGUMENTS[] = "InternalIPC::SendArguments";
@@ -83,7 +79,6 @@ OString readStringFromPipe(osl::StreamPipe & pipe) {
         char buf[1024];
         sal_Int32 n = pipe.recv(buf, SAL_N_ELEMENTS(buf));
         if (n <= 0) {
-            SAL_INFO("desktop.app", "read empty string");
             return "";
         }
         bool end = false;
@@ -94,19 +89,29 @@ OString readStringFromPipe(osl::StreamPipe & pipe) {
         str.append(buf, n);
             //TODO: how does OStringBuffer.append handle overflow?
         if (end) {
-            auto s = str.makeStringAndClear();
-            SAL_INFO("desktop.app", "read <" << s << ">");
-            return s;
+            return str.makeStringAndClear();
         }
     }
 }
 
+#endif
+
 }
+
+// Type of pipe we use
+enum PipeMode
+{
+    PIPEMODE_DONTKNOW,
+    PIPEMODE_CREATED,
+    PIPEMODE_CONNECTED
+};
 
 namespace desktop
 {
 
 namespace {
+
+#if HAVE_FEATURE_DESKTOP
 
 class Parser: public CommandLineArgs::Supplier {
 public:
@@ -148,13 +153,15 @@ public:
         }
     }
 
-    virtual boost::optional< OUString > getCwdUrl() override { return m_cwdUrl; }
+    virtual ~Parser() {}
 
-    virtual bool next(OUString * argument) override { return next(argument, true); }
+    virtual boost::optional< OUString > getCwdUrl() SAL_OVERRIDE { return m_cwdUrl; }
+
+    virtual bool next(OUString * argument) SAL_OVERRIDE { return next(argument, true); }
 
 private:
-    bool next(OUString * argument, bool prefix) {
-        OSL_ASSERT(argument != nullptr);
+    virtual bool next(OUString * argument, bool prefix) {
+        OSL_ASSERT(argument != NULL);
         if (m_index < m_input.getLength()) {
             if (prefix) {
                 if (m_input[m_index] != ',') {
@@ -241,23 +248,29 @@ bool addArgument(OStringBuffer &rArguments, char prefix,
     return true;
 }
 
+#endif
+
 }
 
-rtl::Reference< RequestHandler > RequestHandler::pGlobal;
+rtl::Reference< OfficeIPCThread > OfficeIPCThread::pGlobalOfficeIPCThread;
+    namespace { struct Security : public rtl::Static<osl::Security, Security> {}; }
 
 // Turns a string in aMsg such as file:///home/foo/.libreoffice/3
 // Into a hex string of well known length ff132a86...
 OUString CreateMD5FromString( const OUString& aMsg )
 {
-    SAL_INFO("desktop.app", "create md5 from '" << aMsg << "'");
+#if (OSL_DEBUG_LEVEL > 2)
+    fprintf( stderr, "create md5 from '%s'\n",
+             OUStringToOString (aMsg, RTL_TEXTENCODING_UTF8).getStr() );
+#endif
 
     rtlDigest handle = rtl_digest_create( rtl_Digest_AlgorithmMD5 );
     if ( handle )
     {
-        const sal_uInt8* pData = reinterpret_cast<const sal_uInt8*>(aMsg.getStr());
+        const sal_uInt8* pData = (const sal_uInt8*)aMsg.getStr();
         sal_uInt32       nSize = ( aMsg.getLength() * sizeof( sal_Unicode ));
         sal_uInt32       nMD5KeyLen = rtl_digest_queryLength( handle );
-        std::unique_ptr<sal_uInt8[]> pMD5KeyBuffer(new sal_uInt8[ nMD5KeyLen ]);
+        boost::scoped_array<sal_uInt8> pMD5KeyBuffer(new sal_uInt8[ nMD5KeyLen ]);
 
         rtl_digest_init( handle, pData, nSize );
         rtl_digest_update( handle, pData, nSize );
@@ -278,491 +291,190 @@ OUString CreateMD5FromString( const OUString& aMsg )
 class ProcessEventsClass_Impl
 {
 public:
-    DECL_STATIC_LINK( ProcessEventsClass_Impl, CallEvent, void*, void );
-    DECL_STATIC_LINK( ProcessEventsClass_Impl, ProcessDocumentsEvent, void*, void );
+    DECL_STATIC_LINK( ProcessEventsClass_Impl, CallEvent, void* pEvent );
+    DECL_STATIC_LINK( ProcessEventsClass_Impl, ProcessDocumentsEvent, void* pEvent );
 };
 
-IMPL_STATIC_LINK( ProcessEventsClass_Impl, CallEvent, void*, pEvent, void )
+IMPL_STATIC_LINK_NOINSTANCE( ProcessEventsClass_Impl, CallEvent, void*, pEvent )
 {
     // Application events are processed by the Desktop::HandleAppEvent implementation.
-    Desktop::HandleAppEvent( *static_cast<ApplicationEvent*>(pEvent) );
-    delete static_cast<ApplicationEvent*>(pEvent);
+    Desktop::HandleAppEvent( *((ApplicationEvent*)pEvent) );
+    delete (ApplicationEvent*)pEvent;
+    return 0;
 }
 
-IMPL_STATIC_LINK( ProcessEventsClass_Impl, ProcessDocumentsEvent, void*, pEvent, void )
+IMPL_STATIC_LINK_NOINSTANCE( ProcessEventsClass_Impl, ProcessDocumentsEvent, void*, pEvent )
 {
-    // Documents requests are processed by the RequestHandler implementation
-    ProcessDocumentsRequest* pDocsRequest = static_cast<ProcessDocumentsRequest*>(pEvent);
-    RequestHandler::ExecuteCmdLineRequests(*pDocsRequest, false);
-    delete pDocsRequest;
+    // Documents requests are processed by the OfficeIPCThread implementation
+    ProcessDocumentsRequest* pDocsRequest = (ProcessDocumentsRequest*)pEvent;
+
+    if ( pDocsRequest )
+    {
+        OfficeIPCThread::ExecuteCmdLineRequests( *pDocsRequest );
+        delete pDocsRequest;
+    }
+    return 0;
 }
 
 void ImplPostForeignAppEvent( ApplicationEvent* pEvent )
 {
-    Application::PostUserEvent( LINK( nullptr, ProcessEventsClass_Impl, CallEvent ), pEvent );
+    Application::PostUserEvent( STATIC_LINK( NULL, ProcessEventsClass_Impl, CallEvent ), pEvent );
 }
 
 void ImplPostProcessDocumentsEvent( ProcessDocumentsRequest* pEvent )
 {
-    Application::PostUserEvent( LINK( nullptr, ProcessEventsClass_Impl, ProcessDocumentsEvent ), pEvent );
+    Application::PostUserEvent( STATIC_LINK( NULL, ProcessEventsClass_Impl, ProcessDocumentsEvent ), pEvent );
 }
 
-oslSignalAction SAL_CALL SalMainPipeExchangeSignal_impl(SAL_UNUSED_PARAMETER void* /*pData*/, oslSignalInfo* pInfo)
+oslSignalAction SAL_CALL SalMainPipeExchangeSignal_impl(void* /*pData*/, oslSignalInfo* pInfo)
 {
     if( pInfo->Signal == osl_Signal_Terminate )
-        RequestHandler::SetDowning();
+        OfficeIPCThread::DisableOfficeIPCThread(false);
     return osl_Signal_ActCallNextHdl;
 }
 
 
-// The RequestHandlerController implementation is a bookkeeper for all pending requests
-// that were created by the RequestHandler. The requests are waiting to be processed by
+
+// The OfficeIPCThreadController implementation is a bookkeeper for all pending requests
+// that were created by the OfficeIPCThread. The requests are waiting to be processed by
 // our framework loadComponentFromURL function (e.g. open/print request).
-// During shutdown the framework is asking RequestHandlerController about pending requests.
+// During shutdown the framework is asking OfficeIPCThreadController about pending requests.
 // If there are pending requests framework has to stop the shutdown process. It is waiting
 // for these requests because framework is not able to handle shutdown and open a document
 // concurrently.
 
 
 // XServiceInfo
-OUString SAL_CALL RequestHandlerController::getImplementationName()
+OUString SAL_CALL OfficeIPCThreadController::getImplementationName()
+throw ( RuntimeException, std::exception )
 {
-    return OUString( "com.sun.star.comp.RequestHandlerController" );
+    return OUString( "com.sun.star.comp.OfficeIPCThreadController" );
 }
 
-sal_Bool RequestHandlerController::supportsService(
-    OUString const & ServiceName)
+sal_Bool OfficeIPCThreadController::supportsService(
+    OUString const & ServiceName) throw (css::uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, ServiceName);
 }
 
-Sequence< OUString > SAL_CALL RequestHandlerController::getSupportedServiceNames()
+Sequence< OUString > SAL_CALL OfficeIPCThreadController::getSupportedServiceNames()
+throw ( RuntimeException, std::exception )
 {
     Sequence< OUString > aSeq( 0 );
     return aSeq;
 }
 
 // XEventListener
-void SAL_CALL RequestHandlerController::disposing( const EventObject& )
+void SAL_CALL OfficeIPCThreadController::disposing( const EventObject& )
+throw( RuntimeException, std::exception )
 {
 }
 
 // XTerminateListener
-void SAL_CALL RequestHandlerController::queryTermination( const EventObject& )
+void SAL_CALL OfficeIPCThreadController::queryTermination( const EventObject& )
+throw( TerminationVetoException, RuntimeException, std::exception )
 {
     // Desktop ask about pending request through our office ipc pipe. We have to
     // be sure that no pending request is waiting because framework is not able to
     // handle shutdown and open a document concurrently.
 
-    if ( RequestHandler::AreRequestsPending() )
+    if ( OfficeIPCThread::AreRequestsPending() )
         throw TerminationVetoException();
     else
-        RequestHandler::SetDowning();
+        OfficeIPCThread::SetDowning();
 }
 
-void SAL_CALL RequestHandlerController::notifyTermination( const EventObject& )
+void SAL_CALL OfficeIPCThreadController::notifyTermination( const EventObject& )
+throw( RuntimeException, std::exception )
 {
 }
-
-class IpcThread: public salhelper::Thread {
-public:
-    void start(RequestHandler * handler) {
-        m_handler = handler;
-        launch();
-    }
-
-    virtual void close() = 0;
-
-protected:
-    explicit IpcThread(char const * name): Thread(name), m_handler(nullptr) {}
-
-    virtual ~IpcThread() override {}
-
-    bool process(OString const & arguments, bool * waitProcessed);
-
-    RequestHandler * m_handler;
-};
-
-class PipeIpcThread: public IpcThread {
-public:
-    static RequestHandler::Status enable(rtl::Reference<IpcThread> * thread);
-
-private:
-    explicit PipeIpcThread(osl::Pipe const & pipe):
-        IpcThread("PipeIPC"), pipe_(pipe)
-    {}
-
-    virtual ~PipeIpcThread() override {}
-
-    void execute() override;
-
-    void close() override { pipe_.close(); }
-
-    osl::Pipe pipe_;
-};
-
-#if ENABLE_DBUS
-
-namespace {
-
-struct DbusConnectionHolder {
-    explicit DbusConnectionHolder(DBusConnection * theConnection):
-        connection(theConnection)
-    {}
-
-    DbusConnectionHolder(DbusConnectionHolder && other): connection(nullptr)
-    { std::swap(connection, other.connection); }
-
-    ~DbusConnectionHolder() {
-        if (connection != nullptr) {
-            dbus_connection_close(connection);
-            dbus_connection_unref(connection);
-        }
-    }
-
-    DBusConnection * connection;
-};
-
-struct DbusMessageHolder {
-    explicit DbusMessageHolder(DBusMessage * theMessage): message(theMessage) {}
-
-    ~DbusMessageHolder() { clear(); }
-
-    void clear() {
-        if (message != nullptr) {
-            dbus_message_unref(message);
-        }
-        message = nullptr;
-    }
-
-    DBusMessage * message;
-
-private:
-    DbusMessageHolder(DbusMessageHolder &) = delete;
-    void operator =(DbusMessageHolder) = delete;
-};
-
-}
-
-class DbusIpcThread: public IpcThread {
-public:
-    static RequestHandler::Status enable(rtl::Reference<IpcThread> * thread);
-
-private:
-    explicit DbusIpcThread(DbusConnectionHolder && connection):
-        IpcThread("DbusIPC"), connection_(std::move(connection))
-    {}
-
-    virtual ~DbusIpcThread() override {}
-
-    void execute() override;
-
-    void close() override;
-
-    DbusConnectionHolder connection_;
-};
-
-RequestHandler::Status DbusIpcThread::enable(rtl::Reference<IpcThread> * thread)
-{
-    assert(thread != nullptr);
-    if (!dbus_threads_init_default()) {
-        SAL_WARN("desktop.app", "dbus_threads_init_default failed");
-        return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-    }
-    DBusError e;
-    dbus_error_init(&e);
-    DbusConnectionHolder con(dbus_bus_get_private(DBUS_BUS_SESSION, &e));
-    assert((con.connection == nullptr) == bool(dbus_error_is_set(&e)));
-    if (con.connection == nullptr) {
-        SAL_WARN(
-            "desktop.app",
-            "dbus_bus_get_private failed with: " << e.name << ": "
-                << e.message);
-        dbus_error_free(&e);
-        return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-    }
-    for (;;) {
-        int n = dbus_bus_request_name(
-            con.connection, "org.libreoffice.LibreOfficeIpc0",
-            DBUS_NAME_FLAG_DO_NOT_QUEUE, &e);
-        assert((n == -1) == bool(dbus_error_is_set(&e)));
-        switch (n) {
-        case -1:
-            SAL_WARN(
-                "desktop.app",
-                "dbus_bus_request_name failed with: " << e.name << ": "
-                << e.message);
-            dbus_error_free(&e);
-            return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-        case DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER:
-            *thread = new DbusIpcThread(std::move(con));
-            return RequestHandler::IPC_STATUS_OK;
-        case DBUS_REQUEST_NAME_REPLY_EXISTS:
-            {
-                OStringBuffer buf(ARGUMENT_PREFIX);
-                OUString arg;
-                if (!(utl::Bootstrap::getProcessWorkingDir(arg)
-                      && addArgument(buf, '1', arg)))
-                {
-                    buf.append('0');
-                }
-                sal_uInt32 narg = rtl_getAppCommandArgCount();
-                for (sal_uInt32 i = 0; i != narg; ++i) {
-                    rtl_getAppCommandArg(i, &arg.pData);
-                    if (!addArgument(buf, ',', arg)) {
-                        return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-                    }
-                }
-                char const * argstr = buf.getStr();
-                DbusMessageHolder msg(
-                    dbus_message_new_method_call(
-                        "org.libreoffice.LibreOfficeIpc0",
-                        "/org/libreoffice/LibreOfficeIpc0",
-                        "org.libreoffice.LibreOfficeIpcIfc0", "Execute"));
-                if (msg.message == nullptr) {
-                    SAL_WARN(
-                        "desktop.app", "dbus_message_new_method_call failed");
-                    return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-                }
-                DBusMessageIter it;
-                dbus_message_iter_init_append(msg.message, &it);
-                if (!dbus_message_iter_append_basic(
-                        &it, DBUS_TYPE_STRING, &argstr))
-                {
-                    SAL_WARN(
-                        "desktop.app", "dbus_message_iter_append_basic failed");
-                    return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-                }
-                DbusMessageHolder repl(
-                    dbus_connection_send_with_reply_and_block(
-                        con.connection, msg.message, 0x7FFFFFFF, &e));
-                assert(
-                    (repl.message == nullptr) == bool(dbus_error_is_set(&e)));
-                if (repl.message == nullptr) {
-                    SAL_INFO(
-                        "desktop.app",
-                        "dbus_connection_send_with_reply_and_block failed"
-                            " with: " << e.name << ": " << e.message);
-                    dbus_error_free(&e);
-                    break;
-                }
-                return RequestHandler::IPC_STATUS_2ND_OFFICE;
-            }
-        case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
-        case DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER:
-            SAL_WARN(
-                "desktop.app",
-                "dbus_bus_request_name failed with unexpected " << +n);
-            return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
-        default:
-            for (;;) std::abort();
-        }
-    }
-}
-
-void DbusIpcThread::execute()
-{
-    assert(m_handler != nullptr);
-    m_handler->cReady.wait();
-    for (;;) {
-        {
-            osl::MutexGuard g(RequestHandler::GetMutex());
-            if (m_handler->mState == RequestHandler::State::Downing) {
-                break;
-            }
-        }
-        if (!dbus_connection_read_write(connection_.connection, -1)) {
-            break;
-        }
-        for (;;) {
-            DbusMessageHolder msg(
-                dbus_connection_pop_message(connection_.connection));
-            if (msg.message == nullptr) {
-                break;
-            }
-            if (!dbus_message_is_method_call(
-                    msg.message, "org.libreoffice.LibreOfficeIpcIfc0",
-                    "Execute"))
-            {
-                SAL_INFO("desktop.app", "unknown DBus message ignored");
-                continue;
-            }
-            DBusMessageIter it;
-            if (!dbus_message_iter_init(msg.message, &it)) {
-                SAL_WARN(
-                    "desktop.app", "DBus message without argument ignored");
-                continue;
-            }
-            if (dbus_message_iter_get_arg_type(&it) != DBUS_TYPE_STRING) {
-                SAL_WARN(
-                    "desktop.app",
-                    "DBus message with non-string argument ignored");
-                continue;
-            }
-            char const * argstr;
-            dbus_message_iter_get_basic(&it, &argstr);
-            bool waitProcessed = false;
-            {
-                osl::MutexGuard g(RequestHandler::GetMutex());
-                if (!process(argstr, &waitProcessed)) {
-                    continue;
-                }
-            }
-            if (waitProcessed) {
-                m_handler->cProcessed.wait();
-            }
-            DbusMessageHolder repl(dbus_message_new_method_return(msg.message));
-            if (repl.message == nullptr) {
-                SAL_WARN(
-                    "desktop.app", "dbus_message_new_method_return failed");
-                continue;
-            }
-            dbus_uint32_t serial = 0;
-            if (!dbus_connection_send(
-                    connection_.connection, repl.message, &serial)) {
-                SAL_WARN("desktop.app", "dbus_connection_send failed");
-                continue;
-            }
-            dbus_connection_flush(connection_.connection);
-        }
-    }
-}
-
-void DbusIpcThread::close() {
-    assert(connection_.connection != nullptr);
-    // Make dbus_connection_read_write fall out of internal poll call blocking
-    // on POLLIN:
-    int fd;
-    if (!dbus_connection_get_socket(connection_.connection, &fd)) {
-        SAL_WARN("desktop.app", "dbus_connection_get_socket failed");
-        return;
-    }
-    if (shutdown(fd, SHUT_RD) == -1) {
-        auto const e = errno;
-        SAL_WARN("desktop.app", "shutdown failed with errno " << e);
-    }
-}
-
-#endif
 
 namespace
 {
-    class theRequestHandlerMutex
-        : public rtl::Static<osl::Mutex, theRequestHandlerMutex> {};
+    class theOfficeIPCThreadMutex
+        : public rtl::Static<osl::Mutex, theOfficeIPCThreadMutex> {};
 }
 
-::osl::Mutex& RequestHandler::GetMutex()
+::osl::Mutex& OfficeIPCThread::GetMutex()
 {
-    return theRequestHandlerMutex::get();
+    return theOfficeIPCThreadMutex::get();
 }
 
-void RequestHandler::SetDowning()
+void OfficeIPCThread::SetDowning()
 {
     // We have the order to block all incoming requests. Framework
     // wants to shutdown and we have to make sure that no loading/printing
     // requests are executed anymore.
     ::osl::MutexGuard   aGuard( GetMutex() );
 
-    if ( pGlobal.is() )
-        pGlobal->mState = State::Downing;
+    if ( pGlobalOfficeIPCThread.is() )
+        pGlobalOfficeIPCThread->mbDowning = true;
 }
 
-void RequestHandler::EnableRequests()
+static bool s_bInEnableRequests = false;
+
+void OfficeIPCThread::EnableRequests( bool i_bEnable )
 {
     // switch between just queueing the requests and executing them
     ::osl::MutexGuard   aGuard( GetMutex() );
 
-    if ( pGlobal.is() )
+    if ( pGlobalOfficeIPCThread.is() )
     {
-        if (pGlobal->mState != State::Downing) {
-            pGlobal->mState = State::RequestsEnabled;
+        s_bInEnableRequests = true;
+        pGlobalOfficeIPCThread->mbRequestsEnabled = i_bEnable;
+        if( i_bEnable )
+        {
+            // hit the compiler over the head
+            ProcessDocumentsRequest aEmptyReq = ProcessDocumentsRequest( boost::optional< OUString >() );
+            // trigger already queued requests
+            OfficeIPCThread::ExecuteCmdLineRequests( aEmptyReq );
         }
-        // hit the compiler over the head
-        ProcessDocumentsRequest aEmptyReq = ProcessDocumentsRequest( boost::optional< OUString >() );
-        // trigger already queued requests
-        RequestHandler::ExecuteCmdLineRequests(aEmptyReq, true);
+        s_bInEnableRequests = false;
     }
 }
 
-bool RequestHandler::AreRequestsPending()
+bool OfficeIPCThread::AreRequestsPending()
 {
     // Give info about pending requests
     ::osl::MutexGuard   aGuard( GetMutex() );
-    if ( pGlobal.is() )
-        return ( pGlobal->mnPendingRequests > 0 );
+    if ( pGlobalOfficeIPCThread.is() )
+        return ( pGlobalOfficeIPCThread->mnPendingRequests > 0 );
     else
         return false;
 }
 
-void RequestHandler::RequestsCompleted()
+void OfficeIPCThread::RequestsCompleted( int nCount )
 {
     // Remove nCount pending requests from our internal counter
     ::osl::MutexGuard   aGuard( GetMutex() );
-    if ( pGlobal.is() )
+    if ( pGlobalOfficeIPCThread.is() )
     {
-        if ( pGlobal->mnPendingRequests > 0 )
-            pGlobal->mnPendingRequests --;
+        if ( pGlobalOfficeIPCThread->mnPendingRequests > 0 )
+            pGlobalOfficeIPCThread->mnPendingRequests -= nCount;
     }
 }
 
-RequestHandler::Status RequestHandler::Enable(bool ipc)
+OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 {
+#if HAVE_FEATURE_DESKTOP
     ::osl::MutexGuard   aGuard( GetMutex() );
 
-    if( pGlobal.is() )
+    if( pGlobalOfficeIPCThread.is() )
         return IPC_STATUS_OK;
 
-#if !HAVE_FEATURE_DESKTOP || HAVE_FEATURE_MACOSX_SANDBOX
-    ipc = false;
-#endif
+    OUString aUserInstallPath;
+    OUString aDummy;
 
-    if (!ipc) {
-        pGlobal = new RequestHandler;
-        return IPC_STATUS_OK;
-    }
-
-    enum class Kind { Pipe, Dbus };
-    Kind kind = Kind::Pipe;
-#if ENABLE_DBUS
-    if (std::getenv("LIBO_FLATPAK") != nullptr) {
-        kind = Kind::Dbus;
-    }
-#endif
-    rtl::Reference<IpcThread> thread;
-    Status stat = Status(); // silence bogus potentially-uninitialized warnings
-    switch (kind) {
-    case Kind::Pipe:
-        stat = PipeIpcThread::enable(&thread);
-        break;
-    case Kind::Dbus:
-#if ENABLE_DBUS
-        stat = DbusIpcThread::enable(&thread);
-        break;
-#endif
-    default:
-        assert(false);
-    }
-    assert(thread.is() == (stat == IPC_STATUS_OK));
-    if (stat == IPC_STATUS_OK) {
-        pGlobal = new RequestHandler;
-        pGlobal->mIpcThread = thread;
-        pGlobal->mIpcThread->start(pGlobal.get());
-    }
-    return stat;
-}
-
-RequestHandler::Status PipeIpcThread::enable(rtl::Reference<IpcThread> * thread)
-{
-    assert(thread != nullptr);
+    rtl::Reference< OfficeIPCThread > pThread(new OfficeIPCThread);
 
     // The name of the named pipe is created with the hashcode of the user installation directory (without /user). We have to retrieve
     // this information from a unotools implementation.
-    OUString aUserInstallPath;
     ::utl::Bootstrap::PathStatus aLocateResult = ::utl::Bootstrap::locateUserInstallation( aUserInstallPath );
-    if (aLocateResult != utl::Bootstrap::PATH_EXISTS
-        && aLocateResult != utl::Bootstrap::PATH_VALID)
+    if ( aLocateResult == ::utl::Bootstrap::PATH_EXISTS || aLocateResult == ::utl::Bootstrap::PATH_VALID)
+        aDummy = aUserInstallPath;
+    else
     {
-        return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
+        return IPC_STATUS_BOOTSTRAP_ERROR;
     }
 
     // Try to  determine if we are the first office or not! This should prevent multiple
@@ -770,39 +482,67 @@ RequestHandler::Status PipeIpcThread::enable(rtl::Reference<IpcThread> * thread)
     // First we try to create our pipe if this fails we try to connect. We have to do this
     // in a loop because the other office can crash or shutdown between createPipe
     // and connectPipe!!
-    auto aUserInstallPathHashCode = CreateMD5FromString(aUserInstallPath);
+
+    OUString            aIniName;
+
+    osl_getExecutableFile( &aIniName.pData );
+
+    sal_uInt32     lastIndex = aIniName.lastIndexOf('/');
+    if ( lastIndex > 0 )
+    {
+        aIniName    = aIniName.copy( 0, lastIndex+1 );
+        aIniName    += "perftune";
+#if defined(WNT)
+        aIniName    += ".ini";
+#else
+        aIniName    += "rc";
+#endif
+    }
+
+    ::rtl::Bootstrap aPerfTuneIniFile( aIniName );
+
+    OUString aDefault( "0" );
+    OUString aPreloadData;
+
+    aPerfTuneIniFile.getFrom( OUString( "FastPipeCommunication" ), aPreloadData, aDefault );
+
+
+    OUString aUserInstallPathHashCode;
+
+    if ( aPreloadData == "1" )
+    {
+        sal_Char    szBuffer[32];
+        sprintf( szBuffer, "%d", LIBO_VERSION_MAJOR * 10000 + LIBO_VERSION_MINOR * 100 + LIBO_VERSION_MICRO * 1 );
+        aUserInstallPathHashCode = OUString( szBuffer, strlen(szBuffer), osl_getThreadTextEncoding() );
+    }
+    else
+        aUserInstallPathHashCode = CreateMD5FromString( aDummy );
+
 
     // Check result to create a hash code from the user install path
     if ( aUserInstallPathHashCode.isEmpty() )
-        return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR; // Something completely broken, we cannot create a valid hash code!
-
-    osl::Pipe pipe;
-    enum PipeMode
-    {
-        PIPEMODE_DONTKNOW,
-        PIPEMODE_CREATED,
-        PIPEMODE_CONNECTED
-    };
-    PipeMode nPipeMode = PIPEMODE_DONTKNOW;
+        return IPC_STATUS_BOOTSTRAP_ERROR; // Something completely broken, we cannot create a valid hash code!
 
 #ifdef PRODUCT_NAME
     OUString aPipeIdent( "Single" + OUString( PRODUCT_NAME ) + "IPC_" + aUserInstallPathHashCode );
 #else	// PRODUCT_NAME
     OUString aPipeIdent( "SingleOfficeIPC_" + aUserInstallPathHashCode );
 #endif	// PRODUCT_NAME
+
+    PipeMode nPipeMode = PIPEMODE_DONTKNOW;
     do
     {
-        osl::Security security;
+        osl::Security &rSecurity = Security::get();
 
         // Try to create pipe
-        if ( pipe.create( aPipeIdent.getStr(), osl_Pipe_CREATE, security ))
+        if ( pThread->maPipe.create( aPipeIdent.getStr(), osl_Pipe_CREATE, rSecurity ))
         {
             // Pipe created
             nPipeMode = PIPEMODE_CREATED;
         }
-        else if( pipe.create( aPipeIdent.getStr(), osl_Pipe_OPEN, security )) // Creation not successful, now we try to connect
+        else if( pThread->maPipe.create( aPipeIdent.getStr(), osl_Pipe_OPEN, rSecurity )) // Creation not successful, now we try to connect
         {
-            osl::StreamPipe aStreamPipe(pipe.getHandle());
+            osl::StreamPipe aStreamPipe(pThread->maPipe.getHandle());
             if (readStringFromPipe(aStreamPipe) == SEND_ARGUMENTS)
             {
                 // Pipe connected to first office
@@ -819,9 +559,9 @@ RequestHandler::Status PipeIpcThread::enable(rtl::Reference<IpcThread> * thread)
         }
         else
         {
-            oslPipeError eReason = pipe.getError();
+            oslPipeError eReason = pThread->maPipe.getError();
             if ((eReason == osl_Pipe_E_ConnectionRefused) || (eReason == osl_Pipe_E_invalidError))
-                return RequestHandler::IPC_STATUS_PIPE_ERROR;
+                return IPC_STATUS_PIPE_ERROR;
 
             // Wait for second office to be ready
             TimeValue aTimeValue;
@@ -834,18 +574,18 @@ RequestHandler::Status PipeIpcThread::enable(rtl::Reference<IpcThread> * thread)
 
     if ( nPipeMode == PIPEMODE_CREATED )
     {
-        // Seems we are the one and only, so create listening thread
-        *thread = new PipeIpcThread(pipe);
-        return RequestHandler::IPC_STATUS_OK;
+        // Seems we are the one and only, so start listening thread
+        pGlobalOfficeIPCThread = pThread;
+        pThread->launch();
     }
     else
     {
         // Seems another office is running. Pipe arguments to it and self terminate
-        osl::StreamPipe aStreamPipe(pipe.getHandle());
+        osl::StreamPipe aStreamPipe(pThread->maPipe.getHandle());
 
         OStringBuffer aArguments(ARGUMENT_PREFIX);
         OUString cwdUrl;
-        if (!(utl::Bootstrap::getProcessWorkingDir(cwdUrl) &&
+        if (!(tools::getProcessWorkingDir(cwdUrl) &&
               addArgument(aArguments, '1', cwdUrl)))
         {
             aArguments.append('0');
@@ -853,313 +593,101 @@ RequestHandler::Status PipeIpcThread::enable(rtl::Reference<IpcThread> * thread)
         sal_uInt32 nCount = rtl_getAppCommandArgCount();
         for( sal_uInt32 i=0; i < nCount; i++ )
         {
-            rtl_getAppCommandArg( i, &aUserInstallPath.pData );
-            if (!addArgument(aArguments, ',', aUserInstallPath)) {
-                return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
+            rtl_getAppCommandArg( i, &aDummy.pData );
+            if (!addArgument(aArguments, ',', aDummy)) {
+                return IPC_STATUS_BOOTSTRAP_ERROR;
             }
         }
         aArguments.append('\0');
         // finally, write the string onto the pipe
-        SAL_INFO("desktop.app", "writing <" << aArguments.getStr() << ">");
         sal_Int32 n = aStreamPipe.write(
             aArguments.getStr(), aArguments.getLength());
         if (n != aArguments.getLength()) {
-            SAL_INFO("desktop.app", "short write: " << n);
-            return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
+            SAL_INFO("desktop", "short write: " << n);
+            return IPC_STATUS_BOOTSTRAP_ERROR;
         }
 
         if (readStringFromPipe(aStreamPipe) != PROCESSING_DONE)
         {
             // something went wrong
-            return RequestHandler::IPC_STATUS_BOOTSTRAP_ERROR;
+            return IPC_STATUS_BOOTSTRAP_ERROR;
         }
 
-        return RequestHandler::IPC_STATUS_2ND_OFFICE;
+        return IPC_STATUS_2ND_OFFICE;
     }
+#else
+    pGlobalOfficeIPCThread = rtl::Reference< OfficeIPCThread >(new OfficeIPCThread);
+#endif
+    return IPC_STATUS_OK;
 }
 
-void RequestHandler::Disable()
+void OfficeIPCThread::DisableOfficeIPCThread(bool join)
 {
+#if HAVE_FEATURE_DESKTOP
     osl::ClearableMutexGuard aMutex( GetMutex() );
 
-    if( pGlobal.is() )
+    if( pGlobalOfficeIPCThread.is() )
     {
-        rtl::Reference< RequestHandler > handler(pGlobal);
-        pGlobal.clear();
+        rtl::Reference< OfficeIPCThread > pOfficeIPCThread(
+            pGlobalOfficeIPCThread);
+        pGlobalOfficeIPCThread.clear();
 
-        handler->mState = State::Downing;
-        if (handler->mIpcThread.is()) {
-            handler->mIpcThread->close();
-        }
+        pOfficeIPCThread->mbDowning = true;
+        pOfficeIPCThread->maPipe.close();
 
         // release mutex to avoid deadlocks
         aMutex.clear();
 
-        handler->cReady.set();
+        OfficeIPCThread::SetReady(pOfficeIPCThread);
 
         // exit gracefully and join
-        if (handler->mIpcThread.is())
+        if (join)
         {
-            handler->mIpcThread->join();
-            handler->mIpcThread.clear();
+            pOfficeIPCThread->join();
         }
-
-        handler->cReady.reset();
     }
+#else
+    (void) join;
+#endif
 }
 
-RequestHandler::RequestHandler() :
-    mState( State::Starting ),
-    mnPendingRequests( 0 )
+OfficeIPCThread::OfficeIPCThread() :
+    Thread( "OfficeIPCThread" ),
+    mbDowning( false ),
+    mbRequestsEnabled( false ),
+    mnPendingRequests( 0 ),
+    mpDispatchWatcher( 0 )
 {
 }
 
-RequestHandler::~RequestHandler()
+OfficeIPCThread::~OfficeIPCThread()
 {
-    assert(!mIpcThread.is());
+    ::osl::ClearableMutexGuard  aGuard( GetMutex() );
+
+    if ( mpDispatchWatcher )
+        mpDispatchWatcher->release();
+    maPipe.close();
+    pGlobalOfficeIPCThread.clear();
 }
 
-void RequestHandler::SetReady(bool bIsReady)
+void OfficeIPCThread::SetReady(
+    rtl::Reference< OfficeIPCThread > const & pThread)
 {
-    osl::MutexGuard g(GetMutex());
-    if (pGlobal.is())
-    {
-        if (bIsReady)
-            pGlobal->cReady.set();
-        else
-            pGlobal->cReady.reset();
-    }
-}
-
-void RequestHandler::WaitForReady()
-{
-    rtl::Reference<RequestHandler> t;
-    {
-        osl::MutexGuard g(GetMutex());
-        t =  pGlobal;
-    }
+    rtl::Reference< OfficeIPCThread > const & t(
+        pThread.is() ? pThread : pGlobalOfficeIPCThread);
     if (t.is())
     {
-        t->cReady.wait();
+        t->cReady.set();
     }
 }
 
-bool IpcThread::process(OString const & arguments, bool * waitProcessed) {
-    assert(waitProcessed != nullptr);
-
-    std::unique_ptr< CommandLineArgs > aCmdLineArgs;
-    try
-    {
-        Parser p(arguments);
-        aCmdLineArgs.reset( new CommandLineArgs( p ) );
-    }
-    catch ( const CommandLineArgs::Supplier::Exception & )
-    {
-        SAL_WARN("desktop.app", "Error in received command line arguments");
-        return false;
-    }
-
-    bool bDocRequestSent = false;
-
-    OUString aUnknown( aCmdLineArgs->GetUnknown() );
-    if ( !aUnknown.isEmpty() || aCmdLineArgs->IsHelp() )
-    {
-        ApplicationEvent* pAppEvent =
-            new ApplicationEvent(ApplicationEvent::Type::Help, aUnknown);
-        ImplPostForeignAppEvent( pAppEvent );
-    }
-    else if ( aCmdLineArgs->IsVersion() )
-    {
-        ApplicationEvent* pAppEvent =
-            new ApplicationEvent(ApplicationEvent::Type::Version);
-        ImplPostForeignAppEvent( pAppEvent );
-    }
-    else
-    {
-        const CommandLineArgs &rCurrentCmdLineArgs = Desktop::GetCommandLineArgs();
-
-        if ( aCmdLineArgs->IsQuickstart() )
-        {
-            // we have to use application event, because we have to start quickstart service in main thread!!
-            ApplicationEvent* pAppEvent =
-                new ApplicationEvent(ApplicationEvent::Type::QuickStart);
-            ImplPostForeignAppEvent( pAppEvent );
-        }
-
-        // handle request for acceptor
-        std::vector< OUString > const & accept = aCmdLineArgs->GetAccept();
-        for (std::vector< OUString >::const_iterator i(accept.begin());
-             i != accept.end(); ++i)
-        {
-            ApplicationEvent* pAppEvent = new ApplicationEvent(
-                ApplicationEvent::Type::Accept, *i);
-            ImplPostForeignAppEvent( pAppEvent );
-        }
-        // handle acceptor removal
-        std::vector< OUString > const & unaccept = aCmdLineArgs->GetUnaccept();
-        for (std::vector< OUString >::const_iterator i(unaccept.begin());
-             i != unaccept.end(); ++i)
-        {
-            ApplicationEvent* pAppEvent = new ApplicationEvent(
-                ApplicationEvent::Type::Unaccept, *i);
-            ImplPostForeignAppEvent( pAppEvent );
-        }
-
-        ProcessDocumentsRequest* pRequest = new ProcessDocumentsRequest(
-            aCmdLineArgs->getCwdUrl());
-        m_handler->cProcessed.reset();
-        pRequest->pcProcessed = &m_handler->cProcessed;
-
-        // Print requests are not dependent on the --invisible cmdline argument as they are
-        // loaded with the "hidden" flag! So they are always checked.
-        pRequest->aPrintList = aCmdLineArgs->GetPrintList();
-        bDocRequestSent |= !pRequest->aPrintList.empty();
-        pRequest->aPrintToList = aCmdLineArgs->GetPrintToList();
-        pRequest->aPrinterName = aCmdLineArgs->GetPrinterName();
-        bDocRequestSent |= !( pRequest->aPrintToList.empty() || pRequest->aPrinterName.isEmpty() );
-        pRequest->aConversionList = aCmdLineArgs->GetConversionList();
-        pRequest->aConversionParams = aCmdLineArgs->GetConversionParams();
-        pRequest->aConversionOut = aCmdLineArgs->GetConversionOut();
-        pRequest->aInFilter = aCmdLineArgs->GetInFilter();
-        pRequest->bTextCat = aCmdLineArgs->IsTextCat();
-        bDocRequestSent |= !pRequest->aConversionList.empty();
-
-        if ( !rCurrentCmdLineArgs.IsInvisible() )
-        {
-            // Read cmdline args that can open/create documents. As they would open a window
-            // they are only allowed if the "--invisible" is currently not used!
-            pRequest->aOpenList = aCmdLineArgs->GetOpenList();
-            bDocRequestSent |= !pRequest->aOpenList.empty();
-            pRequest->aViewList = aCmdLineArgs->GetViewList();
-            bDocRequestSent |= !pRequest->aViewList.empty();
-            pRequest->aStartList = aCmdLineArgs->GetStartList();
-            bDocRequestSent |= !pRequest->aStartList.empty();
-            pRequest->aForceOpenList = aCmdLineArgs->GetForceOpenList();
-            bDocRequestSent |= !pRequest->aForceOpenList.empty();
-            pRequest->aForceNewList = aCmdLineArgs->GetForceNewList();
-            bDocRequestSent |= !pRequest->aForceNewList.empty();
-
-            // Special command line args to create an empty document for a given module
-
-            // #i18338# (lo)
-            // we only do this if no document was specified on the command line,
-            // since this would be inconsistent with the behaviour of
-            // the first process, see OpenClients() (call to OpenDefault()) in app.cxx
-            if ( aCmdLineArgs->HasModuleParam() && !bDocRequestSent )
-            {
-                SvtModuleOptions aOpt;
-                SvtModuleOptions::EFactory eFactory = SvtModuleOptions::EFactory::WRITER;
-                if ( aCmdLineArgs->IsWriter() )
-                    eFactory = SvtModuleOptions::EFactory::WRITER;
-                else if ( aCmdLineArgs->IsCalc() )
-                    eFactory = SvtModuleOptions::EFactory::CALC;
-                else if ( aCmdLineArgs->IsDraw() )
-                    eFactory = SvtModuleOptions::EFactory::DRAW;
-                else if ( aCmdLineArgs->IsImpress() )
-                    eFactory = SvtModuleOptions::EFactory::IMPRESS;
-                else if ( aCmdLineArgs->IsBase() )
-                    eFactory = SvtModuleOptions::EFactory::DATABASE;
-                else if ( aCmdLineArgs->IsMath() )
-                    eFactory = SvtModuleOptions::EFactory::MATH;
-                else if ( aCmdLineArgs->IsGlobal() )
-                    eFactory = SvtModuleOptions::EFactory::WRITERGLOBAL;
-                else if ( aCmdLineArgs->IsWeb() )
-                    eFactory = SvtModuleOptions::EFactory::WRITERWEB;
-
-                if ( !pRequest->aOpenList.empty() )
-                    pRequest->aModule = aOpt.GetFactoryName( eFactory );
-                else
-                    pRequest->aOpenList.push_back( aOpt.GetFactoryEmptyDocumentURL( eFactory ) );
-                bDocRequestSent = true;
-            }
-        }
-
-        if ( !aCmdLineArgs->IsQuickstart() ) {
-            bool bShowHelp = false;
-            OUStringBuffer aHelpURLBuffer;
-            if (aCmdLineArgs->IsHelpWriter()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://swriter/start");
-            } else if (aCmdLineArgs->IsHelpCalc()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://scalc/start");
-            } else if (aCmdLineArgs->IsHelpDraw()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://sdraw/start");
-            } else if (aCmdLineArgs->IsHelpImpress()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://simpress/start");
-            } else if (aCmdLineArgs->IsHelpBase()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://sdatabase/start");
-            } else if (aCmdLineArgs->IsHelpBasic()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://sbasic/start");
-            } else if (aCmdLineArgs->IsHelpMath()) {
-                bShowHelp = true;
-                aHelpURLBuffer.append("vnd.sun.star.help://smath/start");
-            }
-            if (bShowHelp) {
-                aHelpURLBuffer.append("?Language=");
-                aHelpURLBuffer.append(utl::ConfigManager::getLocale());
-#if defined UNX
-                aHelpURLBuffer.append("&System=UNX");
-#elif defined WNT
-                aHelpURLBuffer.append("&System=WIN");
-#endif
-                ApplicationEvent* pAppEvent = new ApplicationEvent(
-                    ApplicationEvent::Type::OpenHelpUrl,
-                    aHelpURLBuffer.makeStringAndClear());
-                ImplPostForeignAppEvent( pAppEvent );
-            }
-        }
-
-        if ( bDocRequestSent )
-        {
-            // Send requests to dispatch watcher if we have at least one. The receiver
-            // is responsible to delete the request after processing it.
-            if ( aCmdLineArgs->HasModuleParam() )
-            {
-                SvtModuleOptions    aOpt;
-
-                // Support command line parameters to start a module (as preselection)
-                if ( aCmdLineArgs->IsWriter() && aOpt.IsModuleInstalled( SvtModuleOptions::EModule::WRITER ) )
-                    pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::EFactory::WRITER );
-                else if ( aCmdLineArgs->IsCalc() && aOpt.IsModuleInstalled( SvtModuleOptions::EModule::CALC ) )
-                    pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::EFactory::CALC );
-                else if ( aCmdLineArgs->IsImpress() && aOpt.IsModuleInstalled( SvtModuleOptions::EModule::IMPRESS ) )
-                    pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::EFactory::IMPRESS );
-                else if ( aCmdLineArgs->IsDraw() && aOpt.IsModuleInstalled( SvtModuleOptions::EModule::DRAW ) )
-                    pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::EFactory::DRAW );
-            }
-
-            ImplPostProcessDocumentsEvent( pRequest );
-        }
-        else
-        {
-            // delete not used request again
-            delete pRequest;
-            pRequest = nullptr;
-        }
-        if (aCmdLineArgs->IsEmpty())
-        {
-            // no document was sent, just bring Office to front
-            ApplicationEvent* pAppEvent =
-                new ApplicationEvent(ApplicationEvent::Type::Appear);
-            ImplPostForeignAppEvent( pAppEvent );
-        }
-    }
-    *waitProcessed = bDocRequestSent;
-    return true;
-}
-
-void PipeIpcThread::execute()
+void OfficeIPCThread::execute()
 {
-    assert(m_handler != nullptr);
+#if HAVE_FEATURE_DESKTOP
     do
     {
         osl::StreamPipe aStreamPipe;
-        oslPipeError nError = pipe_.accept( aStreamPipe );
+        oslPipeError nError = maPipe.accept( aStreamPipe );
 
 
         if( nError == osl_Pipe_E_None )
@@ -1167,28 +695,27 @@ void PipeIpcThread::execute()
             // if we receive a request while the office is displaying some dialog or error during
             // bootstrap, that dialogs event loop might get events that are dispatched by this thread
             // we have to wait for cReady to be set by the real main loop.
-            // only requests that don't dispatch events may be processed before cReady is set.
-            m_handler->cReady.wait();
+            // only reqests that dont dispatch events may be processed before cReady is set.
+            cReady.wait();
 
             // we might have decided to shutdown while we were sleeping
-            if (!RequestHandler::pGlobal.is()) return;
+            if (!pGlobalOfficeIPCThread.is()) return;
 
-            // only lock the mutex when processing starts, otherwise we deadlock when the office goes
+            // only lock the mutex when processing starts, othewise we deadlock when the office goes
             // down during wait
-            osl::ClearableMutexGuard aGuard( RequestHandler::GetMutex() );
+            osl::ClearableMutexGuard aGuard( GetMutex() );
 
-            if (m_handler->mState == RequestHandler::State::Downing)
+            if ( mbDowning )
             {
                 break;
             }
 
             // notify client we're ready to process its args:
-            SAL_INFO("desktop.app", "writing <" << SEND_ARGUMENTS << ">");
             sal_Int32 n = aStreamPipe.write(
                 SEND_ARGUMENTS, SAL_N_ELEMENTS(SEND_ARGUMENTS));
                 // incl. terminating NUL
             if (n != SAL_N_ELEMENTS(SEND_ARGUMENTS)) {
-                SAL_WARN("desktop.app", "short write: " << n);
+                SAL_WARN("desktop", "short write: " << n);
                 continue;
             }
 
@@ -1198,47 +725,247 @@ void PipeIpcThread::execute()
             if (aArguments.isEmpty())
                 continue;
 
-            bool waitProcessed = false;
-            if (!process(aArguments, &waitProcessed)) {
+            boost::scoped_ptr< CommandLineArgs > aCmdLineArgs;
+            try
+            {
+                Parser p(aArguments);
+                aCmdLineArgs.reset( new CommandLineArgs( p ) );
+            }
+            catch ( const CommandLineArgs::Supplier::Exception & )
+            {
+#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+                fprintf( stderr, "Error in received command line arguments\n" );
+#endif
                 continue;
+            }
+
+            bool bDocRequestSent = false;
+
+            OUString aUnknown( aCmdLineArgs->GetUnknown() );
+            if ( !aUnknown.isEmpty() || aCmdLineArgs->IsHelp() )
+            {
+                ApplicationEvent* pAppEvent =
+                    new ApplicationEvent(ApplicationEvent::TYPE_HELP, aUnknown);
+                ImplPostForeignAppEvent( pAppEvent );
+            }
+            else if ( aCmdLineArgs->IsVersion() )
+            {
+                ApplicationEvent* pAppEvent =
+                    new ApplicationEvent(ApplicationEvent::TYPE_VERSION);
+                ImplPostForeignAppEvent( pAppEvent );
+            }
+            else
+            {
+                const CommandLineArgs &rCurrentCmdLineArgs = Desktop::GetCommandLineArgs();
+
+                if ( aCmdLineArgs->IsQuickstart() )
+                {
+                    // we have to use application event, because we have to start quickstart service in main thread!!
+                    ApplicationEvent* pAppEvent =
+                        new ApplicationEvent(ApplicationEvent::TYPE_QUICKSTART);
+                    ImplPostForeignAppEvent( pAppEvent );
+                }
+
+                // handle request for acceptor
+                std::vector< OUString > const & accept = aCmdLineArgs->
+                    GetAccept();
+                for (std::vector< OUString >::const_iterator i(accept.begin());
+                     i != accept.end(); ++i)
+                {
+                    ApplicationEvent* pAppEvent = new ApplicationEvent(
+                        ApplicationEvent::TYPE_ACCEPT, *i);
+                    ImplPostForeignAppEvent( pAppEvent );
+                }
+                // handle acceptor removal
+                std::vector< OUString > const & unaccept = aCmdLineArgs->
+                    GetUnaccept();
+                for (std::vector< OUString >::const_iterator i(
+                         unaccept.begin());
+                     i != unaccept.end(); ++i)
+                {
+                    ApplicationEvent* pAppEvent = new ApplicationEvent(
+                        ApplicationEvent::TYPE_UNACCEPT, *i);
+                    ImplPostForeignAppEvent( pAppEvent );
+                }
+
+                ProcessDocumentsRequest* pRequest = new ProcessDocumentsRequest(
+                    aCmdLineArgs->getCwdUrl());
+                cProcessed.reset();
+                pRequest->pcProcessed = &cProcessed;
+
+                // Print requests are not dependent on the --invisible cmdline argument as they are
+                // loaded with the "hidden" flag! So they are always checked.
+                pRequest->aPrintList = aCmdLineArgs->GetPrintList();
+                bDocRequestSent |= !pRequest->aPrintList.empty();
+                pRequest->aPrintToList = aCmdLineArgs->GetPrintToList();
+                pRequest->aPrinterName = aCmdLineArgs->GetPrinterName();
+                bDocRequestSent |= !( pRequest->aPrintToList.empty() || pRequest->aPrinterName.isEmpty() );
+
+                if ( !rCurrentCmdLineArgs.IsInvisible() )
+                {
+                    // Read cmdline args that can open/create documents. As they would open a window
+                    // they are only allowed if the "--invisible" is currently not used!
+                    pRequest->aOpenList = aCmdLineArgs->GetOpenList();
+                    bDocRequestSent |= !pRequest->aOpenList.empty();
+                    pRequest->aViewList = aCmdLineArgs->GetViewList();
+                    bDocRequestSent |= !pRequest->aViewList.empty();
+                    pRequest->aStartList = aCmdLineArgs->GetStartList();
+                    bDocRequestSent |= !pRequest->aStartList.empty();
+                    pRequest->aForceOpenList = aCmdLineArgs->GetForceOpenList();
+                    bDocRequestSent |= !pRequest->aForceOpenList.empty();
+                    pRequest->aForceNewList = aCmdLineArgs->GetForceNewList();
+                    bDocRequestSent |= !pRequest->aForceNewList.empty();
+
+                    // Special command line args to create an empty document for a given module
+
+                    // #i18338# (lo)
+                    // we only do this if no document was specified on the command line,
+                    // since this would be inconsistent with the behaviour of
+                    // the first process, see OpenClients() (call to OpenDefault()) in app.cxx
+                    if ( aCmdLineArgs->HasModuleParam() && !bDocRequestSent )
+                    {
+                        SvtModuleOptions aOpt;
+                        SvtModuleOptions::EFactory eFactory = SvtModuleOptions::E_WRITER;
+                        if ( aCmdLineArgs->IsWriter() )
+                            eFactory = SvtModuleOptions::E_WRITER;
+                        else if ( aCmdLineArgs->IsCalc() )
+                            eFactory = SvtModuleOptions::E_CALC;
+                        else if ( aCmdLineArgs->IsDraw() )
+                            eFactory = SvtModuleOptions::E_DRAW;
+                        else if ( aCmdLineArgs->IsImpress() )
+                            eFactory = SvtModuleOptions::E_IMPRESS;
+                        else if ( aCmdLineArgs->IsBase() )
+                            eFactory = SvtModuleOptions::E_DATABASE;
+                        else if ( aCmdLineArgs->IsMath() )
+                            eFactory = SvtModuleOptions::E_MATH;
+                        else if ( aCmdLineArgs->IsGlobal() )
+                            eFactory = SvtModuleOptions::E_WRITERGLOBAL;
+                        else if ( aCmdLineArgs->IsWeb() )
+                            eFactory = SvtModuleOptions::E_WRITERWEB;
+
+                        if ( !pRequest->aOpenList.empty() )
+                            pRequest->aModule = aOpt.GetFactoryName( eFactory );
+                        else
+                            pRequest->aOpenList.push_back( aOpt.GetFactoryEmptyDocumentURL( eFactory ) );
+                        bDocRequestSent = true;
+                    }
+                }
+
+                if ( !aCmdLineArgs->IsQuickstart() ) {
+                    bool bShowHelp = false;
+                    OUStringBuffer aHelpURLBuffer;
+                    if (aCmdLineArgs->IsHelpWriter()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://swriter/start");
+                    } else if (aCmdLineArgs->IsHelpCalc()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://scalc/start");
+                    } else if (aCmdLineArgs->IsHelpDraw()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://sdraw/start");
+                    } else if (aCmdLineArgs->IsHelpImpress()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://simpress/start");
+                    } else if (aCmdLineArgs->IsHelpBase()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://sdatabase/start");
+                    } else if (aCmdLineArgs->IsHelpBasic()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://sbasic/start");
+                    } else if (aCmdLineArgs->IsHelpMath()) {
+                        bShowHelp = true;
+                        aHelpURLBuffer.appendAscii("vnd.sun.star.help://smath/start");
+                    }
+                    if (bShowHelp) {
+                        aHelpURLBuffer.appendAscii("?Language=");
+                        aHelpURLBuffer.append(utl::ConfigManager::getLocale());
+#if defined UNX
+                        aHelpURLBuffer.appendAscii("&System=UNX");
+#elif defined WNT
+                        aHelpURLBuffer.appendAscii("&System=WIN");
+#endif
+                        ApplicationEvent* pAppEvent = new ApplicationEvent(
+                            ApplicationEvent::TYPE_OPENHELPURL,
+                            aHelpURLBuffer.makeStringAndClear());
+                        ImplPostForeignAppEvent( pAppEvent );
+                    }
+                }
+
+                if ( bDocRequestSent )
+                {
+                    // Send requests to dispatch watcher if we have at least one. The receiver
+                    // is responsible to delete the request after processing it.
+                    if ( aCmdLineArgs->HasModuleParam() )
+                    {
+                        SvtModuleOptions    aOpt;
+
+                        // Support command line parameters to start a module (as preselection)
+                        if ( aCmdLineArgs->IsWriter() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
+                            pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::E_WRITER );
+                        else if ( aCmdLineArgs->IsCalc() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
+                            pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::E_CALC );
+                        else if ( aCmdLineArgs->IsImpress() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
+                            pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::E_IMPRESS );
+                        else if ( aCmdLineArgs->IsDraw() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
+                            pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::E_DRAW );
+                    }
+
+                    ImplPostProcessDocumentsEvent( pRequest );
+                }
+                else
+                {
+                    // delete not used request again
+                    delete pRequest;
+                    pRequest = NULL;
+                }
+                if (aArguments.equalsL(sc_aShowSequence, sc_nShSeqLength) ||
+                    aCmdLineArgs->IsEmpty())
+                {
+                    // no document was sent, just bring Office to front
+                    ApplicationEvent* pAppEvent =
+                        new ApplicationEvent(ApplicationEvent::TYPE_APPEAR);
+                    ImplPostForeignAppEvent( pAppEvent );
+                }
             }
 
             // we don't need the mutex any longer...
             aGuard.clear();
             // wait for processing to finish
-            if (waitProcessed)
-                m_handler->cProcessed.wait();
+            if (bDocRequestSent)
+                cProcessed.wait();
             // processing finished, inform the requesting end:
-            SAL_INFO("desktop.app", "writing <" << PROCESSING_DONE << ">");
             n = aStreamPipe.write(
                 PROCESSING_DONE, SAL_N_ELEMENTS(PROCESSING_DONE));
                 // incl. terminating NUL
             if (n != SAL_N_ELEMENTS(PROCESSING_DONE)) {
-                SAL_WARN("desktop.app", "short write: " << n);
+                SAL_WARN("desktop", "short write: " << n);
                 continue;
             }
         }
         else
         {
             {
-                osl::MutexGuard aGuard( RequestHandler::GetMutex() );
-                if (m_handler->mState == RequestHandler::State::Downing)
+                osl::MutexGuard aGuard( GetMutex() );
+                if ( mbDowning )
                 {
                     break;
                 }
             }
 
-            SAL_WARN( "desktop.app", "Error on accept: " << (int)nError);
+#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+            fprintf( stderr, "Error on accept: %d\n", (int)nError );
+#endif
             TimeValue tval;
             tval.Seconds = 1;
             tval.Nanosec = 0;
             salhelper::Thread::wait( tval );
         }
     } while( schedule() );
+#endif
 }
 
 static void AddToDispatchList(
-    std::vector<DispatchWatcher::DispatchRequest>& rDispatchList,
+    DispatchWatcher::DispatchList& rDispatchList,
     boost::optional< OUString > const & cwdUrl,
     std::vector< OUString > const & aRequestList,
     DispatchWatcher::RequestType nType,
@@ -1248,12 +975,13 @@ static void AddToDispatchList(
     for (std::vector< OUString >::const_iterator i(aRequestList.begin());
          i != aRequestList.end(); ++i)
     {
-        rDispatchList.push_back({nType, *i, cwdUrl, aParam, aFactory});
+        rDispatchList.push_back(
+            DispatchWatcher::DispatchRequest( nType, *i, cwdUrl, aParam, aFactory ));
     }
 }
 
 static void AddConversionsToDispatchList(
-    std::vector<DispatchWatcher::DispatchRequest>& rDispatchList,
+    DispatchWatcher::DispatchList& rDispatchList,
     boost::optional< OUString > const & cwdUrl,
     std::vector< OUString > const & rRequestList,
     const OUString& rParam,
@@ -1278,14 +1006,7 @@ static void AddConversionsToDispatchList(
 
     OUString aOutDir( rParamOut.trim() );
     OUString aPWD;
-    if (cwdUrl)
-    {
-        aPWD = *cwdUrl;
-    }
-    else
-    {
-        utl::Bootstrap::getProcessWorkingDir( aPWD );
-    }
+    ::tools::getProcessWorkingDir( aPWD );
 
     if( !::osl::FileBase::getAbsoluteFileURL( aPWD, rParamOut, aOutDir ) )
         ::osl::FileBase::getSystemPathFromFileURL( aOutDir, aOutDir );
@@ -1304,55 +1025,55 @@ static void AddConversionsToDispatchList(
     for (std::vector< OUString >::const_iterator i(rRequestList.begin());
          i != rRequestList.end(); ++i)
     {
-        rDispatchList.push_back({nType, *i, cwdUrl, aParam, rFactory});
+        rDispatchList.push_back(
+            DispatchWatcher::DispatchRequest( nType, *i, cwdUrl, aParam, rFactory ));
     }
 }
 
 
-bool RequestHandler::ExecuteCmdLineRequests(
-    ProcessDocumentsRequest& aRequest, bool noTerminate)
+bool OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequest )
 {
     // protect the dispatch list
     osl::ClearableMutexGuard aGuard( GetMutex() );
 
-    static std::vector<DispatchWatcher::DispatchRequest> aDispatchList;
+    static DispatchWatcher::DispatchList    aDispatchList;
 
+    OUString aEmpty;
     // Create dispatch list for dispatch watcher
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aInFilter, DispatchWatcher::REQUEST_INFILTER, "", aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, "", aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, "", aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aStartList, DispatchWatcher::REQUEST_START, "", aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, "", aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aInFilter, DispatchWatcher::REQUEST_INFILTER, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aStartList, DispatchWatcher::REQUEST_START, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, aEmpty, aRequest.aModule );
     AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aPrintToList, DispatchWatcher::REQUEST_PRINTTO, aRequest.aPrinterName, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, "", aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, "", aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, aEmpty, aRequest.aModule );
     AddConversionsToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aConversionList, aRequest.aConversionParams, aRequest.aPrinterName, aRequest.aModule, aRequest.aConversionOut, aRequest.bTextCat );
     bool bShutdown( false );
 
-    if ( pGlobal.is() )
+    if ( pGlobalOfficeIPCThread.is() )
     {
-        if( ! pGlobal->AreRequestsEnabled() )
+        if( ! pGlobalOfficeIPCThread->AreRequestsEnabled() )
             return bShutdown;
 
-        pGlobal->mnPendingRequests += aDispatchList.size();
-        if ( !pGlobal->mpDispatchWatcher.is() )
+        pGlobalOfficeIPCThread->mnPendingRequests += aDispatchList.size();
+        if ( !pGlobalOfficeIPCThread->mpDispatchWatcher )
         {
-            pGlobal->mpDispatchWatcher = new DispatchWatcher;
+            pGlobalOfficeIPCThread->mpDispatchWatcher = DispatchWatcher::GetDispatchWatcher();
+            pGlobalOfficeIPCThread->mpDispatchWatcher->acquire();
         }
-        rtl::Reference<DispatchWatcher> dispatchWatcher(
-            pGlobal->mpDispatchWatcher);
 
         // copy for execute
-        std::vector<DispatchWatcher::DispatchRequest> aTempList( aDispatchList );
+        DispatchWatcher::DispatchList aTempList( aDispatchList );
         aDispatchList.clear();
 
         aGuard.clear();
 
         // Execute dispatch requests
-        bShutdown = dispatchWatcher->executeDispatchRequests( aTempList, noTerminate);
+        bShutdown = pGlobalOfficeIPCThread->mpDispatchWatcher->executeDispatchRequests( aTempList, s_bInEnableRequests );
 
         // set processed flag
-        if (aRequest.pcProcessed != nullptr)
+        if (aRequest.pcProcessed != NULL)
             aRequest.pcProcessed->set();
     }
 

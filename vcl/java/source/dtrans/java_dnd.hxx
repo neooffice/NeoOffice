@@ -38,11 +38,10 @@
 
 #include <list>
 
-#include <cppuhelper/compbase.hxx>
+#include <cppuhelper/compbase3.hxx>
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #include <com/sun/star/datatransfer/dnd/XDragSource.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
-#include <com/sun/star/lang/IllegalArgumentException.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <osl/thread.h>
@@ -55,7 +54,7 @@ typedef void* id;
 struct NSView;
 #endif
 
-class JavaDragSource : public ::cppu::WeakComponentImplHelper< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
+class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDragSource, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 public:
 	sal_Int8				mnActions;
@@ -66,29 +65,29 @@ public:
 	id						mpPasteboardHelper;
 	vcl::Window*			mpWindow;
 
-							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, void );
+							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void* );
 
 							JavaDragSource();
 	virtual					~JavaDragSource();
 
 	// XDragSource
-	virtual sal_Bool		SAL_CALL isDragImageSupported() throw() override;
-	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw() override;
-	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw() override;
+	virtual sal_Bool		SAL_CALL isDragImageSupported() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	// XInitialization
-	virtual void			SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& arguments ) override;
+	virtual void			SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& arguments ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	// XServiceInfo
-	virtual OUString		SAL_CALL getImplementationName() throw() override;
-	virtual sal_Bool		SAL_CALL supportsService( const OUString& serviceName ) throw() override;
-	virtual ::com::sun::star::uno::Sequence< OUString >	SAL_CALL getSupportedServiceNames() throw() override;
+	virtual OUString		SAL_CALL getImplementationName() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual sal_Bool		SAL_CALL supportsService( const OUString& serviceName ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual ::com::sun::star::uno::Sequence< OUString >	SAL_CALL getSupportedServiceNames() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	NSView*					getNSView();
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 };
 
-class JavaDropTarget : public ::cppu::WeakComponentImplHelper< ::com::sun::star::datatransfer::dnd::XDropTarget, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
+class JavaDropTarget : public ::cppu::WeakComponentImplHelper3< ::com::sun::star::datatransfer::dnd::XDropTarget, ::com::sun::star::lang::XInitialization, ::com::sun::star::lang::XServiceInfo >
 {
 public:
     sal_Bool				mbActive;
@@ -104,19 +103,19 @@ public:
 
 	// Overrides WeakComponentImplHelper::disposing() which is called by
 	// WeakComponentImplHelper::dispose()
-    virtual void			SAL_CALL disposing() override;
+    virtual void			SAL_CALL disposing() SAL_OVERRIDE;
 
-	virtual void			SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& arguments ) override;
+	virtual void			SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& arguments ) throw( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
-	virtual void			SAL_CALL addDropTargetListener( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw() override;
-	virtual void			SAL_CALL removeDropTargetListener( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw() override;
-	virtual sal_Bool		SAL_CALL isActive() throw() override;
-	virtual void			SAL_CALL setActive( sal_Bool active ) throw() override;
-	virtual sal_Int8		SAL_CALL getDefaultActions() throw() override;
-	virtual void			SAL_CALL setDefaultActions( sal_Int8 actions ) throw() override;
-	virtual OUString	SAL_CALL getImplementationName() throw() override;
-	virtual sal_Bool		SAL_CALL supportsService( const OUString& serviceName ) throw() override;
-	virtual ::com::sun::star::uno::Sequence< OUString >	SAL_CALL getSupportedServiceNames() throw() override;
+	virtual void			SAL_CALL addDropTargetListener( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL removeDropTargetListener( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener >& xListener ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual sal_Bool		SAL_CALL isActive() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL setActive( sal_Bool active ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual sal_Int8		SAL_CALL getDefaultActions() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual void			SAL_CALL setDefaultActions( sal_Int8 actions ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual OUString	SAL_CALL getImplementationName() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual sal_Bool		SAL_CALL supportsService( const OUString& serviceName ) throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual ::com::sun::star::uno::Sequence< OUString >	SAL_CALL getSupportedServiceNames() throw( com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	NSView*					getNSView();
 	sal_Int8				handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo );

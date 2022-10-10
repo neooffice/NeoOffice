@@ -102,7 +102,7 @@
 	<xsl:value-of select="translate($productversion,' ','')"/>
 </xsl:variable>
 <!-- this is were the images are -->
-<xsl:param name="imgtheme" select="''"/>
+<xsl:param name="imgrepos" select="''"/>
 <xsl:param name="Id" />
 <xsl:param name="Language" select="'en-US'"/>
 <xsl:variable name="lang" select="$Language"/>
@@ -113,8 +113,7 @@
 
   <!-- parts of help and image urls -->
 <xsl:variable name="help_url_prefix" select="'vnd.sun.star.help://'"/>
-<xsl:variable name="img_url_prefix" select="concat('vnd.libreoffice.image://',$imgtheme,'/')"/>
-<xsl:variable name="img_url_internal" select="'vnd.libreoffice.image://helpimg/'"/>
+<xsl:variable name="img_url_prefix" select="concat('vnd.sun.star.zip://',$imgrepos,'/')"/>
 <xsl:variable name="urlpost" select="concat('?Language=',$lang,$am,'System=',$System,$am,'UseDB=no')"/>
 <xsl:variable name="urlpre" select="$help_url_prefix" /> 
 <xsl:variable name="linkprefix" select="$urlpre"/>
@@ -123,9 +122,9 @@
 <xsl:variable name="css" select="'default.css'"/>
 
 <!-- images for notes, tips and warnings -->
-<xsl:variable name="note_img" select="concat($img_url_internal,'media/helpimg/note.png')"/>
-<xsl:variable name="tip_img" select="concat($img_url_internal,'media/helpimg/tip.png')"/>
-<xsl:variable name="warning_img" select="concat($img_url_internal,'media/helpimg/warning.png')"/>
+<xsl:variable name="note_img" select="concat($img_url_prefix,'res/helpimg/note.png')"/>
+<xsl:variable name="tip_img" select="concat($img_url_prefix,'res/helpimg/tip.png')"/>
+<xsl:variable name="warning_img" select="concat($img_url_prefix,'res/helpimg/warning.png')"/>
 
 <!--
 #############
@@ -259,6 +258,9 @@
 <!-- ITEM -->
 <xsl:template match="item"><span class="{@type}"><xsl:apply-templates /></span></xsl:template>
 <xsl:template match="item" mode="embedded"><span class="{@type}"><xsl:apply-templates /></span></xsl:template>
+
+<!-- LASTEDITED -->
+<xsl:template match="lastedited" />
 
 <!-- LINK -->
 <xsl:template match="link">
@@ -842,21 +844,31 @@
 
 <!-- Insert an image -->
 <xsl:template name="insertimage">
+	
+	<xsl:variable name="fpath">
+		<xsl:call-template name="getfpath">
+			<xsl:with-param name="s"><xsl:value-of select="@src"/></xsl:with-param>
+		</xsl:call-template>
+	</xsl:variable>
+	
+	<xsl:variable name="fname">
+		<xsl:call-template name="getfname">
+			<xsl:with-param name="s"><xsl:value-of select="@src"/></xsl:with-param>
+		</xsl:call-template>
+	</xsl:variable>
+
   <xsl:variable name="src">
     <xsl:choose>
-      <xsl:when test="starts-with(@src,'media/')">
-        <xsl:value-of select="concat($img_url_internal,@src)"/>
-      </xsl:when>
       <xsl:when test="not($ExtensionId='') and starts-with(@src,$ExtensionId)">
         <xsl:value-of select="concat($ExtensionPath,'/',@src)"/>
       </xsl:when>
       <xsl:otherwise>
         <xsl:choose>
-          <xsl:when test="@localize='true'">
-            <xsl:value-of select="concat($img_url_prefix,@src,'?lang=',$lang)"/>
+          <xsl:when test="(@localize='true') and not($lang='en-US')">
+            <xsl:value-of select="concat($img_url_prefix,$fpath,$lang,'/',$fname)"/>
           </xsl:when>
           <xsl:otherwise>
-            <xsl:value-of select="concat($img_url_prefix,@src)"/>
+            <xsl:value-of select="concat($img_url_prefix,$fpath,$fname)"/>
           </xsl:otherwise>
         </xsl:choose>
       </xsl:otherwise>
@@ -962,6 +974,36 @@
 	</xsl:choose>
 </xsl:template>
 
+<xsl:template name="getfpath">
+	<xsl:param name="s"/>
+	<xsl:param name="p"/>
+	<xsl:choose>
+		<xsl:when test="contains($s,'/')">
+			<xsl:call-template name="getfpath">
+				<xsl:with-param name="p"><xsl:value-of select="concat($p,substring-before($s,'/'),'/')"/></xsl:with-param>
+				<xsl:with-param name="s"><xsl:value-of select="substring-after($s,'/')"/></xsl:with-param>
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:otherwise>
+			<xsl:value-of select="$p"/>
+		</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+
+<xsl:template name="getfname">
+	<xsl:param name="s"/>
+	<xsl:choose>
+		<xsl:when test="contains($s,'/')">
+			<xsl:call-template name="getfname">
+				<xsl:with-param name="s"><xsl:value-of select="substring-after($s,'/')"/></xsl:with-param>
+			</xsl:call-template>
+		</xsl:when>
+		<xsl:otherwise>
+			<xsl:value-of select="$s"/>
+		</xsl:otherwise>
+	</xsl:choose>
+</xsl:template>
+
 <xsl:template name="createDBpostfix">
 	<xsl:param name="archive"/>
 	<xsl:variable name="newDB">
@@ -997,7 +1039,7 @@
 </xsl:template>
 <xsl:template match="paragraph[(@id='par_id3149797' or @id='hd_id3155388' or @id='par_id3147335' or @id='hd_id3153881' or @id='par_id3148943' or @id='hd_id3153061' or @id='par_id3156343' or @id='hd_id3146795' or @id='par_id3150358' or @id='par_id3154939') and ancestor::body/preceding-sibling::meta[topic[@id='textsharedoptionen01014000xml']]]" />
 
-<!-- Replace "Mac OS X" and "OS X" with "macOS" -->
+<!-- Replace "Mac OS X" and "OS X" with "Mac" -->
 <xsl:template match="paragraph[@id='hd_id4791405' and ancestor::body/preceding-sibling::meta[topic[@id='textsharedautopi01170000xml']]]/text()">
 	<xsl:call-template name="replacewithmacbrand">
 		<xsl:with-param name="string"><xsl:value-of select="."/></xsl:with-param>
@@ -1054,10 +1096,10 @@
 	</xsl:choose>
 </xsl:template>
 
-<!-- Replace "Mac OS X" and "OS X" with "macOS" in text -->
+<!-- Replace "Mac OS X" and "OS X" with "Mac" in text -->
 <xsl:variable name="macosxbrand" select="'Mac OS X'"/>
 <xsl:variable name="osxbrand" select="'OS X'"/>
-<xsl:variable name="macbrand" select="'macOS'"/>
+<xsl:variable name="macbrand" select="'Mac'"/>
 <xsl:template name="replacewithmacbrand">
 	<xsl:param name="string"/>
 	<xsl:choose>

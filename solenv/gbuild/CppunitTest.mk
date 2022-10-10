@@ -16,7 +16,7 @@
 #   except in compliance with the License. You may obtain a copy of
 #   the License at http://www.apache.org/licenses/LICENSE-2.0 .
 #
-#   Modified November 2019 by Patrick Luby. NeoOffice is only distributed
+#   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
 #   under the GNU General Public License, Version 3 as allowed by Section 3.3
 #   of the Mozilla Public License, v. 2.0.
 #
@@ -26,34 +26,20 @@
 
 # CppunitTest class
 
-# Cap the number of threads unittests use.
-export MAX_CONCURRENCY=4
-# Disable searching for certificates by default
-export MOZILLA_CERTIFICATE_FOLDER=0
-
-gb_CppunitTest_UNITTESTFAILED ?= $(GBUILDDIR)/platform/unittest-failed-default.sh
-gb_CppunitTest_PYTHONDEPS ?= $(call gb_Library_get_target,pyuno_wrapper) $(if $(SYSTEM_PYTHON),,$(call gb_Package_get_target,python3))
-
-ifeq ($(strip $(gb_CppunitTest_GDBTRACE)),)
-ifneq ($(strip $(CPPUNITTRACE)),)
-ifneq ($(filter gdb,$(CPPUNITTRACE)),)
-gb_CppunitTest_GDBTRACE := $(subst gdb,gdb -ex "set environment $(subst =, ,$(gb_CppunitTest_CPPTESTPRECOMMAND))",$(CPPUNITTRACE))
-else ifneq ($(filter lldb,$(CPPUNITTRACE)),)
-gb_CppunitTest_PREGDBTRACE := lo_dyldpathfile=$(call var2file,$(shell $(gb_MKTEMP)),500,settings set target.env-vars $(gb_CppunitTest_CPPTESTPRECOMMAND))
-gb_CppunitTest_GDBTRACE := $(subst lldb,lldb -s $$lo_dyldpathfile,$(CPPUNITTRACE))
-gb_CppunitTest_POSTGDBTRACE := rm $$lo_dyldpathfile
-else
-gb_CppunitTest_GDBTRACE := $(CPPUNITTRACE)
-endif
+ifeq ($(strip $(DEBUGCPPUNIT)),TRUE)
+ifeq ($(strip $(GUIBASE)),java)
+gb_CppunitTest_GDBTRACE := lldb -o run --
 gb_CppunitTest__interactive := $(true)
-endif
+else	# GUIBASE == java
+gb_CppunitTest_GDBTRACE := gdb -nx -ex "add-auto-load-safe-path $(INSTDIR)" --command=$(SRCDIR)/solenv/bin/gdbtrycatchtrace-stdout -return-child-result --args
+endif	# GUIBASE == java
+else ifneq ($(strip $(CPPUNITTRACE)),)
+gb_CppunitTest_GDBTRACE := $(CPPUNITTRACE)
+gb_CppunitTest__interactive := $(true)
 endif
 
 ifneq ($(strip $(VALGRIND)),)
 gb_CppunitTest_VALGRINDTOOL := valgrind --tool=$(VALGRIND) --num-callers=50 --error-exitcode=1 --trace-children=yes --trace-children-skip='*/java,*/gij'
-ifneq ($(strip $(VALGRIND_GDB)),)
-gb_CppunitTest_VALGRINDTOOL += --vgdb=yes --vgdb-error=0
-endif
 ifeq ($(strip $(VALGRIND)),memcheck)
 G_SLICE := always-malloc
 GLIBCXX_FORCE_NEW := 1
@@ -62,23 +48,14 @@ endif
 
 ifneq (,$(filter perfcheck,$(MAKECMDGOALS)))
 $(if $(ENABLE_VALGRIND),,$(call gb_Output_error,Running performance tests with empty $$(ENABLE_VALGRIND) does not make sense))
-gb_CppunitTest_VALGRINDTOOL := valgrind --tool=callgrind --dump-instr=yes --instr-atstart=no --simulate-cache=yes --dump-instr=yes --collect-bus=yes --branch-sim=yes
-ifneq ($(strip $(VALGRIND_GDB)),)
-gb_CppunitTest_VALGRINDTOOL += --vgdb=yes --vgdb-error=0
-endif
+gb_CppunitTest_VALGRINDTOOL := valgrind --tool=callgrind --dump-instr=yes --instr-atstart=no
 endif
 
 # defined by platform
+#  gb_CppunitTest_TARGETTYPE
 #  gb_CppunitTest_get_filename
-gb_CppunitTest_RUNTIMEDEPS := $(call gb_Executable_get_runtime_dependencies,cppunittester)
+gb_CppunitTest_CPPTESTDEPS := $(call gb_Executable_get_runtime_dependencies,cppunittester)
 gb_CppunitTest_CPPTESTCOMMAND := $(call gb_Executable_get_target_for_build,cppunittester)
-
-# i18npool dlopens localedata_* libraries.
-gb_CppunitTest_RUNTIMEDEPS += \
-	$(call gb_Library_get_target,localedata_en) \
-	$(call gb_Library_get_target,localedata_es) \
-	$(call gb_Library_get_target,localedata_euro) \
-	$(call gb_Library_get_target,localedata_others) \
 
 define gb_CppunitTest__make_args
 $(HEADLESS) \
@@ -112,60 +89,37 @@ $(call gb_CppunitTest_get_clean_target,%) :
 		rm -f $(call gb_CppunitTest_get_target,$*) $(call gb_CppunitTest_get_target,$*).log)
 
 .PHONY : $(call gb_CppunitTest_get_target,%)
-$(call gb_CppunitTest_get_target,%) :| $(gb_CppunitTest_RUNTIMEDEPS)
+$(call gb_CppunitTest_get_target,%) :| $(gb_CppunitTest_CPPTESTDEPS)
 	$(call gb_Output_announce,$*,$(true),CUT,2)
 	$(call gb_Helper_abbreviate_dirs,\
-	        $(if $(gb_CppunitTest_vcl_hide_windows),export VCL_HIDE_WINDOWS=1 && ) \
-	        $(if $(gb_CppunitTest_vcl_show_windows),unset VCL_HIDE_WINDOWS && ) \
 		mkdir -p $(dir $@) && \
 		rm -fr $@.user && mkdir $@.user && \
-		$(if $(gb_CppunitTest__use_confpreinit), \
-		    $(INSTDIR)/program/lokconf_init $(call gb_CppunitTest__make_args) &&) \
 		$(if $(gb_CppunitTest__interactive),, \
-			$(if $(filter $(PRODUCT_BUILD_TYPE),java),rm -f $@.resource.log &&) \
 			$(if $(value gb_CppunitTest_postprocess), \
 				rm -fr $@.core && mkdir $@.core && cd $@.core &&)) \
-		( \
-		$(if $(gb_CppunitTest_localized),for l in $(WITH_LANG_LIST) ; do LO_TEST_LOCALE="$$l" ) \
-		$(if $(gb_CppunitTest_PREGDBTRACE),$(gb_CppunitTest_PREGDBTRACE) &&) \
-		$(if $(filter gdb,$(CPPUNITTRACE)),,$(gb_CppunitTest_CPPTESTPRECOMMAND)) \
+		($(gb_CppunitTest_CPPTESTPRECOMMAND) \
 		$(if $(G_SLICE),G_SLICE=$(G_SLICE)) \
 		$(if $(GLIBCXX_FORCE_NEW),GLIBCXX_FORCE_NEW=$(GLIBCXX_FORCE_NEW)) \
-		$(gb_CppunitTest_malloc_check) \
+		$(if $(HEADLESS),,VCL_HIDE_WINDOWS=1) \
 		$(if $(strip $(PYTHON_URE)),\
 			PYTHONDONTWRITEBYTECODE=1) \
-		$(EXTRA_ENV_VARS) \
 		$(ICECREAM_RUN) $(gb_CppunitTest_GDBTRACE) $(gb_CppunitTest_VALGRINDTOOL) $(gb_CppunitTest_CPPTESTCOMMAND) \
 		$(call gb_LinkTarget_get_target,$(call gb_CppunitTest_get_linktarget,$*)) \
-		$(call gb_CppunitTest__make_args) "-env:CPPUNITTESTTARGET=$@" \
-		$(if $(gb_CppunitTest_POSTGDBTRACE), \
-			; RET=$$? && $(gb_CppunitTest_POSTGDBTRACE) && (exit $$RET)) \
-		$(if $(gb_CppunitTest_localized),|| exit $$?; done) \
-		) \
+		$(call gb_CppunitTest__make_args) \
 		$(if $(gb_CppunitTest__interactive),, \
 			> $@.log 2>&1 \
 			|| ($(if $(value gb_CppunitTest_postprocess), \
 					RET=$$?; \
 					$(call gb_CppunitTest_postprocess,$(gb_CppunitTest_CPPTESTCOMMAND),$@.core,$$RET) >> $@.log 2>&1;) \
-				cat $@.log; $(gb_CppunitTest_UNITTESTFAILED) Cppunit $*)))
+				cat $@.log; $(SRCDIR)/solenv/bin/unittest-failed.sh Cppunit $*))))
 
 define gb_CppunitTest_CppunitTest
 $(call gb_CppunitTest__CppunitTest_impl,$(1),$(call gb_CppunitTest_get_linktarget,$(1)))
 
 endef
 
-define gb_CppunitTest_CppunitScreenShot
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_localized := $(true)
-$(call gb_CppunitTest__CppunitTest_impl,$(1),$(call gb_CppunitTest_get_linktarget,$(1)))
-
-endef
-
-define gb_CppunitTest_register_target
-endef
-
 # call gb_CppunitTest__CppunitTest_impl,cppunittest,linktarget
 define gb_CppunitTest__CppunitTest_impl
-$(call gb_CppunitTest_register_target, $(1), $(2), "test")
 $(call gb_LinkTarget_LinkTarget,$(2),CppunitTest_$(1),NONE)
 $(call gb_LinkTarget_set_targettype,$(2),CppunitTest)
 $(call gb_LinkTarget_add_libs,$(2),$(gb_STDLIBS))
@@ -193,7 +147,6 @@ $(call gb_CppunitTest_get_target,$(1)) : VCL := $(false)
 $(call gb_CppunitTest_get_target,$(1)) : UNO_SERVICES :=
 $(call gb_CppunitTest_get_target,$(1)) : UNO_TYPES :=
 $(call gb_CppunitTest_get_target,$(1)) : HEADLESS := --headless
-$(call gb_CppunitTest_get_target,$(1)) : EXTRA_ENV_VARS :=
 $$(eval $$(call gb_Module_register_target,$(call gb_CppunitTest_get_target,$(1)),$(call gb_CppunitTest_get_clean_target,$(1))))
 $(call gb_Helper_make_userfriendly_targets,$(1),CppunitTest)
 
@@ -222,21 +175,17 @@ endef
 define gb_CppunitTest__use_vcl
 $(call gb_CppunitTest_get_target,$(1)) : VCL := $(true)
 $(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,vclbootstrapprotector)
-ifeq ($(USING_X11),TRUE)
+ifeq ($(GUIBASE),unx)
 $(call gb_CppunitTest_get_target,$(1)) : $(call gb_Library_get_target,desktop_detector)
-$(call gb_CppunitTest_get_target,$(1)) : $(if $(filter $(2),$(true)),, \
+$(call gb_CppunitTest_get_target,$(1)) : $(if $(filter $(2),$(true)), \
+    $(call gb_Library_get_target,vclplug_svp), \
     $(call gb_Library_get_target,vclplug_gen) \
         $(if $(ENABLE_GTK),$(call gb_Library_get_target,vclplug_gtk)) \
         $(if $(ENABLE_GTK3),$(call gb_Library_get_target,vclplug_gtk3)) \
+        $(if $(ENABLE_KDE),$(call gb_Library_get_target,vclplug_kde)) \
         $(if $(ENABLE_KDE4),$(call gb_Library_get_target,vclplug_kde4)) \
         $(if $(ENABLE_TDE),$(call gb_Library_get_target,vclplug_tde)))
 endif
-
-endef
-
-define gb_CppunitTest_use_confpreinit
-$(call gb_CppunitTest_use_executable,$(1),lokconf_init)
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest__use_confpreinit := TRUE
 
 endef
 
@@ -247,20 +196,7 @@ endef
 
 define gb_CppunitTest_use_vcl_non_headless
 $(call gb_CppunitTest_get_target,$(1)) : HEADLESS :=
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_vcl_hide_windows := $(true)
 $(call gb_CppunitTest__use_vcl,$(1),$(false))
-
-endef
-
-define gb_CppunitTest_use_vcl_non_headless_with_windows
-$(call gb_CppunitTest_get_target,$(1)) : HEADLESS :=
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_vcl_show_windows := $(true)
-$(call gb_CppunitTest__use_vcl,$(1),$(false))
-
-endef
-
-define gb_CppunitTest_localized_run
-$(call gb_CppunitTest_get_target,$(1)) : gb_CppunitTest_localized := $(true)
 
 endef
 
@@ -399,18 +335,16 @@ $(call gb_CppunitTest_get_target,$(1)) : PYTHON_URE := $(true)
 $(call gb_CppunitTest_get_target,$(1)) :\
 	$(call gb_Library_get_target,pythonloader) \
 	$(call gb_Library_get_target,pyuno) \
-	$(gb_CppunitTest_PYTHONDEPS) \
+	$(if $(filter-out WNT,$(OS)),\
+		$(call gb_Library_get_target,pyuno_wrapper) \
+	) \
+	$(if $(SYSTEM_PYTHON),, \
+		$(if $(filter MACOSX,$(OS)),\
+			$(call gb_GeneratedPackage_get_target,python3),\
+			$(call gb_Package_get_target,python3) \
+		) \
+	) \
 	$(call gb_Package_get_target,pyuno_python_scripts)
-
-endef
-
-define gb_CppunitTest_use_uiconfig
-$(call gb_CppunitTest_get_target,$(1)) : $(call gb_UIConfig_get_target,$(2))
-
-endef
-
-define gb_CppunitTest_use_uiconfigs
-$(foreach uiconfig,$(2),$(call gb_CppunitTest_use_uiconfig,$(1),$(uiconfig)))
 
 endef
 
@@ -433,8 +367,6 @@ $(eval $(foreach method,\
 	add_objcobjects \
 	add_objcxxobject \
 	add_objcxxobjects \
-	add_cxxclrobject \
-	add_cxxclrobjects \
 	add_asmobject \
 	add_asmobjects \
 	use_package \
@@ -447,7 +379,6 @@ $(eval $(foreach method,\
 	set_yaccflags \
 	add_objcflags \
 	add_objcxxflags \
-	add_cxxclrflags \
 	add_defs \
 	set_include \
 	add_ldflags \
@@ -465,8 +396,8 @@ $(eval $(foreach method,\
 	use_custom_headers \
 	set_visibility_default \
 	set_warnings_not_errors \
-	set_external_code \
 	set_generated_cxx_suffix \
+	disable_compiler_plugins \
 ,\
 	$(call gb_CppunitTest__forward_to_Linktarget,$(method))\
 ))

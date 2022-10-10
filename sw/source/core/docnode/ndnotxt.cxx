@@ -43,12 +43,12 @@
 
 #include <frmfmt.hxx>
 
-SwNoTextNode::SwNoTextNode( const SwNodeIndex & rWhere,
-                  const SwNodeType nNdType,
-                  SwGrfFormatColl *pGrfColl,
+SwNoTxtNode::SwNoTxtNode( const SwNodeIndex & rWhere,
+                  const sal_uInt8 nNdType,
+                  SwGrfFmtColl *pGrfColl,
                   SwAttrSet* pAutoAttr ) :
-    SwContentNode( rWhere, nNdType, pGrfColl ),
-    pContour( nullptr ),
+    SwCntntNode( rWhere, nNdType, pGrfColl ),
+    pContour( 0 ),
     bAutomaticContour( false ),
     bContourMapModeValid( true ),
     bPixelContour( false )
@@ -58,94 +58,109 @@ SwNoTextNode::SwNoTextNode( const SwNodeIndex & rWhere,
         SetAttr( *pAutoAttr );
 }
 
-SwNoTextNode::~SwNoTextNode()
+SwNoTxtNode::~SwNoTxtNode()
 {
+    delete pContour;
 }
 
 /// Creates an AttrSet for all derivations with ranges for frame-
 /// and graphics-attributes.
-void SwNoTextNode::NewAttrSet( SwAttrPool& rPool )
+void SwNoTxtNode::NewAttrSet( SwAttrPool& rPool )
 {
     OSL_ENSURE( !mpAttrSet.get(), "AttrSet is already set" );
-    SwAttrSet aNewAttrSet( rPool, aNoTextNodeSetRange );
+    SwAttrSet aNewAttrSet( rPool, aNoTxtNodeSetRange );
 
     // put names of parent style and conditional style:
-    const SwFormatColl* pFormatColl = GetFormatColl();
+    const SwFmtColl* pFmtColl = GetFmtColl();
     OUString sVal;
-    SwStyleNameMapper::FillProgName( pFormatColl->GetName(), sVal, SwGetPoolIdFromName::TxtColl, true );
-    SfxStringItem aFormatColl( RES_FRMATR_STYLE_NAME, sVal );
-    aNewAttrSet.Put( aFormatColl );
+    SwStyleNameMapper::FillProgName( pFmtColl->GetName(), sVal, nsSwGetPoolIdFromName::GET_POOLID_TXTCOLL, true );
+    SfxStringItem aFmtColl( RES_FRMATR_STYLE_NAME, sVal );
+    aNewAttrSet.Put( aFmtColl );
 
-    aNewAttrSet.SetParent( &GetFormatColl()->GetAttrSet() );
+    aNewAttrSet.SetParent( &GetFmtColl()->GetAttrSet() );
     mpAttrSet = GetDoc()->GetIStyleAccess().getAutomaticStyle( aNewAttrSet, IStyleAccess::AUTO_STYLE_NOTXT );
 }
 
 /// Dummies for loading/saving of persistent data
 /// when working with graphics and OLE objects
-bool SwNoTextNode::RestorePersistentData()
+bool SwNoTxtNode::RestorePersistentData()
 {
     return true;
 }
 
-bool SwNoTextNode::SavePersistentData()
+bool SwNoTxtNode::SavePersistentData()
 {
     return true;
 }
 
-void SwNoTextNode::SetContour( const tools::PolyPolygon *pPoly, bool bAutomatic )
+void SwNoTxtNode::SetContour( const tools::PolyPolygon *pPoly, bool bAutomatic )
 {
+    delete pContour;
     if ( pPoly )
-        pContour.reset( new tools::PolyPolygon( *pPoly ) );
+        pContour = new tools::PolyPolygon( *pPoly );
     else
-        pContour.reset();
+        pContour = 0;
     bAutomaticContour = bAutomatic;
     bContourMapModeValid = true;
     bPixelContour = false;
 }
 
-void SwNoTextNode::CreateContour()
+void SwNoTxtNode::CreateContour()
 {
     OSL_ENSURE( !pContour, "Contour available." );
-    pContour.reset( new tools::PolyPolygon(SvxContourDlg::CreateAutoContour(GetGraphic())) );
+    pContour = new tools::PolyPolygon(SvxContourDlg::CreateAutoContour(GetGraphic()));
     bAutomaticContour = true;
     bContourMapModeValid = true;
     bPixelContour = false;
 }
 
-const tools::PolyPolygon *SwNoTextNode::HasContour() const
+const tools::PolyPolygon *SwNoTxtNode::HasContour() const
 {
     if( !bContourMapModeValid )
     {
         const MapMode aGrfMap( GetGraphic().GetPrefMapMode() );
 #ifdef USE_JAVA
-        // Fix bug 3593 by treating MapUnit::MapPoint the same as
-        // MapUnit::MapPixel when calculating contours
-        bool bPixelGrf = ( aGrfMap.GetMapUnit() == MapUnit::MapPixel || aGrfMap.GetMapUnit() == MapUnit::MapPoint );
+        // Fix bug 3593 by treating MAP_POINT the same as MAP_PIXEL when
+        // calculating contours
+        bool bPixelGrf = ( aGrfMap.GetMapUnit() == MAP_PIXEL || aGrfMap.GetMapUnit() == MAP_POINT );
 #else	// USE_JAVA
-        bool bPixelGrf = aGrfMap.GetMapUnit() == MapUnit::MapPixel;
+        bool bPixelGrf = aGrfMap.GetMapUnit() == MAP_PIXEL;
 #endif	// USE_JAVA
-        const MapMode aContourMap( bPixelGrf ? MapUnit::MapPixel : MapUnit::Map100thMM );
+        const MapMode aContourMap( bPixelGrf ? MAP_PIXEL : MAP_100TH_MM );
         if( bPixelGrf ? !bPixelContour : aGrfMap != aContourMap )
         {
+            // #i102238#
             double nGrfDPIx = 0.0;
             double nGrfDPIy = 0.0;
             {
                 if ( !bPixelGrf && bPixelContour )
                 {
-                    basegfx::B2DSize aDPI = GetGraphic().GetPPI();
-                    nGrfDPIx = aDPI.getX();
-                    nGrfDPIy = aDPI.getY();
+                    const Size aGrfPixelSize( GetGraphic().GetSizePixel() );
+                    const Size aGrfPrefMapModeSize( GetGraphic().GetPrefSize() );
+                    if ( aGrfMap.GetMapUnit() == MAP_INCH )
+                    {
+                        nGrfDPIx = aGrfPixelSize.Width() / ( (double)aGrfMap.GetScaleX() * aGrfPrefMapModeSize.Width() );
+                        nGrfDPIy = aGrfPixelSize.Height() / ( (double)aGrfMap.GetScaleY() * aGrfPrefMapModeSize.Height() );
+                    }
+                    else
+                    {
+                        const Size aGrf1000thInchSize =
+                            OutputDevice::LogicToLogic( aGrfPrefMapModeSize,
+                                                        aGrfMap, MAP_1000TH_INCH );
+                        nGrfDPIx = 1000.0 * aGrfPixelSize.Width() / aGrf1000thInchSize.Width();
+                        nGrfDPIy = 1000.0 * aGrfPixelSize.Height() / aGrf1000thInchSize.Height();
+                    }
                 }
             }
             OSL_ENSURE( !bPixelGrf || aGrfMap == aContourMap,
                         "scale factor for pixel unsupported" );
             OutputDevice* pOutDev =
                 (bPixelGrf || bPixelContour) ? Application::GetDefaultDevice()
-                                             : nullptr;
+                                             : 0;
             sal_uInt16 nPolyCount = pContour->Count();
             for( sal_uInt16 j=0; j<nPolyCount; j++ )
             {
-                tools::Polygon& rPoly = (*pContour)[j];
+                Polygon& rPoly = (*pContour)[j];
 
                 sal_uInt16 nCount = rPoly.GetSize();
                 for( sal_uInt16 i=0 ; i<nCount; i++ )
@@ -156,7 +171,7 @@ const tools::PolyPolygon *SwNoTextNode::HasContour() const
                     else if( bPixelContour )
                     {
                         rPoly[i] = pOutDev->PixelToLogic( rPoly[i], aGrfMap );
-
+                        // #i102238#
                         if ( nGrfDPIx != 0 && nGrfDPIy != 0 )
                         {
                             rPoly[i] = Point( rPoly[i].getX() * pOutDev->GetDPIX() / nGrfDPIx,
@@ -170,29 +185,30 @@ const tools::PolyPolygon *SwNoTextNode::HasContour() const
                 }
             }
         }
-        const_cast<SwNoTextNode *>(this)->bContourMapModeValid = true;
-        const_cast<SwNoTextNode *>(this)->bPixelContour = false;
+        ((SwNoTxtNode *)this)->bContourMapModeValid = true;
+        ((SwNoTxtNode *)this)->bPixelContour = false;
     }
 
-    return pContour.get();
+    return pContour;
 }
 
-void SwNoTextNode::GetContour( tools::PolyPolygon &rPoly ) const
+void SwNoTxtNode::GetContour( tools::PolyPolygon &rPoly ) const
 {
     OSL_ENSURE( pContour, "Contour not available." );
     rPoly = *HasContour();
 }
 
-void SwNoTextNode::SetContourAPI( const tools::PolyPolygon *pPoly )
+void SwNoTxtNode::SetContourAPI( const tools::PolyPolygon *pPoly )
 {
+    delete pContour;
     if ( pPoly )
-        pContour.reset( new tools::PolyPolygon( *pPoly ) );
+        pContour = new tools::PolyPolygon( *pPoly );
     else
-        pContour.reset();
+        pContour = 0;
     bContourMapModeValid = false;
 }
 
-bool SwNoTextNode::GetContourAPI( tools::PolyPolygon &rContour ) const
+bool SwNoTxtNode::GetContourAPI( tools::PolyPolygon &rContour ) const
 {
     if( !pContour )
         return false;
@@ -201,17 +217,19 @@ bool SwNoTextNode::GetContourAPI( tools::PolyPolygon &rContour ) const
     if( bContourMapModeValid )
     {
         const MapMode aGrfMap( GetGraphic().GetPrefMapMode() );
-        const MapMode aContourMap( MapUnit::Map100thMM );
-        OSL_ENSURE( aGrfMap.GetMapUnit() != MapUnit::MapPixel ||
-                aGrfMap == MapMode( MapUnit::MapPixel ),
+        const MapMode aContourMap( MAP_100TH_MM );
+        OSL_ENSURE( aGrfMap.GetMapUnit() != MAP_PIXEL ||
+                aGrfMap == MapMode( MAP_PIXEL ),
                     "scale factor for pixel unsupported" );
-        if( aGrfMap.GetMapUnit() != MapUnit::MapPixel &&
+        if( aGrfMap.GetMapUnit() != MAP_PIXEL &&
             aGrfMap != aContourMap )
         {
             sal_uInt16 nPolyCount = rContour.Count();
             for( sal_uInt16 j=0; j<nPolyCount; j++ )
             {
-                tools::Polygon& rPoly = rContour[j];
+                // --> OD #i102238# - use the right <tools::PolyPolygon> instance
+                Polygon& rPoly = rContour[j];
+                // <--
 
                 sal_uInt16 nCount = rPoly.GetSize();
                 for( sal_uInt16 i=0 ; i<nCount; i++ )
@@ -226,13 +244,13 @@ bool SwNoTextNode::GetContourAPI( tools::PolyPolygon &rContour ) const
     return true;
 }
 
-bool SwNoTextNode::IsPixelContour() const
+bool SwNoTxtNode::IsPixelContour() const
 {
     bool bRet;
     if( bContourMapModeValid )
     {
         const MapMode aGrfMap( GetGraphic().GetPrefMapMode() );
-        bRet = aGrfMap.GetMapUnit() == MapUnit::MapPixel;
+        bRet = aGrfMap.GetMapUnit() == MAP_PIXEL;
     }
     else
     {
@@ -242,7 +260,7 @@ bool SwNoTextNode::IsPixelContour() const
     return bRet;
 }
 
-Graphic SwNoTextNode::GetGraphic() const
+Graphic SwNoTxtNode::GetGraphic() const
 {
     Graphic aRet;
     if ( GetGrfNode() )
@@ -258,53 +276,53 @@ Graphic SwNoTextNode::GetGraphic() const
 }
 
 // #i73249#
-void SwNoTextNode::SetTitle( const OUString& rTitle )
+void SwNoTxtNode::SetTitle( const OUString& rTitle, bool bBroadcast )
 {
     // Title attribute of <SdrObject> replaces own AlternateText attribute
-    SwFlyFrameFormat* pFlyFormat = dynamic_cast<SwFlyFrameFormat*>(GetFlyFormat());
-    OSL_ENSURE( pFlyFormat, "<SwNoTextNode::SetTitle(..)> - missing <SwFlyFrameFormat> instance" );
-    if ( !pFlyFormat )
+    SwFlyFrmFmt* pFlyFmt = dynamic_cast<SwFlyFrmFmt*>(GetFlyFmt());
+    OSL_ENSURE( pFlyFmt, "<SwNoTxtNode::SetTitle(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
     {
         return;
     }
 
-    pFlyFormat->SetObjTitle( rTitle );
+    pFlyFmt->SetObjTitle( rTitle, bBroadcast );
 }
 
-OUString SwNoTextNode::GetTitle() const
+OUString SwNoTxtNode::GetTitle() const
 {
-    const SwFlyFrameFormat* pFlyFormat = dynamic_cast<const SwFlyFrameFormat*>(GetFlyFormat());
-    OSL_ENSURE( pFlyFormat, "<SwNoTextNode::GetTitle(..)> - missing <SwFlyFrameFormat> instance" );
-    if ( !pFlyFormat )
+    const SwFlyFrmFmt* pFlyFmt = dynamic_cast<const SwFlyFrmFmt*>(GetFlyFmt());
+    OSL_ENSURE( pFlyFmt, "<SwNoTxtNode::GetTitle(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
     {
         return OUString();
     }
 
-    return pFlyFormat->GetObjTitle();
+    return pFlyFmt->GetObjTitle();
 }
 
-void SwNoTextNode::SetDescription( const OUString& rDescription )
+void SwNoTxtNode::SetDescription( const OUString& rDescription, bool bBroadcast )
 {
-    SwFlyFrameFormat* pFlyFormat = dynamic_cast<SwFlyFrameFormat*>(GetFlyFormat());
-    OSL_ENSURE( pFlyFormat, "<SwNoTextNode::SetDescription(..)> - missing <SwFlyFrameFormat> instance" );
-    if ( !pFlyFormat )
+    SwFlyFrmFmt* pFlyFmt = dynamic_cast<SwFlyFrmFmt*>(GetFlyFmt());
+    OSL_ENSURE( pFlyFmt, "<SwNoTxtNode::SetDescription(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
     {
         return;
     }
 
-    pFlyFormat->SetObjDescription( rDescription );
+    pFlyFmt->SetObjDescription( rDescription, bBroadcast );
 }
 
-OUString SwNoTextNode::GetDescription() const
+OUString SwNoTxtNode::GetDescription() const
 {
-    const SwFlyFrameFormat* pFlyFormat = dynamic_cast<const SwFlyFrameFormat*>(GetFlyFormat());
-    OSL_ENSURE( pFlyFormat, "<SwNoTextNode::GetDescription(..)> - missing <SwFlyFrameFormat> instance" );
-    if ( !pFlyFormat )
+    const SwFlyFrmFmt* pFlyFmt = dynamic_cast<const SwFlyFrmFmt*>(GetFlyFmt());
+    OSL_ENSURE( pFlyFmt, "<SwNoTxtNode::GetDescription(..)> - missing <SwFlyFrmFmt> instance" );
+    if ( !pFlyFmt )
     {
         return OUString();
     }
 
-    return pFlyFormat->GetObjDescription();
+    return pFlyFmt->GetObjDescription();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

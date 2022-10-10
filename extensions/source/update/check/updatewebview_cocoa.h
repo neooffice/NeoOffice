@@ -31,15 +31,14 @@
  *
  *************************************************************************/
 
+#include "update_cocoa.hxx"
+
+#ifdef USE_NATIVE_WEB_VIEW
+
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 #include <postmac.h>
-
-// Uncomment the following line to enable the native web view code
-// #define USE_NATIVE_WEB_VIEW
-
-#ifdef USE_NATIVE_WEB_VIEW
 
 #define kUpdateDefaultBrowserWidth	800
 #define kUpdateDefaultBrowserHeight	620

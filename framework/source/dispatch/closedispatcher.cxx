@@ -30,8 +30,6 @@
 #include <services.h>
 #include <general.h>
 
-#include <com/sun/star/bridge/BridgeFactory.hpp>
-#include <com/sun/star/bridge/XBridgeFactory2.hpp>
 #include <com/sun/star/frame/Desktop.hpp>
 #include <com/sun/star/frame/XController.hpp>
 #include <com/sun/star/frame/CommandGroup.hpp>
@@ -69,7 +67,8 @@ CloseDispatcher::CloseDispatcher(const css::uno::Reference< css::uno::XComponent
     , m_aAsyncCallback(
         new vcl::EventPoster(LINK(this, CloseDispatcher, impl_asyncCallback)))
     , m_eOperation(E_CLOSE_DOC)
-    , m_pSysWindow(nullptr)
+    , m_lStatusListener(m_mutex)
+    , m_pSysWindow(NULL)
 {
     uno::Reference<frame::XFrame> xTarget = static_impl_searchRightTargetFrame(xFrame, sTarget);
     m_xCloseFrame = xTarget;
@@ -78,9 +77,9 @@ CloseDispatcher::CloseDispatcher(const css::uno::Reference< css::uno::XComponent
     uno::Reference<awt::XWindow> xWindow = xTarget->getContainerWindow();
     if (xWindow.is())
     {
-        VclPtr<vcl::Window> pWindow = VCLUnoHelper::GetWindow(xWindow);
+        vcl::Window* pWindow = VCLUnoHelper::GetWindow(xWindow);
         if (pWindow->IsSystemWindow())
-            m_pSysWindow = dynamic_cast<SystemWindow*>(pWindow.get());
+            m_pSysWindow = dynamic_cast<SystemWindow*>(pWindow);
     }
 }
 
@@ -88,16 +87,17 @@ CloseDispatcher::~CloseDispatcher()
 {
     SolarMutexGuard g;
     m_aAsyncCallback.reset();
-    m_pSysWindow.reset();
 }
 
 void SAL_CALL CloseDispatcher::dispatch(const css::util::URL&                                  aURL      ,
                                         const css::uno::Sequence< css::beans::PropertyValue >& lArguments)
+    throw(css::uno::RuntimeException, std::exception)
 {
     dispatchWithNotification(aURL, lArguments, css::uno::Reference< css::frame::XDispatchResultListener >());
 }
 
 css::uno::Sequence< sal_Int16 > SAL_CALL CloseDispatcher::getSupportedCommandGroups()
+    throw(css::uno::RuntimeException, std::exception)
 {
     css::uno::Sequence< sal_Int16 > lGroups(2);
     lGroups[0] = css::frame::CommandGroup::VIEW;
@@ -106,21 +106,22 @@ css::uno::Sequence< sal_Int16 > SAL_CALL CloseDispatcher::getSupportedCommandGro
 }
 
 css::uno::Sequence< css::frame::DispatchInformation > SAL_CALL CloseDispatcher::getConfigurableDispatchInformation(sal_Int16 nCommandGroup)
+    throw(css::uno::RuntimeException, std::exception)
 {
     if (nCommandGroup == css::frame::CommandGroup::VIEW)
     {
-        /* Attention: Don't add .uno:CloseFrame here. Because it's not really
+        /* Attention: Dont add .uno:CloseFrame here. Because its not really
                       a configurable feature ... and further it does not have
                       a valid UIName entry inside the GenericCommands.xcu ... */
         css::uno::Sequence< css::frame::DispatchInformation > lViewInfos(1);
-        lViewInfos[0].Command = URL_CLOSEWIN;
+        lViewInfos[0].Command = OUString(URL_CLOSEWIN);
         lViewInfos[0].GroupId = css::frame::CommandGroup::VIEW;
         return lViewInfos;
     }
     else if (nCommandGroup == css::frame::CommandGroup::DOCUMENT)
     {
         css::uno::Sequence< css::frame::DispatchInformation > lDocInfos(1);
-        lDocInfos[0].Command = URL_CLOSEDOC;
+        lDocInfos[0].Command = OUString(URL_CLOSEDOC);
         lDocInfos[0].GroupId = css::frame::CommandGroup::DOCUMENT;
         return lDocInfos;
     }
@@ -130,17 +131,20 @@ css::uno::Sequence< css::frame::DispatchInformation > SAL_CALL CloseDispatcher::
 
 void SAL_CALL CloseDispatcher::addStatusListener(const css::uno::Reference< css::frame::XStatusListener >& /*xListener*/,
                                                  const css::util::URL&                                     /*aURL*/     )
+    throw(css::uno::RuntimeException, std::exception)
 {
 }
 
 void SAL_CALL CloseDispatcher::removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >& /*xListener*/,
                                                     const css::util::URL&                                     /*aURL*/     )
+    throw(css::uno::RuntimeException, std::exception)
 {
 }
 
 void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&                                             aURL      ,
                                                         const css::uno::Sequence< css::beans::PropertyValue >&            lArguments,
                                                         const css::uno::Reference< css::frame::XDispatchResultListener >& xListener )
+    throw(css::uno::RuntimeException, std::exception)
 {
     // SAFE -> ----------------------------------
     SolarMutexClearableGuard aWriteLock;
@@ -188,31 +192,22 @@ void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&   
     if (m_pSysWindow && m_pSysWindow->GetCloseHdl().IsSet())
     {
         // The closing frame has its own close handler.  Call it instead.
-        m_pSysWindow->GetCloseHdl().Call(*m_pSysWindow);
-
-        aWriteLock.clear();
-        // <- SAFE ------------------------------
-
-        implts_notifyResultListener(
-            xListener,
-            css::frame::DispatchResultState::SUCCESS,
-            css::uno::Any());
-
+        m_pSysWindow->GetCloseHdl().Call(m_pSysWindow);
         return;
     }
 
     // OK - URLs are the right ones.
     // But we can't execute synchronously :-)
     // May we are called from a generic key-input handler,
-    // which isn't aware that this call kill its own environment...
+    // which isn't aware that this call kill its own environment ...
     // Do it asynchronous everytimes!
 
-    // But don't forget to hold ourselves alive.
+    // But dont forget to hold usself alive.
     // We are called back from an environment, which doesn't know an uno reference.
     // They call us back by using our c++ interface.
 
     m_xResultListener = xListener;
-    m_xSelfHold.set(static_cast< ::cppu::OWeakObject* >(this), css::uno::UNO_QUERY);
+    m_xSelfHold       = css::uno::Reference< css::uno::XInterface >(static_cast< ::cppu::OWeakObject* >(this), css::uno::UNO_QUERY);
 
     aWriteLock.clear();
     // <- SAFE ----------------------------------
@@ -228,17 +223,17 @@ void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&   
     }
 
     if ( bIsSynchron )
-        impl_asyncCallback(nullptr);
+        impl_asyncCallback(0);
     else
     {
         SolarMutexGuard g;
-        m_aAsyncCallback->Post();
+        m_aAsyncCallback->Post(0);
     }
 }
 
 /**
     @short      asynchronous callback
-    @descr      We start all actions inside this object asynchronous
+    @descr      We start all actions inside this object asnychronoue.
                 (see comments there).
                 Now we do the following:
                 - close all views to the same document, if needed and possible
@@ -247,12 +242,12 @@ void SAL_CALL CloseDispatcher::dispatchWithNotification(const css::util::URL&   
                     document inside the frame. May the document shows a dialog and
                     the user ignore it. Then the state of the office can be changed
                     during we try to close frame and document.
-                - check the environment (means count open frames - excluding our
+                - check the environment (menas count open frames - exlcuding our
                   current one)
                 - decide then, if we must close this frame only, establish the backing mode
                   or shutdown the whole application.
 */
-IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
+IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback)
 {
     try
     {
@@ -284,7 +279,7 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
     // frame already dead ?!
     // Nothing to do !
     if (! xCloseFrame.is())
-        return;
+        return 0;
 
     bool bCloseFrame           = false;
     bool bEstablishBackingMode = false;
@@ -292,15 +287,9 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
 
     // Analyze the environment a first time.
     // If we found some special cases, we can
-    // make some decisions earlier!
+    // make some decisions erliar!
     css::uno::Reference< css::frame::XFramesSupplier > xDesktop( css::frame::Desktop::create(xContext), css::uno::UNO_QUERY_THROW);
-    FrameListAnalyzer aCheck1(xDesktop, xCloseFrame, FrameAnalyzerFlags::Help | FrameAnalyzerFlags::BackingComponent);
-
-    // Check for existing UNO connections.
-    // NOTE: There is a race between checking this and connections being created/destroyed before
-    //       we close the frame / terminate the app.
-    css::uno::Reference<css::bridge::XBridgeFactory2> bridgeFac( css::bridge::BridgeFactory::create(xContext) );
-    bool bHasActiveConnections = bridgeFac->getExistingBridges().getLength() > 0;
+    FrameListAnalyzer aCheck1(xDesktop, xCloseFrame, FrameListAnalyzer::E_HELP | FrameListAnalyzer::E_BACKINGCOMPONENT);
 
 #if defined USE_JAVA && defined MACOSX
     // Do not close the backing window under any circumstances
@@ -309,7 +298,7 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
     else
 
 #endif	// USE_JAVA && MACOSX
-    // a) If the current frame (where the close dispatch was requested for) does not have
+    // a) If the curent frame (where the close dispatch was requested for) does not have
     //    any parent frame ... it will close this frame only. Such frame isn't part of the
     //    global desktop tree ... and such frames are used as "implementation details" only.
     //    E.g. the live previews of our wizards doing such things. And then the owner of the frame
@@ -320,21 +309,19 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
 
     // b) The help window can't disagree with any request.
     //    Because it doesn't implement a controller - it uses a window only.
-    //    Further it can't be the last open frame - if we do all other things
+    //    Further t can't be the last open frame - if we do all other things
     //    right inside this CloseDispatcher implementation.
     //    => close it!
     else if (aCheck1.m_bReferenceIsHelp)
         bCloseFrame = true;
 
-    // c) If we are already in "backing mode", we terminate the application, if no active UNO connections are found.
-    //    If there is an active UNO connection, we only close the frame and leave the application alive.
-    //    It doesn't matter, how many other frames (can be the help or hidden frames only) are open then.
-    else if (aCheck1.m_bReferenceIsBacking) {
-        if (bHasActiveConnections)
-            bCloseFrame = true;
-        else
-            bTerminateApp = true;
-    }
+    // c) If we are already in "backing mode", we have to terminate
+    //    the application, if this special frame is closed.
+    //    It doesn't matter, how many other frames (can be the help or hidden frames only)
+    //    are open then.
+    //    => terminate the application!
+    else if (aCheck1.m_bReferenceIsBacking)
+        bTerminateApp = true;
 
     // d) Otherwhise we have to: close all views to the same document, close the
     //    document inside our own frame and decide then again, what has to be done!
@@ -344,12 +331,12 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
         {
             // OK; this frame is empty now.
             // Check the environment again to decide, what is the next step.
-            FrameListAnalyzer aCheck2(xDesktop, xCloseFrame, FrameAnalyzerFlags::All);
+            FrameListAnalyzer aCheck2(xDesktop, xCloseFrame, FrameListAnalyzer::E_ALL);
 
             // c1) there is as minimum 1 frame open, which is visible and contains a document
-            //     different from our one. And it's not the help!
+            //     different from our one. And its not the help!
             //     => close our frame only - nothing else.
-            if (!aCheck2.m_lOtherVisibleFrames.empty())
+            if (aCheck2.m_lOtherVisibleFrames.getLength()>0)
                 bCloseFrame = true;
             else
 
@@ -359,7 +346,7 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
             //     close the frame.
             if (
                 (!bCloseAllViewsToo                    ) &&
-                (!aCheck2.m_lModelFrames.empty())
+                (aCheck2.m_lModelFrames.getLength() > 0)
                )
                 bCloseFrame = true;
 
@@ -374,17 +361,15 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
                 // Fix bug 3004 by not creating more than one backing window.
                 // Fix multiple backing windows in Window menu by closing any
                 // extra backing windows.
-                FrameListAnalyzer aCheckBackingMode(xDesktop, css::uno::Reference< css::frame::XFrame >(), FrameAnalyzerFlags::BackingComponent);
+                FrameListAnalyzer aCheckBackingMode(xDesktop, css::uno::Reference< css::frame::XFrame >(), FrameListAnalyzer::E_BACKINGCOMPONENT);
                 if (!aCheckBackingMode.m_xBackingComponent.is())
                     bEstablishBackingMode = sal_True;
                 else
                     bCloseFrame = sal_True;
 #else	// USE_JAVA && MACOSX
-                if (bHasActiveConnections)
-                    bCloseFrame = true;
-                else if (eOperation == E_CLOSE_FRAME)
+                if (eOperation == E_CLOSE_FRAME)
                     bTerminateApp = true;
-                else if( SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::EModule::STARTMODULE) )
+                else if( SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE) )
                     bEstablishBackingMode = true;
                 else
                     bTerminateApp = true;
@@ -412,7 +397,7 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
             if( xSet.is() )
             {
                 css::uno::Any aVal( xSet->getFastPropertyValue( 0 ) );
-                bool bState = false;
+                sal_Bool bState = sal_False;
                 if( aVal >>= bState )
                     bQuickstarterRunning = bState;
             }
@@ -435,7 +420,7 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
     {
         css::uno::Reference< css::frame::XController > xController = xCloseFrame->getController();
         if (xController.is())
-            xController->suspend(false);
+            xController->suspend(sal_False);
     }
 
     // inform listener
@@ -448,7 +433,7 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
     // This method was called asynchronous from our main thread by using a pointer.
     // We reached this method only, by using a reference to ourself :-)
     // Further this member is used to detect still running and not yet finished
-    // asynchronous operations. So its time now to release this reference.
+    // ansynchronous operations. So its time now to release this reference.
     // But hold it temp alive. Otherwise we die before we can finish this method really :-))
     css::uno::Reference< css::uno::XInterface > xTempHold = m_xSelfHold;
     m_xSelfHold.clear();
@@ -457,6 +442,8 @@ IMPL_LINK_NOARG(CloseDispatcher, impl_asyncCallback, LinkParamNone*, void)
     catch(const css::lang::DisposedException&)
     {
     }
+
+    return 0;
 }
 
 bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< css::frame::XFrame >& xFrame                ,
@@ -469,7 +456,7 @@ bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< c
         return true;
 
     // Close all views to the same document ... if forced to do so.
-    // But don't touch our own frame here!
+    // But dont touch our own frame here!
     // We must do so ... because the may be following controller->suspend()
     // will show the "save/discard/cancel" dialog for the last view only!
     if (bCloseAllOtherViewsToo)
@@ -481,10 +468,10 @@ bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< c
         }
 
         css::uno::Reference< css::frame::XFramesSupplier > xDesktop( css::frame::Desktop::create( xContext ), css::uno::UNO_QUERY_THROW);
-        FrameListAnalyzer aCheck(xDesktop, xFrame, FrameAnalyzerFlags::All);
+        FrameListAnalyzer aCheck(xDesktop, xFrame, FrameListAnalyzer::E_ALL);
 
-        size_t c = aCheck.m_lModelFrames.size();
-        size_t i = 0;
+        sal_Int32 c = aCheck.m_lModelFrames.getLength();
+        sal_Int32 i = 0;
         for (i=0; i<c; ++i)
         {
             if (!fpf::closeIt(aCheck.m_lModelFrames[i], false))
@@ -497,15 +484,15 @@ bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< c
     if (bAllowSuspend)
     {
         css::uno::Reference< css::frame::XController > xController = xFrame->getController();
-        if (xController.is()) // some views don't uses a controller .-( (e.g. the help window)
+        if (xController.is()) // some views dont uses a controller .-( (e.g. the help window)
         {
-            bControllerSuspended = xController->suspend(true);
+            bControllerSuspended = xController->suspend(sal_True);
             if (! bControllerSuspended)
                 return false;
         }
     }
 
-    // don't remove the component really by e.g. calling setComponent(null, null).
+    // dont remove the component really by e.g. calling setComponent(null, null).
     // It's enough to suspend the controller.
     // If we close the frame later this controller doesn't show the same dialog again.
     return true;
@@ -523,7 +510,7 @@ bool CloseDispatcher::implts_closeFrame()
     if ( ! xFrame.is() )
         return true;
 
-    // don't deliver ownership; our "UI user" will try it again if it failed.
+    // dont deliver owner ship; our "UI user" will try it again if it failed.
     // OK - he will get an empty frame then. But normally an empty frame
     // should be closeable always :-)
     if (!fpf::closeIt(xFrame, false))
@@ -531,7 +518,7 @@ bool CloseDispatcher::implts_closeFrame()
 
     {
         SolarMutexGuard g;
-        m_xCloseFrame.clear();
+        m_xCloseFrame = css::uno::WeakReference< css::frame::XFrame >();
     }
 
     return true;
@@ -563,7 +550,7 @@ bool CloseDispatcher::implts_establishBackingMode()
     css::uno::Reference< css::awt::XWindow > xBackingWin(xStartModule, css::uno::UNO_QUERY);
     xFrame->setComponent(xBackingWin, xStartModule);
     xStartModule->attachFrame(xFrame);
-    xContainerWindow->setVisible(true);
+    xContainerWindow->setVisible(sal_True);
 
     return true;
 }
@@ -622,7 +609,7 @@ css::uno::Reference< css::frame::XFrame > CloseDispatcher::static_impl_searchRig
             //     Because sometimes VCL create "implicit border windows" as parents even we created
             //     a simple XWindow using the toolkit only .-(
             SolarMutexGuard aSolarLock;
-            VclPtr<vcl::Window> pWindow = VCLUnoHelper::GetWindow( xWindow );
+            vcl::Window* pWindow = VCLUnoHelper::GetWindow( xWindow );
             if (
                 (pWindow                  ) &&
                 (pWindow->IsSystemWindow())

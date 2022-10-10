@@ -55,7 +55,7 @@ JavaImplFont::JavaImplFont( OUString aName, float fSize, short nOrientation, sal
 JavaImplFont::JavaImplFont( JavaImplFont *pFont ) : maPSName( pFont->maPSName ), mnNativeFont( pFont->mnNativeFont ), mnOrientation( pFont->mnOrientation ), mfScaleX( pFont->mfScaleX ), mfSize( pFont->mfSize ), mbAntialiased( pFont->mbAntialiased ), mbVertical( pFont->mbVertical ), mbNativeFontOwner( sal_True )
 {
 	if ( mnNativeFont )
-		CFRetain( reinterpret_cast< CTFontRef >( mnNativeFont ) );
+		CFRetain( (CTFontRef)mnNativeFont );
 }
 
 // ----------------------------------------------------------------------------
@@ -63,7 +63,7 @@ JavaImplFont::JavaImplFont( JavaImplFont *pFont ) : maPSName( pFont->maPSName ),
 JavaImplFont::~JavaImplFont()
 {
 	if ( mnNativeFont && mbNativeFontOwner )
-		CFRelease( reinterpret_cast< CTFontRef >( mnNativeFont ) );
+		CFRelease( (CTFontRef)mnNativeFont );
 }
 
 // ----------------------------------------------------------------------------
@@ -75,10 +75,10 @@ sal_IntPtr JavaImplFont::getNativeFont()
 		SalData *pSalData = GetSalData();
 
 		OUString aPSName( getPSName() );
-		::std::unordered_map< OUString, sal_IntPtr, OUStringHash >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
+		::boost::unordered_map< OUString, sal_IntPtr, OUStringHash >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
 		if ( it == pSalData->maJavaNativeFontMapping.end() )
 		{
-			::std::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
+			::boost::unordered_map< OUString, JavaPhysicalFontFace*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
 			if ( jit != pSalData->maJavaFontNameMapping.end() && jit->second->mnNativeFontID )
 			{
 				mnNativeFont = jit->second->mnNativeFontID;
@@ -87,17 +87,17 @@ sal_IntPtr JavaImplFont::getNativeFont()
 			else
 			{
 				// Fix bug 1611 by adding another search for mismatched names
-				CFStringRef aString = CFStringCreateWithCharactersNoCopy( nullptr, reinterpret_cast< const UniChar* >( aPSName.getStr() ), aPSName.getLength(), kCFAllocatorNull );
+				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPSName.getStr(), aPSName.getLength(), kCFAllocatorNull );
 				if ( aString )
 				{
-					CTFontRef aFont = CTFontCreateWithName( aString, 0, nullptr );
+					CTFontRef aFont = CTFontCreateWithName( aString, 0, NULL );
 					if ( aFont )
 					{
 						// Fix bug 3653 by never releasing this font as this
 						// is a font loaded internally by Java and Java will
 						// release the font out from underneath us
 						mbNativeFontOwner = sal_False;
-						mnNativeFont = reinterpret_cast< sal_IntPtr >( aFont );
+						mnNativeFont = (sal_IntPtr)aFont;
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}
 
@@ -114,7 +114,7 @@ sal_IntPtr JavaImplFont::getNativeFont()
 		// CTFontCreateWithName() is called, the returned font will be
 		// released if Mac OS X removes or disables the underlying font
 		if ( mnNativeFont )
-			CFRetain( reinterpret_cast< CTFontRef >( mnNativeFont ) );
+			CFRetain( (CTFontRef)mnNativeFont );
 	}
 
 	return mnNativeFont;

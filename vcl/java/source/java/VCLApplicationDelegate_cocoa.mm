@@ -40,12 +40,16 @@
 #import <apple_remote/RemoteControl.h>
 #include <postmac.h>
 
+#include <osl/file.hxx>
+#include <osl/objcutils.h>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
+#include <vcl/VCLApplicationDelegate.h>
 
 #include "svids.hrc"
 #include "java/saldata.hxx"
 #include "java/salframe.h"
+#include "java/salmenu.h"
 
 #include "VCLApplicationDelegate_cocoa.h"
 #include "VCLEventQueue_cocoa.h"
@@ -69,14 +73,32 @@ static NSString *pSFXDocumentRevision = @"SFXDocumentRevision";
 
 using namespace vcl;
 
+#ifdef USE_NATIVE_RESUME
+
+static BOOL IsResumeEnabled()
+{
+	BOOL bRet = YES;
+
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
+	if ( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			bRet = NO;
+		CFRelease( aPref );
+	}
+
+	return bRet;
+}
+
+#endif	// USE_NATIVE_RESUME
+
 static void HandleAboutRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::About, nullptr, nullptr );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_ABOUT, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -86,12 +108,25 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 {
 	if ( rPath.getLength() && !Application::IsShutDown() )
 	{
-		// If no application mutex exists yet, queue event as we are likely to
-		// crash. Check if ImplSVData exists first since
-		// Application::IsShutDown() uses it.
-		if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+		// If no application mutex exists yet, ignore event as we are likely to
+		// crash
+		if ( ImplApplicationIsRunning() )
 		{
-			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SalEvent::PrintDocument : SalEvent::OpenDocument, nullptr, nullptr, rPath );
+			OUString aUnresolvedPath = OStringToOUString( rPath, RTL_TEXTENCODING_UTF8 );
+			// Fix failure to resolve aliases by obtaining a security scoped
+			// bookmark before opening the file
+			id pSecurityScopedURL = Application_acquireSecurityScopedURLFromOUString( &aUnresolvedPath, sal_True, NULL );
+
+			// Resolve any macOS aliases in path
+			OUString aResolvedPath;
+			OString aPath( rPath );
+			const auto err = osl::FileBase::getAbsoluteFileURL( OUString(), aUnresolvedPath, aResolvedPath );
+			if ( err == osl::FileBase::E_None && !aResolvedPath.isEmpty() )
+				aPath = OUStringToOString( aResolvedPath, RTL_TEXTENCODING_UTF8 );
+			if ( pSecurityScopedURL )
+				Application_releaseSecurityScopedURL( pSecurityScopedURL );
+
+			JavaSalEvent *pEvent = new JavaSalEvent( bPrint ? SALEVENT_PRINTDOCUMENT : SALEVENT_OPENDOCUMENT, NULL, NULL, aPath );
 			JavaSalEventQueue::postCachedEvent( pEvent );
 			pEvent->release();
 		}
@@ -107,45 +142,46 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 static void HandlePreferencesRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Preferences, nullptr, nullptr );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_PREFS, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
 }
 
-static NSApplicationTerminateReply HandleTerminationRequest()
+static void HandleTerminationRequest()
 {
-	NSApplicationTerminateReply nRet = NSTerminateCancel;
-
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash. Also, ignore event if the drag print lock is locked. Lastly,
+	// fix deadlock when displaying a native popup menu by cancelling the
+	// popup menu immediately so that the LibO dispatch thread does not get
+	// stuck waiting for the main thread.
+    if ( ImplApplicationIsRunning() && !VCLInstance_isInDragPrintLock() && !VCLMenu_isShowingPopUpMenu() )
 	{
 		// Try to fix deadlocks in the framework module by not acquiring the
 		// application mutex on the main thread
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::Shutdown, nullptr, nullptr );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SHUTDOWN, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pEvent );
-		while ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+		while ( ImplApplicationIsRunning() && !pEvent->isShutdownCancelled() && !JavaSalEventQueue::isShutdownDisabled() )
+		{
+			// Prioritize execution of any run on main thread calls that may
+			// be blocking shutdown
+			CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 			NSApplication_dispatchPendingEvents( NO, YES );
+		}
 		pEvent->release();
 	}
-
-	return nRet;
 }
 
 static void HandleDidChangeScreenParametersRequest()
 {
 	// If no application mutex exists yet, ignore event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
-		JavaSalEvent *pEvent = new JavaSalEvent( SalEvent::ScreenParamsChanged, nullptr, nullptr );
+		JavaSalEvent *pEvent = new JavaSalEvent( SALEVENT_SCREENPARAMSCHANGED, NULL, NULL);
 		JavaSalEventQueue::postCachedEvent( pEvent );
 		pEvent->release();
 	}
@@ -281,20 +317,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		NSString *pPath = [pAbsoluteURL path];
-		if ( pApp && pPath )
-		{
-			BOOL bResume = YES;
-			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
-			if ( aPref )
-			{
-				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
-					bResume = NO;
-				CFRelease( aPref );
-			}
-
-			if ( bResume )
-				[pSharedAppDelegate application:pApp openFile:pPath];
-		}
+		if ( pApp && pPath && IsResumeEnabled() )
+			[pSharedAppDelegate application:pApp openFile:pPath];
 	}
 #endif	// USE_NATIVE_RESUME
 
@@ -347,7 +371,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			NSString *pPath = [pContentsURL path];
 			if ( pPath && [pPath length] )
 			{
-				HandleOpenPrintFileRequest( [pPath UTF8String], sal_False );
+#ifdef USE_NATIVE_RESUME
+				if ( IsResumeEnabled() )
+					HandleOpenPrintFileRequest( [pPath UTF8String], sal_False );
+#endif	// USE_NATIVE_RESUME
 
 				pDoc = [[VCLDocument alloc] init];
 				[pDoc autorelease];
@@ -389,13 +416,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 				{
 					NSMenu *pSubmenu = [pItem submenu];
 					if ( pSubmenu )
-					{
 						[pSubmenu setDelegate:self];
-
-						// Set help menu
-						if ( i == nCount - 1 )
-							pApp.helpMenu = pSubmenu;
-					}
 				}
 			}
 		}
@@ -490,11 +511,16 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
+	NSApplicationTerminateReply nRet = NSTerminateCancel;
 	if ( mbInTermination || ( pApplication && [pApplication modalWindow] ) )
-		return NSTerminateCancel;
+		return nRet;
 
 	mbInTermination = YES;
-	return HandleTerminationRequest();
+	// This call will only return if the shutdown is cancelled
+	HandleTerminationRequest();
+	mbInTermination = NO;
+
+	return nRet;
 }
 
 - (void)applicationWillBecomeActive:(NSNotification *)pNotification
@@ -577,9 +603,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	[super init];
 
 	mbAppMenuInitialized = NO;
+	mbAwaitingTracking = NO;
 	mbCancelTracking = NO;
 	mpDelegate = nil;
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
+	mbInPerformKeyEquivalent = NO;
 	mbInTermination = NO;
 	mbInTracking = NO;
 	mpAppleRemoteMainController = [[AppleRemoteMainController alloc] init];
@@ -620,13 +648,29 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return self;
 }
 
+- (BOOL)isInPerformKeyEquivalent
+{
+	return mbInPerformKeyEquivalent;
+}
+
+- (BOOL)isInTermination
+{
+	return mbInTermination;
+}
+
 - (BOOL)isInTracking
 {
-	return mbInTracking;
+	// Attempt to fix Mac App Store crash when tracking menubar by counting
+	// "awaiting tracking" as "in tracking"
+	return ( mbAwaitingTracking || mbInTracking );
 }
 
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
 {
+	// Skip if this is a popup menu
+	if ( VCLMenu_isPopUpMenu( pMenu ) )
+		return;
+
 	if ( !mbAppMenuInitialized )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
@@ -641,16 +685,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 					NSMenu *pAppMenu = [pItem submenu];
 					if ( pAppMenu )
 					{
-						// Check if ImplSVData exists first since
-						// Application::IsShutDown() uses it
-						if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+						if ( ImplApplicationIsRunning() )
 						{
-							comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-							rSolarMutex.acquire();
-							mbAppMenuInitialized = YES;
+								ACQUIRE_SOLARMUTEX
+								mbAppMenuInitialized = YES;
 
-							if ( !Application::IsShutDown() )
-							{
 								NSString *pAbout = nil;
 								NSString *pPreferences = nil;
 								NSString *pServices = nil;
@@ -664,81 +703,79 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 								{
 									OUString aAbout( ResId( SV_STDTEXT_ABOUT, *pResMgr ) );
 									if ( aAbout.getLength() )
-										pAbout = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aAbout.getStr() ) length:aAbout.getLength()];
+										pAbout = [NSString stringWithCharacters:aAbout.getStr() length:aAbout.getLength()];
 
 									OUString aPreferences( ResId( SV_STDTEXT_PREFERENCES, *pResMgr ) );
 									if ( aPreferences.getLength() )
-										pPreferences = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aPreferences.getStr() ) length:aPreferences.getLength()];
+										pPreferences = [NSString stringWithCharacters:aPreferences.getStr() length:aPreferences.getLength()];
 
 									OUString aServices( ResId( SV_MENU_MAC_SERVICES, *pResMgr ) );
 									if ( aServices.getLength() )
-										pServices = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aServices.getStr() ) length:aServices.getLength()];
+										pServices = [NSString stringWithCharacters:aServices.getStr() length:aServices.getLength()];
 
 									OUString aHide( ResId( SV_MENU_MAC_HIDEAPP, *pResMgr ) );
 									if ( aHide.getLength() )
-										pHide = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aHide.getStr() ) length:aHide.getLength()];
+										pHide = [NSString stringWithCharacters:aHide.getStr() length:aHide.getLength()];
 
 									OUString aHideOthers( ResId( SV_MENU_MAC_HIDEALL, *pResMgr ) );
 									if ( aHideOthers.getLength() )
-										pHideOthers = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aHideOthers.getStr() ) length:aHideOthers.getLength()];
+										pHideOthers = [NSString stringWithCharacters:aHideOthers.getStr() length:aHideOthers.getLength()];
 
 									OUString aShowAll( ResId( SV_MENU_MAC_SHOWALL, *pResMgr ) );
 									if ( aShowAll.getLength() )
-										pShowAll = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aShowAll.getStr() ) length:aShowAll.getLength()];
+										pShowAll = [NSString stringWithCharacters:aShowAll.getStr() length:aShowAll.getLength()];
 
 									OUString aQuit( ResId( SV_MENU_MAC_QUITAPP, *pResMgr ) );
 									if ( aQuit.getLength() )
-										pQuit = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aQuit.getStr() ) length:aQuit.getLength()];
+										pQuit = [NSString stringWithCharacters:aQuit.getStr() length:aQuit.getLength()];
 								}
 
 								NSUInteger nItems = [pAppMenu numberOfItems];
 								NSUInteger i = 0;
 								for ( ; i < nItems; i++ )
 								{
-									NSMenuItem *pAppItem = [pAppMenu itemAtIndex:i];
-									if ( pAppItem )
+									NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
+									if ( pItem )
 									{
-										NSString *pTitle = [pAppItem title];
+										NSString *pTitle = [pItem title];
 										if ( pTitle )
 										{
 											if ( pAbout && [pTitle isEqualToString:@"About"] )
 											{
-												[pAppItem setTarget:self];
-												[pAppItem setAction:@selector(showAbout)];
-												[pAppItem setTitle:pAbout];
+												[pItem setTarget:self];
+												[pItem setAction:@selector(showAbout)];
+												[pItem setTitle:pAbout];
 											}
 											else if ( pPreferences && [pTitle isEqualToString:@"Preferences…"] )
 											{
-												[pAppItem setTarget:self];
-												[pAppItem setAction:@selector(showPreferences)];
-												[pAppItem setTitle:pPreferences];
+												[pItem setTarget:self];
+												[pItem setAction:@selector(showPreferences)];
+												[pItem setTitle:pPreferences];
 											}
 											else if ( pServices && [pTitle isEqualToString:@"Services"] )
 											{
-												[pAppItem setTitle:pServices];
+												[pItem setTitle:pServices];
 											}
 											else if ( pHide && [pTitle isEqualToString:@"Hide"] )
 											{
-												[pAppItem setTitle:pHide];
+												[pItem setTitle:pHide];
 											}
 											else if ( pHideOthers && [pTitle isEqualToString:@"Hide Others"] )
 											{
-												[pAppItem setTitle:pHideOthers];
+												[pItem setTitle:pHideOthers];
 											}
 											else if ( pShowAll && [pTitle isEqualToString:@"Show All"] )
 											{
-												[pAppItem setTitle:pShowAll];
+												[pItem setTitle:pShowAll];
 											}
 											else if ( pQuit && [pTitle isEqualToString:@"Quit"] )
 											{
-												[pAppItem setTitle:pQuit];
+												[pItem setTitle:pQuit];
 											}
 										}
 									}
 								}
-							}
-
-							rSolarMutex.release();
+								RELEASE_SOLARMUTEX
 						}
 					}
 				}
@@ -746,8 +783,43 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 
-	if ( pMenu && ( !mbInTracking || mbCancelTracking ) )
-		[pMenu cancelTracking];
+	// Attempt to fix Mac App Store crash by ensuring that the menu is not
+	// released by the VCLInstance_updateNativeMenus() function
+	if ( pMenu )
+		[pMenu retain];
+
+	// Fix failure to display menubar submenus on macOS 12 after start of
+	// tracking until mouse is moved by delaying updating of menus until the
+	// first call to menuNeedsUpdate: after tracking has started
+	if ( mbAwaitingTracking && !mbInTracking && !mbCancelTracking )
+	{
+		// Attempt to fix Mac App Store crash by immediately changing status
+		// to in tracking so that out code will not change the native menubar's
+		// menu items while updating the menus
+		mbInTracking = YES;
+		mbAwaitingTracking = NO;
+
+		if ( VCLInstance_updateNativeMenus() )
+		{
+			// Fix bug reported in the following NeoOffice forum
+			// topic by forcing any pending menu changes to be done
+			// before any menus are displayed:
+			// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8532
+			[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
+		}
+		else
+		{
+			mbInTracking = NO;
+			mbCancelTracking = YES;
+		}
+	}
+
+	if ( pMenu )
+	{
+		if ( !mbInTracking || mbCancelTracking )
+			[pMenu cancelTracking];
+		[pMenu release];
+	}
 }
 
 - (void)setDelegate:(id)pDelegate
@@ -763,6 +835,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
     	mpDelegate = pDelegate;
     	[mpDelegate retain];
 	}
+}
+
+- (void)setInPerformKeyEquivalent:(BOOL)bInPerformKeyEquivalent
+{
+	mbInPerformKeyEquivalent = bInPerformKeyEquivalent;
 }
 
 - (void)showAbout
@@ -791,25 +868,13 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 				NSString *pName = [pNotification name];
 				if ( [NSMenuDidBeginTrackingNotification isEqualToString:pName] )
 				{
+					mbAwaitingTracking = YES;
 					mbCancelTracking = NO;
 					mbInTracking = NO;
-					if ( VCLInstance_updateNativeMenus() )
-					{
-						mbInTracking = YES;
-
-						// Fix bug reported in the following NeoOffice forum
-						// topic by forcing any pending menu changes to be done
-						// before any menus are displayed:
-						// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8532
-						[VCLMainMenuDidEndTracking mainMenuDidEndTracking:YES];
-					}
-					else
-					{
-						mbCancelTracking = YES;
-					}
 				}
 				else if ( [NSMenuDidEndTrackingNotification isEqualToString:pName] )
 				{
+					mbAwaitingTracking = NO;
 					mbCancelTracking = YES;
 					mbInTracking = NO;
 				}
@@ -824,3 +889,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 }
 
 @end
+
+BOOL VCLApplicationDelegate_isInTermination()
+{
+	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
+	return ( !pAppDelegate || [pAppDelegate isInTermination] );
+}

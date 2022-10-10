@@ -21,7 +21,10 @@ NeoOffice est une suite bureautique pour Mac qui est basé sur OpenOffice et Lib
 Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonctionner en mode natif sur OS X pour la première fois. Depuis lors, les ingénieurs de NeoOffice ont continuellement ajouté des améliorations à NeoOffice que vous ne trouverez pas dans OpenOffice ou LibreOffice, comme :
 
 • Mode foncé natif
-• Menu de NeoOffice > Document par défault pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
+• Menu d'accents natif en maintenant enfoncé une touche du clavier
+• Onglets natifs en activant la préférence système « Préférer les onglets »
+• Mode plein écran natif
+• Menu de NeoOffice > Document par défaut pour ouvrir de Calc ou Impress au lieu de Writer au démarrage
 • Menu de Fichier > Parcourir toutes les versions pour restaurer les versions précédentes de vos documents
 • Verrouillage natif des fichiers pour modifier sans encombre des fichiers dans iCloud Drive, Dropbox ou lecteurs réseau
 • Vérification de la grammaire natif Mac
@@ -31,28 +34,27 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 
 
 What's New in this Version:
-Avant d'acheter NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
+Avant de télécharger NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
 
-This version of NeoOffice fixes the following bugs:
-• When running on macOS Big Sur, NeoOffice would freeze for several seconds when switching to a different document window
-• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
-• When running on macOS Big Sur, NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
+This version of NeoOffice fixes the following bug:
+• Command-clicking on a hyperlink in a document would display a "fatal error" dialog and then crash if the hyperlink does not point to a local file. This bug was caused by our fix for LibreOffice bug 150873 that was added in the previous release to resolve any macOS aliases in a file path.
 
 
 Promotional Text:
-NeoOffice inclut le Mode foncé natif !
-
-Utilisateurs de macOS Big Sur: suivez-nous sur Twitter @NeoOffice pour télécharger les dernières corrections de bogues.
+NeoOffice supporte maintenant VoiceOver.
 
 
 Keywords:
 neo,office,document,tableur,texte,présentations,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+https://www.neooffice.org/neojava/macappstore.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+https://www.neooffice.org/neojava/features.php
+
+Privacy Policy URL:
+https://www.neooffice.org/neojava/faq.php?fragment=privacy
 
 App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_fr.png file. Note: the ScreenSnapshotWriterAndCalc_fr.png was created using the document files in the ScreenSnapshotWriterAndCalc/fr subdirectory.

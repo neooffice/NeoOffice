@@ -23,24 +23,10 @@ $(eval $(call gb_Library_set_include,sofficeapp,\
     -I$(SRCDIR)/desktop/inc \
     -I$(SRCDIR)/desktop/source/inc \
     -I$(SRCDIR)/desktop/source/deployment/inc \
+    -I$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/vcl/inc \
 ))
 
-$(eval $(call gb_Library_add_libs,sofficeapp,\
-    $(if $(filter LINUX %BSD SOLARIS, $(OS)), \
-        $(DLOPEN_LIBS) \
-        -lpthread \
-    ) \
-))
-
-$(eval $(call gb_Library_use_externals,sofficeapp, \
-	$(if $(ENABLE_BREAKPAD),breakpad) \
-	$(if $(filter OPENCL,$(BUILD_TYPE)),clew) \
-    boost_headers \
-    dbus \
-    icu_headers \
-    icui18n \
-    icuuc \
-))
+$(eval $(call gb_Library_use_external,sofficeapp,boost_headers))
 
 $(eval $(call gb_Library_use_custom_headers,sofficeapp,\
 	officecfg/registry \
@@ -82,29 +68,27 @@ endif	# PRODUCT_DIR_NAME3 != ""
 $(eval $(call gb_Library_set_precompiled_header,sofficeapp,$(SRCDIR)/desktop/inc/pch/precompiled_sofficeapp))
 
 $(eval $(call gb_Library_use_libraries,sofficeapp,\
+    $(if $(filter $(OS),ANDROID),,basebmp) \
     comphelper \
     cppu \
     cppuhelper \
-    $(if $(ENABLE_BREAKPAD), \
-        crashreport \
-    ) \
     deploymentmisc \
-    editeng \
     i18nlangtag \
-    $(if $(filter OPENCL,$(BUILD_TYPE)),opencl) \
     sal \
     salhelper \
     sb \
     sfx \
     svl \
-    svx \
-    svxcore \
     svt \
     tk \
     tl \
     ucbhelper \
     utl \
     vcl \
+    $(if $(and $(filter unx,$(GUIBASE)),$(filter-out MACOSX,$(OS))), \
+        $(if $(ENABLE_HEADLESS),,vclplug_svp) \
+    ) \
+	$(gb_UWINAPI) \
 ))
 
 ifeq ($(OS),MACOSX)
@@ -131,63 +115,46 @@ $(eval $(call gb_Library_add_exception_objects,sofficeapp,\
     desktop/source/app/check_ext_deps \
     desktop/source/app/cmdlineargs \
     desktop/source/app/cmdlinehelp \
+    desktop/source/app/configinit \
     desktop/source/app/desktopcontext \
     desktop/source/app/desktopresid \
     desktop/source/app/dispatchwatcher \
     desktop/source/app/langselect \
     desktop/source/app/lockfile2 \
     desktop/source/app/officeipcthread \
-    desktop/source/app/opencl \
     desktop/source/app/sofficemain \
     desktop/source/app/userinstall \
     desktop/source/migration/migration \
 ))
 
-ifeq ($(ENABLE_HEADLESS),TRUE)
-$(eval $(call gb_Library_add_libs,sofficeapp,\
-	-lm $(DLOPEN_LIBS) \
-	-lpthread \
-))
-else
-ifeq ($(OS), $(filter LINUX %BSD SOLARIS, $(OS)))
-ifeq ($(USING_X11),TRUE)
+ifeq ($(OS),LINUX)
 $(eval $(call gb_Library_use_static_libraries,sofficeapp,\
     glxtest \
 ))
-endif
 
 $(eval $(call gb_Library_add_libs,sofficeapp,\
-	-lm $(DLOPEN_LIBS) \
+	-lm \
+	-ldl \
 	-lpthread \
+    -lGL \
+    -lGLU \
     -lX11 \
 ))
 endif
+
+# liblibreoffice bits
+$(eval $(call gb_Library_add_exception_objects,sofficeapp,\
+	desktop/source/lib/init \
+))
+
+ifeq ($(OS),ANDROID)
+$(eval $(call gb_Library_add_exception_objects,sofficeapp,\
+	desktop/source/lib/lokandroid \
+))
 endif
 
-# LibreOfficeKit bits
-ifneq ($(filter $(OS),ANDROID IOS MACOSX WNT),)
-$(eval $(call gb_Library_add_exception_objects,sofficeapp,\
-	desktop/source/lib/init \
-	desktop/source/lib/lokinteractionhandler \
-	desktop/source/lib/lokclipboard \
-	$(if $(filter $(OS),ANDROID), \
-		desktop/source/lib/lokandroid) \
-))
-else
-ifeq ($(USING_X11),TRUE)
-$(eval $(call gb_Library_add_exception_objects,sofficeapp,\
-	desktop/source/lib/init \
-	desktop/source/lib/lokinteractionhandler \
-	desktop/source/lib/lokclipboard \
-))
-endif
-ifeq ($(ENABLE_HEADLESS),TRUE)
-$(eval $(call gb_Library_add_exception_objects,sofficeapp,\
-    desktop/source/lib/init \
-    desktop/source/lib/lokinteractionhandler \
-    desktop/source/lib/lokclipboard \
-))
-endif
+ifeq ($(ENABLE_TELEPATHY),TRUE)
+$(eval $(call gb_Library_use_libraries,sofficeapp,tubes))
 endif
 
 # vim: set ts=4 sw=4 et:

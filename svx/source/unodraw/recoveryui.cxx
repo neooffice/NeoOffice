@@ -33,7 +33,7 @@
 #include <com/sun/star/frame/XSynchronousDispatch.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/task/XStatusIndicatorFactory.hpp>
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase2.hxx>
 #include <osl/file.hxx>
 #include <rtl/bootstrap.hxx>
 #include <rtl/ref.hxx>
@@ -43,14 +43,15 @@
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
+#include <boost/scoped_ptr.hpp>
 #include <officecfg/Office/Recovery.hxx>
 
-namespace svxdr = svx::DocRecovery;
+namespace svxdr = ::svx::DocRecovery;
 using namespace ::osl;
 
 namespace {
 
-class RecoveryUI : public ::cppu::WeakImplHelper< css::lang::XServiceInfo        ,
+class RecoveryUI : public ::cppu::WeakImplHelper2< css::lang::XServiceInfo        ,
                                                    css::frame::XSynchronousDispatch > // => XDispatch!
 {
 
@@ -73,29 +74,56 @@ class RecoveryUI : public ::cppu::WeakImplHelper< css::lang::XServiceInfo       
         css::uno::Reference< css::uno::XComponentContext > m_xContext;
 
         /** @short TODO */
-        VclPtr<vcl::Window> m_pParentWindow;
+        vcl::Window* m_pParentWindow;
 
         /** @short TODO */
         RecoveryUI::EJob m_eJob;
+
+        /** @short TODO */
+        css::uno::Reference< css::task::XStatusIndicatorFactory > m_xProgressFactory;
+
 
     // interface
     public:
 
 
         /** @short  TODO */
-        explicit RecoveryUI(const css::uno::Reference< css::uno::XComponentContext >& xContext);
+        RecoveryUI(const css::uno::Reference< css::uno::XComponentContext >& xContext);
+
+
+        /** @short  TODO */
+        virtual ~RecoveryUI();
+
 
         // css.lang.XServiceInfo
 
-        virtual OUString SAL_CALL getImplementationName() override;
+        virtual OUString SAL_CALL getImplementationName()
+            throw(css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-        virtual sal_Bool SAL_CALL supportsService(const OUString& sServiceName) override;
+        virtual sal_Bool SAL_CALL supportsService(const OUString& sServiceName)
+            throw(css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
-        virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+        virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames()
+            throw(css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
 
-        virtual css::uno::Any SAL_CALL dispatchWithReturnValue(const css::util::URL& aURL,
-                                            const css::uno::Sequence< css::beans::PropertyValue >& lArguments ) override;
+        virtual com::sun::star::uno::Any SAL_CALL dispatchWithReturnValue(const css::util::URL& aURL,
+                                            const css::uno::Sequence< css::beans::PropertyValue >& lArguments )
+            throw(css::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+
+
+        // css.frame.XDispatch
+
+        virtual void SAL_CALL dispatch(const css::util::URL&                                  aURL      ,
+                                       const css::uno::Sequence< css::beans::PropertyValue >& lArguments)
+            throw(css::uno::RuntimeException);
+
+        virtual void SAL_CALL addStatusListener(const css::uno::Reference< css::frame::XStatusListener >& xListener,
+                                                const css::util::URL&                                     aURL     )
+            throw(css::uno::RuntimeException);
+        virtual void SAL_CALL removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >& xListener,
+                                                   const css::util::URL&                                     aURL     )
+            throw(css::uno::RuntimeException);
 
 
     // helper
@@ -105,7 +133,7 @@ class RecoveryUI : public ::cppu::WeakImplHelper< css::lang::XServiceInfo       
 
         bool impl_doEmergencySave();
 
-        bool impl_doRecovery();
+        void impl_doRecovery();
 
         void impl_showAllRecoveredDocs();
 
@@ -113,28 +141,38 @@ class RecoveryUI : public ::cppu::WeakImplHelper< css::lang::XServiceInfo       
 
 RecoveryUI::RecoveryUI(const css::uno::Reference< css::uno::XComponentContext >& xContext)
     : m_xContext     (xContext                 )
-    , m_pParentWindow(nullptr                        )
+    , m_pParentWindow(0                        )
     , m_eJob         (RecoveryUI::E_JOB_UNKNOWN)
 {
 }
 
+RecoveryUI::~RecoveryUI()
+{
+}
+
 OUString SAL_CALL RecoveryUI::getImplementationName()
+    throw(css::uno::RuntimeException, std::exception)
 {
     return OUString("com.sun.star.comp.svx.RecoveryUI");
 }
 
 sal_Bool SAL_CALL RecoveryUI::supportsService(const OUString& sServiceName)
+    throw(css::uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, sServiceName);
 }
 
 css::uno::Sequence< OUString > SAL_CALL RecoveryUI::getSupportedServiceNames()
+    throw(css::uno::RuntimeException, std::exception)
 {
-    return { "com.sun.star.dialog.RecoveryUI" };
+    css::uno::Sequence< OUString > lServiceNames(1);
+    lServiceNames[0] = "com.sun.star.dialog.RecoveryUI";
+    return lServiceNames;
 }
 
 css::uno::Any SAL_CALL RecoveryUI::dispatchWithReturnValue(const css::util::URL& aURL,
                                                    const css::uno::Sequence< css::beans::PropertyValue >& )
+    throw(css::uno::RuntimeException, std::exception)
 {
     // Internally we use VCL ... every call into vcl based code must
     // be guarded by locking the global solar mutex.
@@ -146,35 +184,52 @@ css::uno::Any SAL_CALL RecoveryUI::dispatchWithReturnValue(const css::util::URL&
 
     switch(eJob)
     {
-        case RecoveryUI::E_DO_EMERGENCY_SAVE:
+        case RecoveryUI::E_DO_EMERGENCY_SAVE :
         {
             bool bRet = impl_doEmergencySave();
             aRet <<= bRet;
             break;
         }
 
-        case RecoveryUI::E_DO_RECOVERY:
-        {
-            bool bRet = impl_doRecovery();
-            aRet <<= bRet;
+        case RecoveryUI::E_DO_RECOVERY :
+            impl_doRecovery();
             break;
-        }
 
-        default:
-        {
-            aRet <<= false;
+        default :
             break;
-        }
     }
 
     return aRet;
 }
 
 
-OUString GetCrashConfigDir()
+void SAL_CALL RecoveryUI::dispatch(const css::util::URL&                                  aURL      ,
+                                   const css::uno::Sequence< css::beans::PropertyValue >& lArguments)
+    throw(css::uno::RuntimeException)
+{
+    // recycle this method :-)
+    dispatchWithReturnValue(aURL, lArguments);
+}
+
+
+void SAL_CALL RecoveryUI::addStatusListener(const css::uno::Reference< css::frame::XStatusListener >&, const css::util::URL& ) throw(css::uno::RuntimeException)
+{
+    // TODO
+    OSL_FAIL("RecoveryUI::addStatusListener()\nNot implemented yet!");
+}
+
+
+void SAL_CALL RecoveryUI::removeStatusListener(const css::uno::Reference< css::frame::XStatusListener >&, const css::util::URL& )
+    throw(css::uno::RuntimeException)
+{
+    // TODO
+    OSL_FAIL("RecoveryUI::removeStatusListener()\nNot implemented yet!");
+}
+
+static OUString GetCrashConfigDir()
 {
 
-#if defined(_WIN32)
+#if defined(WNT)
     OUString    ustrValue = "${$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/bootstrap.ini:UserInstallation}";
 #elif defined(MACOSX)
     OUString    ustrValue = "~";
@@ -183,28 +238,30 @@ OUString GetCrashConfigDir()
 #endif
     rtl::Bootstrap::expandMacros( ustrValue );
 
-#if defined(_WIN32)
+#if defined(WNT)
     ustrValue += "/user/crashdata";
 #endif
     return ustrValue;
 }
 
 
-#if defined(_WIN32)
+
+#if defined(WNT)
 #define LCKFILE "crashdat.lck"
 #else
 #define LCKFILE ".crash_report_unsent"
 #endif
 
 
-OUString GetUnsentURL()
+static OUString GetUnsentURL()
 {
     OUString aURL = GetCrashConfigDir() + "/" LCKFILE;
     return aURL;
 }
 
 
-bool delete_pending_crash()
+
+static bool delete_pending_crash()
 {
     OUString    aUnsentURL = GetUnsentURL();
     return ( FileBase::E_None == File::remove( aUnsentURL ) );
@@ -213,11 +270,11 @@ bool delete_pending_crash()
 RecoveryUI::EJob RecoveryUI::impl_classifyJob(const css::util::URL& aURL)
 {
     m_eJob = RecoveryUI::E_JOB_UNKNOWN;
-    if (aURL.Protocol == RECOVERY_CMDPART_PROTOCOL)
+    if (aURL.Protocol.equals(RECOVERY_CMDPART_PROTOCOL))
     {
-        if (aURL.Path == RECOVERY_CMDPART_DO_EMERGENCY_SAVE)
+        if (aURL.Path.equals(RECOVERY_CMDPART_DO_EMERGENCY_SAVE))
             m_eJob = RecoveryUI::E_DO_EMERGENCY_SAVE;
-        else if (aURL.Path == RECOVERY_CMDPART_DO_RECOVERY)
+        else if (aURL.Path.equals(RECOVERY_CMDPART_DO_RECOVERY))
             m_eJob = RecoveryUI::E_DO_RECOVERY;
     }
 
@@ -227,8 +284,7 @@ RecoveryUI::EJob RecoveryUI::impl_classifyJob(const css::util::URL& aURL)
 bool RecoveryUI::impl_doEmergencySave()
 {
     // create core service, which implements the real "emergency save" algorithm.
-    rtl::Reference<svxdr::RecoveryCore> pCore = new svxdr::RecoveryCore(m_xContext, true);
-
+    svxdr::RecoveryCore* pCore = new svxdr::RecoveryCore(m_xContext, true);
 #ifdef USE_JAVA
     // Do not invoke any GUI code or the app will deadlock so abort instead
     short nRet = 0;
@@ -236,8 +292,10 @@ bool RecoveryUI::impl_doEmergencySave()
     pCore->doEmergencySave();
     abort();
 #else	// USE_JAVA
+    css::uno::Reference< css::frame::XStatusListener > xCore(pCore);
+
     // create dialog for this operation and bind it to the used core service
-    ScopedVclPtrInstance<svxdr::SaveDialog> xDialog(m_pParentWindow, pCore.get());
+    boost::scoped_ptr<Dialog> xDialog(new svxdr::SaveDialog(m_pParentWindow, pCore));
 
     // start the dialog
     short nRet = xDialog->Execute();
@@ -245,23 +303,22 @@ bool RecoveryUI::impl_doEmergencySave()
     return (nRet==DLG_RET_OK_AUTOLUNCH);
 }
 
-bool RecoveryUI::impl_doRecovery()
+void RecoveryUI::impl_doRecovery()
 {
     // create core service, which implements the real "emergency save" algorithm.
-    rtl::Reference<svxdr::RecoveryCore> pCore = new svxdr::RecoveryCore(m_xContext, false);
+    svxdr::RecoveryCore* pCore = new svxdr::RecoveryCore(m_xContext, false);
+    css::uno::Reference< css::frame::XStatusListener > xCore(pCore);
 
     // create all needed dialogs for this operation
     // and bind it to the used core service
-    ScopedVclPtrInstance<svxdr::RecoveryDialog> xDialog(m_pParentWindow, pCore.get());
+    boost::scoped_ptr<Dialog> xDialog(new svxdr::RecoveryDialog(m_pParentWindow, pCore));
 
     // start the dialog
-    short nRet = xDialog->Execute();
+    xDialog->Execute();
 
     impl_showAllRecoveredDocs();
 
     delete_pending_crash();
-
-    return nRet != RET_CANCEL;
 }
 
 void RecoveryUI::impl_showAllRecoveredDocs()
@@ -287,7 +344,7 @@ void RecoveryUI::impl_showAllRecoveredDocs()
             if (!xWindow.is())
                 continue;
 
-            xWindow->setVisible(true);
+            xWindow->setVisible(sal_True);
         }
         catch(const css::uno::RuntimeException&)
             { throw; }

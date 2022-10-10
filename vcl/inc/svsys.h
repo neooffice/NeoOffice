@@ -27,7 +27,7 @@
 #ifndef INCLUDED_VCL_INC_SVSYS_H
 #define INCLUDED_VCL_INC_SVSYS_H
 
-#ifdef _WIN32
+#ifdef WNT
 #include "win/svsys.h"
 #elif defined MACOSX
 #ifdef USE_JAVA

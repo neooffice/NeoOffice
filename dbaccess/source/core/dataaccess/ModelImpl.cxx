@@ -55,7 +55,6 @@
 #include <comphelper/sequence.hxx>
 #include <connectivity/dbexception.hxx>
 #include <cppuhelper/exc_hlp.hxx>
-#include <cppuhelper/implbase.hxx>
 #include <cppuhelper/typeprovider.hxx>
 #include <rtl/digest.h>
 #include <sfx2/signaturestate.hxx>
@@ -63,7 +62,7 @@
 #include <tools/diagnose_ex.h>
 #include <osl/diagnose.h>
 #include <sal/log.hxx>
-#include <vcl/errcode.hxx>
+#include <tools/errcode.hxx>
 #include <tools/urlobj.hxx>
 #include <unotools/sharedunocomponent.hxx>
 
@@ -75,7 +74,7 @@
 
 typedef sal_Bool Application_canUseJava_Type();
 
-static Application_canUseJava_Type *pApplication_canUseJava = nullptr;
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -94,6 +93,7 @@ using namespace ::com::sun::star::ucb;
 using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::view;
 using namespace ::com::sun::star::task;
+using namespace ::com::sun::star::reflection;
 using namespace ::com::sun::star::script;
 using namespace ::cppu;
 using namespace ::osl;
@@ -125,10 +125,10 @@ bool VosMutexFacade::tryToAcquire()
 }
 
 // DocumentStorageAccess
-class DocumentStorageAccess : public ::cppu::WeakImplHelper<   XDocumentSubStorageSupplier
-                                                           ,   XTransactionListener >
+class DocumentStorageAccess : public ::cppu::WeakImplHelper2<   XDocumentSubStorageSupplier
+                                                            ,   XTransactionListener >
 {
-    typedef std::map< OUString, Reference< XStorage > >    NamedStorages;
+    typedef ::std::map< OUString, Reference< XStorage > >    NamedStorages;
 
     ::osl::Mutex        m_aMutex;
     /// all sub storages which we ever gave to the outer world
@@ -138,7 +138,7 @@ class DocumentStorageAccess : public ::cppu::WeakImplHelper<   XDocumentSubStora
     bool                m_bDisposingSubStorages;
 
 public:
-    explicit DocumentStorageAccess( ODatabaseModelImpl& _rModelImplementation )
+    DocumentStorageAccess( ODatabaseModelImpl& _rModelImplementation )
         :m_pModelImplementation( &_rModelImplementation )
         ,m_bPropagateCommitToRoot( true )
         ,m_bDisposingSubStorages( false )
@@ -146,7 +146,7 @@ public:
     }
 
 protected:
-    virtual ~DocumentStorageAccess() override
+    virtual ~DocumentStorageAccess()
     {
     }
 
@@ -154,17 +154,17 @@ public:
     void dispose();
 
     // XDocumentSubStorageSupplier
-    virtual Reference< XStorage > SAL_CALL getDocumentSubStorage( const OUString& aStorageName, ::sal_Int32 _nMode ) override;
-    virtual Sequence< OUString > SAL_CALL getDocumentSubStoragesNames(  ) override;
+    virtual Reference< XStorage > SAL_CALL getDocumentSubStorage( const OUString& aStorageName, ::sal_Int32 _nMode ) throw (RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual Sequence< OUString > SAL_CALL getDocumentSubStoragesNames(  ) throw (IOException, RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XTransactionListener
-    virtual void SAL_CALL preCommit( const css::lang::EventObject& aEvent ) override;
-    virtual void SAL_CALL commited( const css::lang::EventObject& aEvent ) override;
-    virtual void SAL_CALL preRevert( const css::lang::EventObject& aEvent ) override;
-    virtual void SAL_CALL reverted( const css::lang::EventObject& aEvent ) override;
+    virtual void SAL_CALL preCommit( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL commited( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL preRevert( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::Exception, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL reverted( const ::com::sun::star::lang::EventObject& aEvent ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XEventListener
-    virtual void SAL_CALL disposing( const css::lang::EventObject& Source ) override;
+    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     /// disposes all storages managed by this instance
     void disposeStorages();
@@ -197,7 +197,7 @@ void DocumentStorageAccess::dispose()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    for (   NamedStorages::const_iterator loop = m_aExposedStorages.begin();
+    for (   NamedStorages::iterator loop = m_aExposedStorages.begin();
             loop != m_aExposedStorages.end();
             ++loop
         )
@@ -216,7 +216,7 @@ void DocumentStorageAccess::dispose()
 
     m_aExposedStorages.clear();
 
-    m_pModelImplementation = nullptr;
+    m_pModelImplementation = NULL;
 }
 
 Reference< XStorage > DocumentStorageAccess::impl_openSubStorage_nothrow( const OUString& _rStorageName, sal_Int32 _nDesiredMode )
@@ -255,7 +255,7 @@ void DocumentStorageAccess::disposeStorages()
 {
     m_bDisposingSubStorages = true;
 
-    NamedStorages::const_iterator aEnd = m_aExposedStorages.end();
+    NamedStorages::iterator aEnd = m_aExposedStorages.end();
     for (   NamedStorages::iterator aIter = m_aExposedStorages.begin();
             aIter != aEnd ;
             ++aIter
@@ -318,10 +318,10 @@ bool DocumentStorageAccess::commitEmbeddedStorage( bool _bPreventRootCommits )
 
 }
 
-Reference< XStorage > SAL_CALL DocumentStorageAccess::getDocumentSubStorage( const OUString& aStorageName, ::sal_Int32 _nDesiredMode )
+Reference< XStorage > SAL_CALL DocumentStorageAccess::getDocumentSubStorage( const OUString& aStorageName, ::sal_Int32 _nDesiredMode ) throw (RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
-    NamedStorages::const_iterator pos = m_aExposedStorages.find( aStorageName );
+    NamedStorages::iterator pos = m_aExposedStorages.find( aStorageName );
     if ( pos == m_aExposedStorages.end() )
     {
         Reference< XStorage > xResult = impl_openSubStorage_nothrow( aStorageName, _nDesiredMode );
@@ -331,13 +331,13 @@ Reference< XStorage > SAL_CALL DocumentStorageAccess::getDocumentSubStorage( con
     return pos->second;
 }
 
-Sequence< OUString > SAL_CALL DocumentStorageAccess::getDocumentSubStoragesNames(  )
+Sequence< OUString > SAL_CALL DocumentStorageAccess::getDocumentSubStoragesNames(  ) throw (IOException, RuntimeException, std::exception)
 {
     Reference< XStorage > xRootStor( m_pModelImplementation->getRootStorage() );
     if ( !xRootStor.is() )
         return Sequence< OUString >();
 
-    std::vector< OUString > aNames;
+    ::std::vector< OUString > aNames;
 
     Sequence< OUString > aElementNames( xRootStor->getElementNames() );
     for ( sal_Int32 i=0; i<aElementNames.getLength(); ++i )
@@ -350,12 +350,12 @@ Sequence< OUString > SAL_CALL DocumentStorageAccess::getDocumentSubStoragesNames
         :  Sequence< OUString >( &aNames[0], aNames.size() );
 }
 
-void SAL_CALL DocumentStorageAccess::preCommit( const css::lang::EventObject& /*aEvent*/ )
+void SAL_CALL DocumentStorageAccess::preCommit( const css::lang::EventObject& /*aEvent*/ ) throw (Exception, RuntimeException, std::exception)
 {
     // not interested in
 }
 
-void SAL_CALL DocumentStorageAccess::commited( const css::lang::EventObject& aEvent )
+void SAL_CALL DocumentStorageAccess::commited( const css::lang::EventObject& aEvent ) throw (RuntimeException, std::exception)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -378,24 +378,24 @@ void SAL_CALL DocumentStorageAccess::commited( const css::lang::EventObject& aEv
     }
 }
 
-void SAL_CALL DocumentStorageAccess::preRevert( const css::lang::EventObject& /*aEvent*/ )
+void SAL_CALL DocumentStorageAccess::preRevert( const css::lang::EventObject& /*aEvent*/ ) throw (Exception, RuntimeException, std::exception)
 {
     // not interested in
 }
 
-void SAL_CALL DocumentStorageAccess::reverted( const css::lang::EventObject& /*aEvent*/ )
+void SAL_CALL DocumentStorageAccess::reverted( const css::lang::EventObject& /*aEvent*/ ) throw (RuntimeException, std::exception)
 {
     // not interested in
 }
 
-void SAL_CALL DocumentStorageAccess::disposing( const css::lang::EventObject& Source )
+void SAL_CALL DocumentStorageAccess::disposing( const css::lang::EventObject& Source ) throw ( RuntimeException, std::exception )
 {
     OSL_ENSURE( Reference< XStorage >( Source.Source, UNO_QUERY ).is(), "DocumentStorageAccess::disposing: No storage? What's this?" );
 
     if ( m_bDisposingSubStorages )
         return;
 
-    for (   NamedStorages::const_iterator find = m_aExposedStorages.begin();
+    for (   NamedStorages::iterator find = m_aExposedStorages.begin();
             find != m_aExposedStorages.end();
             ++find
         )
@@ -411,12 +411,13 @@ void SAL_CALL DocumentStorageAccess::disposing( const css::lang::EventObject& So
 ODatabaseModelImpl::ODatabaseModelImpl( const Reference< XComponentContext >& _rxContext, ODatabaseContext& _rDBContext )
             :m_xModel()
             ,m_xDataSource()
+            ,m_pStorageAccess( NULL )
             ,m_aMutex()
             ,m_aMutexFacade( m_aMutex )
             ,m_aContainer(4)
             ,m_aMacroMode( *this )
             ,m_nImposedMacroExecMode( MacroExecMode::NEVER_EXECUTE )
-            ,m_rDBContext( _rDBContext )
+            ,m_pDBContext( &_rDBContext )
             ,m_refCount(0)
             ,m_aEmbeddedMacros()
             ,m_bModificationLock( false )
@@ -428,13 +429,13 @@ ODatabaseModelImpl::ODatabaseModelImpl( const Reference< XComponentContext >& _r
             ,m_bSuppressVersionColumns(true)
             ,m_bModified(false)
             ,m_bDocumentReadOnly(false)
-            ,m_pSharedConnectionManager(nullptr)
+            ,m_pSharedConnectionManager(NULL)
             ,m_nControllerLockCount(0)
 {
     // some kind of default
 #if defined USE_JAVA && defined MACOSX
     if ( !pApplication_canUseJava )
-        pApplication_canUseJava = reinterpret_cast< Application_canUseJava_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" ) );
+        pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
     if ( !pApplication_canUseJava || !pApplication_canUseJava() )
         m_sConnectURL = "sdbc:dbase:";
     else
@@ -452,12 +453,13 @@ ODatabaseModelImpl::ODatabaseModelImpl(
                     )
             :m_xModel()
             ,m_xDataSource()
+            ,m_pStorageAccess( NULL )
             ,m_aMutex()
             ,m_aMutexFacade( m_aMutex )
             ,m_aContainer(4)
             ,m_aMacroMode( *this )
             ,m_nImposedMacroExecMode( MacroExecMode::NEVER_EXECUTE )
-            ,m_rDBContext( _rDBContext )
+            ,m_pDBContext( &_rDBContext )
             ,m_refCount(0)
             ,m_aEmbeddedMacros()
             ,m_bModificationLock( false )
@@ -470,7 +472,7 @@ ODatabaseModelImpl::ODatabaseModelImpl(
             ,m_bSuppressVersionColumns(true)
             ,m_bModified(false)
             ,m_bDocumentReadOnly(false)
-            ,m_pSharedConnectionManager(nullptr)
+            ,m_pSharedConnectionManager(NULL)
             ,m_nControllerLockCount(0)
 {
     impl_construct_nothrow();
@@ -493,9 +495,9 @@ void ODatabaseModelImpl::impl_construct_nothrow()
         *pAllowedType++ = ::cppu::UnoType<OUString>::get();
         *pAllowedType++ = ::cppu::UnoType<sal_Int32>::get();
         *pAllowedType++ = ::cppu::UnoType<sal_Int16>::get();
-        *pAllowedType++ = cppu::UnoType<Sequence< Any >>::get();
+        *pAllowedType++ = ::getCppuType( static_cast< Sequence< Any >* >( NULL ) );
 
-        m_xSettings = PropertyBag::createWithTypes( m_aContext, aAllowedTypes, false/*AllowEmptyPropertyName*/, true/*AutomaticAddition*/ );
+        m_xSettings = PropertyBag::createWithTypes( m_aContext, aAllowedTypes, sal_False/*AllowEmptyPropertyName*/, sal_True/*AutomaticAddition*/ );
 
         // insert the default settings
         Reference< XPropertyContainer > xContainer( m_xSettings, UNO_QUERY_THROW );
@@ -527,14 +529,14 @@ void ODatabaseModelImpl::impl_construct_nothrow()
     {
         DBG_UNHANDLED_EXCEPTION();
     }
-    m_rDBContext.appendAtTerminateListener(*this);
+    m_pDBContext->appendAtTerminateListener(*this);
 }
 
 namespace
 {
     OUString lcl_getContainerStorageName_throw( ODatabaseModelImpl::ObjectType _eType )
     {
-        const sal_Char* pAsciiName( nullptr );
+        const sal_Char* pAsciiName( NULL );
         switch ( _eType )
         {
         case ODatabaseModelImpl::E_FORM:   pAsciiName = "forms"; break;
@@ -584,7 +586,7 @@ namespace
 
         try
         {
-            Reference< XStorage > xContainerStorage( _rModel.getStorage( _eType ) );
+            Reference< XStorage > xContainerStorage( _rModel.getStorage( _eType, ElementModes::READWRITE ) );
             // note the READWRITE here: If the storage already existed before, then the OpenMode will
             // be ignored, anyway.
             // If the storage did not yet exist, then it will be created. If the database document
@@ -633,36 +635,32 @@ bool ODatabaseModelImpl::objectHasMacros( const Reference< XStorage >& _rxContai
 void ODatabaseModelImpl::reset()
 {
     m_bReadOnly = false;
-    std::vector< TContentPtr > aEmptyContainers( 4 );
+    ::std::vector< TContentPtr > aEmptyContainers( 4 );
     m_aContainer.swap( aEmptyContainers );
 
-    if ( m_pStorageAccess.is() )
+    if ( m_pStorageAccess )
     {
         m_pStorageAccess->dispose();
-        m_pStorageAccess.clear();
+        m_pStorageAccess->release();
+        m_pStorageAccess = NULL;
     }
 }
 
-void SAL_CALL ODatabaseModelImpl::disposing( const css::lang::EventObject& Source )
+void SAL_CALL ODatabaseModelImpl::disposing( const ::com::sun::star::lang::EventObject& Source ) throw(RuntimeException)
 {
     Reference<XConnection> xCon(Source.Source,UNO_QUERY);
     if ( xCon.is() )
     {
         bool bStore = false;
-        for (OWeakConnectionArray::iterator i = m_aConnections.begin(); i != m_aConnections.end(); )
+        OWeakConnectionArray::iterator aEnd = m_aConnections.end();
+        for (OWeakConnectionArray::iterator i = m_aConnections.begin(); aEnd != i; ++i)
         {
-            css::uno::Reference< css::sdbc::XConnection > xIterConn ( *i );
-            if ( !xIterConn.is())
+            if ( xCon == i->get() )
             {
-                i = m_aConnections.erase(i);
-            }
-            else if ( xCon == xIterConn )
-            {
-                *i = css::uno::WeakReference< css::sdbc::XConnection >();
+                *i = OWeakConnection();
                 bStore = true;
                 break;
-            } else
-                ++i;
+            }
         }
 
         if ( bStore )
@@ -680,8 +678,8 @@ void ODatabaseModelImpl::clearConnections()
     aConnections.swap( m_aConnections );
 
     Reference< XConnection > xConn;
-    OWeakConnectionArray::const_iterator aEnd = aConnections.end();
-    for ( OWeakConnectionArray::const_iterator i = aConnections.begin(); aEnd != i; ++i )
+    OWeakConnectionArray::iterator aEnd = aConnections.end();
+    for ( OWeakConnectionArray::iterator i = aConnections.begin(); aEnd != i; ++i )
     {
         xConn = *i;
         if ( xConn.is() )
@@ -697,8 +695,8 @@ void ODatabaseModelImpl::clearConnections()
         }
     }
 
-    m_pSharedConnectionManager = nullptr;
-    m_xSharedConnectionManager = nullptr;
+    m_pSharedConnectionManager = NULL;
+    m_xSharedConnectionManager = NULL;
 }
 
 void ODatabaseModelImpl::dispose()
@@ -719,18 +717,18 @@ void ODatabaseModelImpl::dispose()
     m_xDataSource = WeakReference<XDataSource>();
     m_xModel = WeakReference< XModel >();
 
-    std::vector<TContentPtr>::const_iterator aIter = m_aContainer.begin();
-    std::vector<TContentPtr>::const_iterator aEnd = m_aContainer.end();
+    ::std::vector<TContentPtr>::iterator aIter = m_aContainer.begin();
+    ::std::vector<TContentPtr>::iterator aEnd = m_aContainer.end();
     for (;aIter != aEnd ; ++aIter)
     {
         if ( aIter->get() )
-            (*aIter)->m_pDataSource = nullptr;
+            (*aIter)->m_pDataSource = NULL;
     }
     m_aContainer.clear();
 
     clearConnections();
 
-    m_xNumberFormatsSupplier = nullptr;
+    m_xNumberFormatsSupplier = NULL;
 
     try
     {
@@ -741,17 +739,18 @@ void ODatabaseModelImpl::dispose()
         if ( bCouldStore )
             commitRootStorage();
 
-        impl_switchToStorage_throw( nullptr );
+        impl_switchToStorage_throw( NULL );
     }
     catch( const Exception& )
     {
         DBG_UNHANDLED_EXCEPTION();
     }
 
-    if ( m_pStorageAccess.is() )
+    if ( m_pStorageAccess )
     {
         m_pStorageAccess->dispose();
-        m_pStorageAccess.clear();
+        m_pStorageAccess->release();
+        m_pStorageAccess = NULL;
     }
 }
 
@@ -849,27 +848,21 @@ Reference< XStorage > ODatabaseModelImpl::getOrCreateRootStorage()
             aStorageCreationArgs[1] <<= ElementModes::READWRITE;
 
             Reference< XStorage > xDocumentStorage;
-            OUString sURL;
-            aSource >>= sURL;
-            // Don't try to load a meta-URL as-is.
-            if (!sURL.startsWithIgnoreAsciiCase("vnd.sun.star.pkg:"))
+            try
             {
+                xDocumentStorage.set( xStorageFactory->createInstanceWithArguments( aStorageCreationArgs ), UNO_QUERY_THROW );
+            }
+            catch( const Exception& )
+            {
+                m_bDocumentReadOnly = true;
+                aStorageCreationArgs[1] <<= ElementModes::READ;
                 try
                 {
                     xDocumentStorage.set( xStorageFactory->createInstanceWithArguments( aStorageCreationArgs ), UNO_QUERY_THROW );
                 }
                 catch( const Exception& )
                 {
-                    m_bDocumentReadOnly = true;
-                    aStorageCreationArgs[1] <<= ElementModes::READ;
-                    try
-                    {
-                        xDocumentStorage.set( xStorageFactory->createInstanceWithArguments( aStorageCreationArgs ), UNO_QUERY_THROW );
-                    }
-                    catch( const Exception& )
-                    {
-                        DBG_UNHANDLED_EXCEPTION();
-                    }
+                    DBG_UNHANDLED_EXCEPTION();
                 }
             }
 
@@ -881,11 +874,12 @@ Reference< XStorage > ODatabaseModelImpl::getOrCreateRootStorage()
 
 DocumentStorageAccess* ODatabaseModelImpl::getDocumentStorageAccess()
 {
-    if ( !m_pStorageAccess.is() )
+    if ( !m_pStorageAccess )
     {
         m_pStorageAccess = new DocumentStorageAccess( *this );
+        m_pStorageAccess->acquire();
     }
-    return m_pStorageAccess.get();
+    return m_pStorageAccess;
 }
 
 void ODatabaseModelImpl::modelIsDisposing( const bool _wasInitialized, ResetModelAccess )
@@ -960,7 +954,7 @@ Reference< XModel> ODatabaseModelImpl::getModel_noCreate() const
     return m_xModel;
 }
 
-Reference< XModel > ODatabaseModelImpl::createNewModel_deliverOwnership()
+Reference< XModel > ODatabaseModelImpl::createNewModel_deliverOwnership( bool _bInitialize )
 {
     Reference< XModel > xModel( m_xModel );
     OSL_PRECOND( !xModel.is(), "ODatabaseModelImpl::createNewModel_deliverOwnership: not to be called if there already is a model!" );
@@ -991,6 +985,20 @@ Reference< XModel > ODatabaseModelImpl::createNewModel_deliverOwnership()
             // #i105505#
             xModel->attachResource( xModel->getURL(), m_aMediaDescriptor.getPropertyValues() );
         }
+
+        if ( _bInitialize )
+        {
+            try
+            {
+                Reference< XLoadable > xLoad( xModel, UNO_QUERY_THROW );
+                xLoad->initNew();
+            }
+            catch( RuntimeException& ) { throw; }
+            catch( const Exception& )
+            {
+                DBG_UNHANDLED_EXCEPTION();
+            }
+        }
     }
     return xModel;
 }
@@ -1005,11 +1013,10 @@ void SAL_CALL ODatabaseModelImpl::release()
     if ( osl_atomic_decrement(&m_refCount) == 0 )
     {
         acquire();  // prevent multiple releases
-        m_rDBContext.removeFromTerminateListener(*this);
+        m_pDBContext->removeFromTerminateListener(*this);
         dispose();
-        m_rDBContext.storeTransientProperties(*this);
-        if (!m_sDocumentURL.isEmpty())
-            m_rDBContext.revokeDatabaseDocument(*this);
+        m_pDBContext->storeTransientProperties(*this);
+        revokeDataSource();
         delete this;
     }
 }
@@ -1019,10 +1026,9 @@ void ODatabaseModelImpl::commitStorages()
     getDocumentStorageAccess()->commitStorages();
 }
 
-Reference< XStorage > ODatabaseModelImpl::getStorage( const ObjectType _eType )
+Reference< XStorage > ODatabaseModelImpl::getStorage( const ObjectType _eType, const sal_Int32 _nDesiredMode )
 {
-    return getDocumentStorageAccess()->getDocumentSubStorage( getObjectContainerStorageName( _eType ),
-                    css::embed::ElementModes::READWRITE );
+    return getDocumentStorageAccess()->getDocumentSubStorage( getObjectContainerStorageName( _eType ), _nDesiredMode );
 }
 
 const AsciiPropertyValue* ODatabaseModelImpl::getDefaultDataSourceSettings()
@@ -1112,9 +1118,15 @@ TContentPtr& ODatabaseModelImpl::getObjectContainer( ObjectType _eType )
     return rContentPtr;
 }
 
+void ODatabaseModelImpl::revokeDataSource() const
+{
+    if ( m_pDBContext && !m_sDocumentURL.isEmpty() )
+        m_pDBContext->revokeDatabaseDocument( *this );
+}
+
 bool ODatabaseModelImpl::adjustMacroMode_AutoReject()
 {
-    return m_aMacroMode.adjustMacroMode( nullptr );
+    return m_aMacroMode.adjustMacroMode( NULL );
 }
 
 bool ODatabaseModelImpl::checkMacrosOnLoading()
@@ -1198,7 +1210,7 @@ namespace
         if ( _inout_rListener.is() )
         {
             _inout_rListener->dispose();
-            _inout_rListener = nullptr;
+            _inout_rListener = NULL;
         }
 
         if ( xModify.is() && _bListen )
@@ -1211,7 +1223,7 @@ namespace
 
 namespace
 {
-    void lcl_rebaseScriptStorage_throw( const Reference< XStorageBasedLibraryContainer >& _rxContainer,
+    static void lcl_rebaseScriptStorage_throw( const Reference< XStorageBasedLibraryContainer >& _rxContainer,
         const Reference< XStorage >& _rxNewRootStorage )
     {
         if ( _rxContainer.is() )
@@ -1257,7 +1269,7 @@ void ODatabaseModelImpl::impl_switchToLogicalURL( const OUString& i_rDocumentURL
         )
     {
         INetURLObject aURL( i_rDocumentURL );
-        if ( aURL.GetProtocol() != INetProtocol::NotValid )
+        if ( aURL.GetProtocol() != INET_PROT_NOT_VALID )
         {
             m_sName = i_rDocumentURL;
             // TODO: our data source must broadcast the change of the Name property
@@ -1272,10 +1284,13 @@ void ODatabaseModelImpl::impl_switchToLogicalURL( const OUString& i_rDocumentURL
         m_sDocFileLocation = m_sDocumentURL;
 
     // register at the database context, or change registration
-    if (!sOldURL.isEmpty())
-        m_rDBContext.databaseDocumentURLChange( sOldURL, m_sDocumentURL );
-    else
-        m_rDBContext.registerDatabaseDocument( *this );
+    if ( m_pDBContext )
+    {
+        if ( !sOldURL.isEmpty() )
+            m_pDBContext->databaseDocumentURLChange( sOldURL, m_sDocumentURL );
+        else
+            m_pDBContext->registerDatabaseDocument( *this );
+    }
 }
 
 OUString ODatabaseModelImpl::getObjectContainerStorageName( const ObjectType _eType )
@@ -1297,9 +1312,10 @@ sal_Int16 ODatabaseModelImpl::getCurrentMacroExecMode() const
     return nCurrentMode;
 }
 
-void ODatabaseModelImpl::setCurrentMacroExecMode( sal_uInt16 nMacroMode )
+bool ODatabaseModelImpl::setCurrentMacroExecMode( sal_uInt16 nMacroMode )
 {
     m_aMediaDescriptor.put( "MacroExecutionMode", nMacroMode );
+    return true;
 }
 
 OUString ODatabaseModelImpl::getDocumentLocation() const
@@ -1313,11 +1329,18 @@ OUString ODatabaseModelImpl::getDocumentLocation() const
     // this folder is considered to be secure. So, the document URL needs to be used to decide about the security.
 }
 
+Reference< XStorage > ODatabaseModelImpl::getZipStorageToSign()
+{
+    // we do not support signing the scripting storages, so we're allowed to
+    // return <NULL/> here.
+    return Reference< XStorage >();
+}
+
 ODatabaseModelImpl::EmbeddedMacros ODatabaseModelImpl::determineEmbeddedMacros()
 {
     if ( !m_aEmbeddedMacros )
     {
-        if ( ::sfx2::DocumentMacroMode::storageHasMacros( getOrCreateRootStorage() ) )
+        if ( ::sfx2::DocumentMacroMode::storageHasMacros( const_cast< ODatabaseModelImpl* >( this )->getOrCreateRootStorage() ) )
         {
             m_aEmbeddedMacros.reset( eDocumentWideMacros );
         }
@@ -1346,16 +1369,21 @@ Reference< XEmbeddedScripts > ODatabaseModelImpl::getEmbeddedDocumentScripts() c
     return Reference< XEmbeddedScripts >( getModel_noCreate(), UNO_QUERY );
 }
 
-SignatureState ODatabaseModelImpl::getScriptingSignatureState()
+sal_Int16 ODatabaseModelImpl::getScriptingSignatureState()
 {
     // no support for signatures at the moment
-    return SignatureState::NOSIGNATURES;
+    return SIGNATURESTATE_NOSIGNATURES;
 }
 
 bool ODatabaseModelImpl::hasTrustedScriptingSignature( bool /*bAllowUIToAddAuthor*/ )
 {
     // no support for signatures at the moment
     return false;
+}
+
+void ODatabaseModelImpl::showBrokenSignatureWarning( const Reference< XInteractionHandler >& /*_rxInteraction*/ ) const
+{
+    OSL_FAIL( "ODatabaseModelImpl::showBrokenSignatureWarning: signatures can't be broken - we do not support them!" );
 }
 
 void ODatabaseModelImpl::storageIsModified()

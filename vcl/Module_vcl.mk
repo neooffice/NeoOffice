@@ -27,46 +27,34 @@
 $(eval $(call gb_Module_Module,vcl))
 
 $(eval $(call gb_Module_add_targets,vcl,\
+    CustomTarget_afm_hash \
     Library_vcl \
 	Package_opengl \
-	$(if $(filter WNT,$(OS)), \
-		Package_opengl_blacklist ) \
     $(if $(filter DESKTOP,$(BUILD_TYPE)), \
         StaticLibrary_vclmain \
-		$(if $(ENABLE_MACOSX_SANDBOX),, \
-			$(if $(ENABLE_HEADLESS),, \
-				Executable_ui-previewer)) \
-		$(if $(filter LINUX MACOSX SOLARIS WNT %BSD,$(OS)), \
+        Executable_ui-previewer \
+		$(if $(filter LINUX MACOSX WNT,$(OS)), \
+			Executable_icontest \
 			Executable_outdevgrind \
-			$(if $(ENABLE_HEADLESS),, \
-				Executable_vcldemo \
-				Executable_icontest \
-				Executable_visualbackendtest \
-				Executable_mtfdemo ))) \
-))
-
-ifeq ($(CROSS_COMPILING)$(DISABLE_DYNLOADING),)
-
-$(eval $(call gb_Module_add_targets,vcl,\
+			Executable_vcldemo )) \
     $(if $(filter-out ANDROID IOS WNT,$(OS)), \
         Executable_svdemo \
-        Executable_fftester \
         Executable_svptest \
         Executable_svpclient) \
 ))
-
-endif
 
 $(eval $(call gb_Module_add_l10n_targets,vcl,\
     AllLangResTarget_vcl \
     UIConfig_vcl \
 ))
 
-ifeq ($(USING_X11),TRUE)
+ifeq ($(GUIBASE),unx)
 $(eval $(call gb_Module_add_targets,vcl,\
+    Library_vclplug_svp \
     Library_vclplug_gen \
     Library_desktop_detector \
-    StaticLibrary_glxtest \
+    StaticLibrary_headless \
+	StaticLibrary_glxtest \
     Package_fontunxppds \
     Package_fontunxpsprint \
 ))
@@ -87,6 +75,13 @@ $(eval $(call gb_Module_add_targets,vcl,\
     CustomTarget_tde_moc \
     Executable_tdefilepicker \
     Library_vclplug_tde \
+))
+endif
+ifneq ($(ENABLE_KDE),)
+$(eval $(call gb_Module_add_targets,vcl,\
+    CustomTarget_kde_moc \
+    Executable_kdefilepicker \
+    Library_vclplug_kde \
 ))
 endif
 ifneq ($(ENABLE_KDE4),)
@@ -115,84 +110,19 @@ $(eval $(call gb_Module_add_targets,vcl,\
 ))
 endif
 
-ifneq ($(ENABLE_FUZZERS),)
-$(eval $(call gb_Module_add_targets,vcl,\
-    CustomTarget_nativecode \
-    StaticLibrary_fuzzer \
-    Executable_wmffuzzer \
-    Executable_jpgfuzzer \
-    Executable_giffuzzer \
-    Executable_xbmfuzzer \
-    Executable_xpmfuzzer \
-    Executable_pngfuzzer \
-    Executable_bmpfuzzer \
-    Executable_svmfuzzer \
-    Executable_pcdfuzzer \
-    Executable_dxffuzzer \
-    Executable_metfuzzer \
-    Executable_ppmfuzzer \
-    Executable_psdfuzzer \
-    Executable_epsfuzzer \
-    Executable_pctfuzzer \
-    Executable_pcxfuzzer \
-    Executable_rasfuzzer \
-    Executable_tgafuzzer \
-    Executable_tiffuzzer \
-    Executable_hwpfuzzer \
-    Executable_602fuzzer \
-    Executable_lwpfuzzer \
-    Executable_olefuzzer \
-    Executable_pptfuzzer \
-    Executable_rtffuzzer \
-    Executable_cgmfuzzer \
-    Executable_ww2fuzzer \
-    Executable_ww6fuzzer \
-))
-endif
-
 $(eval $(call gb_Module_add_check_targets,vcl,\
-	CppunitTest_vcl_lifecycle \
-	CppunitTest_vcl_bitmap_test \
-	CppunitTest_vcl_bitmapprocessor_test \
 	CppunitTest_vcl_fontcharmap \
-	CppunitTest_vcl_font \
-	CppunitTest_vcl_fontmetric \
 	CppunitTest_vcl_complextext \
 	CppunitTest_vcl_filters_test \
-	CppunitTest_vcl_mapmode \
 	CppunitTest_vcl_outdev \
 	CppunitTest_vcl_app_test \
-	$(if $(MERGELIBS),,CppunitTest_vcl_wmf_test) \
-	CppunitTest_vcl_jpeg_read_write_test \
-	CppunitTest_vcl_svm_test \
-	CppunitTest_vcl_pdfexport \
-    CppunitTest_vcl_errorhandler \
+	CppunitTest_vcl_wmf_test \
 ))
 
-
-ifeq ($(USING_X11),TRUE)
+ifeq ($(GUIBASE),unx)
 $(eval $(call gb_Module_add_check_targets,vcl,\
 	CppunitTest_vcl_timer \
 ))
 endif
-
-ifeq ($(ENABLE_HEADLESS),TRUE)
-$(eval $(call gb_Module_add_check_targets,vcl,\
-	CppunitTest_vcl_timer \
-))
-endif
-
-# Is any configuration missing?
-ifeq ($(OS),WNT)
-$(eval $(call gb_Module_add_check_targets,vcl,\
-	CppunitTest_vcl_timer \
-	CppunitTest_vcl_blocklistparser_test \
-))
-endif
-
-# screenshots
-$(eval $(call gb_Module_add_screenshot_targets,vcl,\
-    CppunitTest_vcl_dialogs_test \
-))
 
 # vim: set noet sw=4 ts=4:

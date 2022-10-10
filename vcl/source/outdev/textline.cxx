@@ -23,15 +23,11 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <cassert>
-
 #include <sal/types.h>
 
 #include <vcl/outdev.hxx>
-#include <vcl/settings.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/window.hxx>
+#include <vcl/settings.hxx>
 
 #include <tools/helpers.hxx>
 
@@ -39,13 +35,18 @@
 #include "impfont.hxx"
 #include "outdata.hxx"
 
+#include <config_graphite.h>
+#if ENABLE_GRAPHITE
+#include "graphite_features.hxx"
+#endif
+
 #if defined USE_JAVA && defined MACOSX
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 #endif	// USE_JAVA && MACOSX
 
-#define UNDERLINE_LAST      LINESTYLE_BOLDWAVE
+#define UNDERLINE_LAST      UNDERLINE_BOLDWAVE
 #define STRIKEOUT_LAST      STRIKEOUT_X
 
 bool OutputDevice::ImplIsUnderlineAbove( const vcl::Font& rFont )
@@ -64,12 +65,12 @@ bool OutputDevice::ImplIsUnderlineAbove( const vcl::Font& rFont )
 
 void OutputDevice::ImplInitTextLineSize()
 {
-    mpFontInstance->mxFontMetric->ImplInitTextLineSize( this );
+    mpFontEntry->maMetric.ImplInitTextLineSize( this );
 }
 
 void OutputDevice::ImplInitAboveTextLineSize()
 {
-    mpFontInstance->mxFontMetric->ImplInitAboveTextLineSize();
+    mpFontEntry->maMetric.ImplInitAboveTextLineSize();
 }
 
 void OutputDevice::ImplDrawWavePixel( long nOriginX, long nOriginY,
@@ -109,7 +110,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
     long nStartX = nBaseX + nDistX;
     long nStartY = nBaseY + nDistY;
 
-    // If the height is 1 pixel, it's enough output a line
+    // If the height is 1 pixel, it's enough ouput a line
     if ( (nLineWidth == 1) && (nHeight == 1) )
     {
         mpGraphics->SetLineColor( ImplColorToSal( rColor ) );
@@ -133,10 +134,12 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
         long    nDiffY = nHeight-1;
         long    nCount = nWidth;
         long    nOffY = -1;
+        long    nFreq;
+        long    i;
         long    nPixWidth;
         long    nPixHeight;
         bool    bDrawPixAsRect;
-        // On printers that output pixel via DrawRect()
+        // On printers that ouput pixel via DrawRect()
         if ( (GetOutDevType() == OUTDEV_PRINTER) || (nLineWidth > 1) )
         {
             if ( mbLineColor || mbInitLineColor )
@@ -173,10 +176,10 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
         else
         {
             nCurY += nDiffY;
-            long nFreq = nCount / (nDiffX+nDiffY);
+            nFreq = nCount / (nDiffX+nDiffY);
             while ( nFreq-- )
             {
-                for( long i = nDiffY; i; --i )
+                for( i = nDiffY; i; --i )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
                                        mpGraphics, this,
@@ -184,7 +187,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
                     nCurX++;
                     nCurY += nOffY;
                 }
-                for( long i = nDiffX; i; --i )
+                for( i = nDiffX; i; --i )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
                                        mpGraphics, this,
@@ -196,7 +199,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
             nFreq = nCount % (nDiffX+nDiffY);
             if ( nFreq )
             {
-                for( long i = nDiffY; i && nFreq; --i, --nFreq )
+                for( i = nDiffY; i && nFreq; --i, --nFreq )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
                                        mpGraphics, this,
@@ -205,7 +208,7 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
                     nCurY += nOffY;
 
                 }
-                for( long i = nDiffX; i && nFreq; --i, --nFreq )
+                for( i = nDiffX; i && nFreq; --i, --nFreq )
                 {
                     ImplDrawWavePixel( nBaseX, nBaseY, nCurX, nCurY, nOrientation,
                                        mpGraphics, this,
@@ -219,38 +222,38 @@ void OutputDevice::ImplDrawWaveLine( long nBaseX, long nBaseY,
 
 void OutputDevice::ImplDrawWaveTextLine( long nBaseX, long nBaseY,
                                          long nDistX, long nDistY, long nWidth,
-                                         FontLineStyle eTextLine,
+                                         FontUnderline eTextLine,
                                          Color aColor,
                                          bool bIsAbove )
 {
-    LogicalFontInstance* pFontInstance = mpFontInstance;
+    ImplFontEntry*  pFontEntry = mpFontEntry;
     long            nLineHeight;
     long            nLinePos;
 
     if ( bIsAbove )
     {
-        nLineHeight = pFontInstance->mxFontMetric->GetAboveWavelineUnderlineSize();
-        nLinePos = pFontInstance->mxFontMetric->GetAboveWavelineUnderlineOffset();
+        nLineHeight = pFontEntry->maMetric.mnAboveWUnderlineSize;
+        nLinePos = pFontEntry->maMetric.mnAboveWUnderlineOffset;
     }
     else
     {
-        nLineHeight = pFontInstance->mxFontMetric->GetWavelineUnderlineSize();
-        nLinePos = pFontInstance->mxFontMetric->GetWavelineUnderlineOffset();
+        nLineHeight = pFontEntry->maMetric.mnWUnderlineSize;
+        nLinePos = pFontEntry->maMetric.mnWUnderlineOffset;
     }
-    if ( (eTextLine == LINESTYLE_SMALLWAVE) && (nLineHeight > 3) )
+    if ( (eTextLine == UNDERLINE_SMALLWAVE) && (nLineHeight > 3) )
         nLineHeight = 3;
 
     long nLineWidth = (mnDPIX / 300);
     if ( !nLineWidth )
         nLineWidth = 1;
 
-    if ( eTextLine == LINESTYLE_BOLDWAVE )
+    if ( eTextLine == UNDERLINE_BOLDWAVE )
         nLineWidth *= 2;
 
     nLinePos += nDistY - (nLineHeight / 2);
 
     long nLineWidthHeight = ((nLineWidth * mnDPIX) + (mnDPIY / 2)) / mnDPIY;
-    if ( eTextLine == LINESTYLE_DOUBLEWAVE )
+    if ( eTextLine == UNDERLINE_DOUBLEWAVE )
     {
         long nOrgLineHeight = nLineHeight;
         nLineHeight /= 3;
@@ -272,26 +275,26 @@ void OutputDevice::ImplDrawWaveTextLine( long nBaseX, long nBaseY,
 
         nLinePos -= nLineWidthHeight-nLineDY2;
         ImplDrawWaveLine( nBaseX, nBaseY, nDistX, nLinePos, nWidth, nLineHeight,
-                          nLineWidth, mpFontInstance->mnOrientation, aColor );
+                          nLineWidth, mpFontEntry->mnOrientation, aColor );
         nLinePos += nLineWidthHeight+nLineDY;
         ImplDrawWaveLine( nBaseX, nBaseY, nDistX, nLinePos, nWidth, nLineHeight,
-                          nLineWidth, mpFontInstance->mnOrientation, aColor );
+                          nLineWidth, mpFontEntry->mnOrientation, aColor );
     }
     else
     {
         nLinePos -= nLineWidthHeight/2;
         ImplDrawWaveLine( nBaseX, nBaseY, nDistX, nLinePos, nWidth, nLineHeight,
-                          nLineWidth, mpFontInstance->mnOrientation, aColor );
+                          nLineWidth, mpFontEntry->mnOrientation, aColor );
     }
 }
 
 void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
                                              long nDistX, long nDistY, long nWidth,
-                                             FontLineStyle eTextLine,
+                                             FontUnderline eTextLine,
                                              Color aColor,
                                              bool bIsAbove )
 {
-    LogicalFontInstance*  pFontInstance = mpFontInstance;
+    ImplFontEntry*  pFontEntry = mpFontEntry;
     long            nLineHeight = 0;
     long            nLinePos  = 0;
     long            nLinePos2 = 0;
@@ -299,56 +302,56 @@ void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
     const long nY = nDistY;
 
     if ( eTextLine > UNDERLINE_LAST )
-        eTextLine = LINESTYLE_SINGLE;
+        eTextLine = UNDERLINE_SINGLE;
 
     switch ( eTextLine )
     {
-    case LINESTYLE_SINGLE:
-    case LINESTYLE_DOTTED:
-    case LINESTYLE_DASH:
-    case LINESTYLE_LONGDASH:
-    case LINESTYLE_DASHDOT:
-    case LINESTYLE_DASHDOTDOT:
+    case UNDERLINE_SINGLE:
+    case UNDERLINE_DOTTED:
+    case UNDERLINE_DASH:
+    case UNDERLINE_LONGDASH:
+    case UNDERLINE_DASHDOT:
+    case UNDERLINE_DASHDOTDOT:
         if ( bIsAbove )
         {
-            nLineHeight = pFontInstance->mxFontMetric->GetAboveUnderlineSize();
-            nLinePos    = nY + pFontInstance->mxFontMetric->GetAboveUnderlineOffset();
+            nLineHeight = pFontEntry->maMetric.mnAboveUnderlineSize;
+            nLinePos    = nY + pFontEntry->maMetric.mnAboveUnderlineOffset;
         }
         else
         {
-            nLineHeight = pFontInstance->mxFontMetric->GetUnderlineSize();
-            nLinePos    = nY + pFontInstance->mxFontMetric->GetUnderlineOffset();
+            nLineHeight = pFontEntry->maMetric.mnUnderlineSize;
+            nLinePos    = nY + pFontEntry->maMetric.mnUnderlineOffset;
         }
         break;
-    case LINESTYLE_BOLD:
-    case LINESTYLE_BOLDDOTTED:
-    case LINESTYLE_BOLDDASH:
-    case LINESTYLE_BOLDLONGDASH:
-    case LINESTYLE_BOLDDASHDOT:
-    case LINESTYLE_BOLDDASHDOTDOT:
+    case UNDERLINE_BOLD:
+    case UNDERLINE_BOLDDOTTED:
+    case UNDERLINE_BOLDDASH:
+    case UNDERLINE_BOLDLONGDASH:
+    case UNDERLINE_BOLDDASHDOT:
+    case UNDERLINE_BOLDDASHDOTDOT:
         if ( bIsAbove )
         {
-            nLineHeight = pFontInstance->mxFontMetric->GetAboveBoldUnderlineSize();
-            nLinePos    = nY + pFontInstance->mxFontMetric->GetAboveBoldUnderlineOffset();
+            nLineHeight = pFontEntry->maMetric.mnAboveBUnderlineSize;
+            nLinePos    = nY + pFontEntry->maMetric.mnAboveBUnderlineOffset;
         }
         else
         {
-            nLineHeight = pFontInstance->mxFontMetric->GetBoldUnderlineSize();
-            nLinePos    = nY + pFontInstance->mxFontMetric->GetBoldUnderlineOffset();
+            nLineHeight = pFontEntry->maMetric.mnBUnderlineSize;
+            nLinePos    = nY + pFontEntry->maMetric.mnBUnderlineOffset;
         }
         break;
-    case LINESTYLE_DOUBLE:
+    case UNDERLINE_DOUBLE:
         if ( bIsAbove )
         {
-            nLineHeight = pFontInstance->mxFontMetric->GetAboveDoubleUnderlineSize();
-            nLinePos    = nY + pFontInstance->mxFontMetric->GetAboveDoubleUnderlineOffset1();
-            nLinePos2   = nY + pFontInstance->mxFontMetric->GetAboveDoubleUnderlineOffset2();
+            nLineHeight = pFontEntry->maMetric.mnAboveDUnderlineSize;
+            nLinePos    = nY + pFontEntry->maMetric.mnAboveDUnderlineOffset1;
+            nLinePos2   = nY + pFontEntry->maMetric.mnAboveDUnderlineOffset2;
         }
         else
         {
-            nLineHeight = pFontInstance->mxFontMetric->GetDoubleUnderlineSize();
-            nLinePos    = nY + pFontInstance->mxFontMetric->GetDoubleUnderlineOffset1();
-            nLinePos2   = nY + pFontInstance->mxFontMetric->GetDoubleUnderlineOffset2();
+            nLineHeight = pFontEntry->maMetric.mnDUnderlineSize;
+            nLinePos    = nY + pFontEntry->maMetric.mnDUnderlineOffset1;
+            nLinePos2   = nY + pFontEntry->maMetric.mnDUnderlineOffset2;
         }
         break;
     default:
@@ -369,16 +372,16 @@ void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
 
         switch ( eTextLine )
         {
-        case LINESTYLE_SINGLE:
-        case LINESTYLE_BOLD:
+        case UNDERLINE_SINGLE:
+        case UNDERLINE_BOLD:
             ImplDrawTextRect( nBaseX, nBaseY, nLeft, nLinePos, nWidth, nLineHeight );
             break;
-        case LINESTYLE_DOUBLE:
+        case UNDERLINE_DOUBLE:
             ImplDrawTextRect( nBaseX, nBaseY, nLeft, nLinePos,  nWidth, nLineHeight );
             ImplDrawTextRect( nBaseX, nBaseY, nLeft, nLinePos2, nWidth, nLineHeight );
             break;
-        case LINESTYLE_DOTTED:
-        case LINESTYLE_BOLDDOTTED:
+        case UNDERLINE_DOTTED:
+        case UNDERLINE_BOLDDOTTED:
             {
                 long nDotWidth = nLineHeight*mnDPIY;
                 nDotWidth += mnDPIY/2;
@@ -396,10 +399,10 @@ void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
                 }
             }
             break;
-        case LINESTYLE_DASH:
-        case LINESTYLE_LONGDASH:
-        case LINESTYLE_BOLDDASH:
-        case LINESTYLE_BOLDLONGDASH:
+        case UNDERLINE_DASH:
+        case UNDERLINE_LONGDASH:
+        case UNDERLINE_BOLDDASH:
+        case UNDERLINE_BOLDLONGDASH:
             {
                 long nDotWidth = nLineHeight*mnDPIY;
                 nDotWidth += mnDPIY/2;
@@ -409,8 +412,8 @@ void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
                 long nMinSpaceWidth;
                 long nSpaceWidth;
                 long nDashWidth;
-                if ( (eTextLine == LINESTYLE_LONGDASH) ||
-                     (eTextLine == LINESTYLE_BOLDLONGDASH) )
+                if ( (eTextLine == UNDERLINE_LONGDASH) ||
+                     (eTextLine == UNDERLINE_BOLDLONGDASH) )
                 {
                     nMinDashWidth = nDotWidth*6;
                     nMinSpaceWidth = nDotWidth*2;
@@ -444,8 +447,8 @@ void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
                 }
             }
             break;
-        case LINESTYLE_DASHDOT:
-        case LINESTYLE_BOLDDASHDOT:
+        case UNDERLINE_DASHDOT:
+        case UNDERLINE_BOLDDASHDOT:
             {
                 long nDotWidth = nLineHeight*mnDPIY;
                 nDotWidth += mnDPIY/2;
@@ -479,8 +482,8 @@ void OutputDevice::ImplDrawStraightTextLine( long nBaseX, long nBaseY,
                 }
             }
             break;
-        case LINESTYLE_DASHDOTDOT:
-        case LINESTYLE_BOLDDASHDOTDOT:
+        case UNDERLINE_DASHDOTDOT:
+        case UNDERLINE_BOLDDASHDOTDOT:
             {
                 long nDotWidth = nLineHeight*mnDPIY;
                 nDotWidth += mnDPIY/2;
@@ -533,7 +536,7 @@ void OutputDevice::ImplDrawStrikeoutLine( long nBaseX, long nBaseY,
                                           FontStrikeout eStrikeout,
                                           Color aColor )
 {
-    LogicalFontInstance*  pFontInstance = mpFontInstance;
+    ImplFontEntry*  pFontEntry = mpFontEntry;
     long            nLineHeight = 0;
     long            nLinePos  = 0;
     long            nLinePos2 = 0;
@@ -546,17 +549,17 @@ void OutputDevice::ImplDrawStrikeoutLine( long nBaseX, long nBaseY,
     switch ( eStrikeout )
     {
     case STRIKEOUT_SINGLE:
-        nLineHeight = pFontInstance->mxFontMetric->GetStrikeoutSize();
-        nLinePos    = nY + pFontInstance->mxFontMetric->GetStrikeoutOffset();
+        nLineHeight = pFontEntry->maMetric.mnStrikeoutSize;
+        nLinePos    = nY + pFontEntry->maMetric.mnStrikeoutOffset;
         break;
     case STRIKEOUT_BOLD:
-        nLineHeight = pFontInstance->mxFontMetric->GetBoldStrikeoutSize();
-        nLinePos    = nY + pFontInstance->mxFontMetric->GetBoldStrikeoutOffset();
+        nLineHeight = pFontEntry->maMetric.mnBStrikeoutSize;
+        nLinePos    = nY + pFontEntry->maMetric.mnBStrikeoutOffset;
         break;
     case STRIKEOUT_DOUBLE:
-        nLineHeight = pFontInstance->mxFontMetric->GetDoubleStrikeoutSize();
-        nLinePos    = nY + pFontInstance->mxFontMetric->GetDoubleStrikeoutOffset1();
-        nLinePos2   = nY + pFontInstance->mxFontMetric->GetDoubleStrikeoutOffset2();
+        nLineHeight = pFontEntry->maMetric.mnDStrikeoutSize;
+        nLinePos    = nY + pFontEntry->maMetric.mnDStrikeoutOffset1;
+        nLinePos2   = nY + pFontEntry->maMetric.mnDStrikeoutOffset2;
         break;
     default:
         break;
@@ -601,7 +604,7 @@ void OutputDevice::ImplDrawStrikeoutChar( long nBaseX, long nBaseY,
         return;
 
     // prepare string for strikeout measurement
-    const char cStrikeoutChar =  eStrikeout == STRIKEOUT_SLASH ? '/' : 'X';
+    char cStrikeoutChar =  eStrikeout == STRIKEOUT_SLASH ? '/' : 'X';
     static const int nTestStrLen = 4;
     static const int nMaxStrikeStrLen = 2048;
     sal_Unicode aChars[nMaxStrikeStrLen+1]; // +1 for valgrind...
@@ -645,18 +648,18 @@ void OutputDevice::ImplDrawStrikeoutChar( long nBaseX, long nBaseY,
 
     const OUString aStrikeoutText(aChars, nStrikeStrLen);
 
-    if( mpFontInstance->mnOrientation )
+    if( mpFontEntry->mnOrientation )
     {
         Point aOriginPt(0, 0);
-        aOriginPt.RotateAround( nDistX, nDistY, mpFontInstance->mnOrientation );
+        aOriginPt.RotateAround( nDistX, nDistY, mpFontEntry->mnOrientation );
     }
 
     nBaseX += nDistX;
     nBaseY += nDistY;
 
     // strikeout text has to be left aligned
-    ComplexTextLayoutFlags nOrigTLM = mnTextLayoutMode;
-    mnTextLayoutMode = ComplexTextLayoutFlags::BiDiStrong;
+    ComplexTextLayoutMode nOrigTLM = mnTextLayoutMode;
+    mnTextLayoutMode = TEXT_LAYOUT_BIDI_STRONG | TEXT_LAYOUT_COMPLEX_DISABLED;
     pLayout = ImplLayout( aStrikeoutText, 0, aStrikeoutText.getLength() );
     mnTextLayoutMode = nOrigTLM;
 
@@ -670,16 +673,16 @@ void OutputDevice::ImplDrawStrikeoutChar( long nBaseX, long nBaseY,
 
     pLayout->DrawBase() = Point( nBaseX+mnTextOffX, nBaseY+mnTextOffY );
 
-    tools::Rectangle aPixelRect;
+    Rectangle aPixelRect;
     aPixelRect.Left() = nBaseX+mnTextOffX;
     aPixelRect.Right() = aPixelRect.Left()+nWidth;
-    aPixelRect.Bottom() = nBaseY+mpFontInstance->mxFontMetric->GetDescent();
-    aPixelRect.Top() = nBaseY-mpFontInstance->mxFontMetric->GetAscent();
+    aPixelRect.Bottom() = nBaseY+mpFontEntry->maMetric.mnDescent;
+    aPixelRect.Top() = nBaseY-mpFontEntry->maMetric.mnAscent;
 
-    if (mpFontInstance->mnOrientation)
+    if (mpFontEntry->mnOrientation)
     {
-        tools::Polygon aPoly( aPixelRect );
-        aPoly.Rotate( Point(nBaseX+mnTextOffX, nBaseY+mnTextOffY), mpFontInstance->mnOrientation);
+        Polygon aPoly( aPixelRect );
+        aPoly.Rotate( Point(nBaseX+mnTextOffX, nBaseY+mnTextOffY), mpFontEntry->mnOrientation);
         aPixelRect = aPoly.GetBoundRect();
     }
 
@@ -700,8 +703,8 @@ void OutputDevice::ImplDrawStrikeoutChar( long nBaseX, long nBaseY,
 void OutputDevice::ImplDrawTextLine( long nX, long nY,
                                      long nDistX, DeviceCoordinate nWidth,
                                      FontStrikeout eStrikeout,
-                                     FontLineStyle eUnderline,
-                                     FontLineStyle eOverline,
+                                     FontUnderline eUnderline,
+                                     FontUnderline eOverline,
                                      bool bUnderlineAbove )
 {
     if ( !nWidth )
@@ -716,9 +719,10 @@ void OutputDevice::ImplDrawTextLine( long nX, long nY,
 
     if ( IsRTLEnabled() )
     {
+        // --- RTL --- mirror at basex
         long nXAdd = nWidth - nDistX;
-        if( mpFontInstance->mnOrientation )
-            nXAdd = FRound( nXAdd * cos( mpFontInstance->mnOrientation * F_PI1800 ) );
+        if( mpFontEntry->mnOrientation )
+            nXAdd = FRound( nXAdd * cos( mpFontEntry->mnOrientation * F_PI1800 ) );
 
         nX += nXAdd - 1;
     }
@@ -729,18 +733,18 @@ void OutputDevice::ImplDrawTextLine( long nX, long nY,
     if ( !IsOverlineColor() )
         aOverlineColor = GetTextColor();
 
-    if ( (eUnderline == LINESTYLE_SMALLWAVE) ||
-         (eUnderline == LINESTYLE_WAVE) ||
-         (eUnderline == LINESTYLE_DOUBLEWAVE) ||
-         (eUnderline == LINESTYLE_BOLDWAVE) )
+    if ( (eUnderline == UNDERLINE_SMALLWAVE) ||
+         (eUnderline == UNDERLINE_WAVE) ||
+         (eUnderline == UNDERLINE_DOUBLEWAVE) ||
+         (eUnderline == UNDERLINE_BOLDWAVE) )
     {
         ImplDrawWaveTextLine( nX, nY, nDistX, 0, nWidth, eUnderline, aUnderlineColor, bUnderlineAbove );
         bUnderlineDone = true;
     }
-    if ( (eOverline == LINESTYLE_SMALLWAVE) ||
-         (eOverline == LINESTYLE_WAVE) ||
-         (eOverline == LINESTYLE_DOUBLEWAVE) ||
-         (eOverline == LINESTYLE_BOLDWAVE) )
+    if ( (eOverline == UNDERLINE_SMALLWAVE) ||
+         (eOverline == UNDERLINE_WAVE) ||
+         (eOverline == UNDERLINE_DOUBLEWAVE) ||
+         (eOverline == UNDERLINE_BOLDWAVE) )
     {
         ImplDrawWaveTextLine( nX, nY, nDistX, 0, nWidth, eOverline, aOverlineColor, true );
         bOverlineDone = true;
@@ -764,7 +768,7 @@ void OutputDevice::ImplDrawTextLine( long nX, long nY,
 }
 
 void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout, FontStrikeout eStrikeout,
-                                      FontLineStyle eUnderline, FontLineStyle eOverline,
+                                      FontUnderline eUnderline, FontUnderline eOverline,
                                       bool bWordLine, bool bUnderlineAbove )
 {
     if( bWordLine )
@@ -776,36 +780,31 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout, FontStrikeout eStri
         Point aPos;
         DeviceCoordinate nDist = 0;
         DeviceCoordinate nWidth = 0;
-        const GlyphItem* pGlyph;
-        int nStart = 0;
-#ifdef NO_LIBO_4_4_GLYPH_FLAGS
-        while (rSalLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart))
-#else	// NO_LIBO_4_4_GLYPH_FLAGS
         DeviceCoordinate nAdvance = 0;
-        while (rSalLayout.GetNextGlyphs(1, &pGlyph, aPos, nStart, &nAdvance))
-#endif	// NO_LIBO_4_4_GLYPH_FLAGS
+        for( int nStart = 0;;)
         {
+            // iterate through the layouted glyphs
+            sal_GlyphId aGlyphId;
+            if( !rSalLayout.GetNextGlyphs( 1, &aGlyphId, aPos, nStart, &nAdvance ) )
+                break;
+
             // calculate the boundaries of each word
-            if (!pGlyph->IsSpacing())
+            if( !rSalLayout.IsSpacingGlyph( aGlyphId ) )
             {
                 if( !nWidth )
                 {
                     // get the distance to the base point (as projected to baseline)
                     nDist = aPos.X() - aStartPt.X();
-                    if( mpFontInstance->mnOrientation )
+                    if( mpFontEntry->mnOrientation )
                     {
                         const long nDY = aPos.Y() - aStartPt.Y();
-                        const double fRad = mpFontInstance->mnOrientation * F_PI1800;
+                        const double fRad = mpFontEntry->mnOrientation * F_PI1800;
                         nDist = FRound( nDist*cos(fRad) - nDY*sin(fRad) );
                     }
                 }
 
                 // update the length of the textline
-#ifdef NO_LIBO_4_4_GLYPH_FLAGS
-                nWidth += pGlyph->mnNewWidth;
-#else	// NO_LIBO_4_4_GLYPH_FLAGS
                 nWidth += nAdvance;
-#endif	// NO_LIBO_4_4_GLYPH_FLAGS
             }
             else if( nWidth > 0 )
             {
@@ -841,7 +840,7 @@ void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
     if ( keyboardNavigationPref )
     {
         int prefVal;
-        if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( static_cast< CFNumberRef >( keyboardNavigationPref ), kCFNumberIntType, &prefVal ) )
+        if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
             isFullAccessEnabled = ( prefVal % 2 ? true : false );
         CFRelease( keyboardNavigationPref );
     }
@@ -853,13 +852,14 @@ void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
     long nBaseX = nX;
     if( /*HasMirroredGraphics() &&*/ IsRTLEnabled() )
     {
+        // --- RTL ---
         // add some strange offset
         nX += 2;
         // revert the hack that will be done later in ImplDrawTextLine
         nX = nBaseX - nWidth - (nX - nBaseX - 1);
     }
 
-    ImplDrawTextLine( nX, nY, 0, nWidth, STRIKEOUT_NONE, LINESTYLE_SINGLE, LINESTYLE_NONE, false );
+    ImplDrawTextLine( nX, nY, 0, nWidth, STRIKEOUT_NONE, UNDERLINE_SINGLE, UNDERLINE_NONE, false );
 }
 
 void OutputDevice::SetTextLineColor()
@@ -879,29 +879,29 @@ void OutputDevice::SetTextLineColor( const Color& rColor )
 
     Color aColor( rColor );
 
-    if ( mnDrawMode & ( DrawModeFlags::BlackText | DrawModeFlags::WhiteText |
-                        DrawModeFlags::GrayText | DrawModeFlags::GhostedText |
-                        DrawModeFlags::SettingsText ) )
+    if ( mnDrawMode & ( DRAWMODE_BLACKTEXT | DRAWMODE_WHITETEXT |
+                        DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT |
+                        DRAWMODE_SETTINGSTEXT ) )
     {
-        if ( mnDrawMode & DrawModeFlags::BlackText )
+        if ( mnDrawMode & DRAWMODE_BLACKTEXT )
         {
             aColor = Color( COL_BLACK );
         }
-        else if ( mnDrawMode & DrawModeFlags::WhiteText )
+        else if ( mnDrawMode & DRAWMODE_WHITETEXT )
         {
             aColor = Color( COL_WHITE );
         }
-        else if ( mnDrawMode & DrawModeFlags::GrayText )
+        else if ( mnDrawMode & DRAWMODE_GRAYTEXT )
         {
             const sal_uInt8 cLum = aColor.GetLuminance();
             aColor = Color( cLum, cLum, cLum );
         }
-        else if ( mnDrawMode & DrawModeFlags::SettingsText )
+        else if ( mnDrawMode & DRAWMODE_SETTINGSTEXT )
         {
             aColor = GetSettings().GetStyleSettings().GetFontColor();
         }
 
-        if( (mnDrawMode & DrawModeFlags::GhostedText) &&
+        if( (mnDrawMode & DRAWMODE_GHOSTEDTEXT) &&
             (aColor.GetColor() != COL_TRANSPARENT) )
         {
             aColor = Color( (aColor.GetRed() >> 1) | 0x80,
@@ -936,29 +936,29 @@ void OutputDevice::SetOverlineColor( const Color& rColor )
 
     Color aColor( rColor );
 
-    if ( mnDrawMode & ( DrawModeFlags::BlackText | DrawModeFlags::WhiteText |
-                        DrawModeFlags::GrayText | DrawModeFlags::GhostedText |
-                        DrawModeFlags::SettingsText ) )
+    if ( mnDrawMode & ( DRAWMODE_BLACKTEXT | DRAWMODE_WHITETEXT |
+                        DRAWMODE_GRAYTEXT | DRAWMODE_GHOSTEDTEXT |
+                        DRAWMODE_SETTINGSTEXT ) )
     {
-        if ( mnDrawMode & DrawModeFlags::BlackText )
+        if ( mnDrawMode & DRAWMODE_BLACKTEXT )
         {
             aColor = Color( COL_BLACK );
         }
-        else if ( mnDrawMode & DrawModeFlags::WhiteText )
+        else if ( mnDrawMode & DRAWMODE_WHITETEXT )
         {
             aColor = Color( COL_WHITE );
         }
-        else if ( mnDrawMode & DrawModeFlags::GrayText )
+        else if ( mnDrawMode & DRAWMODE_GRAYTEXT )
         {
             const sal_uInt8 cLum = aColor.GetLuminance();
             aColor = Color( cLum, cLum, cLum );
         }
-        else if ( mnDrawMode & DrawModeFlags::SettingsText )
+        else if ( mnDrawMode & DRAWMODE_SETTINGSTEXT )
         {
             aColor = GetSettings().GetStyleSettings().GetFontColor();
         }
 
-        if( (mnDrawMode & DrawModeFlags::GhostedText) &&
+        if( (mnDrawMode & DRAWMODE_GHOSTEDTEXT) &&
             (aColor.GetColor() != COL_TRANSPARENT) )
         {
             aColor = Color( (aColor.GetRed() >> 1) | 0x80,
@@ -978,17 +978,16 @@ void OutputDevice::SetOverlineColor( const Color& rColor )
 
 void OutputDevice::DrawTextLine( const Point& rPos, long nWidth,
                                  FontStrikeout eStrikeout,
-                                 FontLineStyle eUnderline,
-                                 FontLineStyle eOverline,
+                                 FontUnderline eUnderline,
+                                 FontUnderline eOverline,
                                  bool bUnderlineAbove )
 {
-    assert(!is_double_buffered_window());
 
     if ( mpMetaFile )
         mpMetaFile->AddAction( new MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ) );
 
-    if ( ((eUnderline == LINESTYLE_NONE) || (eUnderline == LINESTYLE_DONTKNOW)) &&
-         ((eOverline  == LINESTYLE_NONE) || (eOverline  == LINESTYLE_DONTKNOW)) &&
+    if ( ((eUnderline == UNDERLINE_NONE) || (eUnderline == UNDERLINE_DONTKNOW)) &&
+         ((eOverline  == UNDERLINE_NONE) || (eOverline  == UNDERLINE_DONTKNOW)) &&
          ((eStrikeout == STRIKEOUT_NONE) || (eStrikeout == STRIKEOUT_DONTKNOW)) )
     {
         return;
@@ -1026,7 +1025,6 @@ void OutputDevice::DrawTextLine( const Point& rPos, long nWidth,
 
 void OutputDevice::DrawWaveLine( const Point& rStartPos, const Point& rEndPos )
 {
-    assert(!is_double_buffered_window());
 
     if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
         return;
@@ -1062,34 +1060,34 @@ void OutputDevice::DrawWaveLine( const Point& rStartPos, const Point& rEndPos )
         aStartPt.RotateAround( nEndX, nEndY, -nOrientation );
     }
 
-    long nWaveHeight = 3;
+    long nWaveHeight;
+
+    nWaveHeight = 3;
     nStartY++;
     nEndY++;
 
-    float fScaleFactor = GetDPIScaleFactor();
-
-    if (fScaleFactor > 1.0f)
+    if (mnDPIScaleFactor > 1)
     {
-        nWaveHeight *= fScaleFactor;
+        nWaveHeight *= mnDPIScaleFactor;
 
-        nStartY += fScaleFactor - 1; // Shift down additional pixel(s) to create more visual separation.
+        nStartY += mnDPIScaleFactor - 1; // Shift down additional pixel(s) to create more visual separation.
 
         // odd heights look better than even
-        if (nWaveHeight % 2 == 0)
+        if (mnDPIScaleFactor % 2 == 0)
         {
             nWaveHeight--;
         }
     }
 
     // #109280# make sure the waveline does not exceed the descent to avoid paint problems
-    LogicalFontInstance* pFontInstance = mpFontInstance;
-    if( nWaveHeight > pFontInstance->mxFontMetric->GetWavelineUnderlineSize() )
+    ImplFontEntry* pFontEntry = mpFontEntry;
+    if( nWaveHeight > pFontEntry->maMetric.mnWUnderlineSize )
     {
-        nWaveHeight = pFontInstance->mxFontMetric->GetWavelineUnderlineSize();
+        nWaveHeight = pFontEntry->maMetric.mnWUnderlineSize;
     }
     ImplDrawWaveLine(nStartX, nStartY, 0, 0,
                      nEndX-nStartX, nWaveHeight,
-                     fScaleFactor, nOrientation, GetLineColor());
+                     mnDPIScaleFactor, nOrientation, GetLineColor());
 
     if( mpAlphaVDev )
         mpAlphaVDev->DrawWaveLine( rStartPos, rEndPos );

@@ -28,6 +28,7 @@
 
 #include <list>
 
+#include <boost/noncopyable.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/container/XHierarchicalNameAccess.hpp>
 #include <com/sun/star/configuration/theDefaultProvider.hpp>
@@ -35,6 +36,7 @@
 #include <com/sun/star/uno/Any.hxx>
 #include <com/sun/star/uno/Reference.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
+#include <osl/diagnose.h>
 #include <rtl/instance.hxx>
 #include <rtl/ustring.h>
 #include <rtl/ustring.hxx>
@@ -52,7 +54,7 @@
 
 namespace {
 
-class RegisterConfigItemHelper {
+class RegisterConfigItemHelper: private boost::noncopyable {
 public:
     RegisterConfigItemHelper(
         utl::ConfigManager & manager, utl::ConfigItem & item):
@@ -62,19 +64,16 @@ public:
     }
 
     ~RegisterConfigItemHelper() {
-        if (item_ != nullptr) {
+        if (item_ != 0) {
             manager_.removeConfigItem(*item_);
         }
     }
 
-    void keep() { item_ = nullptr; }
+    void keep() { item_ = 0; }
 
 private:
     utl::ConfigManager & manager_;
     utl::ConfigItem * item_;
-
-    RegisterConfigItemHelper(const RegisterConfigItemHelper&) = delete;
-    RegisterConfigItemHelper& operator=(const RegisterConfigItemHelper&) = delete;
 };
 
 css::uno::Reference< css::lang::XMultiServiceFactory >
@@ -86,12 +85,12 @@ OUString getConfigurationString(OUString const & module, OUString const & path)
 {
     css::uno::Sequence< css::uno::Any > args(1);
     args[0] <<= css::beans::NamedValue(
-        "nodepath",
+        OUString("nodepath"),
         css::uno::makeAny(module));
     return
         css::uno::Reference< css::container::XHierarchicalNameAccess >(
             getConfigurationProvider()->createInstanceWithArguments(
-                "com.sun.star.configuration.ConfigurationAccess",
+                OUString("com.sun.star.configuration.ConfigurationAccess"),
                 args),
             css::uno::UNO_QUERY_THROW)->
         getByHierarchicalName(path).get< OUString >();
@@ -105,32 +104,32 @@ struct theConfigManager:
 
 OUString utl::ConfigManager::getAboutBoxProductVersion() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "Product/ooSetupVersionAboutBox");
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooSetupVersionAboutBox"));
 }
 
 OUString utl::ConfigManager::getAboutBoxProductVersionSuffix() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "Product/ooSetupVersionAboutBoxSuffix");
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooSetupVersionAboutBoxSuffix"));
 }
 
 OUString utl::ConfigManager::getDefaultCurrency() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "L10N/ooSetupCurrency");
+        OUString("/org.openoffice.Setup"),
+        OUString("L10N/ooSetupCurrency"));
 }
 
 OUString utl::ConfigManager::getLocale() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "L10N/ooLocale");
+        OUString("/org.openoffice.Setup"),
+        OUString("L10N/ooLocale"));
 }
 
 OUString utl::ConfigManager::getProductExtension() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "Product/ooSetupExtension");
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooSetupExtension"));
 }
 
 OUString utl::ConfigManager::getProductName() {
@@ -142,13 +141,13 @@ OUString utl::ConfigManager::getProductName() {
         CFDictionaryRef aDict = CFBundleGetInfoDictionary( aBundle );
         if ( aDict )
         {
-            CFStringRef aValue = static_cast< CFStringRef >( CFDictionaryGetValue( aDict, CFSTR( "CFBundleName" ) ) );
+            CFStringRef aValue = (CFStringRef)CFDictionaryGetValue( aDict, CFSTR( "CFBundleName" ) );
             if ( aValue && CFGetTypeID( aValue ) == CFStringGetTypeID() )
             {
                 CFIndex nValueLen = CFStringGetLength( aValue );
                 CFRange aValueRange = CFRangeMake( 0, nValueLen );
                 sal_Unicode pValueBuffer[ nValueLen + 1 ];
-                CFStringGetCharacters( aValue, aValueRange, reinterpret_cast< UniChar* >( pValueBuffer ) );
+                CFStringGetCharacters( aValue, aValueRange, pValueBuffer );
                 pValueBuffer[ nValueLen ] = 0;
                 OUString aProductName( pValueBuffer );
                 if ( aProductName.getLength() )
@@ -159,20 +158,20 @@ OUString utl::ConfigManager::getProductName() {
 #endif	// USE_JAVA && MACOSX
 
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "Product/ooName");
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooName"));
 }
 
 OUString utl::ConfigManager::getProductVersion() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "Product/ooSetupVersion");
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooSetupVersion"));
 }
 
 OUString utl::ConfigManager::getVendor() {
     return getConfigurationString(
-        "/org.openoffice.Setup",
-        "Product/ooVendor");
+        OUString("/org.openoffice.Setup"),
+        OUString("Product/ooVendor"));
 }
 
 void utl::ConfigManager::storeConfigItems() {
@@ -187,15 +186,16 @@ css::uno::Reference< css::container::XHierarchicalNameAccess >
 utl::ConfigManager::acquireTree(utl::ConfigItem & item) {
     css::uno::Sequence< css::uno::Any > args(1);
     args[0] <<= css::beans::NamedValue(
-        "nodepath",
-        css::uno::makeAny("/org.openoffice." + item.GetSubTreeName()));
-    if (item.GetMode() & ConfigItemMode::AllLocales) {
+        OUString("nodepath"),
+        css::uno::makeAny(
+            OUString("/org.openoffice.") + item.GetSubTreeName()));
+    if ((item.GetMode() & CONFIG_MODE_ALL_LOCALES) != 0) {
         args.realloc(2);
-        args[1] <<= css::beans::NamedValue("locale", css::uno::makeAny(OUString("*")));
+        args[1] <<= css::beans::NamedValue(OUString("locale"), css::uno::makeAny(OUString("*")));
     }
     return css::uno::Reference< css::container::XHierarchicalNameAccess >(
         getConfigurationProvider()->createInstanceWithArguments(
-            "com.sun.star.configuration.ConfigurationUpdateAccess",
+            OUString("com.sun.star.configuration.ConfigurationUpdateAccess"),
             args),
         css::uno::UNO_QUERY_THROW);
 }
@@ -203,7 +203,7 @@ utl::ConfigManager::acquireTree(utl::ConfigItem & item) {
 utl::ConfigManager::ConfigManager() {}
 
 utl::ConfigManager::~ConfigManager() {
-    SAL_WARN_IF(!items_.empty(), "unotools.config", "ConfigManager not empty");
+    OSL_ASSERT(items_.empty());
 }
 
 css::uno::Reference< css::container::XHierarchicalNameAccess >
@@ -227,7 +227,7 @@ void utl::ConfigManager::removeConfigItem(utl::ConfigItem & item) {
 }
 
 void utl::ConfigManager::registerConfigItem(utl::ConfigItem * item) {
-    assert(item != nullptr);
+    OSL_ASSERT(item != 0);
     items_.push_back(item);
 }
 
@@ -240,18 +240,6 @@ void utl::ConfigManager::doStoreConfigItems() {
             (*i)->ClearModified();
         }
     }
-}
-
-static bool bIsAvoidConfig = false;
-
-bool utl::ConfigManager::IsAvoidConfig()
-{
-    return bIsAvoidConfig;
-}
-
-void utl::ConfigManager::EnableAvoidConfig()
-{
-    bIsAvoidConfig = true;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

@@ -27,7 +27,6 @@
 #include <config_folders.h>
 
 #include <com/sun/star/xml/xpath/XPathAPI.hpp>
-#include <com/sun/star/xml/xpath/XPathException.hpp>
 
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
@@ -44,6 +43,8 @@
 #include <osl/diagnose.h>
 #include <osl/process.h>
 
+#include <cppuhelper/implbase1.hxx>
+
 #ifdef USE_JAVA
 
 // Uncomment this to disable patch checking for non-admin users
@@ -57,9 +58,11 @@
 
 namespace container = css::container ;
 namespace deployment = css::deployment ;
+namespace lang = css::lang ;
 namespace uno = css::uno ;
 namespace task = css::task ;
 namespace xml = css::xml ;
+
 
 
 #ifdef USE_JAVA
@@ -116,6 +119,7 @@ getBootstrapData(
 }
 
 
+
 // Returns 'true' if successfully connected to the update server
 bool
 checkForUpdates(
@@ -124,6 +128,8 @@ checkForUpdates(
     uno::Reference< task::XInteractionHandler > const & rxInteractionHandler,
     const uno::Reference< deployment::XUpdateInformationProvider >& rUpdateInfoProvider)
 {
+    OSL_TRACE("checking for updates ..");
+
     OUString myArch;
     OUString myOS;
 
@@ -140,11 +146,11 @@ checkForUpdates(
 #if defined USE_NATIVE_ADMIN_USER_CHECK && defined MACOSX
     // If there is a local admin group and the user is not in it, do not run
     // update check as the user must have admin privileges to install updates
-    CFArrayRef aGroupIdentities = nullptr;
-    CSIdentityQueryRef aGroupQuery = CSIdentityQueryCreateForName(nullptr, CFSTR("admin"), kCSIdentityQueryStringEquals, kCSIdentityClassGroup, CSGetLocalIdentityAuthority());
+    CFArrayRef aGroupIdentities = NULL;
+    CSIdentityQueryRef aGroupQuery = CSIdentityQueryCreateForName(NULL, CFSTR("admin"), kCSIdentityQueryStringEquals, kCSIdentityClassGroup, CSGetLocalIdentityAuthority());
     if (aGroupQuery)
     {
-        if (CSIdentityQueryExecute(aGroupQuery, 0, nullptr))
+        if (CSIdentityQueryExecute(aGroupQuery, 0, NULL))
             aGroupIdentities = CSIdentityQueryCopyResults(aGroupQuery);
         CFRelease(aGroupQuery);
     }
@@ -152,11 +158,11 @@ checkForUpdates(
     if (aGroupIdentities)
     {
         bool bIsAdminUser = false;
-        CFArrayRef aUserIdentities = nullptr;
-        CSIdentityQueryRef aUserQuery = CSIdentityQueryCreateForCurrentUser(nullptr);
+        CFArrayRef aUserIdentities = NULL;
+        CSIdentityQueryRef aUserQuery = CSIdentityQueryCreateForCurrentUser(NULL);
         if (aUserQuery)
         {
-            if (CSIdentityQueryExecute(aUserQuery, 0, nullptr))
+            if (CSIdentityQueryExecute(aUserQuery, 0, NULL))
                 aUserIdentities = CSIdentityQueryCopyResults(aUserQuery);
             CFRelease(aUserQuery);
         }
@@ -167,12 +173,12 @@ checkForUpdates(
             CFIndex nUserCount = CFArrayGetCount(aUserIdentities);
             for (CFIndex i = 0; !bIsAdminUser && i < nGroupCount; i++)
             {
-                const CSIdentityRef aGroupIdentity = static_cast< const CSIdentityRef >(CFArrayGetValueAtIndex(aGroupIdentities, i));
+                const CSIdentityRef aGroupIdentity = (const CSIdentityRef)CFArrayGetValueAtIndex(aGroupIdentities, i);
                 if (aGroupIdentity)
                 {
                     for (CFIndex j = 0; !bIsAdminUser && j < nUserCount; j++)
                     {
-                        const CSIdentityRef aUserIdentity = static_cast< const CSIdentityRef >(CFArrayGetValueAtIndex(aUserIdentities, j));
+                        const CSIdentityRef aUserIdentity = (const CSIdentityRef)CFArrayGetValueAtIndex(aUserIdentities, j);
                         if (aUserIdentity && CSIdentityIsMemberOfGroup(aUserIdentity, aGroupIdentity))
                             bIsAdminUser = true;
                     }
@@ -228,13 +234,13 @@ checkForUpdates(
             return false; // something went wrong ..
 
         OUStringBuffer aBuffer;
-        aBuffer.append("/child::inst:description[inst:os=\'");
+        aBuffer.appendAscii("/child::inst:description[inst:os=\'");
         aBuffer.append( rOS );
-        aBuffer.append("\' and inst:arch=\'");
+        aBuffer.appendAscii("\' and inst:arch=\'");
         aBuffer.append( rArch );
-        aBuffer.append("\' and inst:gitid!=\'");
+        aBuffer.appendAscii("\' and inst:gitid!=\'");
         aBuffer.append( rGitID );
-        aBuffer.append("\']");
+        aBuffer.appendAscii("\']");
 
         OUString aXPathExpression = aBuffer.makeStringAndClear();
 

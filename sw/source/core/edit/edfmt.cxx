@@ -29,36 +29,41 @@
 #include "ndtxt.hxx"
 #include "hints.hxx"
 
-sal_uInt16 SwEditShell::GetCharFormatCount() const
+sal_uInt16 SwEditShell::GetCharFmtCount() const
 {
-    return GetDoc()->GetCharFormats()->size();
+    return GetDoc()->GetCharFmts()->size();
 }
 
-SwCharFormat& SwEditShell::GetCharFormat(sal_uInt16 nFormat) const
+SwCharFmt& SwEditShell::GetCharFmt(sal_uInt16 nFmt) const
 {
-    return *((*(GetDoc()->GetCharFormats()))[nFormat]);
+    return *((*(GetDoc()->GetCharFmts()))[nFmt]);
 }
 
-SwCharFormat* SwEditShell::GetCurCharFormat() const
+SwCharFmt* SwEditShell::GetCurCharFmt() const
 {
-    SwCharFormat *pFormat = nullptr;
+    SwCharFmt *pFmt = 0;
     SfxItemSet aSet( GetDoc()->GetAttrPool(), RES_TXTATR_CHARFMT,
                                                 RES_TXTATR_CHARFMT );
     const SfxPoolItem* pItem;
     if( GetCurAttr( aSet ) && SfxItemState::SET ==
         aSet.GetItemState( RES_TXTATR_CHARFMT, false, &pItem ) )
-        pFormat = static_cast<const SwFormatCharFormat*>(pItem)->GetCharFormat();
+        pFmt = static_cast<const SwFmtCharFmt*>(pItem)->GetCharFmt();
 
-    return pFormat;
+    return pFmt;
 }
 
-void SwEditShell::FillByEx(SwCharFormat* pCharFormat)
+void SwEditShell::FillByEx(SwCharFmt* pCharFmt, bool bReset)
 {
-    SwPaM* pPam = GetCursor();
-    const SwContentNode* pCNd = pPam->GetContentNode();
-    if( pCNd->IsTextNode() )
+    if ( bReset )
     {
-        SwTextNode const*const pTextNode(pCNd->GetTextNode());
+        pCharFmt->ResetAllFmtAttr();
+    }
+
+    SwPaM* pPam = GetCrsr();
+    const SwCntntNode* pCNd = pPam->GetCntntNode();
+    if( pCNd->IsTxtNode() )
+    {
+        SwTxtNode const*const pTxtNode(pCNd->GetTxtNode());
         sal_Int32 nStt;
         sal_Int32 nEnd;
         if( pPam->HasMark() )
@@ -85,7 +90,7 @@ void SwEditShell::FillByEx(SwCharFormat* pCharFormat)
                     nStt = 0;
                 }
                 else
-                    nEnd = pTextNode->GetText().getLength();
+                    nEnd = pTxtNode->GetTxt().getLength();
             }
         }
         else
@@ -96,45 +101,47 @@ void SwEditShell::FillByEx(SwCharFormat* pCharFormat)
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxItemSet aSet( mxDoc->GetAttrPool(),
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            pCharFormat->GetAttrSet().GetRanges() );
-        pTextNode->GetAttr( aSet, nStt, nEnd );
-        pCharFormat->SetFormatAttr( aSet );
+                            pCharFmt->GetAttrSet().GetRanges() );
+        pTxtNode->GetAttr( aSet, nStt, nEnd );
+        pCharFmt->SetFmtAttr( aSet );
     }
     else if( pCNd->HasSwAttrSet() )
-        pCharFormat->SetFormatAttr( *pCNd->GetpSwAttrSet() );
+        pCharFmt->SetFmtAttr( *pCNd->GetpSwAttrSet() );
 }
 
-size_t SwEditShell::GetTableFrameFormatCount(bool bUsed) const
+sal_uInt16 SwEditShell::GetTblFrmFmtCount(bool bUsed) const
 {
-    return GetDoc()->GetTableFrameFormatCount(bUsed);
+    return GetDoc()->GetTblFrmFmtCount(bUsed);
 }
 
-SwFrameFormat& SwEditShell::GetTableFrameFormat(size_t nFormat, bool bUsed ) const
+SwFrmFmt& SwEditShell::GetTblFrmFmt(sal_uInt16 nFmt, bool bUsed ) const
 {
-    return GetDoc()->GetTableFrameFormat(nFormat, bUsed );
+    return GetDoc()->GetTblFrmFmt(nFmt, bUsed );
 }
 
-OUString SwEditShell::GetUniqueTableName() const
+OUString SwEditShell::GetUniqueTblName() const
 {
-    return GetDoc()->GetUniqueTableName();
+    return GetDoc()->GetUniqueTblName();
 }
 
-SwCharFormat* SwEditShell::MakeCharFormat( const OUString& rName )
+SwCharFmt* SwEditShell::MakeCharFmt( const OUString& rName,
+                                    SwCharFmt* pDerivedFrom )
 {
-    SwCharFormat* pDerivedFrom = GetDoc()->GetDfltCharFormat();
+    if( !pDerivedFrom )
+        pDerivedFrom = GetDoc()->GetDfltCharFmt();
 
-    return GetDoc()->MakeCharFormat( rName, pDerivedFrom );
+    return GetDoc()->MakeCharFmt( rName, pDerivedFrom );
 }
 
-SwTextFormatColl* SwEditShell::GetTextCollFromPool( sal_uInt16 nId )
+SwTxtFmtColl* SwEditShell::GetTxtCollFromPool( sal_uInt16 nId )
 {
-    return GetDoc()->getIDocumentStylePoolAccess().GetTextCollFromPool( nId );
+    return GetDoc()->getIDocumentStylePoolAccess().GetTxtCollFromPool( nId );
 }
 
 /// return the requested automatic format - base-class !
-SwFormat* SwEditShell::GetFormatFromPool( sal_uInt16 nId )
+SwFmt* SwEditShell::GetFmtFromPool( sal_uInt16 nId )
 {
-    return GetDoc()->getIDocumentStylePoolAccess().GetFormatFromPool( nId );
+    return GetDoc()->getIDocumentStylePoolAccess().GetFmtFromPool( nId );
 }
 
 SwPageDesc* SwEditShell::GetPageDescFromPool( sal_uInt16 nId )
@@ -151,30 +158,30 @@ bool SwEditShell::IsUsed( const SwModify& rModify ) const
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
-const SwFlyFrameFormat* SwEditShell::FindFlyByName( const OUString& rName ) const
+const SwFlyFrmFmt* SwEditShell::FindFlyByName( const OUString& rName, sal_uInt8 nNdTyp ) const
 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return mpDoc->FindFlyByName(rName);
+    return mpDoc->FindFlyByName(rName, nNdTyp);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     return mxDoc->FindFlyByName(rName);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
-SwCharFormat* SwEditShell::FindCharFormatByName( const OUString& rName ) const
+SwCharFmt* SwEditShell::FindCharFmtByName( const OUString& rName ) const
 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return mpDoc->FindCharFormatByName( rName );
+    return mpDoc->FindCharFmtByName( rName );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return mxDoc->FindCharFormatByName( rName );
+    return mxDoc->FindCharFmtByName( rName );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 
-SwTextFormatColl* SwEditShell::FindTextFormatCollByName( const OUString& rName ) const
+SwTxtFmtColl* SwEditShell::FindTxtFmtCollByName( const OUString& rName ) const
 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return mpDoc->FindTextFormatCollByName( rName );
+    return mpDoc->FindTxtFmtCollByName( rName );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return mxDoc->FindTextFormatCollByName( rName );
+    return mxDoc->FindTxtFmtCollByName( rName );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 }
 

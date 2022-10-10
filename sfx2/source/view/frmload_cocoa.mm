@@ -61,7 +61,7 @@ void SfxFrameLoader_openDocumentOfType( OUString aDocType )
 			[pDocTypeLaunchOptions retain];
 	}
 
-	NSString *pDocTypeKey = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDocType.getStr() ) length:aDocType.getLength()];
+	NSString *pDocTypeKey = [NSString stringWithCharacters:aDocType.getStr() length:aDocType.getLength()];
 	if ( pDocTypeLaunchOptions && pDocTypeKey && [pDocTypeKey length] )
 	{
 		NSString *pLaunchOption = [pDocTypeLaunchOptions objectForKey:pDocTypeKey];
@@ -114,7 +114,7 @@ void SfxFrameLoader_openDocumentOfType( OUString aDocType )
 
 						if ( MIN_NUMBER_DOCS_OPENED > 0 && nTotalDocTypeCount > 0 && nTotalDocTypeCount > MIN_NUMBER_DOCS_OPENED )
 						{
-							float fDocTypeFraction = static_cast< float >( nDocTypeCount ) / static_cast< float >( nTotalDocTypeCount );
+							float fDocTypeFraction = (float)nDocTypeCount / (float)nTotalDocTypeCount;
 							if ( MIN_FRACTION_DOCS_OPENED > 0 && fDocTypeFraction > MIN_FRACTION_DOCS_OPENED )
 								bSetDefaultLaunchOption = YES;
 						}

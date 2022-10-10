@@ -39,8 +39,8 @@ static sal_uInt32 SAL_CALL osl_defCalcTextWidth( rtl_uString *ustrText )
 oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl_uString **pustrCompacted, sal_uInt32 uMaxWidth, oslCalcTextWidthFunc pfnCalcWidth )
 {
     oslFileError    error = osl_File_E_None;
-    rtl_uString     *ustrPath = nullptr;
-    rtl_uString     *ustrFile = nullptr;
+    rtl_uString     *ustrPath = NULL;
+    rtl_uString     *ustrFile = NULL;
     sal_uInt32      uPathWidth, uFileWidth;
 
     if ( !pfnCalcWidth )

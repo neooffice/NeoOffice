@@ -23,12 +23,17 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  -->
-<javaSelection xmlns="http://openoffice.org/2004/java/framework/1.0">
-  <updated>2019-01-09</updated>
-  <vendorInfos>
-    <vendor name="Oracle Corporation">
-      <minVersion>1.8.0</minVersion>
-      <maxVersion>10.999.999</maxVersion>
-    </vendor>
-  </vendorInfos>
+
+<javaSelection xmlns="http://openoffice.org/2004/java/framework/1.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+ <updated>2022-04-06</updated>
+
+ <vendorInfos>
+ <vendor name="Oracle Corporation">
+  <minVersion>1.8.0</minVersion>
+  <maxVersion>17.999.999</maxVersion>
+ </vendor>
+</vendorInfos>
+
 </javaSelection>

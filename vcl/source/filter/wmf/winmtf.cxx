@@ -24,7 +24,6 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <memory>
 #include "winmtf.hxx"
 #include <basegfx/matrix/b2dhommatrix.hxx>
 #include <basegfx/polygon/b2dpolypolygontools.hxx>
@@ -37,11 +36,6 @@
 #include <rtl/strbuf.hxx>
 #include <rtl/tencinfo.h>
 #include <vcl/virdev.hxx>
-#include <o3tl/make_unique.hxx>
-#include "officecfg/Setup.hxx"
-#include "officecfg/Office/Linguistic.hxx"
-#include "unotools/configmgr.hxx"
-#include "unotools/wincodepage.hxx"
 
 #if OSL_DEBUG_LEVEL > 1
 #define EMFP_DEBUG(x) x
@@ -49,13 +43,13 @@
 #define EMFP_DEBUG(x)
 #endif
 
-void WinMtfClipPath::intersectClipRect( const tools::Rectangle& rRect )
+void WinMtfClipPath::intersectClipRect( const Rectangle& rRect )
 {
     maClip.intersectRange(
         vcl::unotools::b2DRectangleFromRectangle(rRect));
 }
 
-void WinMtfClipPath::excludeClipRect( const tools::Rectangle& rRect )
+void WinMtfClipPath::excludeClipRect( const Rectangle& rRect )
 {
     maClip.subtractRange(
         vcl::unotools::b2DRectangleFromRectangle(rRect));
@@ -86,15 +80,14 @@ void WinMtfClipPath::setClipPath( const tools::PolyPolygon& rPolyPolygon, sal_In
 
 void WinMtfClipPath::moveClipRegion( const Size& rSize )
 {
+    // what a weird concept. emulate, don't want this in B2DClipState
+    // API
+    basegfx::B2DPolyPolygon aCurrClip=maClip.getClipPoly();
     basegfx::B2DHomMatrix aTranslate;
     aTranslate.translate(rSize.Width(), rSize.Height());
-    maClip.transform(aTranslate);
-}
 
-void WinMtfClipPath::setDefaultClipPath()
-{
-    // Empty clip region - everything visible
-    maClip = basegfx::tools::B2DClipState();
+    aCurrClip.transform(aTranslate);
+    maClip = basegfx::tools::B2DClipState( aCurrClip );
 }
 
 basegfx::B2DPolyPolygon WinMtfClipPath::getClipPath() const
@@ -105,24 +98,24 @@ basegfx::B2DPolyPolygon WinMtfClipPath::getClipPath() const
 void WinMtfPathObj::AddPoint( const Point& rPoint )
 {
     if ( bClosed )
-        Insert( tools::Polygon() );
-    tools::Polygon& rPoly = ((tools::PolyPolygon&)*this)[ Count() - 1 ];
-    rPoly.Insert( rPoly.GetSize(), rPoint );
+        Insert( Polygon(), POLYPOLY_APPEND );
+    Polygon& rPoly = ((tools::PolyPolygon&)*this)[ Count() - 1 ];
+    rPoly.Insert( rPoly.GetSize(), rPoint, POLY_NORMAL );
     bClosed = false;
 }
 
-void WinMtfPathObj::AddPolyLine( const tools::Polygon& rPolyLine )
+void WinMtfPathObj::AddPolyLine( const Polygon& rPolyLine )
 {
     if ( bClosed )
-        Insert( tools::Polygon() );
-    tools::Polygon& rPoly = ((tools::PolyPolygon&)*this)[ Count() - 1 ];
+        Insert( Polygon(), POLYPOLY_APPEND );
+    Polygon& rPoly = ((tools::PolyPolygon&)*this)[ Count() - 1 ];
     rPoly.Insert( rPoly.GetSize(), rPolyLine );
     bClosed = false;
 }
 
-void WinMtfPathObj::AddPolygon( const tools::Polygon& rPoly )
+void WinMtfPathObj::AddPolygon( const Polygon& rPoly )
 {
-    Insert( rPoly );
+    Insert( rPoly, POLYPOLY_APPEND );
     bClosed = true;
 }
 
@@ -130,7 +123,7 @@ void WinMtfPathObj::AddPolyPolygon( const tools::PolyPolygon& rPolyPoly )
 {
     sal_uInt16 i, nCount = rPolyPoly.Count();
     for ( i = 0; i < nCount; i++ )
-        Insert( rPolyPoly[ i ] );
+        Insert( rPolyPoly[ i ], POLYPOLY_APPEND );
     bClosed = true;
 }
 
@@ -138,46 +131,28 @@ void WinMtfPathObj::ClosePath()
 {
     if ( Count() )
     {
-        tools::Polygon& rPoly = ((tools::PolyPolygon&)*this)[ Count() - 1 ];
+        Polygon& rPoly = ((tools::PolyPolygon&)*this)[ Count() - 1 ];
         if ( rPoly.GetSize() > 2 )
         {
             Point aFirst( rPoly[ 0 ] );
             if ( aFirst != rPoly[ rPoly.GetSize() - 1 ] )
-                rPoly.Insert( rPoly.GetSize(), aFirst );
+                rPoly.Insert( rPoly.GetSize(), aFirst, POLY_NORMAL );
         }
     }
     bClosed = true;
 }
 
-namespace {
-
-OUString getLODefaultLanguage()
-{
-    if (utl::ConfigManager::IsAvoidConfig())
-        return OUString("en-US");
-    OUString result(officecfg::Office::Linguistic::General::DefaultLocale::get());
-    if (result.isEmpty())
-        result = officecfg::Setup::L10N::ooSetupSystemLocale::get();
-    return result;
-}
-
-}
-
 WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
 {
     rtl_TextEncoding eCharSet;
-    if ((rFont.alfFaceName == "Symbol")
-     || (rFont.alfFaceName == "MT Extra"))
-        eCharSet = RTL_TEXTENCODING_SYMBOL;
-    else if ((rFont.lfCharSet == DEFAULT_CHARSET) || (rFont.lfCharSet == OEM_CHARSET))
-        eCharSet = utl_getWinTextEncodingFromLangStr(getLODefaultLanguage().toUtf8().getStr(),
-                                                     rFont.lfCharSet == OEM_CHARSET);
+    if ( ( rFont.lfCharSet == OEM_CHARSET ) || ( rFont.lfCharSet == DEFAULT_CHARSET ) )
+        eCharSet = RTL_TEXTENCODING_MS_1252;
     else
         eCharSet = rtl_getTextEncodingFromWindowsCharset( rFont.lfCharSet );
     if ( eCharSet == RTL_TEXTENCODING_DONTKNOW )
         eCharSet = RTL_TEXTENCODING_MS_1252;
     aFont.SetCharSet( eCharSet );
-    aFont.SetFamilyName( rFont.alfFaceName );
+    aFont.SetName( rFont.alfFaceName );
     FontFamily eFamily;
     switch ( rFont.lfPitchAndFamily & 0xf0 )
     {
@@ -223,9 +198,7 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
     aFont.SetPitch( ePitch );
 
     FontWeight eWeight;
-    if (rFont.lfWeight == 0) // default weight SHOULD be used
-        eWeight = WEIGHT_DONTKNOW;
-    else if (rFont.lfWeight <= FW_THIN)
+    if( rFont.lfWeight <= FW_THIN )
         eWeight = WEIGHT_THIN;
     else if( rFont.lfWeight <= FW_ULTRALIGHT )
         eWeight = WEIGHT_ULTRALIGHT;
@@ -249,23 +222,27 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
         aFont.SetItalic( ITALIC_NORMAL );
 
     if( rFont.lfUnderline )
-        aFont.SetUnderline( LINESTYLE_SINGLE );
+        aFont.SetUnderline( UNDERLINE_SINGLE );
 
     if( rFont.lfStrikeOut )
         aFont.SetStrikeout( STRIKEOUT_SINGLE );
 
-    aFont.SetOrientation( (short)rFont.lfEscapement );
+    if ( rFont.lfOrientation )
+        aFont.SetOrientation( (short)rFont.lfOrientation );
+    else
+        aFont.SetOrientation( (short)rFont.lfEscapement );
 
     Size aFontSize( Size( rFont.lfWidth, rFont.lfHeight ) );
     if ( rFont.lfHeight > 0 )
     {
         // #i117968# VirtualDevice is not thread safe, but filter is used in multithreading
         SolarMutexGuard aGuard;
-        ScopedVclPtrInstance< VirtualDevice > pVDev;
+        VirtualDevice aVDev;
+
         // converting the cell height into a font height
-        aFont.SetFontSize( aFontSize );
-        pVDev->SetFont( aFont );
-        FontMetric aMetric( pVDev->GetFontMetric() );
+        aFont.SetSize( aFontSize );
+        aVDev.SetFont( aFont );
+        FontMetric aMetric( aVDev.GetFontMetric() );
         long nHeight = aMetric.GetAscent() + aMetric.GetDescent();
         if (nHeight)
         {
@@ -277,18 +254,18 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
     // Convert height to positive
     aFontSize.Height() = std::abs(aFontSize.Height());
 
-    aFont.SetFontSize(aFontSize);
+    aFont.SetSize(aFontSize);
 };
 
-WinMtf::WinMtf( GDIMetaFile& rGDIMetaFile, SvStream& rStreamWMF, FilterConfigItem* pConfigItem )
-    : pOut( o3tl::make_unique<WinMtfOutput>(rGDIMetaFile) )
+WinMtf::WinMtf( WinMtfOutput* pWinMtfOutput, SvStream& rStreamWMF, FilterConfigItem* pConfigItem )
+    : pOut( pWinMtfOutput )
     , pWMF( &rStreamWMF )
     , nEndPos( 0 )
     , pFilterConfigItem( pConfigItem )
 {
     SvLockBytes *pLB = pWMF->GetLockBytes();
     if ( pLB )
-        pLB->SetSynchronMode();
+        pLB->SetSynchronMode( true );
 
     nStartPos = pWMF->Tell();
 
@@ -306,6 +283,8 @@ WinMtf::WinMtf( GDIMetaFile& rGDIMetaFile, SvStream& rStreamWMF, FilterConfigIte
 
 WinMtf::~WinMtf()
 {
+    delete pOut;
+
     if ( xStatusIndicator.is() )
         xStatusIndicator->end();
 }
@@ -431,18 +410,8 @@ Size WinMtfOutput::ImplMap(const Size& rSz, bool bDoWorldTransform)
         }
         else
         {
-            //take the scale, but not the rotation
-            basegfx::B2DHomMatrix aMatrix(maXForm.eM11, maXForm.eM12, 0,
-                                          maXForm.eM21, maXForm.eM22, 0);
-            basegfx::B2DTuple aScale, aTranslate;
-            double fRotate, fShearX;
-            if (!aMatrix.decompose(aScale, aTranslate, fRotate, fShearX))
-            {
-                aScale.setX(1.0);
-                aScale.setY(1.0);
-            }
-            fWidth = rSz.Width() * aScale.getX();
-            fHeight = rSz.Height() * aScale.getY();
+            fWidth = rSz.Width();
+            fHeight = rSz.Height();
         }
 
         if ( mnGfxMode == GM_COMPATIBLE )
@@ -496,27 +465,27 @@ Size WinMtfOutput::ImplMap(const Size& rSz, bool bDoWorldTransform)
         return Size();
 }
 
-tools::Rectangle WinMtfOutput::ImplMap( const tools::Rectangle& rRect )
+Rectangle WinMtfOutput::ImplMap( const Rectangle& rRect )
 {
-    return tools::Rectangle( ImplMap( rRect.TopLeft() ), ImplMap( rRect.GetSize() ) );
+    return Rectangle( ImplMap( rRect.TopLeft() ), ImplMap( rRect.GetSize() ) );
 }
 
 void WinMtfOutput::ImplMap( vcl::Font& rFont )
 {
     // !!! HACK: we now always set the width to zero because the OS width is interpreted differently;
     // must later be made portable in SV (KA 1996-02-08)
-    Size  aFontSize = ImplMap (rFont.GetFontSize(), false);
+    Size  aFontSize = ImplMap (rFont.GetSize(), false);
 
     if( aFontSize.Height() < 0 )
         aFontSize.Height() *= -1;
 
-    rFont.SetFontSize( aFontSize );
+    rFont.SetSize( aFontSize );
 
     if( ( mnWinExtX * mnWinExtY ) < 0 )
         rFont.SetOrientation( 3600 - rFont.GetOrientation() );
 }
 
-tools::Polygon& WinMtfOutput::ImplMap( tools::Polygon& rPolygon )
+Polygon& WinMtfOutput::ImplMap( Polygon& rPolygon )
 {
     sal_uInt16 nPoints = rPolygon.GetSize();
     for ( sal_uInt16 i = 0; i < nPoints; i++ )
@@ -526,13 +495,14 @@ tools::Polygon& WinMtfOutput::ImplMap( tools::Polygon& rPolygon )
     return rPolygon;
 }
 
-void WinMtfOutput::ImplScale( tools::Polygon& rPolygon )
+Polygon& WinMtfOutput::ImplScale( Polygon& rPolygon )
 {
     sal_uInt16 nPoints = rPolygon.GetSize();
     for ( sal_uInt16 i = 0; i < nPoints; i++ )
     {
         rPolygon[ i ] = ImplScale( rPolygon[ i ] );
     }
+    return rPolygon;
 }
 
 tools::PolyPolygon& WinMtfOutput::ImplScale( tools::PolyPolygon& rPolyPolygon )
@@ -554,91 +524,97 @@ tools::PolyPolygon& WinMtfOutput::ImplMap( tools::PolyPolygon& rPolyPolygon )
 
 void WinMtfOutput::SelectObject( sal_Int32 nIndex )
 {
+    GDIObj* pGDIObj = NULL;
+
+    if ( nIndex & ENHMETA_STOCK_OBJECT )
+        pGDIObj = new GDIObj();
+    else
+    {
+        nIndex &= 0xffff;       // safety check: don't allow index to be > 65535
+
+        if ( (sal_uInt32)nIndex < vGDIObj.size() )
+            pGDIObj = vGDIObj[ nIndex ];
+    }
+
+    if( pGDIObj == NULL )
+        return;
+
     if ( nIndex & ENHMETA_STOCK_OBJECT )
     {
-         sal_uInt16 nStockId = (sal_uInt8)nIndex;
+        sal_uInt16 nStockId = (sal_uInt8)nIndex;
         switch( nStockId )
         {
             case WHITE_BRUSH :
             {
-                maFillStyle = WinMtfFillStyle( Color( COL_WHITE ) );
-                mbFillStyleSelected = true;
+                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_WHITE ) ) );
             }
             break;
             case LTGRAY_BRUSH :
             {
-                maFillStyle = WinMtfFillStyle( Color( COL_LIGHTGRAY ) );
-                mbFillStyleSelected = true;
+                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_LIGHTGRAY ) ) );
             }
             break;
             case GRAY_BRUSH :
             case DKGRAY_BRUSH :
             {
-                maFillStyle = WinMtfFillStyle( Color( COL_GRAY ) );
-                mbFillStyleSelected = true;
+                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_GRAY ) ) );
             }
             break;
             case BLACK_BRUSH :
             {
-                maFillStyle = WinMtfFillStyle( Color( COL_BLACK ) );
-                mbFillStyleSelected = true;
+                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_BLACK ) ) );
             }
             break;
             case NULL_BRUSH :
             {
-               maFillStyle = WinMtfFillStyle( Color( COL_TRANSPARENT ), true );
-               mbFillStyleSelected = true;
+                pGDIObj->Set( GDI_BRUSH, new WinMtfFillStyle( Color( COL_TRANSPARENT ), true ) );
             }
             break;
             case WHITE_PEN :
             {
-                maLineStyle = WinMtfLineStyle( Color( COL_WHITE ) );
+                pGDIObj->Set( GDI_PEN, new WinMtfLineStyle( Color( COL_WHITE ) ) );
             }
             break;
             case BLACK_PEN :
             {
-                maLineStyle = WinMtfLineStyle( Color( COL_BLACK ) );
+                pGDIObj->Set( GDI_PEN, new WinMtfLineStyle( Color( COL_BLACK ) ) );
             }
             break;
             case NULL_PEN :
             {
-                maLineStyle = WinMtfLineStyle( Color( COL_TRANSPARENT ), true );
+                pGDIObj->Set( GDI_PEN, new WinMtfLineStyle( Color( COL_TRANSPARENT ), true ) );
             }
             break;
             default:
             break;
         }
     }
-    else
+    if ( pGDIObj->pStyle )
     {
-        nIndex &= 0xffff;       // safety check: don't allow index to be > 65535
-
-        GDIObj *pGDIObj = nullptr;
-
-        if ( (sal_uInt32)nIndex < vGDIObj.size() )
-            pGDIObj = vGDIObj[ nIndex ].get();
-
-        if ( pGDIObj )
+        switch( pGDIObj->eType )
         {
-            const auto pen = dynamic_cast<WinMtfLineStyle*>(pGDIObj);
-            if (pen)
-                maLineStyle = *pen;
-
-            const auto brush = dynamic_cast<WinMtfFillStyle*>(pGDIObj);
-            if (brush)
+            case GDI_PEN :
+                maLineStyle = (WinMtfLineStyle*)pGDIObj->pStyle;
+            break;
+            case GDI_BRUSH :
             {
-                maFillStyle = *brush;
+                maFillStyle = (WinMtfFillStyle*)pGDIObj->pStyle;
                 mbFillStyleSelected = true;
             }
-
-            const auto font = dynamic_cast<WinMtfFontStyle*>(pGDIObj);
-            if (font)
-                maFont = font->aFont;
+            break;
+            case GDI_FONT :
+                maFont = ((WinMtfFontStyle*)pGDIObj->pStyle)->aFont;
+            break;
+            default:
+            break;  //  -Wall many options not handled.
         }
     }
+    if ( nIndex & ENHMETA_STOCK_OBJECT )
+        delete pGDIObj;
 }
 
-void WinMtfOutput::SetTextLayoutMode( ComplexTextLayoutFlags nTextLayoutMode )
+
+void WinMtfOutput::SetTextLayoutMode( ComplexTextLayoutMode nTextLayoutMode )
 {
     mnTextLayoutMode = nTextLayoutMode;
 }
@@ -665,7 +641,7 @@ void WinMtfOutput::SetTextAlign( sal_uInt32 nAlign )
 
 void WinMtfOutput::ImplResizeObjectArry( sal_uInt32 nNewEntrys )
 {
-    vGDIObj.resize(nNewEntrys);
+    vGDIObj.resize(nNewEntrys, NULL);
 }
 
 void WinMtfOutput::ImplDrawClippedPolyPolygon( const tools::PolyPolygon& rPolyPoly )
@@ -679,7 +655,7 @@ void WinMtfOutput::ImplDrawClippedPolyPolygon( const tools::PolyPolygon& rPolyPo
                 mpGDIMetaFile->AddAction( new MetaRectAction( rPolyPoly.GetBoundRect() ) );
             else
             {
-                tools::Polygon aPoly( rPolyPoly[ 0 ] );
+                Polygon aPoly( rPolyPoly[ 0 ] );
                 sal_uInt16 nCount = aPoly.GetSize();
                 if ( nCount )
                 {
@@ -697,72 +673,85 @@ void WinMtfOutput::ImplDrawClippedPolyPolygon( const tools::PolyPolygon& rPolyPo
     }
 }
 
-void WinMtfOutput::CreateObject( std::unique_ptr<GDIObj> pObject )
+void WinMtfOutput::CreateObject( GDIObjectType eType, void* pStyle )
 {
-    if ( pObject )
+    if ( pStyle )
     {
-        const auto pLineStyle = dynamic_cast<WinMtfLineStyle*>(pObject.get());
-        const auto pFontStyle = dynamic_cast<WinMtfFontStyle*>(pObject.get());
-
-        if ( pFontStyle )
+        if ( eType == GDI_FONT )
         {
-            if (pFontStyle->aFont.GetFontHeight() == 0)
-                pFontStyle->aFont.SetFontHeight(423);
+            WinMtfFontStyle* pFontStyle = (WinMtfFontStyle*) pStyle;
+            if (pFontStyle->aFont.GetHeight() == 0)
+                pFontStyle->aFont.SetHeight(423);
             ImplMap(pFontStyle->aFont); // defaulting to 12pt
         }
-        else if ( pLineStyle )
+        else if ( eType == GDI_PEN )
         {
+            WinMtfLineStyle* pLineStyle = (WinMtfLineStyle*) pStyle;
             Size aSize(pLineStyle->aLineInfo.GetWidth(), 0);
             aSize = ImplMap(aSize);
             pLineStyle->aLineInfo.SetWidth(aSize.Width());
         }
     }
-    std::vector<std::unique_ptr<GDIObj>>::size_type nIndex;
+    sal_uInt32 nIndex;
     for ( nIndex = 0; nIndex < vGDIObj.size(); nIndex++ )
     {
-        if ( !vGDIObj[ nIndex ] )
+        if ( vGDIObj[ nIndex ] == NULL )
             break;
     }
     if ( nIndex == vGDIObj.size() )
         ImplResizeObjectArry( vGDIObj.size() + 16 );
 
-    vGDIObj[ nIndex ] = std::move(pObject);
+    vGDIObj[ nIndex ] = new GDIObj( eType, pStyle );
 }
 
-void WinMtfOutput::CreateObjectIndexed( sal_Int32 nIndex, std::unique_ptr<GDIObj> pObject )
+void WinMtfOutput::CreateObject( sal_Int32 nIndex, GDIObjectType eType, void* pStyle )
 {
     if ( ( nIndex & ENHMETA_STOCK_OBJECT ) == 0 )
     {
         nIndex &= 0xffff;       // safety check: do not allow index to be > 65535
-        if ( pObject )
+        if ( pStyle )
         {
-            const auto pLineStyle = dynamic_cast<WinMtfLineStyle*>(pObject.get());
-            const auto pFontStyle = dynamic_cast<WinMtfFontStyle*>(pObject.get());
-            if ( pFontStyle )
+            if ( eType == GDI_FONT )
             {
-                if (pFontStyle->aFont.GetFontHeight() == 0)
-                    pFontStyle->aFont.SetFontHeight(423);
+                WinMtfFontStyle* pFontStyle = (WinMtfFontStyle*) pStyle;
+                if (pFontStyle->aFont.GetHeight() == 0)
+                    pFontStyle->aFont.SetHeight(423);
                 ImplMap(pFontStyle->aFont);
             }
-            else if ( pLineStyle )
+            else if ( eType == GDI_PEN )
             {
+                WinMtfLineStyle* pLineStyle = (WinMtfLineStyle*) pStyle;
                 Size aSize(pLineStyle->aLineInfo.GetWidth(), 0);
-                pLineStyle->aLineInfo.SetWidth( ImplMap(aSize).Width() );
-
-                if ( pLineStyle->aLineInfo.GetStyle() == LineStyle::Dash )
-                {
-                    aSize.Width() += 1;
-                    long nDotLen = ImplMap( aSize ).Width();
-                    pLineStyle->aLineInfo.SetDistance( nDotLen );
-                    pLineStyle->aLineInfo.SetDotLen( nDotLen );
-                    pLineStyle->aLineInfo.SetDashLen( nDotLen * 3 );
-                }
+                aSize = ImplMap(aSize);
+                pLineStyle->aLineInfo.SetWidth(aSize.Width());
             }
         }
         if ( (sal_uInt32)nIndex >= vGDIObj.size() )
             ImplResizeObjectArry( nIndex + 16 );
 
-        vGDIObj[ nIndex ] = std::move(pObject);
+        if ( vGDIObj[ nIndex ] != NULL )
+            delete vGDIObj[ nIndex ];
+
+        vGDIObj[ nIndex ] = new GDIObj( eType, pStyle );
+    }
+    else
+    {
+        switch ( eType )
+        {
+            case GDI_PEN :
+                delete (WinMtfLineStyle*)pStyle;
+            break;
+            case GDI_BRUSH :
+                delete (WinMtfFillStyle*)pStyle;
+            break;
+            case GDI_FONT :
+                delete (WinMtfFontStyle*)pStyle;
+            break;
+
+            default:
+                OSL_FAIL( "unsupported style not deleted" );
+                break;
+        }
     }
 }
 
@@ -772,12 +761,13 @@ void WinMtfOutput::DeleteObject( sal_Int32 nIndex )
     {
         if ( (sal_uInt32)nIndex < vGDIObj.size() )
         {
-            vGDIObj[ nIndex ].reset();
+            delete vGDIObj[ nIndex ];
+            vGDIObj[ nIndex ] = NULL;
         }
     }
 }
 
-void WinMtfOutput::IntersectClipRect( const tools::Rectangle& rRect )
+void WinMtfOutput::IntersectClipRect( const Rectangle& rRect )
 {
     mbClipNeedsUpdate=true;
     if ((rRect.Left()-rRect.Right()==0) && (rRect.Top()-rRect.Bottom()==0))
@@ -787,7 +777,7 @@ void WinMtfOutput::IntersectClipRect( const tools::Rectangle& rRect )
     aClipPath.intersectClipRect( ImplMap( rRect ) );
 }
 
-void WinMtfOutput::ExcludeClipRect( const tools::Rectangle& rRect )
+void WinMtfOutput::ExcludeClipRect( const Rectangle& rRect )
 {
     mbClipNeedsUpdate=true;
     aClipPath.excludeClipRect( ImplMap( rRect ) );
@@ -814,23 +804,17 @@ void WinMtfOutput::SetClipPath( const tools::PolyPolygon& rPolyPolygon, sal_Int3
     aClipPath.setClipPath(aPolyPolygon, nClippingMode);
 }
 
-void WinMtfOutput::SetDefaultClipPath()
-{
-    mbClipNeedsUpdate = true;
-    aClipPath.setDefaultClipPath();
-}
-
 WinMtfOutput::WinMtfOutput( GDIMetaFile& rGDIMetaFile ) :
     mnLatestTextAlign   ( 0 ),
     mnTextAlign         ( TA_LEFT | TA_TOP | TA_NOUPDATECP ),
     maLatestBkColor     ( 0x12345678 ),
     maBkColor           ( COL_WHITE ),
-    mnLatestTextLayoutMode( ComplexTextLayoutFlags::Default ),
-    mnTextLayoutMode    ( ComplexTextLayoutFlags::Default ),
+    mnLatestTextLayoutMode( TEXT_LAYOUT_DEFAULT ),
+    mnTextLayoutMode    ( TEXT_LAYOUT_DEFAULT ),
     mnLatestBkMode      ( BkMode::NONE ),
     mnBkMode            ( BkMode::OPAQUE ),
-    meLatestRasterOp    ( RasterOp::Invert ),
-    meRasterOp          ( RasterOp::OverPaint ),
+    meLatestRasterOp    ( ROP_INVERT ),
+    meRasterOp          ( ROP_OVERPAINT ),
     maActPos            ( Point() ),
     mbNopMode           ( false ),
     mbFillStyleSelected ( false ),
@@ -854,31 +838,33 @@ WinMtfOutput::WinMtfOutput( GDIMetaFile& rGDIMetaFile ) :
 {
     mbIsMapWinSet = false;
     mbIsMapDevSet = false;
-    mpGDIMetaFile->AddAction( new MetaPushAction( PushFlags::CLIPREGION ) ); // The original clipregion has to be on top
-                                                                             // of the stack so it can always be restored
-                                                                             // this is necessary to be able to support
-                                                                             // SetClipRgn( NULL ) and similar ClipRgn actions (SJ)
+    mpGDIMetaFile->AddAction( new MetaPushAction( PushFlags::CLIPREGION ) );      // The original clipregion has to be on top
+                                                                            // of the stack so it can always be restored
+                                                                            // this is necessary to be able to support
+                                                                            // SetClipRgn( NULL ) and similar ClipRgn actions (SJ)
 
-    maFont.SetFamilyName( "Arial" );                                         // sj: #i57205#, we do have some scaling problems if using
-    maFont.SetCharSet( RTL_TEXTENCODING_MS_1252 );                           // the default font then most times a x11 font is used, we
-    maFont.SetFontHeight( 423 );                                      // will prevent this defining a font
+    maFont.SetName( "Arial" );                                              // sj: #i57205#, we do have some scaling problems if using
+    maFont.SetCharSet( RTL_TEXTENCODING_MS_1252 );                          // the default font then most times a x11 font is used, we
+    maFont.SetHeight( 423 );                                                // will prevent this defining a font
 
     maLatestLineStyle.aLineColor = Color( 0x12, 0x34, 0x56 );
     maLatestFillStyle.aFillColor = Color( 0x12, 0x34, 0x56 );
 
-    mnRop = WMFRasterOp::Black;
-    meRasterOp = RasterOp::OverPaint;
-    mpGDIMetaFile->AddAction( new MetaRasterOpAction( RasterOp::OverPaint ) );
+    mnRop = R2_BLACK + 1;
+    SetRasterOp( R2_BLACK );
 }
 
 WinMtfOutput::~WinMtfOutput()
 {
     mpGDIMetaFile->AddAction( new MetaPopAction() );
-    mpGDIMetaFile->SetPrefMapMode( MapUnit::Map100thMM );
+    mpGDIMetaFile->SetPrefMapMode( MAP_100TH_MM );
     if ( mrclFrame.IsEmpty() )
         mpGDIMetaFile->SetPrefSize( Size( mnDevWidth, mnDevHeight ) );
     else
         mpGDIMetaFile->SetPrefSize( mrclFrame.GetSize() );
+
+    for ( sal_uInt32 i = 0; i < vGDIObj.size(); i++ )
+        delete vGDIObj[ i ];
 }
 
 void WinMtfOutput::UpdateClipRegion()
@@ -895,40 +881,13 @@ void WinMtfOutput::UpdateClipRegion()
         if( !aClipPath.isEmpty() )
         {
             const basegfx::B2DPolyPolygon& rClipPoly( aClipPath.getClipPath() );
+            mpGDIMetaFile->AddAction(
+                new MetaISectRectClipRegionAction(
+                    vcl::unotools::rectangleFromB2DRectangle(
+                        rClipPoly.getB2DRange())));
 
             mbComplexClip = rClipPoly.count() > 1
                 || !basegfx::tools::isRectangle(rClipPoly);
-
-            static bool bEnableComplexClipViaRegion = getenv("SAL_WMF_COMPLEXCLIP_VIA_REGION") != nullptr;
-
-            if (bEnableComplexClipViaRegion)
-            {
-                //this makes cases like tdf#45820 work in reasonable time, and I feel in theory should
-                //be just fine. In practice I see the output is different so needs work before its the
-                //default, but for file fuzzing it should be good enough
-                if (mbComplexClip)
-                {
-                    mpGDIMetaFile->AddAction(
-                        new MetaISectRegionClipRegionAction(
-                            vcl::Region(rClipPoly)));
-                    mbComplexClip = false;
-                }
-                else
-                {
-                    mpGDIMetaFile->AddAction(
-                        new MetaISectRectClipRegionAction(
-                            vcl::unotools::rectangleFromB2DRectangle(
-                                rClipPoly.getB2DRange())));
-                }
-            }
-            else
-            {
-                //normal case
-                mpGDIMetaFile->AddAction(
-                    new MetaISectRectClipRegionAction(
-                        vcl::unotools::rectangleFromB2DRectangle(
-                            rClipPoly.getB2DRange())));
-            }
         }
     }
 }
@@ -956,45 +915,47 @@ void WinMtfOutput::UpdateLineStyle()
 void WinMtfOutput::UpdateFillStyle()
 {
     if ( !mbFillStyleSelected )     // SJ: #i57205# taking care of bkcolor if no brush is selected
-        maFillStyle = WinMtfFillStyle( maBkColor, mnBkMode == BkMode::Transparent );
+        maFillStyle = WinMtfFillStyle( maBkColor, mnBkMode == BkMode::TRANSPARENT );
     if (!( maLatestFillStyle == maFillStyle ) )
     {
         maLatestFillStyle = maFillStyle;
-        if (maFillStyle.aType == WinMtfFillStyleType::Solid)
+        if (maFillStyle.aType == FillStyleSolid)
             mpGDIMetaFile->AddAction( new MetaFillColorAction( maFillStyle.aFillColor, !maFillStyle.bTransparent ) );
     }
 }
 
-WMFRasterOp WinMtfOutput::SetRasterOp( WMFRasterOp nRasterOp )
+sal_uInt32 WinMtfOutput::SetRasterOp( sal_uInt32 nRasterOp )
 {
-    WMFRasterOp nRetROP = mnRop;
+    sal_uInt32 nRetROP = mnRop;
     if ( nRasterOp != mnRop )
     {
         mnRop = nRasterOp;
+        static WinMtfFillStyle aNopFillStyle;
+        static WinMtfLineStyle aNopLineStyle;
 
-        if ( mbNopMode && ( nRasterOp != WMFRasterOp::Nop ) )
-        {   // changing modes from WMFRasterOp::Nop so set pen and brush
-            maFillStyle = m_NopFillStyle;
-            maLineStyle = m_NopLineStyle;
+        if ( mbNopMode && ( nRasterOp != R2_NOP ) )
+        {   // changing modes from R2_NOP so set pen and brush
+            maFillStyle = aNopFillStyle;
+            maLineStyle = aNopLineStyle;
             mbNopMode = false;
         }
         switch( nRasterOp )
         {
-            case WMFRasterOp::Not:
-                meRasterOp = RasterOp::Invert;
+            case R2_NOT:
+                meRasterOp = ROP_INVERT;
             break;
 
-            case WMFRasterOp::XorPen:
-                meRasterOp = RasterOp::Xor;
+            case R2_XORPEN:
+                meRasterOp = ROP_XOR;
             break;
 
-            case WMFRasterOp::Nop:
+            case R2_NOP:
             {
-                meRasterOp = RasterOp::OverPaint;
+                meRasterOp = ROP_OVERPAINT;
                 if( !mbNopMode )
                 {
-                    m_NopFillStyle = maFillStyle;
-                    m_NopLineStyle = maLineStyle;
+                    aNopFillStyle = maFillStyle;
+                    aNopLineStyle = maLineStyle;
                     maFillStyle = WinMtfFillStyle( Color( COL_TRANSPARENT ), true );
                     maLineStyle = WinMtfLineStyle( Color( COL_TRANSPARENT ), true );
                     mbNopMode = true;
@@ -1003,7 +964,7 @@ WMFRasterOp WinMtfOutput::SetRasterOp( WMFRasterOp nRasterOp )
             break;
 
             default:
-                meRasterOp = RasterOp::OverPaint;
+                meRasterOp = ROP_OVERPAINT;
             break;
         }
     }
@@ -1057,7 +1018,7 @@ void WinMtfOutput::MoveTo( const Point& rPoint, bool bRecordPath )
         // fdo#57353 create new subpath for subsequent moves
         if ( aPathObj.Count() )
             if ( aPathObj[ aPathObj.Count() - 1 ].GetSize() )
-                aPathObj.Insert( tools::Polygon() );
+                aPathObj.Insert( Polygon(), POLYPOLY_APPEND );
         aPathObj.AddPoint( aDest );
     }
     maActPos = aDest;
@@ -1077,14 +1038,14 @@ void WinMtfOutput::LineTo( const Point& rPoint, bool bRecordPath )
     maActPos = aDest;
 }
 
-void WinMtfOutput::DrawRect( const tools::Rectangle& rRect, bool bEdge )
+void WinMtfOutput::DrawRect( const Rectangle& rRect, bool bEdge )
 {
     UpdateClipRegion();
     UpdateFillStyle();
 
     if ( mbComplexClip )
     {
-        tools::Polygon aPoly( ImplMap( rRect ) );
+        Polygon aPoly( ImplMap( rRect ) );
         tools::PolyPolygon aPolyPolyRect( aPoly );
         tools::PolyPolygon aDest;
         tools::PolyPolygon(aClipPath.getClipPath()).GetIntersection( aPolyPolyRect, aDest );
@@ -1094,12 +1055,12 @@ void WinMtfOutput::DrawRect( const tools::Rectangle& rRect, bool bEdge )
     {
         if ( bEdge )
         {
-            if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash ) )
+            if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LINE_DASH ) )
             {
                 ImplSetNonPersistentLineColorTransparenz();
                 mpGDIMetaFile->AddAction( new MetaRectAction( ImplMap( rRect ) ) );
                 UpdateLineStyle();
-                mpGDIMetaFile->AddAction( new MetaPolyLineAction( tools::Polygon( ImplMap( rRect ) ),maLineStyle.aLineInfo ) );
+                mpGDIMetaFile->AddAction( new MetaPolyLineAction( Polygon( ImplMap( rRect ) ),maLineStyle.aLineInfo ) );
             }
             else
             {
@@ -1115,7 +1076,7 @@ void WinMtfOutput::DrawRect( const tools::Rectangle& rRect, bool bEdge )
     }
 }
 
-void WinMtfOutput::DrawRoundRect( const tools::Rectangle& rRect, const Size& rSize )
+void WinMtfOutput::DrawRoundRect( const Rectangle& rRect, const Size& rSize )
 {
     UpdateClipRegion();
     UpdateLineStyle();
@@ -1123,12 +1084,12 @@ void WinMtfOutput::DrawRoundRect( const tools::Rectangle& rRect, const Size& rSi
     mpGDIMetaFile->AddAction( new MetaRoundRectAction( ImplMap( rRect ), labs( ImplMap( rSize ).Width() ), labs( ImplMap( rSize ).Height() ) ) );
 }
 
-void WinMtfOutput::DrawEllipse( const tools::Rectangle& rRect )
+void WinMtfOutput::DrawEllipse( const Rectangle& rRect )
 {
     UpdateClipRegion();
     UpdateFillStyle();
 
-    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash ) )
+    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LINE_DASH ) )
     {
         Point aCenter( ImplMap( rRect.Center() ) );
         Size  aRad( ImplMap( Size( rRect.GetWidth() / 2, rRect.GetHeight() / 2 ) ) );
@@ -1136,7 +1097,7 @@ void WinMtfOutput::DrawEllipse( const tools::Rectangle& rRect )
         ImplSetNonPersistentLineColorTransparenz();
         mpGDIMetaFile->AddAction( new MetaEllipseAction( ImplMap( rRect ) ) );
         UpdateLineStyle();
-        mpGDIMetaFile->AddAction( new MetaPolyLineAction( tools::Polygon( aCenter, aRad.Width(), aRad.Height() ), maLineStyle.aLineInfo ) );
+        mpGDIMetaFile->AddAction( new MetaPolyLineAction( Polygon( aCenter, aRad.Width(), aRad.Height() ), maLineStyle.aLineInfo ) );
     }
     else
     {
@@ -1145,27 +1106,27 @@ void WinMtfOutput::DrawEllipse( const tools::Rectangle& rRect )
     }
 }
 
-void WinMtfOutput::DrawArc( const tools::Rectangle& rRect, const Point& rStart, const Point& rEnd, bool bTo )
+void WinMtfOutput::DrawArc( const Rectangle& rRect, const Point& rStart, const Point& rEnd, bool bTo )
 {
     UpdateClipRegion();
     UpdateLineStyle();
     UpdateFillStyle();
 
-    tools::Rectangle   aRect( ImplMap( rRect ) );
+    Rectangle   aRect( ImplMap( rRect ) );
     Point       aStart( ImplMap( rStart ) );
     Point       aEnd( ImplMap( rEnd ) );
 
-    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash ) )
+    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LINE_DASH ) )
     {
         if ( aStart == aEnd )
         {   // SJ: #i53768# if start & end is identical, then we have to draw a full ellipse
             Point aCenter( aRect.Center() );
             Size  aRad( aRect.GetWidth() / 2, aRect.GetHeight() / 2 );
 
-            mpGDIMetaFile->AddAction( new MetaPolyLineAction( tools::Polygon( aCenter, aRad.Width(), aRad.Height() ), maLineStyle.aLineInfo ) );
+            mpGDIMetaFile->AddAction( new MetaPolyLineAction( Polygon( aCenter, aRad.Width(), aRad.Height() ), maLineStyle.aLineInfo ) );
         }
         else
-            mpGDIMetaFile->AddAction( new MetaPolyLineAction( tools::Polygon( aRect, aStart, aEnd, PolyStyle::Arc ), maLineStyle.aLineInfo ) );
+            mpGDIMetaFile->AddAction( new MetaPolyLineAction( Polygon( aRect, aStart, aEnd, POLY_ARC ), maLineStyle.aLineInfo ) );
     }
     else
         mpGDIMetaFile->AddAction( new MetaArcAction( aRect, aStart, aEnd ) );
@@ -1174,21 +1135,21 @@ void WinMtfOutput::DrawArc( const tools::Rectangle& rRect, const Point& rStart, 
         maActPos = aEnd;
 }
 
-void WinMtfOutput::DrawPie( const tools::Rectangle& rRect, const Point& rStart, const Point& rEnd )
+void WinMtfOutput::DrawPie( const Rectangle& rRect, const Point& rStart, const Point& rEnd )
 {
     UpdateClipRegion();
     UpdateFillStyle();
 
-    tools::Rectangle   aRect( ImplMap( rRect ) );
+    Rectangle   aRect( ImplMap( rRect ) );
     Point       aStart( ImplMap( rStart ) );
     Point       aEnd( ImplMap( rEnd ) );
 
-    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash ) )
+    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LINE_DASH ) )
     {
         ImplSetNonPersistentLineColorTransparenz();
         mpGDIMetaFile->AddAction( new MetaPieAction( aRect, aStart, aEnd ) );
         UpdateLineStyle();
-        mpGDIMetaFile->AddAction( new MetaPolyLineAction( tools::Polygon( aRect, aStart, aEnd, PolyStyle::Pie ), maLineStyle.aLineInfo ) );
+        mpGDIMetaFile->AddAction( new MetaPolyLineAction( Polygon( aRect, aStart, aEnd, POLY_PIE ), maLineStyle.aLineInfo ) );
     }
     else
     {
@@ -1197,21 +1158,21 @@ void WinMtfOutput::DrawPie( const tools::Rectangle& rRect, const Point& rStart, 
     }
 }
 
-void WinMtfOutput::DrawChord( const tools::Rectangle& rRect, const Point& rStart, const Point& rEnd )
+void WinMtfOutput::DrawChord( const Rectangle& rRect, const Point& rStart, const Point& rEnd )
 {
     UpdateClipRegion();
     UpdateFillStyle();
 
-    tools::Rectangle   aRect( ImplMap( rRect ) );
+    Rectangle   aRect( ImplMap( rRect ) );
     Point       aStart( ImplMap( rStart ) );
     Point       aEnd( ImplMap( rEnd ) );
 
-    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash ) )
+    if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LINE_DASH ) )
     {
         ImplSetNonPersistentLineColorTransparenz();
         mpGDIMetaFile->AddAction( new MetaChordAction( aRect, aStart, aEnd ) );
         UpdateLineStyle();
-        mpGDIMetaFile->AddAction( new MetaPolyLineAction( tools::Polygon( aRect, aStart, aEnd, PolyStyle::Chord ), maLineStyle.aLineInfo ) );
+        mpGDIMetaFile->AddAction( new MetaPolyLineAction( Polygon( aRect, aStart, aEnd, POLY_CHORD ), maLineStyle.aLineInfo ) );
     }
     else
     {
@@ -1220,7 +1181,7 @@ void WinMtfOutput::DrawChord( const tools::Rectangle& rRect, const Point& rStart
     }
 }
 
-void WinMtfOutput::DrawPolygon( tools::Polygon& rPolygon, bool bRecordPath )
+void WinMtfOutput::DrawPolygon( Polygon& rPolygon, bool bRecordPath )
 {
     UpdateClipRegion();
     ImplMap( rPolygon );
@@ -1239,7 +1200,7 @@ void WinMtfOutput::DrawPolygon( tools::Polygon& rPolygon, bool bRecordPath )
         }
         else
         {
-            if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash ) )
+            if ( maLineStyle.aLineInfo.GetWidth() || ( maLineStyle.aLineInfo.GetStyle() == LINE_DASH ) )
             {
                 sal_uInt16 nCount = rPolygon.GetSize();
                 if ( nCount )
@@ -1259,7 +1220,7 @@ void WinMtfOutput::DrawPolygon( tools::Polygon& rPolygon, bool bRecordPath )
             {
                 UpdateLineStyle();
 
-                if (maLatestFillStyle.aType != WinMtfFillStyleType::Pattern)
+                if (maLatestFillStyle.aType != FillStylePattern)
                     mpGDIMetaFile->AddAction( new MetaPolygonAction( rPolygon ) );
                 else {
                     SvtGraphicFill aFill = SvtGraphicFill( tools::PolyPolygon( rPolygon ),
@@ -1271,7 +1232,7 @@ void WinMtfOutput::DrawPolygon( tools::Polygon& rPolygon, bool bRecordPath )
                                                            true,
                                                            SvtGraphicFill::hatchSingle,
                                                            Color(),
-                                                           SvtGraphicFill::GradientType::Linear,
+                                                           SvtGraphicFill::gradientLinear,
                                                            Color(),
                                                            Color(),
                                                            0,
@@ -1314,7 +1275,7 @@ void WinMtfOutput::DrawPolyPolygon( tools::PolyPolygon& rPolyPolygon, bool bReco
         {
             UpdateLineStyle();
             mpGDIMetaFile->AddAction( new MetaPolyPolygonAction( rPolyPolygon ) );
-            if (maLineStyle.aLineInfo.GetWidth() > 0 || maLineStyle.aLineInfo.GetStyle() == LineStyle::Dash)
+            if (maLineStyle.aLineInfo.GetWidth() > 0 || maLineStyle.aLineInfo.GetStyle() == LINE_DASH)
             {
                 for (sal_uInt16 nPoly = 0; nPoly < rPolyPolygon.Count(); ++nPoly)
                 {
@@ -1325,7 +1286,7 @@ void WinMtfOutput::DrawPolyPolygon( tools::PolyPolygon& rPolyPolygon, bool bReco
     }
 }
 
-void WinMtfOutput::DrawPolyLine( tools::Polygon& rPolygon, bool bTo, bool bRecordPath )
+void WinMtfOutput::DrawPolyLine( Polygon& rPolygon, bool bTo, bool bRecordPath )
 {
     UpdateClipRegion();
 
@@ -1348,13 +1309,13 @@ void WinMtfOutput::DrawPolyLine( tools::Polygon& rPolygon, bool bTo, bool bRecor
     }
 }
 
-void WinMtfOutput::DrawPolyBezier( tools::Polygon& rPolygon, bool bTo, bool bRecordPath )
+void WinMtfOutput::DrawPolyBezier( Polygon& rPolygon, bool bTo, bool bRecordPath )
 {
+    UpdateClipRegion();
+
     sal_uInt16 nPoints = rPolygon.GetSize();
     if ( ( nPoints >= 4 ) && ( ( ( nPoints - 4 ) % 3 ) == 0 ) )
     {
-        UpdateClipRegion();
-
         ImplMap( rPolygon );
         if ( bTo )
         {
@@ -1364,9 +1325,9 @@ void WinMtfOutput::DrawPolyBezier( tools::Polygon& rPolygon, bool bTo, bool bRec
         sal_uInt16 i;
         for ( i = 0; ( i + 2 ) < nPoints; )
         {
-            rPolygon.SetFlags( i++, PolyFlags::Normal );
-            rPolygon.SetFlags( i++, PolyFlags::Control );
-            rPolygon.SetFlags( i++, PolyFlags::Control );
+            rPolygon.SetFlags( i++, POLY_NORMAL );
+            rPolygon.SetFlags( i++, POLY_CONTROL );
+            rPolygon.SetFlags( i++, POLY_CONTROL );
         }
         if ( bRecordPath )
             aPathObj.AddPolyLine( rPolygon );
@@ -1378,7 +1339,7 @@ void WinMtfOutput::DrawPolyBezier( tools::Polygon& rPolygon, bool bTo, bool bRec
     }
 }
 
-void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, long* pDYArry, bool bRecordPath, sal_Int32 nGfxMode )
+void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, bool bRecordPath, sal_Int32 nGfxMode )
 {
     UpdateClipRegion();
     rPosition = ImplMap( rPosition );
@@ -1387,25 +1348,20 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, l
 
     if (pDXArry)
     {
-        sal_Int32 nSumX = 0, nSumY = 0;
-        for (sal_Int32 i = 0; i < rText.getLength(); i++ )
+        sal_Int32 i;
+        sal_Int32 nSum = 0;
+        sal_Int32 nLen = rText.getLength();
+
+        for (i = 0; i < nLen; i++ )
         {
-            nSumX += pDXArry[i];
-
-            // #i121382# Map DXArray using WorldTransform
-            const Size aSizeX(ImplMap(Size(nSumX, 0)));
-            const basegfx::B2DVector aVectorX(aSizeX.Width(), aSizeX.Height());
-            pDXArry[i] = basegfx::fround(aVectorX.getLength()) * (nSumX >= 0 ? 1 : -1);
-
-            if (pDYArry)
+            if (i > 0)
             {
-                nSumY += pDYArry[i];
-
-                const Size aSizeY(ImplMap(Size(0, nSumY)));
-                const basegfx::B2DVector aVectorY(aSizeY.Width(), aSizeY.Height());
-                // Reverse Y
-                pDYArry[i] = basegfx::fround(aVectorY.getLength()) * (nSumY >= 0 ? -1 : 1);
+                // #i121382# Map DXArray using WorldTransform
+                const Size aSize(ImplMap(Size(nSum, 0)));
+                const basegfx::B2DVector aVector(aSize.Width(), aSize.Height());
+                pDXArry[i - 1] = basegfx::fround(aVector.getLength());
             }
+            nSum += pDXArry[i];
         }
     }
     if ( mnLatestTextLayoutMode != mnTextLayoutMode )
@@ -1414,18 +1370,18 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, l
         mpGDIMetaFile->AddAction( new MetaLayoutModeAction( mnTextLayoutMode ) );
     }
     SetGfxMode( nGfxMode );
-    TextAlign eTextAlign;
-    if ( ( mnTextAlign & TA_BASELINE) == TA_BASELINE )
-        eTextAlign = ALIGN_BASELINE;
-    else if( ( mnTextAlign & TA_BOTTOM) == TA_BOTTOM )
-        eTextAlign = ALIGN_BOTTOM;
-    else
-        eTextAlign = ALIGN_TOP;
     bool bChangeFont = false;
     if ( mnLatestTextAlign != mnTextAlign )
     {
         bChangeFont = true;
         mnLatestTextAlign = mnTextAlign;
+        TextAlign eTextAlign;
+        if ( ( mnTextAlign & TA_BASELINE) == TA_BASELINE )
+            eTextAlign = ALIGN_BASELINE;
+        else if( ( mnTextAlign & TA_BOTTOM) == TA_BOTTOM )
+            eTextAlign = ALIGN_BOTTOM;
+        else
+            eTextAlign = ALIGN_TOP;
         mpGDIMetaFile->AddAction( new MetaTextAlignAction( eTextAlign ) );
     }
     if ( maLatestTextColor != maTextColor )
@@ -1454,12 +1410,17 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, l
     aTmp.SetColor( maTextColor );
     aTmp.SetFillColor( maBkColor );
 
-    if( mnBkMode == BkMode::Transparent )
+    if( mnBkMode == BkMode::TRANSPARENT )
         aTmp.SetTransparent( true );
     else
         aTmp.SetTransparent( false );
 
-    aTmp.SetAlignment( eTextAlign );
+    if ( ( mnTextAlign & TA_BASELINE) == TA_BASELINE )
+        aTmp.SetAlign( ALIGN_BASELINE );
+    else if( ( mnTextAlign & TA_BOTTOM) == TA_BOTTOM )
+        aTmp.SetAlign( ALIGN_BOTTOM );
+    else
+        aTmp.SetAlign( ALIGN_TOP );
 
     if ( nGfxMode == GM_ADVANCED )
     {
@@ -1486,51 +1447,39 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, l
     {
         // #i117968# VirtualDevice is not thread safe, but filter is used in multithreading
         SolarMutexGuard aGuard;
-        ScopedVclPtrInstance< VirtualDevice > pVDev;
+        VirtualDevice aVDev;
+
         sal_Int32 nTextWidth;
-        Point aActPosDelta;
-        pVDev->SetMapMode( MapMode( MapUnit::Map100thMM ) );
-        pVDev->SetFont( maFont );
-        const sal_uInt32 nLen = pDXArry ? rText.getLength() : 0;
-        if (nLen)
+        aVDev.SetMapMode( MapMode( MAP_100TH_MM ) );
+        aVDev.SetFont( maFont );
+        if( pDXArry )
         {
-            nTextWidth = pVDev->GetTextWidth( OUString(rText[ nLen - 1 ]) );
+            sal_uInt32 nLen = rText.getLength();
+            nTextWidth = aVDev.GetTextWidth( OUString(rText[ nLen - 1 ]) );
             if( nLen > 1 )
                 nTextWidth += pDXArry[ nLen - 2 ];
-            // tdf#39894: We should consider the distance to next character cell origin
-            aActPosDelta.X() = pDXArry[ nLen - 1 ];
-            if ( pDYArry )
-            {
-                aActPosDelta.Y() = pDYArry[ nLen - 1 ];
-            }
         }
         else
-        {
-            nTextWidth = pVDev->GetTextWidth( rText );
-            aActPosDelta.X() = nTextWidth;
-        }
+            nTextWidth = aVDev.GetTextWidth( rText );
 
         if( mnTextAlign & TA_UPDATECP )
             rPosition = maActPos;
 
         if ( mnTextAlign & TA_RIGHT_CENTER )
         {
-            Point aDisplacement( ( ( mnTextAlign & TA_RIGHT_CENTER ) == TA_RIGHT ) ? nTextWidth : nTextWidth >> 1, 0 );
-            Point().RotateAround(aDisplacement.X(), aDisplacement.Y(), maFont.GetOrientation());
-            rPosition -= aDisplacement;
+            double fLength = ( ( mnTextAlign & TA_RIGHT_CENTER ) == TA_RIGHT ) ? nTextWidth : nTextWidth >> 1;
+            rPosition.X() -= (sal_Int32)( fLength * cos( maFont.GetOrientation() * F_PI1800 ) );
+            rPosition.Y() -= (sal_Int32)(-( fLength * sin( maFont.GetOrientation() * F_PI1800 ) ) );
         }
 
         if( mnTextAlign & TA_UPDATECP )
-        {
-            Point().RotateAround(aActPosDelta.X(), aActPosDelta.Y(), maFont.GetOrientation());
-            maActPos = rPosition + aActPosDelta;
-        }
+            maActPos.X() = rPosition.X() + nTextWidth;
     }
     if ( bChangeFont || ( maLatestFont != aTmp ) )
     {
         maLatestFont = aTmp;
         mpGDIMetaFile->AddAction( new MetaFontAction( aTmp ) );
-        mpGDIMetaFile->AddAction( new MetaTextAlignAction( aTmp.GetAlignment() ) );
+        mpGDIMetaFile->AddAction( new MetaTextAlignAction( aTmp.GetAlign() ) );
         mpGDIMetaFile->AddAction( new MetaTextColorAction( aTmp.GetColor() ) );
         mpGDIMetaFile->AddAction( new MetaTextFillColorAction( aTmp.GetFillColor(), !aTmp.IsTransparent() ) );
     }
@@ -1540,34 +1489,23 @@ void WinMtfOutput::DrawText( Point& rPosition, OUString& rText, long* pDXArry, l
     }
     else
     {
-        if ( pDXArry && pDYArry )
+        /* because text without dx array is badly scaled, we
+           will create such an array if necessary */
+        long* pDX = pDXArry;
+        if (!pDXArry)
         {
-            for (sal_Int32 i = 0; i < rText.getLength(); ++i)
-            {
-                Point aCharDisplacement( i ? pDXArry[i-1] : 0, i ? pDYArry[i-1] : 0 );
-                Point().RotateAround(aCharDisplacement.X(), aCharDisplacement.Y(), maFont.GetOrientation());
-                mpGDIMetaFile->AddAction( new MetaTextArrayAction( rPosition + aCharDisplacement, OUString( rText[i] ), nullptr, 0, 1 ) );
-            }
+            // #i117968# VirtualDevice is not thread safe, but filter is used in multithreading
+            SolarMutexGuard aGuard;
+            VirtualDevice aVDev;
+
+            pDX = new long[ rText.getLength() ];
+            aVDev.SetMapMode( MAP_100TH_MM );
+            aVDev.SetFont( maLatestFont );
+            aVDev.GetTextArray( rText, pDX, 0, rText.getLength());
         }
-        else
-        {
-            /* because text without dx array is badly scaled, we
-               will create such an array if necessary */
-            long* pDX = pDXArry;
-            if (!pDXArry)
-            {
-                // #i117968# VirtualDevice is not thread safe, but filter is used in multithreading
-                SolarMutexGuard aGuard;
-                ScopedVclPtrInstance< VirtualDevice > pVDev;
-                pDX = new long[ rText.getLength() ];
-                pVDev->SetMapMode( MapUnit::Map100thMM );
-                pVDev->SetFont( maLatestFont );
-                pVDev->GetTextArray( rText, pDX, 0, rText.getLength());
-            }
-            mpGDIMetaFile->AddAction( new MetaTextArrayAction( rPosition, rText, pDX, 0, rText.getLength() ) );
-            if ( !pDXArry )     // this means we have created our own array
-                delete[] pDX;   // which must be deleted
-        }
+        mpGDIMetaFile->AddAction( new MetaTextArrayAction( rPosition, rText, pDX, 0, rText.getLength() ) );
+        if ( !pDXArry )     // this means we have created our own array
+            delete[] pDX;   // which must be deleted
     }
     SetGfxMode( nOldGfxMode );
 }
@@ -1577,99 +1515,50 @@ void WinMtfOutput::ImplDrawBitmap( const Point& rPos, const Size& rSize, const B
     BitmapEx aBmpEx( rBitmap );
     if ( mbComplexClip )
     {
-        VclPtrInstance< VirtualDevice > pVDev;
-        MapMode aMapMode( MapUnit::Map100thMM );
+        VirtualDevice aVDev;
+        MapMode aMapMode( MAP_100TH_MM );
         aMapMode.SetOrigin( Point( -rPos.X(), -rPos.Y() ) );
-        const Size aOutputSizePixel( pVDev->LogicToPixel( rSize, aMapMode ) );
+        const Size aOutputSizePixel( aVDev.LogicToPixel( rSize, aMapMode ) );
         const Size aSizePixel( rBitmap.GetSizePixel() );
         if ( aOutputSizePixel.Width() && aOutputSizePixel.Height() )
         {
             aMapMode.SetScaleX( Fraction( aSizePixel.Width(), aOutputSizePixel.Width() ) );
             aMapMode.SetScaleY( Fraction( aSizePixel.Height(), aOutputSizePixel.Height() ) );
         }
-        pVDev->SetMapMode( aMapMode );
-        pVDev->SetOutputSizePixel( aSizePixel );
-        pVDev->SetFillColor( Color( COL_BLACK ) );
+        aVDev.SetMapMode( aMapMode );
+        aVDev.SetOutputSizePixel( aSizePixel );
+        aVDev.SetFillColor( Color( COL_BLACK ) );
         const tools::PolyPolygon aClip( aClipPath.getClipPath() );
-        pVDev->DrawPolyPolygon( aClip );
+        aVDev.DrawPolyPolygon( aClip );
         const Point aEmptyPoint;
 
         // #i50672# Extract whole VDev content (to match size of rBitmap)
-        pVDev->EnableMapMode( false );
-        const Bitmap aVDevMask(pVDev->GetBitmap(aEmptyPoint, aSizePixel));
+        aVDev.EnableMapMode( false );
+        Bitmap aMask( aVDev.GetBitmap( aEmptyPoint, aSizePixel ).CreateMask( Color( COL_WHITE ) ) );
 
-        if(aBmpEx.IsTransparent())
+        if ( aBmpEx.IsTransparent() )
         {
-            // bitmap already uses a Mask or Alpha, we need to blend that with
-            // the new masking in pVDev
-            if(aBmpEx.IsAlpha())
-            {
-                // need to blend in AlphaMask quality (8Bit)
-                AlphaMask fromVDev(aVDevMask);
-                AlphaMask fromBmpEx(aBmpEx.GetAlpha());
-                AlphaMask::ScopedReadAccess pR(fromVDev);
-                AlphaMask::ScopedWriteAccess pW(fromBmpEx);
-
-                if(pR && pW)
-                {
-                    const long nWidth(std::min(pR->Width(), pW->Width()));
-                    const long nHeight(std::min(pR->Height(), pW->Height()));
-
-                    for(long nY(0); nY < nHeight; nY++) for(long nX(0); nX < nWidth; nX++)
-                    {
-                        const sal_uInt8 nIndR(pR->GetPixelIndex(nY, nX));
-                        const sal_uInt8 nIndW(pW->GetPixelIndex(nY, nX));
-
-                        // these values represent transparency (0 == no, 255 == fully transparent),
-                        // so to blend these we have to multiply the inverse (opacity)
-                        // and re-invert the result to transparence
-                        const sal_uInt8 nCombined(0x00ff - (((0x00ff - nIndR) * (0x00ff - nIndW)) >> 8));
-
-                        pW->SetPixelIndex(nY, nX, nCombined);
-                    }
-                }
-
-                pR.reset();
-                pW.reset();
-                aBmpEx = BitmapEx(aBmpEx.GetBitmap(), fromBmpEx);
-            }
-            else
-            {
-                // need to blend in Mask quality (1Bit)
-                Bitmap aMask(aVDevMask.CreateMask(Color(COL_WHITE)));
-
 #ifdef USE_JAVA
-                // Fix bug 2882 by or'ing when the transparent color is black
-                if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) || rBitmap.GetTransparentColor() == Color( COL_BLACK ) )
+            // Fix bug 2882 by or'ing when the transparent color is black
+            if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) || rBitmap.GetTransparentColor() == Color( COL_BLACK ) )
 #else	// USE_JAVA
-                if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) )
+            if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) )
 #endif	// USE_JAVA
-                {
-                    aMask.CombineSimple( rBitmap.GetMask(), BmpCombine::Or );
-                }
-                else
-                {
-                    aMask.CombineSimple( rBitmap.GetMask(), BmpCombine::And );
-                }
-
-                aBmpEx = BitmapEx( rBitmap.GetBitmap(), aMask );
-            }
+                aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_OR );
+            else
+                aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_AND );
+            aBmpEx = BitmapEx( rBitmap.GetBitmap(), aMask );
         }
         else
-        {
-            // no mask yet, create and add new mask. For better quality, use Alpha,
-            // this allows the drawn mask being processed with AntiAliasing (AAed)
-            aBmpEx = BitmapEx(rBitmap.GetBitmap(), aVDevMask);
-        }
+            aBmpEx = BitmapEx( rBitmap.GetBitmap(), aMask );
     }
-
     if ( aBmpEx.IsTransparent() )
         mpGDIMetaFile->AddAction( new MetaBmpExScaleAction( rPos, rSize, aBmpEx ) );
     else
         mpGDIMetaFile->AddAction( new MetaBmpScaleAction( rPos, rSize, aBmpEx.GetBitmap() ) );
 }
 
-void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct>>& rSaveList )
+void WinMtfOutput::ResolveBitmapActions( BSaveStructList_impl& rSaveList )
 {
     UpdateClipRegion();
 
@@ -1682,15 +1571,15 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
         size_t          nObjectsOfSameSize = 0;
         size_t          nObjectStartIndex = nObjects - nObjectsLeft;
 
-        BSaveStruct*    pSave = rSaveList[nObjectStartIndex].get();
-        tools::Rectangle       aRect( pSave->aOutRect );
+        BSaveStruct*    pSave = rSaveList[ nObjectStartIndex ];
+        Rectangle       aRect( pSave->aOutRect );
 
         for ( i = nObjectStartIndex; i < nObjects; )
         {
             nObjectsOfSameSize++;
             if ( ++i < nObjects )
             {
-                pSave = rSaveList[i].get();
+                pSave = rSaveList[ i ];
                 if ( pSave->aOutRect != aRect )
                     break;
             }
@@ -1700,7 +1589,7 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
 
         for ( i = nObjectStartIndex; i < ( nObjectStartIndex + nObjectsOfSameSize ); i++ )
         {
-            pSave = rSaveList[i].get();
+            pSave = rSaveList[ i ];
 
             sal_uInt32  nWinRop = pSave->nWinRop;
             sal_uInt8   nRasterOperation = (sal_uInt8)( nWinRop >> 16 );
@@ -1715,7 +1604,7 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
 
             if ( (nUsed & 1) && (( nUsed & 2 ) == 0) && nWinRop != PATINVERT )
             {   // patterns aren't well supported yet
-                WMFRasterOp nOldRop = SetRasterOp( WMFRasterOp::NONE );  // in this case nRasterOperation is either 0 or 0xff
+                sal_uInt32 nOldRop = SetRasterOp( ROP_OVERPAINT );  // in this case nRasterOperation is either 0 or 0xff
                 UpdateFillStyle();
                 DrawRect( aRect, false );
                 SetRasterOp( nOldRop );
@@ -1728,9 +1617,9 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                 {
                     if ( nObjectsOfSameSize == 2 )
                     {
-                        BSaveStruct* pSave2 = rSaveList[i + 1].get();
-                        if ( ( pSave->aBmpEx.GetPrefSize() == pSave2->aBmpEx.GetPrefSize() ) &&
-                             ( pSave->aBmpEx.GetPrefMapMode() == pSave2->aBmpEx.GetPrefMapMode() ) )
+                        BSaveStruct* pSave2 = rSaveList[ i + 1 ];
+                        if ( ( pSave->aBmp.GetPrefSize() == pSave2->aBmp.GetPrefSize() ) &&
+                             ( pSave->aBmp.GetPrefMapMode() == pSave2->aBmp.GetPrefMapMode() ) )
                         {
                             // TODO: Strictly speaking, we should
                             // check whether mask is monochrome, and
@@ -1740,8 +1629,8 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                             // bitmap.
                             if ( ( nWinRop == SRCPAINT ) && ( pSave2->nWinRop == SRCAND ) )
                             {
-                                Bitmap aMask( pSave->aBmpEx.GetBitmap() ); aMask.Invert();
-                                BitmapEx aBmpEx( pSave2->aBmpEx.GetBitmap(), aMask );
+                                Bitmap aMask( pSave->aBmp ); aMask.Invert();
+                                BitmapEx aBmpEx( pSave2->aBmp, aMask );
                                 ImplDrawBitmap( aPos, aSize, aBmpEx );
                                 bDrawn = true;
                                 i++;
@@ -1751,17 +1640,8 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                             // is inverted
                             else if ( ( nWinRop == SRCAND ) && ( pSave2->nWinRop == SRCPAINT ) )
                             {
-                                Bitmap aMask( pSave->aBmpEx.GetBitmap() );
-                                BitmapEx aBmpEx( pSave2->aBmpEx.GetBitmap(), aMask );
-                                ImplDrawBitmap( aPos, aSize, aBmpEx );
-                                bDrawn = true;
-                                i++;
-                            }
-                            // tdf#90539
-                            else if ( ( nWinRop == SRCAND ) && ( pSave2->nWinRop == SRCINVERT ) )
-                            {
-                                Bitmap aMask( pSave->aBmpEx.GetBitmap() );
-                                BitmapEx aBmpEx( pSave2->aBmpEx.GetBitmap(), aMask );
+                                Bitmap aMask( pSave->aBmp );
+                                BitmapEx aBmpEx( pSave2->aBmp, aMask );
                                 ImplDrawBitmap( aPos, aSize, aBmpEx );
                                 bDrawn = true;
                                 i++;
@@ -1773,32 +1653,25 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                 if ( !bDrawn )
                 {
                     Push();
-                    WMFRasterOp nOldRop = SetRasterOp( WMFRasterOp::CopyPen );
-                    Bitmap      aBitmap( pSave->aBmpEx.GetBitmap() );
+                    sal_uInt32  nOldRop = SetRasterOp( R2_COPYPEN );
+                    Bitmap      aBitmap( pSave->aBmp );
                     sal_uInt32  nOperation = ( nRasterOperation & 0xf );
                     switch( nOperation )
                     {
                         case 0x1 :
                         case 0xe :
                         {
-                            if(pSave->aBmpEx.IsAlpha())
+                            SetRasterOp( R2_XORPEN );
+                            ImplDrawBitmap( aPos, aSize, aBitmap );
+                            SetRasterOp( R2_COPYPEN );
+                            Bitmap  aMask( aBitmap );
+                            aMask.Invert();
+                            BitmapEx aBmpEx( aBitmap, aMask );
+                            ImplDrawBitmap( aPos, aSize, aBmpEx );
+                            if ( nOperation == 0x1 )
                             {
-                                ImplDrawBitmap( aPos, aSize, pSave->aBmpEx );
-                            }
-                            else
-                            {
-                                SetRasterOp( WMFRasterOp::XorPen );
-                                ImplDrawBitmap( aPos, aSize, aBitmap );
-                                SetRasterOp( WMFRasterOp::CopyPen );
-                                Bitmap  aMask( aBitmap );
-                                aMask.Invert();
-                                BitmapEx aBmpEx( aBitmap, aMask );
-                                ImplDrawBitmap( aPos, aSize, aBmpEx );
-                                if ( nOperation == 0x1 )
-                                {
-                                    SetRasterOp( WMFRasterOp::Not );
-                                    DrawRect( aRect, false );
-                                }
+                                SetRasterOp( R2_NOT );
+                                DrawRect( aRect, false );
                             }
                         }
                         break;
@@ -1808,14 +1681,14 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                             Bitmap  aMask( aBitmap );
                             if ( ( nUsed & 1 ) && ( nRasterOperation & 0xb0 ) == 0xb0 )     // pattern used
                             {
-                                aBitmap.Convert( BmpConversion::N24Bit );
+                                aBitmap.Convert( BMP_CONVERSION_24BIT );
                                 aBitmap.Erase( maFillStyle.aFillColor );
                             }
                             BitmapEx aBmpEx( aBitmap, aMask );
                             ImplDrawBitmap( aPos, aSize, aBmpEx );
                             if ( nOperation == 0x7 )
                             {
-                                SetRasterOp( WMFRasterOp::Not );
+                                SetRasterOp( R2_NOT );
                                 DrawRect( aRect, false );
                             }
                         }
@@ -1824,18 +1697,18 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                         case 0x4 :
                         case 0xb :
                         {
-                            SetRasterOp( WMFRasterOp::Not );
+                            SetRasterOp( R2_NOT );
                             DrawRect( aRect, false );
-                            SetRasterOp( WMFRasterOp::CopyPen );
+                            SetRasterOp( R2_COPYPEN );
                             Bitmap  aMask( aBitmap );
                             aBitmap.Invert();
                             BitmapEx aBmpEx( aBitmap, aMask );
                             ImplDrawBitmap( aPos, aSize, aBmpEx );
-                            SetRasterOp( WMFRasterOp::XorPen );
+                            SetRasterOp( R2_XORPEN );
                             ImplDrawBitmap( aPos, aSize, aBitmap );
                             if ( nOperation == 0xb )
                             {
-                                SetRasterOp( WMFRasterOp::Not );
+                                SetRasterOp( R2_NOT );
                                 DrawRect( aRect, false );
                             }
                         }
@@ -1848,11 +1721,11 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                             aMask.Invert();
                             BitmapEx aBmpEx( aBitmap, aMask );
                             ImplDrawBitmap( aPos, aSize, aBmpEx );
-                            SetRasterOp( WMFRasterOp::XorPen );
+                            SetRasterOp( R2_XORPEN );
                             ImplDrawBitmap( aPos, aSize, aBitmap );
                             if ( nOperation == 0xd )
                             {
-                                SetRasterOp( WMFRasterOp::Not );
+                                SetRasterOp( R2_NOT );
                                 DrawRect( aRect, false );
                             }
                         }
@@ -1860,11 +1733,11 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
                         case 0x6 :
                         case 0x9 :
                         {
-                            SetRasterOp( WMFRasterOp::XorPen );
+                            SetRasterOp( R2_XORPEN );
                             ImplDrawBitmap( aPos, aSize, aBitmap );
                             if ( nOperation == 0x9 )
                             {
-                                SetRasterOp( WMFRasterOp::Not );
+                                SetRasterOp( R2_NOT );
                                 DrawRect( aRect, false );
                             }
                         }
@@ -1890,11 +1763,9 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
 
                         case 0x5 :  // only destination is used
                         {
-                            SetRasterOp( WMFRasterOp::Not );
+                            SetRasterOp( R2_NOT );
                             DrawRect( aRect, false );
                         }
-                        break;
-
                         case 0xa :  // no operation
                         break;
                     }
@@ -1906,6 +1777,8 @@ void WinMtfOutput::ResolveBitmapActions( std::vector<std::unique_ptr<BSaveStruct
         nObjectsLeft -= nObjectsOfSameSize;
     }
 
+    for( size_t i = 0, n = rSaveList.size(); i < n; ++i )
+        delete rSaveList[ i ];
     rSaveList.clear();
 }
 
@@ -2005,12 +1878,12 @@ void WinMtfOutput::ScaleWinExt( double fX, double fY )
     mnWinExtY = FRound( mnWinExtY * fY );
 }
 
-void WinMtfOutput::SetrclBounds( const tools::Rectangle& rRect )
+void WinMtfOutput::SetrclBounds( const Rectangle& rRect )
 {
     mrclBounds = rRect;
 }
 
-void WinMtfOutput::SetrclFrame( const tools::Rectangle& rRect )
+void WinMtfOutput::SetrclFrame( const Rectangle& rRect )
 {
     mrclFrame = rRect;
 }
@@ -2133,7 +2006,7 @@ void WinMtfOutput::ModifyWorldTransform( const XForm& rXForm, sal_uInt32 nMode )
 void WinMtfOutput::Push()                       // !! to be able to access the original ClipRegion it
 {                                               // is not allowed to use the MetaPushAction()
     UpdateClipRegion();                         // (the original clip region is on top of the stack) (SJ)
-    std::shared_ptr<SaveStruct> pSave( new SaveStruct );
+    SaveStructPtr pSave( new SaveStruct );
 
     pSave->aLineStyle = maLineStyle;
     pSave->aFillStyle = maFillStyle;
@@ -2173,7 +2046,7 @@ void WinMtfOutput::Pop()
     if( !vSaveStack.empty() )
     {
         // Backup the current data on the stack
-        std::shared_ptr<SaveStruct> pSave( vSaveStack.back() );
+        SaveStructPtr pSave( vSaveStack.back() );
 
         maLineStyle = pSave->aLineStyle;
         maFillStyle = pSave->aFillStyle;
@@ -2215,7 +2088,7 @@ void WinMtfOutput::Pop()
 
 void WinMtfOutput::AddFromGDIMetaFile( GDIMetaFile& rGDIMetaFile )
 {
-   rGDIMetaFile.Play( *mpGDIMetaFile );
+   rGDIMetaFile.Play( *mpGDIMetaFile, 0xFFFFFFFF );
 }
 
 void WinMtfOutput::PassEMFPlusHeaderInfo()
@@ -2247,7 +2120,7 @@ void WinMtfOutput::PassEMFPlusHeaderInfo()
     // on windows where the function parameters are probably resolved in reverse order
     mem.Flush();
 
-    mpGDIMetaFile->AddAction( new MetaCommentAction( "EMF_PLUS_HEADER_INFO", 0, static_cast<const sal_uInt8*>(mem.GetData()), mem.GetEndOfData() ) );
+    mpGDIMetaFile->AddAction( new MetaCommentAction( "EMF_PLUS_HEADER_INFO", 0, (const sal_uInt8*) mem.GetData(), mem.GetEndOfData() ) );
     mpGDIMetaFile->UseCanvas( true );
 }
 

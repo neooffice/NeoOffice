@@ -17,10 +17,13 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <memory>
 #include <sal/config.h>
 
+#include <utility>
+
+#include <boost/shared_ptr.hpp>
 #include <comphelper/string.hxx>
+#include <o3tl/ptr_container.hxx>
 
 #include "scitems.hxx"
 #include <editeng/eeitem.hxx>
@@ -57,12 +60,15 @@
 #include "document.hxx"
 #include "rangelst.hxx"
 
-#include <o3tl/make_unique.hxx>
+#include <config_orcus.h>
+
+#if ENABLE_ORCUS
 #include <orcus/css_parser.hpp>
+#endif
 
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
-#include <utility>
+#include <boost/scoped_array.hpp>
 
 using ::editeng::SvxBorderLine;
 using namespace ::com::sun::star;
@@ -79,19 +85,19 @@ void ScHTMLStyles::add(const char* pElemName, size_t nElemName, const char* pCla
         if (pClassName)
         {
             // Both element and class names given.
-            ElemsType::iterator itrElem = m_ElemProps.find(aElem);
-            if (itrElem == m_ElemProps.end())
+            ElemsType::iterator itrElem = maElemProps.find(aElem);
+            if (itrElem == maElemProps.end())
             {
                 // new element
-                std::pair<ElemsType::iterator, bool> r =
-                    m_ElemProps.insert(std::make_pair(aElem, o3tl::make_unique<NamePropsType>()));
+                std::unique_ptr<NamePropsType> p(new NamePropsType);
+                std::pair<ElemsType::iterator, bool> r = o3tl::ptr_container::insert(maElemProps, aElem, std::move(p));
                 if (!r.second)
                     // insertion failed.
                     return;
                 itrElem = r.first;
             }
 
-            NamePropsType *const pClsProps = itrElem->second.get();
+            NamePropsType* pClsProps = itrElem->second;
             OUString aClass(pClassName, nClassName, RTL_TEXTENCODING_UTF8);
             aClass = aClass.toAsciiLowerCase();
             insertProp(*pClsProps, aClass, aProp, aValue);
@@ -99,7 +105,7 @@ void ScHTMLStyles::add(const char* pElemName, size_t nElemName, const char* pCla
         else
         {
             // Element name only. Add it to the element global.
-            insertProp(m_ElemGlobalProps, aElem, aProp, aValue);
+            insertProp(maElemGlobalProps, aElem, aProp, aValue);
         }
     }
     else
@@ -109,7 +115,7 @@ void ScHTMLStyles::add(const char* pElemName, size_t nElemName, const char* pCla
             // Class name only. Add it to the global.
             OUString aClass(pClassName, nClassName, RTL_TEXTENCODING_UTF8);
             aClass = aClass.toAsciiLowerCase();
-            insertProp(m_GlobalProps, aClass, aProp, aValue);
+            insertProp(maGlobalProps, aClass, aProp, aValue);
         }
     }
 }
@@ -119,14 +125,14 @@ const OUString& ScHTMLStyles::getPropertyValue(
 {
     // First, look into the element-class storage.
     {
-        auto const itr = m_ElemProps.find(rElem);
-        if (itr != m_ElemProps.end())
+        ElemsType::const_iterator itr = maElemProps.find(rElem);
+        if (itr != maElemProps.end())
         {
-            const NamePropsType *const pClasses = itr->second.get();
+            const NamePropsType* pClasses = itr->second;
             NamePropsType::const_iterator itr2 = pClasses->find(rClass);
             if (itr2 != pClasses->end())
             {
-                const PropsType *const pProps = itr2->second.get();
+                const PropsType* pProps = itr2->second;
                 PropsType::const_iterator itr3 = pProps->find(rPropName);
                 if (itr3 != pProps->end())
                     return itr3->second;
@@ -135,10 +141,10 @@ const OUString& ScHTMLStyles::getPropertyValue(
     }
     // Next, look into the class global storage.
     {
-        auto const itr = m_GlobalProps.find(rClass);
-        if (itr != m_GlobalProps.end())
+        NamePropsType::const_iterator itr = maGlobalProps.find(rClass);
+        if (itr != maGlobalProps.end())
         {
-            const PropsType *const pProps = itr->second.get();
+            const PropsType* pProps = itr->second;
             PropsType::const_iterator itr2 = pProps->find(rPropName);
             if (itr2 != pProps->end())
                 return itr2->second;
@@ -146,10 +152,10 @@ const OUString& ScHTMLStyles::getPropertyValue(
     }
     // As the last resort, look into the element global storage.
     {
-        auto const itr = m_ElemGlobalProps.find(rClass);
-        if (itr != m_ElemGlobalProps.end())
+        NamePropsType::const_iterator itr = maElemGlobalProps.find(rClass);
+        if (itr != maElemGlobalProps.end())
         {
-            const PropsType *const pProps = itr->second.get();
+            const PropsType* pProps = itr->second;
             PropsType::const_iterator itr2 = pProps->find(rPropName);
             if (itr2 != pProps->end())
                 return itr2->second;
@@ -167,8 +173,8 @@ void ScHTMLStyles::insertProp(
     if (itr == rStore.end())
     {
         // new element
-        std::pair<NamePropsType::iterator, bool> r =
-            rStore.insert(std::make_pair(aName, o3tl::make_unique<PropsType>()));
+        std::unique_ptr<PropsType> p(new PropsType);
+        std::pair<NamePropsType::iterator, bool> r = o3tl::ptr_container::insert(rStore, aName, std::move(p));
         if (!r.second)
             // insertion failed.
             return;
@@ -176,7 +182,7 @@ void ScHTMLStyles::insertProp(
         itr = r.first;
     }
 
-    PropsType *const pProps = itr->second.get();
+    PropsType* pProps = itr->second;
     pProps->insert(PropsType::value_type(aProp, aValue));
 }
 
@@ -202,7 +208,8 @@ ScHTMLLayoutParser::ScHTMLLayoutParser(
         aPageSize( aPageSizeP ),
         aBaseURL( rBaseURL ),
         xLockedList( new ScRangeList ),
-        pTables( nullptr ),
+        pTables( NULL ),
+        pColOffset( new ScHTMLColOffset ),
         pLocalColOffset( new ScHTMLColOffset ),
         nFirstTableCell(0),
         nTableLevel(0),
@@ -220,7 +227,7 @@ ScHTMLLayoutParser::ScHTMLLayoutParser(
         bInTitle( false )
 {
     MakeColNoRef( pLocalColOffset, 0, 0, 0, 0 );
-    MakeColNoRef( &maColOffset, 0, 0, 0, 0 );
+    MakeColNoRef( pColOffset, 0, 0, 0, 0 );
 }
 
 ScHTMLLayoutParser::~ScHTMLLayoutParser()
@@ -232,9 +239,9 @@ ScHTMLLayoutParser::~ScHTMLLayoutParser()
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
 
         bool found = false;
-        for (ScEEParseEntry* p : maList)
+        for ( size_t i = 0, nListSize = maList.size(); i < nListSize; ++i )
         {
-            if ( pS->pCellEntry == p )
+            if ( pS->pCellEntry == maList[ i ] )
             {
                 found = true;
                 break;
@@ -248,6 +255,7 @@ ScHTMLLayoutParser::~ScHTMLLayoutParser()
         delete pS;
     }
     delete pLocalColOffset;
+    delete pColOffset;
     if ( pTables )
     {
         for( OuterMap::const_iterator it = pTables->begin(); it != pTables->end(); ++it)
@@ -258,14 +266,14 @@ ScHTMLLayoutParser::~ScHTMLLayoutParser()
 
 sal_uLong ScHTMLLayoutParser::Read( SvStream& rStream, const OUString& rBaseURL )
 {
-    Link<HtmlImportInfo&,void> aOldLink = pEdit->GetHtmlImportHdl();
-    pEdit->SetHtmlImportHdl( LINK( this, ScHTMLLayoutParser, HTMLImportHdl ) );
+    Link aOldLink = pEdit->GetImportHdl();
+    pEdit->SetImportHdl( LINK( this, ScHTMLLayoutParser, HTMLImportHdl ) );
 
     SfxObjectShell* pObjSh = mpDoc->GetDocumentShell();
     bool bLoading = pObjSh && pObjSh->IsLoading();
 
     SvKeyValueIteratorRef xValues;
-    SvKeyValueIterator* pAttributes = nullptr;
+    SvKeyValueIterator* pAttributes = NULL;
     if ( bLoading )
         pAttributes = pObjSh->GetHeaderAttributes();
     else
@@ -279,33 +287,33 @@ sal_uLong ScHTMLLayoutParser::Read( SvStream& rStream, const OUString& rBaseURL 
             aContentType += OUString::createFromAscii( pCharSet );
 
             xValues = new SvKeyValueIterator;
-            xValues->Append( SvKeyValue( OOO_STRING_SVTOOLS_HTML_META_content_type, aContentType ) );
-            pAttributes = xValues.get();
+            xValues->Append( SvKeyValue( OUString( OOO_STRING_SVTOOLS_HTML_META_content_type ), aContentType ) );
+            pAttributes = xValues;
         }
     }
 
     sal_uLong nErr = pEdit->Read( rStream, rBaseURL, EE_FORMAT_HTML, pAttributes );
 
-    pEdit->SetHtmlImportHdl( aOldLink );
+    pEdit->SetImportHdl( aOldLink );
     // Create column width
     Adjust();
     OutputDevice* pDefaultDev = Application::GetDefaultDevice();
-    sal_uInt16 nCount = maColOffset.size();
-    sal_uLong nOff = maColOffset[0];
+    sal_uInt16 nCount = pColOffset->size();
+    sal_uLong nOff = (*pColOffset)[0];
     Size aSize;
     for ( sal_uInt16 j = 1; j < nCount; j++ )
     {
-        aSize.Width() = maColOffset[j] - nOff;
-        aSize = pDefaultDev->PixelToLogic( aSize, MapMode( MapUnit::MapTwip ) );
+        aSize.Width() = (*pColOffset)[j] - nOff;
+        aSize = pDefaultDev->PixelToLogic( aSize, MapMode( MAP_TWIP ) );
         maColWidths[ j-1 ] = aSize.Width();
-        nOff = maColOffset[j];
+        nOff = (*pColOffset)[j];
     }
     return nErr;
 }
 
 const ScHTMLTable* ScHTMLLayoutParser::GetGlobalTable() const
 {
-    return nullptr;
+    return 0;
 }
 
 void ScHTMLLayoutParser::NewActEntry( ScEEParseEntry* pE )
@@ -349,7 +357,7 @@ void ScHTMLLayoutParser::EntryEnd( ScEEParseEntry* pE, const ESelection& rSel )
     }
 }
 
-void ScHTMLLayoutParser::NextRow( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::NextRow( ImportInfo* pInfo )
 {
     if ( bInCell )
         CloseEntry( pInfo );
@@ -495,20 +503,23 @@ void ScHTMLLayoutParser::Adjust()
 {
     xLockedList->RemoveAll();
 
-    std::stack< ScHTMLAdjustStackEntry* > aStack;
-    ScHTMLAdjustStackEntry* pS = nullptr;
+    ScHTMLAdjustStack aStack;
+    ScHTMLAdjustStackEntry* pS = NULL;
     sal_uInt16 nTab = 0;
     SCCOL nLastCol = SCCOL_MAX;
     SCROW nNextRow = 0;
     SCROW nCurRow = 0;
     sal_uInt16 nPageWidth = (sal_uInt16) aPageSize.Width();
-    InnerMap* pTab = nullptr;
+    InnerMap* pTab = NULL;
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-    for (ScEEParseEntry* pE : maList)
+    for ( size_t i = 0, nListSize = maList.size(); i < nListSize; ++i )
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
     for (auto& pE : maList)
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+        ScEEParseEntry* pE = maList[ i ];
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if ( pE->nTab < nTab )
         {   // Table finished
             if ( !aStack.empty() )
@@ -521,7 +532,7 @@ void ScHTMLLayoutParser::Adjust()
                 nCurRow = pS->nCurRow;
             }
             delete pS;
-            pS = nullptr;
+            pS = NULL;
             nTab = pE->nTab;
             if (pTables)
             {
@@ -604,7 +615,7 @@ void ScHTMLLayoutParser::Adjust()
             }
         }
         // Real column
-        (void)SeekOffset( &maColOffset, pE->nOffset, &pE->nCol, nOffsetTolerance );
+        (void)SeekOffset( pColOffset, pE->nOffset, &pE->nCol, nOffsetTolerance );
         SCCOL nColBeforeSkip = pE->nCol;
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         SkipLocked( pE, false );
@@ -613,19 +624,19 @@ void ScHTMLLayoutParser::Adjust()
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         if ( pE->nCol != nColBeforeSkip )
         {
-            SCCOL nCount = (SCCOL)maColOffset.size();
+            SCCOL nCount = (SCCOL)pColOffset->size();
             if ( nCount <= pE->nCol )
             {
-                pE->nOffset = (sal_uInt16) maColOffset[nCount-1];
-                MakeCol( &maColOffset, pE->nOffset, pE->nWidth, nOffsetTolerance, nOffsetTolerance );
+                pE->nOffset = (sal_uInt16) (*pColOffset)[nCount-1];
+                MakeCol( pColOffset, pE->nOffset, pE->nWidth, nOffsetTolerance, nOffsetTolerance );
             }
             else
             {
-                pE->nOffset = (sal_uInt16) maColOffset[pE->nCol];
+                pE->nOffset = (sal_uInt16) (*pColOffset)[pE->nCol];
             }
         }
         SCCOL nPos;
-        if ( pE->nWidth && SeekOffset( &maColOffset, pE->nOffset + pE->nWidth, &nPos, nOffsetTolerance ) )
+        if ( pE->nWidth && SeekOffset( pColOffset, pE->nOffset + pE->nWidth, &nPos, nOffsetTolerance ) )
             pE->nColOverlap = (nPos > pE->nCol ? nPos - pE->nCol : 1);
         else
         {
@@ -653,7 +664,7 @@ sal_uInt16 ScHTMLLayoutParser::GetWidth( ScEEParseEntry* pE )
 {
     if ( pE->nWidth )
         return pE->nWidth;
-    sal_Int32 nTmp = std::min( static_cast<sal_Int32>( pE->nCol -
+    sal_Int32 nTmp = ::std::min( static_cast<sal_Int32>( pE->nCol -
                 nColCntStart + pE->nColOverlap),
             static_cast<sal_Int32>( pLocalColOffset->size() - 1));
     SCCOL nPos = (nTmp < 0 ? 0 : static_cast<SCCOL>(nTmp));
@@ -703,9 +714,9 @@ void ScHTMLLayoutParser::SetWidths()
         // Why actually no pE?
         if ( nFirstTableCell < maList.size() )
         {
-            std::unique_ptr<sal_uInt16[]> pOffsets(new sal_uInt16[ nColsPerRow+1 ]);
+            boost::scoped_array<sal_uInt16> pOffsets(new sal_uInt16[ nColsPerRow+1 ]);
             memset( pOffsets.get(), 0, (nColsPerRow+1) * sizeof(sal_uInt16) );
-            std::unique_ptr<sal_uInt16[]> pWidths(new sal_uInt16[ nColsPerRow ]);
+            boost::scoped_array<sal_uInt16> pWidths(new sal_uInt16[ nColsPerRow ]);
             memset( pWidths.get(), 0, nColsPerRow * sizeof(sal_uInt16) );
             pOffsets[0] = nColOffsetStart;
             for ( size_t i = nFirstTableCell, nListSize = maList.size(); i < nListSize; ++i )
@@ -830,7 +841,7 @@ void ScHTMLLayoutParser::SetWidths()
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 OSL_ENSURE( pE->nWidth, "SetWidths: pE->nWidth == 0" );
             }
-            MakeCol( &maColOffset, pE->nOffset, pE->nWidth, nOffsetTolerance, nOffsetTolerance );
+            MakeCol( pColOffset, pE->nOffset, pE->nWidth, nOffsetTolerance, nOffsetTolerance );
         }
     }
 }
@@ -863,7 +874,7 @@ void ScHTMLLayoutParser::Colonize( ScEEParseEntry* pE )
         nTableWidth = nColOffset - nColOffsetStart;
 }
 
-void ScHTMLLayoutParser::CloseEntry( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::CloseEntry( ImportInfo* pInfo )
 {
     bInCell = false;
     if ( bTabInTabCell )
@@ -871,9 +882,9 @@ void ScHTMLLayoutParser::CloseEntry( HtmlImportInfo* pInfo )
         bTabInTabCell = false;
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
         bool found = false;
-        for (ScEEParseEntry* p : maList)
+        for ( size_t i = 0, nListSize = maList.size(); i < nListSize; ++i )
         {
-            if ( pActEntry == p )
+            if ( pActEntry == maList[ i ] )
             {
                 found = true;
                 break;
@@ -936,46 +947,50 @@ void ScHTMLLayoutParser::CloseEntry( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
 }
 
-IMPL_LINK( ScHTMLLayoutParser, HTMLImportHdl, HtmlImportInfo&, rInfo, void )
+IMPL_LINK( ScHTMLLayoutParser, HTMLImportHdl, ImportInfo*, pInfo )
 {
-    switch ( rInfo.eState )
+    switch ( pInfo->eState )
     {
-        case HtmlImportState::NextToken:
-            ProcToken( &rInfo );
+        case HTMLIMP_NEXTTOKEN:
+            ProcToken( pInfo );
             break;
-        case HtmlImportState::Start:
+        case HTMLIMP_UNKNOWNATTR:
+            ProcToken( pInfo );
             break;
-        case HtmlImportState::End:
-            if ( rInfo.aSelection.nEndPos )
+        case HTMLIMP_START:
+            break;
+        case HTMLIMP_END:
+            if ( pInfo->aSelection.nEndPos )
             {
                 // If text remains: create paragraph, without calling CloseEntry().
                 if( bInCell )   // ...but only in opened table cells.
                 {
                     bInCell = false;
-                    NextRow( &rInfo );
+                    NextRow( pInfo );
                     bInCell = true;
                 }
-                CloseEntry( &rInfo );
+                CloseEntry( pInfo );
             }
             while ( nTableLevel > 0 )
-                TableOff( &rInfo );      // close tables, if </TABLE> missing
+                TableOff( pInfo );      // close tables, if </TABLE> missing
             break;
-        case HtmlImportState::SetAttr:
+        case HTMLIMP_SETATTR:
             break;
-        case HtmlImportState::InsertText:
+        case HTMLIMP_INSERTTEXT:
             break;
-        case HtmlImportState::InsertPara:
+        case HTMLIMP_INSERTPARA:
             if ( nTableLevel < 1 )
             {
-                CloseEntry( &rInfo );
-                NextRow( &rInfo );
+                CloseEntry( pInfo );
+                NextRow( pInfo );
             }
             break;
-        case HtmlImportState::InsertField:
+        case HTMLIMP_INSERTFIELD:
             break;
         default:
             OSL_FAIL("HTMLImportHdl: unknown ImportInfo.eState");
     }
+    return 0;
 }
 
 // Greatest common divisor (Euclid)
@@ -1003,7 +1018,7 @@ static SCROW lcl_KGV( SCROW a, SCROW b )
         return (b / lcl_GGT(a,b)) * a;
 }
 
-void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::TableDataOn( ImportInfo* pInfo )
 {
     if ( bInCell )
         CloseEntry( pInfo );
@@ -1013,13 +1028,14 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
         TableOn( pInfo );
     }
     bInCell = true;
-    bool bHorJustifyCenterTH = (pInfo->nToken == HtmlTokenId::TABLEHEADER_ON);
+    bool bHorJustifyCenterTH = (pInfo->nToken == HTML_TABLEHEADER_ON);
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (const auto & rOption : rOptions)
+    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
     {
+        const HTMLOption& rOption = rOptions[i];
         switch( rOption.GetToken() )
         {
-            case HtmlOptionId::COLSPAN:
+            case HTML_O_COLSPAN:
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pActEntry->nColOverlap = ( SCCOL ) rOption.GetString().toInt32();
@@ -1028,7 +1044,7 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::ROWSPAN:
+            case HTML_O_ROWSPAN:
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pActEntry->nRowOverlap = ( SCROW ) rOption.GetString().toInt32();
@@ -1037,28 +1053,28 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::ALIGN:
+            case HTML_O_ALIGN:
             {
                 bHorJustifyCenterTH = false;
                 SvxCellHorJustify eVal;
                 const OUString& rOptVal = rOption.GetString();
                 if ( rOptVal.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_AL_right )  )
-                    eVal = SvxCellHorJustify::Right;
+                    eVal = SVX_HOR_JUSTIFY_RIGHT;
                 else if ( rOptVal.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_AL_center ) )
-                    eVal = SvxCellHorJustify::Center;
+                    eVal = SVX_HOR_JUSTIFY_CENTER;
                 else if ( rOptVal.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_AL_left ) )
-                    eVal = SvxCellHorJustify::Left;
+                    eVal = SVX_HOR_JUSTIFY_LEFT;
                 else
-                    eVal = SvxCellHorJustify::Standard;
-                if ( eVal != SvxCellHorJustify::Standard )
+                    eVal = SVX_HOR_JUSTIFY_STANDARD;
+                if ( eVal != SVX_HOR_JUSTIFY_STANDARD )
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                     pActEntry->aItemSet.Put( SvxHorJustifyItem( eVal, ATTR_HOR_JUSTIFY) );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-                    mxActEntry->aItemSet.Put( SvxHorJustifyItem( eVal, ATTR_HOR_JUSTIFY) );
+                    mxActEntry->aItemSet.Put(SvxHorJustifyItem(eVal, ATTR_HOR_JUSTIFY));
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::VALIGN:
+            case HTML_O_VALIGN:
             {
                 SvxCellVerJustify eVal;
                 const OUString& rOptVal = rOption.GetString();
@@ -1077,7 +1093,7 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::WIDTH:
+            case HTML_O_WIDTH:
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pActEntry->nWidth = GetWidthPixel( rOption );
@@ -1086,7 +1102,7 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::BGCOLOR:
+            case HTML_O_BGCOLOR:
             {
                 Color aColor;
                 rOption.GetColor( aColor );
@@ -1098,7 +1114,7 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::SDVAL:
+            case HTML_O_SDVAL:
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pActEntry->pValStr = new OUString( rOption.GetString() );
@@ -1107,7 +1123,7 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            case HtmlOptionId::SDNUM:
+            case HTML_O_SDNUM:
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 pActEntry->pNumStr = new OUString( rOption.GetString() );
@@ -1116,7 +1132,6 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             }
             break;
-            default: break;
         }
     }
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -1136,28 +1151,28 @@ void ScHTMLLayoutParser::TableDataOn( HtmlImportInfo* pInfo )
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
         mxActEntry->aItemSet.Put(
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
-            SvxHorJustifyItem( SvxCellHorJustify::Center, ATTR_HOR_JUSTIFY) );
+            SvxHorJustifyItem( SVX_HOR_JUSTIFY_CENTER, ATTR_HOR_JUSTIFY) );
 }
 
-void ScHTMLLayoutParser::TableRowOn( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::TableRowOn( ImportInfo* pInfo )
 {
     if ( nColCnt > nColCntStart )
         NextRow( pInfo ); // The optional TableRowOff wasn't there
     nColOffset = nColOffsetStart;
 }
 
-void ScHTMLLayoutParser::TableRowOff( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::TableRowOff( ImportInfo* pInfo )
 {
     NextRow( pInfo );
 }
 
-void ScHTMLLayoutParser::TableDataOff( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::TableDataOff( ImportInfo* pInfo )
 {
     if ( bInCell )
         CloseEntry( pInfo ); // Only if it really was one
 }
 
-void ScHTMLLayoutParser::TableOn( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::TableOn( ImportInfo* pInfo )
 {
     OUString aTabName;
 
@@ -1175,7 +1190,7 @@ void ScHTMLLayoutParser::TableOn( HtmlImportInfo* pInfo )
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
             mxActEntry, xLockedList, pLocalColOffset, nFirstTableCell,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
-            nRowCnt, nColCntStart, nMaxCol, nTable,
+            nColCnt, nRowCnt, nColCntStart, nMaxCol, nTable,
             nTableWidth, nColOffset, nColOffsetStart,
             bFirstRow ) );
         sal_uInt16 nLastWidth = nTableWidth;
@@ -1189,25 +1204,25 @@ void ScHTMLLayoutParser::TableOn( HtmlImportInfo* pInfo )
             nTableWidth = nLastWidth / static_cast<sal_uInt16>((nMaxCol - nColCntStart));
         }
         nLastWidth = nTableWidth;
-        if ( pInfo->nToken == HtmlTokenId::TABLE_ON )
+        if ( pInfo->nToken == HTML_TABLE_ON )
         {   // It can still be TD or TH, if we didn't have a TABLE earlier
             const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-            for (const auto & rOption : rOptions)
+            for (size_t i = 0, n = rOptions.size(); i < n; ++i)
             {
+                const HTMLOption& rOption = rOptions[i];
                 switch( rOption.GetToken() )
                 {
-                    case HtmlOptionId::WIDTH:
+                    case HTML_O_WIDTH:
                     {   // Percent: of document width or outer cell
                         nTableWidth = GetWidthPixel( rOption );
                     }
                     break;
-                    case HtmlOptionId::BORDER:
+                    case HTML_O_BORDER:
                         // Border is: ((pOption->GetString().Len() == 0) || (pOption->GetNumber() != 0));
                     break;
-                    case HtmlOptionId::ID:
+                    case HTML_O_ID:
                         aTabName = rOption.GetString();
                     break;
-                    default: break;
                 }
             }
         }
@@ -1226,7 +1241,7 @@ void ScHTMLLayoutParser::TableOn( HtmlImportInfo* pInfo )
         }
 
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-        ScEEParseEntry* pE = nullptr;
+        ScEEParseEntry* pE = NULL;
         if (maList.size())
             pE = maList.back();
         NewActEntry( pE ); // New free flying pActEntry
@@ -1254,33 +1269,33 @@ void ScHTMLLayoutParser::TableOn( HtmlImportInfo* pInfo )
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
             mxActEntry, xLockedList, pLocalColOffset, nFirstTableCell,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
-            nRowCnt, nColCntStart, nMaxCol, nTable,
+            nColCnt, nRowCnt, nColCntStart, nMaxCol, nTable,
             nTableWidth, nColOffset, nColOffsetStart,
             bFirstRow ) );
         // As soon as we have multiple tables we need to be tolerant with the offsets.
         if (nMaxTable > 0)
             nOffsetTolerance = SC_HTML_OFFSET_TOLERANCE_LARGE;
         nTableWidth = 0;
-        if ( pInfo->nToken == HtmlTokenId::TABLE_ON )
+        if ( pInfo->nToken == HTML_TABLE_ON )
         {
             // It can still be TD or TH, if we didn't have a TABLE earlier
             const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-            for (const auto & rOption : rOptions)
+            for (size_t i = 0, n = rOptions.size(); i < n; ++i)
             {
+                const HTMLOption& rOption = rOptions[i];
                 switch( rOption.GetToken() )
                 {
-                    case HtmlOptionId::WIDTH:
+                    case HTML_O_WIDTH:
                     {   // Percent: of document width or outer cell
                         nTableWidth = GetWidthPixel( rOption );
                     }
                     break;
-                    case HtmlOptionId::BORDER:
+                    case HTML_O_BORDER:
                         //BorderOn is: ((pOption->GetString().Len() == 0) || (pOption->GetNumber() != 0));
                     break;
-                    case HtmlOptionId::ID:
+                    case HTML_O_ID:
                         aTabName = rOption.GetString();
                     break;
-                    default: break;
                 }
             }
         }
@@ -1293,7 +1308,7 @@ void ScHTMLLayoutParser::TableOn( HtmlImportInfo* pInfo )
     MakeColNoRef( pLocalColOffset, nColOffsetStart, 0, 0, 0 );
 }
 
-void ScHTMLLayoutParser::TableOff( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::TableOff( ImportInfo* pInfo )
 {
     if ( bInCell )
         CloseEntry( pInfo );
@@ -1348,7 +1363,7 @@ void ScHTMLLayoutParser::TableOff( HtmlImportInfo* pInfo )
                     nRowKGV = nRowsPerRow1 = nRows;
                     nRowsPerRow2 = 1;
                 }
-                InnerMap* pTab2 = nullptr;
+                InnerMap* pTab2 = NULL;
                 if ( nRowsPerRow2 > 1 )
                 {   // Height of the inner table
                     pTab2 = new InnerMap;
@@ -1464,26 +1479,26 @@ void ScHTMLLayoutParser::TableOff( HtmlImportInfo* pInfo )
     }
 }
 
-void ScHTMLLayoutParser::Image( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::Image( ImportInfo* pInfo )
 {
+    ScHTMLImage* pImage = new ScHTMLImage;
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-    pActEntry->maImageList.push_back( o3tl::make_unique<ScHTMLImage>() );
-    ScHTMLImage* pImage = pActEntry->maImageList.back().get();
+    pActEntry->maImageList.push_back( pImage );
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-    mxActEntry->maImageList.push_back( o3tl::make_unique<ScHTMLImage>() );
-    ScHTMLImage* pImage = mxActEntry->maImageList.back().get();
+    mxActEntry->maImageList.push_back( pImage );
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (const auto & rOption : rOptions)
+    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
     {
+        const HTMLOption& rOption = rOptions[i];
         switch( rOption.GetToken() )
         {
-            case HtmlOptionId::SRC:
+            case HTML_O_SRC:
             {
                 pImage->aURL = INetURLObject::GetAbsURL( aBaseURL, rOption.GetString() );
             }
             break;
-            case HtmlOptionId::ALT:
+            case HTML_O_ALT:
             {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 if ( !pActEntry->bHasGraphic )
@@ -1507,27 +1522,26 @@ void ScHTMLLayoutParser::Image( HtmlImportInfo* pInfo )
                 }
             }
             break;
-            case HtmlOptionId::WIDTH:
+            case HTML_O_WIDTH:
             {
                 pImage->aSize.Width() = (long)rOption.GetNumber();
             }
             break;
-            case HtmlOptionId::HEIGHT:
+            case HTML_O_HEIGHT:
             {
                 pImage->aSize.Height() = (long)rOption.GetNumber();
             }
             break;
-            case HtmlOptionId::HSPACE:
+            case HTML_O_HSPACE:
             {
                 pImage->aSpace.X() = (long)rOption.GetNumber();
             }
             break;
-            case HtmlOptionId::VSPACE:
+            case HTML_O_VSPACE:
             {
                 pImage->aSpace.Y() = (long)rOption.GetNumber();
             }
             break;
-            default: break;
         }
     }
     if (pImage->aURL.isEmpty())
@@ -1560,7 +1574,7 @@ void ScHTMLLayoutParser::Image( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
     pImage->aFilterName = rFilter.GetImportFormatName( nFormat );
-    pImage->pGraphic.reset( pGraphic );
+    pImage->pGraphic = pGraphic;
     if ( !(pImage->aSize.Width() && pImage->aSize.Height()) )
     {
         OutputDevice* pDefaultDev = Application::GetDefaultDevice();
@@ -1575,11 +1589,16 @@ void ScHTMLLayoutParser::Image( HtmlImportInfo* pInfo )
     {
         long nWidth = 0;
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-        for (std::unique_ptr<ScHTMLImage> & pI : pActEntry->maImageList)
+        for ( sal_uInt32 i=0; i < pActEntry->maImageList.size(); ++i )
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-        for (std::unique_ptr<ScHTMLImage> & pI : mxActEntry->maImageList)
+        for ( sal_uInt32 i=0; i < mxActEntry->maImageList.size(); ++i )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         {
+#ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
+            ScHTMLImage* pI = &pActEntry->maImageList[ i ];
+#else	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            ScHTMLImage* pI = &mxActEntry->maImageList[ i ];
+#endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
             if ( pI->nDir & nHorizontal )
                 nWidth += pI->aSize.Width() + 2 * pI->aSpace.X();
             else
@@ -1593,24 +1612,29 @@ void ScHTMLLayoutParser::Image( HtmlImportInfo* pInfo )
           && (nWidth + pImage->aSize.Width() + 2 * pImage->aSpace.X()
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
                 >= pActEntry->nWidth) )
-            pActEntry->maImageList.back()->nDir = nVertical;
+            pActEntry->maImageList.back().nDir = nVertical;
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 >= mxActEntry->nWidth) )
-            mxActEntry->maImageList.back()->nDir = nVertical;
+            mxActEntry->maImageList.back().nDir = nVertical;
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     }
 }
 
-void ScHTMLLayoutParser::ColOn( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::ColOn( ImportInfo* pInfo )
 {
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (const auto & rOption : rOptions)
+    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
     {
-        if( rOption.GetToken() == HtmlOptionId::WIDTH )
+        const HTMLOption& rOption = rOptions[i];
+        switch( rOption.GetToken() )
         {
-            sal_uInt16 nVal = GetWidthPixel( rOption );
-            MakeCol( pLocalColOffset, nColOffset, nVal, 0, 0 );
-            nColOffset = nColOffset + nVal;
+            case HTML_O_WIDTH:
+            {
+                sal_uInt16 nVal = GetWidthPixel( rOption );
+                MakeCol( pLocalColOffset, nColOffset, nVal, 0, 0 );
+                nColOffset = nColOffset + nVal;
+            }
+            break;
         }
     }
 }
@@ -1635,21 +1659,28 @@ sal_uInt16 ScHTMLLayoutParser::GetWidthPixel( const HTMLOption& rOption )
     }
 }
 
-void ScHTMLLayoutParser::AnchorOn( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::AnchorOn( ImportInfo* pInfo )
 {
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-    for (const auto & rOption : rOptions)
+    for (size_t i = 0, n = rOptions.size(); i < n; ++i)
     {
-        if( rOption.GetToken() == HtmlOptionId::NAME )
+        const HTMLOption& rOption = rOptions[i];
+        switch( rOption.GetToken() )
+        {
+            case HTML_O_NAME:
+            {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-            pActEntry->pName = new OUString(rOption.GetString());
+                pActEntry->pName = new OUString(rOption.GetString());
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-            mxActEntry->pName = new OUString(rOption.GetString());
+                mxActEntry->pName = new OUString(rOption.GetString());
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
+            }
+            break;
+        }
     }
 }
 
-bool ScHTMLLayoutParser::IsAtBeginningOfText( HtmlImportInfo* pInfo )
+bool ScHTMLLayoutParser::IsAtBeginningOfText( ImportInfo* pInfo )
 {
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
     ESelection& rSel = pActEntry->aSel;
@@ -1661,16 +1692,17 @@ bool ScHTMLLayoutParser::IsAtBeginningOfText( HtmlImportInfo* pInfo )
         pEdit->GetTextLen( rSel.nStartPara ) == 0;
 }
 
-void ScHTMLLayoutParser::FontOn( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::FontOn( ImportInfo* pInfo )
 {
     if ( IsAtBeginningOfText( pInfo ) )
     {   // Only at the start of the text; applies to whole line
         const HTMLOptions& rOptions = static_cast<HTMLParser*>(pInfo->pParser)->GetOptions();
-        for (const auto & rOption : rOptions)
+        for (size_t i = 0, n = rOptions.size(); i < n; ++i)
         {
+            const HTMLOption& rOption = rOptions[i];
             switch( rOption.GetToken() )
             {
-                case HtmlOptionId::FACE :
+                case HTML_O_FACE :
                 {
                     const OUString& rFace = rOption.GetString();
                     OUString aFontName;
@@ -1695,7 +1727,7 @@ void ScHTMLLayoutParser::FontOn( HtmlImportInfo* pInfo )
                             RTL_TEXTENCODING_DONTKNOW, ATTR_FONT ) );
                 }
                 break;
-                case HtmlOptionId::SIZE :
+                case HTML_O_SIZE :
                 {
                     sal_uInt16 nSize = (sal_uInt16) rOption.GetNumber();
                     if ( nSize == 0 )
@@ -1710,7 +1742,7 @@ void ScHTMLLayoutParser::FontOn( HtmlImportInfo* pInfo )
                         maFontHeights[nSize-1], 100, ATTR_FONT_HEIGHT ) );
                 }
                 break;
-                case HtmlOptionId::COLOR :
+                case HTML_O_COLOR :
                 {
                     Color aColor;
                     rOption.GetColor( aColor );
@@ -1721,18 +1753,17 @@ void ScHTMLLayoutParser::FontOn( HtmlImportInfo* pInfo )
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 }
                 break;
-                default: break;
             }
         }
     }
 }
 
-void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
+void ScHTMLLayoutParser::ProcToken( ImportInfo* pInfo )
 {
     bool bSetLastToken = true;
     switch ( pInfo->nToken )
     {
-        case HtmlTokenId::META:
+        case HTML_META:
         {
             HTMLParser* pParser = static_cast<HTMLParser*>(pInfo->pParser);
             uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
@@ -1742,13 +1773,13 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
                 mpDoc->GetDocumentShell()->GetHeaderAttributes() );
         }
         break;
-        case HtmlTokenId::TITLE_ON:
+        case HTML_TITLE_ON:
         {
             bInTitle = true;
             aString.clear();
         }
         break;
-        case HtmlTokenId::TITLE_OFF:
+        case HTML_TITLE_OFF:
         {
             if ( bInTitle && !aString.isEmpty() )
             {
@@ -1762,17 +1793,17 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
             bInTitle = false;
         }
         break;
-        case HtmlTokenId::TABLE_ON:
+        case HTML_TABLE_ON:
         {
             TableOn( pInfo );
         }
         break;
-        case HtmlTokenId::COL_ON:
+        case HTML_COL_ON:
         {
             ColOn( pInfo );
         }
         break;
-        case HtmlTokenId::TABLEHEADER_ON:       // Opens row
+        case HTML_TABLEHEADER_ON:       // Opens row
         {
             if ( bInCell )
                 CloseEntry( pInfo );
@@ -1783,61 +1814,60 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
             mxActEntry->aItemSet.Put(
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                 SvxWeightItem( WEIGHT_BOLD, ATTR_FONT_WEIGHT) );
-            SAL_FALLTHROUGH;
-        }
-        case HtmlTokenId::TABLEDATA_ON:         // Opens cell
+        }   // fall through
+        case HTML_TABLEDATA_ON:         // Opens cell
         {
             TableDataOn( pInfo );
         }
         break;
-        case HtmlTokenId::TABLEHEADER_OFF:
-        case HtmlTokenId::TABLEDATA_OFF:        // Closes cell
+        case HTML_TABLEHEADER_OFF:
+        case HTML_TABLEDATA_OFF:        // Closes cell
         {
             TableDataOff( pInfo );
         }
         break;
-        case HtmlTokenId::TABLEROW_ON:          // Before first cell in row
+        case HTML_TABLEROW_ON:          // Before first cell in row
         {
             TableRowOn( pInfo );
         }
         break;
-        case HtmlTokenId::TABLEROW_OFF:         // After last cell in row
+        case HTML_TABLEROW_OFF:         // After last cell in row
         {
             TableRowOff( pInfo );
         }
         break;
-        case HtmlTokenId::TABLE_OFF:
+        case HTML_TABLE_OFF:
         {
             TableOff( pInfo );
         }
         break;
-        case HtmlTokenId::IMAGE:
+        case HTML_IMAGE:
         {
             Image( pInfo );
         }
         break;
-        case HtmlTokenId::PARABREAK_OFF:
+        case HTML_PARABREAK_OFF:
         {   // We continue vertically after an image
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
             if ( pActEntry->maImageList.size() > 0 )
-                pActEntry->maImageList.back()->nDir = nVertical;
+                pActEntry->maImageList.back().nDir = nVertical;
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
             if (mxActEntry->maImageList.size() > 0)
-                mxActEntry->maImageList.back()->nDir = nVertical;
+                mxActEntry->maImageList.back().nDir = nVertical;
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
         }
         break;
-        case HtmlTokenId::ANCHOR_ON:
+        case HTML_ANCHOR_ON:
         {
             AnchorOn( pInfo );
         }
         break;
-        case HtmlTokenId::FONT_ON :
+        case HTML_FONT_ON :
         {
             FontOn( pInfo );
         }
         break;
-        case HtmlTokenId::BIGPRINT_ON :
+        case HTML_BIGPRINT_ON :
         {
             // TODO: Remember current font size and increase by 1
             if ( IsAtBeginningOfText( pInfo ) )
@@ -1849,7 +1879,7 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
                     maFontHeights[3], 100, ATTR_FONT_HEIGHT ) );
         }
         break;
-        case HtmlTokenId::SMALLPRINT_ON :
+        case HTML_SMALLPRINT_ON :
         {
             // TODO: Remember current font size and decrease by 1
             if ( IsAtBeginningOfText( pInfo ) )
@@ -1861,8 +1891,8 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
                     maFontHeights[0], 100, ATTR_FONT_HEIGHT ) );
         }
         break;
-        case HtmlTokenId::BOLD_ON :
-        case HtmlTokenId::STRONG_ON :
+        case HTML_BOLD_ON :
+        case HTML_STRONG_ON :
         {
             if ( IsAtBeginningOfText( pInfo ) )
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -1873,13 +1903,13 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
                     ATTR_FONT_WEIGHT ) );
         }
         break;
-        case HtmlTokenId::ITALIC_ON :
-        case HtmlTokenId::EMPHASIS_ON :
-        case HtmlTokenId::ADDRESS_ON :
-        case HtmlTokenId::BLOCKQUOTE_ON :
-        case HtmlTokenId::BLOCKQUOTE30_ON :
-        case HtmlTokenId::CITIATION_ON :
-        case HtmlTokenId::VARIABLE_ON :
+        case HTML_ITALIC_ON :
+        case HTML_EMPHASIS_ON :
+        case HTML_ADDRESS_ON :
+        case HTML_BLOCKQUOTE_ON :
+        case HTML_BLOCKQUOTE30_ON :
+        case HTML_CITIATION_ON :
+        case HTML_VARIABLE_ON :
         {
             if ( IsAtBeginningOfText( pInfo ) )
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -1890,7 +1920,7 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
                     ATTR_FONT_POSTURE ) );
         }
         break;
-        case HtmlTokenId::DEFINSTANCE_ON :
+        case HTML_DEFINSTANCE_ON :
         {
             if ( IsAtBeginningOfText( pInfo ) )
             {
@@ -1909,37 +1939,37 @@ void ScHTMLLayoutParser::ProcToken( HtmlImportInfo* pInfo )
             }
         }
         break;
-        case HtmlTokenId::UNDERLINE_ON :
+        case HTML_UNDERLINE_ON :
         {
             if ( IsAtBeginningOfText( pInfo ) )
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-                pActEntry->aItemSet.Put( SvxUnderlineItem( LINESTYLE_SINGLE,
+                pActEntry->aItemSet.Put( SvxUnderlineItem( UNDERLINE_SINGLE,
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
-                mxActEntry->aItemSet.Put( SvxUnderlineItem( LINESTYLE_SINGLE,
+                mxActEntry->aItemSet.Put( SvxUnderlineItem( UNDERLINE_SINGLE,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
                     ATTR_FONT_UNDERLINE ) );
         }
         break;
-        case HtmlTokenId::TEXTTOKEN:
+        case HTML_TEXTTOKEN:
         {
             if ( bInTitle )
                 aString += pInfo->aText;
         }
         break;
         default:
-        {   // Don't set nHtmlLastToken!
+        {   // Don't set nLastToken!
             bSetLastToken = false;
         }
     }
     if ( bSetLastToken )
-        nHtmlLastToken = pInfo->nToken;
+        nLastToken = pInfo->nToken;
 }
 
 // HTML DATA QUERY PARSER
 
 template< typename Type >
 inline Type getLimitedValue( const Type& rValue, const Type& rMin, const Type& rMax )
-{ return std::max( std::min( rValue, rMax ), rMin ); }
+{ return ::std::max( ::std::min( rValue, rMax ), rMin ); }
 
 ScHTMLEntry::ScHTMLEntry( const SfxItemSet& rItemSet, ScHTMLTableId nTableId ) :
     ScEEParseEntry( rItemSet ),
@@ -1954,7 +1984,7 @@ bool ScHTMLEntry::HasContents() const
      return mbImportAlways || aSel.HasRange() || !aAltText.isEmpty() || IsTable();
 }
 
-void ScHTMLEntry::AdjustStart( const HtmlImportInfo& rInfo )
+void ScHTMLEntry::AdjustStart( const ImportInfo& rInfo )
 {
     // set start position
     aSel.nStartPara = rInfo.aSelection.nStartPara;
@@ -1967,7 +1997,7 @@ void ScHTMLEntry::AdjustStart( const HtmlImportInfo& rInfo )
     }
 }
 
-void ScHTMLEntry::AdjustEnd( const HtmlImportInfo& rInfo )
+void ScHTMLEntry::AdjustEnd( const ImportInfo& rInfo )
 {
     OSL_ENSURE( (aSel.nEndPara < rInfo.aSelection.nEndPara) ||
                 ((aSel.nEndPara == rInfo.aSelection.nEndPara) && (aSel.nEndPos <= rInfo.aSelection.nEndPos)),
@@ -2000,11 +2030,11 @@ void ScHTMLEntry::Strip( const EditEngine& rEditEngine )
     instance of this class ownes the contained table objects and deletes them
     on destruction.
  */
-class ScHTMLTableMap final
+class ScHTMLTableMap
 {
 private:
-    typedef std::shared_ptr< ScHTMLTable >          ScHTMLTablePtr;
-    typedef std::map< ScHTMLTableId, ScHTMLTablePtr > ScHTMLTableStdMap;
+    typedef ::boost::shared_ptr< ScHTMLTable >          ScHTMLTablePtr;
+    typedef ::std::map< ScHTMLTableId, ScHTMLTablePtr > ScHTMLTableStdMap;
 
 public:
     typedef ScHTMLTableStdMap::iterator             iterator;
@@ -2017,9 +2047,10 @@ private:
 
 public:
     explicit            ScHTMLTableMap( ScHTMLTable& rParentTable );
+    virtual             ~ScHTMLTableMap();
 
-    const_iterator begin() const { return maTables.begin(); }
-    const_iterator end() const { return maTables.end(); }
+    inline const_iterator begin() const { return maTables.begin(); }
+    inline const_iterator end() const { return maTables.end(); }
 
     /** Returns the specified table.
         @param nTableId  Unique identifier of the table.
@@ -2028,23 +2059,27 @@ public:
 
     /** Inserts a new table into the container. This container owns the created table.
         @param bPreFormText  true = New table is based on preformatted text (<pre> tag). */
-    ScHTMLTable*        CreateTable( const HtmlImportInfo& rInfo, bool bPreFormText );
+    ScHTMLTable*        CreateTable( const ImportInfo& rInfo, bool bPreFormText );
 
 private:
     /** Sets a working table with its index for search optimization. */
-    void         SetCurrTable( ScHTMLTable* pTable ) const
+    inline void         SetCurrTable( ScHTMLTable* pTable ) const
                             { if( pTable ) mpCurrTable = pTable; }
 };
 
 ScHTMLTableMap::ScHTMLTableMap( ScHTMLTable& rParentTable ) :
     mrParentTable(rParentTable),
-    mpCurrTable(nullptr)
+    mpCurrTable(NULL)
+{
+}
+
+ScHTMLTableMap::~ScHTMLTableMap()
 {
 }
 
 ScHTMLTable* ScHTMLTableMap::FindTable( ScHTMLTableId nTableId, bool bDeep ) const
 {
-    ScHTMLTable* pResult = nullptr;
+    ScHTMLTable* pResult = 0;
     if( mpCurrTable && (nTableId == mpCurrTable->GetTableId()) )
         pResult = mpCurrTable;              // cached table
     else
@@ -2063,7 +2098,7 @@ ScHTMLTable* ScHTMLTableMap::FindTable( ScHTMLTableId nTableId, bool bDeep ) con
     return pResult;
 }
 
-ScHTMLTable* ScHTMLTableMap::CreateTable( const HtmlImportInfo& rInfo, bool bPreFormText )
+ScHTMLTable* ScHTMLTableMap::CreateTable( const ImportInfo& rInfo, bool bPreFormText )
 {
     ScHTMLTable* pTable = new ScHTMLTable( mrParentTable, rInfo, bPreFormText );
     maTables[ pTable->GetTableId() ].reset( pTable );
@@ -2084,9 +2119,9 @@ public:
         @param pTableMap  Pointer to the table map (is allowed to be NULL). */
     explicit            ScHTMLTableIterator( const ScHTMLTableMap* pTableMap );
 
-    bool         is() const { return mpTableMap && maIter != maEnd; }
-    ScHTMLTable* operator->() { return maIter->second.get(); }
-    ScHTMLTableIterator& operator++() { ++maIter; return *this; }
+    inline bool         is() const { return mpTableMap && maIter != maEnd; }
+    inline ScHTMLTable* operator->() { return maIter->second.get(); }
+    inline ScHTMLTableIterator& operator++() { ++maIter; return *this; }
 
 private:
     ScHTMLTableMap::const_iterator maIter;
@@ -2111,13 +2146,13 @@ ScHTMLTableAutoId::ScHTMLTableAutoId( ScHTMLTableId& rnUnusedId ) :
     ++mrnUnusedId;
 }
 
-ScHTMLTable::ScHTMLTable( ScHTMLTable& rParentTable, const HtmlImportInfo& rInfo, bool bPreFormText ) :
+ScHTMLTable::ScHTMLTable( ScHTMLTable& rParentTable, const ImportInfo& rInfo, bool bPreFormText ) :
     mpParentTable( &rParentTable ),
     maTableId( rParentTable.maTableId.mrnUnusedId ),
     maTableItemSet( rParentTable.GetCurrItemSet() ),
     mrEditEngine( rParentTable.mrEditEngine ),
     mrEEParseList( rParentTable.mrEEParseList ),
-    mpCurrEntryList( nullptr ),
+    mpCurrEntryList( 0 ),
     maSize( 1, 1 ),
     mpParser(rParentTable.mpParser),
     mbBorderOn( false ),
@@ -2140,13 +2175,12 @@ ScHTMLTable::ScHTMLTable( ScHTMLTable& rParentTable, const HtmlImportInfo& rInfo
         {
             switch( itr->GetToken() )
             {
-                case HtmlOptionId::BORDER:
+                case HTML_O_BORDER:
                     mbBorderOn = itr->GetString().isEmpty() || (itr->GetNumber() != 0);
                 break;
-                case HtmlOptionId::ID:
+                case HTML_O_ID:
                     maTableName = itr->GetString();
                 break;
-                default: break;
             }
         }
     }
@@ -2158,18 +2192,18 @@ ScHTMLTable::ScHTMLTable(
     SfxItemPool& rPool,
     EditEngine& rEditEngine,
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-    std::vector< ScEEParseEntry* >& rEEParseList,
+    ::std::vector< ScEEParseEntry* >& rEEParseList,
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
     std::vector<std::shared_ptr<ScEEParseEntry>>& rEEParseList,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
     ScHTMLTableId& rnUnusedId, ScHTMLParser* pParser
 ) :
-    mpParentTable( nullptr ),
+    mpParentTable( 0 ),
     maTableId( rnUnusedId ),
     maTableItemSet( rPool ),
     mrEditEngine( rEditEngine ),
     mrEEParseList( rEEParseList ),
-    mpCurrEntryList( nullptr ),
+    mpCurrEntryList( 0 ),
     maSize( 1, 1 ),
     mpParser(pParser),
     mbBorderOn( false ),
@@ -2197,9 +2231,9 @@ const SfxItemSet& ScHTMLTable::GetCurrItemSet() const
 ScHTMLSize ScHTMLTable::GetSpan( const ScHTMLPos& rCellPos ) const
 {
     ScHTMLSize aSpan( 1, 1 );
-    const ScRange* pRange = nullptr;
-    if(  ( (pRange = maVMergedCells.Find( rCellPos.MakeAddr() ) ) != nullptr)
-      || ( (pRange = maHMergedCells.Find( rCellPos.MakeAddr() ) ) != nullptr)
+    const ScRange* pRange = NULL;
+    if(  ( (pRange = maVMergedCells.Find( rCellPos.MakeAddr() ) ) != 0)
+      || ( (pRange = maHMergedCells.Find( rCellPos.MakeAddr() ) ) != 0)
       )
         aSpan.Set( pRange->aEnd.Col() - pRange->aStart.Col() + 1, pRange->aEnd.Row() - pRange->aStart.Row() + 1 );
     return aSpan;
@@ -2207,7 +2241,7 @@ ScHTMLSize ScHTMLTable::GetSpan( const ScHTMLPos& rCellPos ) const
 
 ScHTMLTable* ScHTMLTable::FindNestedTable( ScHTMLTableId nTableId ) const
 {
-    return mxNestedTables.get() ? mxNestedTables->FindTable( nTableId ) : nullptr;
+    return mxNestedTables.get() ? mxNestedTables->FindTable( nTableId, true ) : 0;
 }
 
 void ScHTMLTable::PutItem( const SfxPoolItem& rItem )
@@ -2217,7 +2251,7 @@ void ScHTMLTable::PutItem( const SfxPoolItem& rItem )
         mxCurrEntry->GetItemSet().Put( rItem );
 }
 
-void ScHTMLTable::PutText( const HtmlImportInfo& rInfo )
+void ScHTMLTable::PutText( const ImportInfo& rInfo )
 {
     OSL_ENSURE( mxCurrEntry.get(), "ScHTMLTable::PutText - no current entry" );
     if( mxCurrEntry.get() )
@@ -2229,7 +2263,7 @@ void ScHTMLTable::PutText( const HtmlImportInfo& rInfo )
     }
 }
 
-void ScHTMLTable::InsertPara( const HtmlImportInfo& rInfo )
+void ScHTMLTable::InsertPara( const ImportInfo& rInfo )
 {
     if( mxCurrEntry.get() && mbDataOn && !IsEmptyCell() )
         mxCurrEntry->SetImportAlways();
@@ -2264,29 +2298,29 @@ void ScHTMLTable::AnchorOn()
         mxCurrEntry->SetImportAlways();
 }
 
-ScHTMLTable* ScHTMLTable::TableOn( const HtmlImportInfo& rInfo )
+ScHTMLTable* ScHTMLTable::TableOn( const ImportInfo& rInfo )
 {
     PushEntry( rInfo );
     return InsertNestedTable( rInfo, false );
 }
 
-ScHTMLTable* ScHTMLTable::TableOff( const HtmlImportInfo& rInfo )
+ScHTMLTable* ScHTMLTable::TableOff( const ImportInfo& rInfo )
 {
     return mbPreFormText ? this : CloseTable( rInfo );
 }
 
-ScHTMLTable* ScHTMLTable::PreOn( const HtmlImportInfo& rInfo )
+ScHTMLTable* ScHTMLTable::PreOn( const ImportInfo& rInfo )
 {
     PushEntry( rInfo );
     return InsertNestedTable( rInfo, true );
 }
 
-ScHTMLTable* ScHTMLTable::PreOff( const HtmlImportInfo& rInfo )
+ScHTMLTable* ScHTMLTable::PreOff( const ImportInfo& rInfo )
 {
     return mbPreFormText ? CloseTable( rInfo ) : this;
 }
 
-void ScHTMLTable::RowOn( const HtmlImportInfo& rInfo )
+void ScHTMLTable::RowOn( const ImportInfo& rInfo )
 {
     PushEntry( rInfo, true );
     if( mpParentTable && !mbPreFormText )   // no rows allowed in global and preformatted tables
@@ -2297,7 +2331,7 @@ void ScHTMLTable::RowOn( const HtmlImportInfo& rInfo )
     CreateNewEntry( rInfo );
 }
 
-void ScHTMLTable::RowOff( const HtmlImportInfo& rInfo )
+void ScHTMLTable::RowOff( const ImportInfo& rInfo )
 {
     PushEntry( rInfo, true );
     if( mpParentTable && !mbPreFormText )   // no rows allowed in global and preformatted tables
@@ -2308,7 +2342,7 @@ void ScHTMLTable::RowOff( const HtmlImportInfo& rInfo )
 namespace {
 
 /**
- * Decode a number format string stored in Excel-generated HTML's CSS
+ * Decode a numbert format string stored in Excel-generated HTML's CSS
  * region.
  */
 OUString decodeNumberFormat(const OUString& rFmt)
@@ -2354,14 +2388,14 @@ OUString decodeNumberFormat(const OUString& rFmt)
 
 }
 
-void ScHTMLTable::DataOn( const HtmlImportInfo& rInfo )
+void ScHTMLTable::DataOn( const ImportInfo& rInfo )
 {
     PushEntry( rInfo, true );
     if( mpParentTable && !mbPreFormText )   // no cells allowed in global and preformatted tables
     {
         // read needed options from the <td> tag
         ScHTMLSize aSpanSize( 1, 1 );
-        std::unique_ptr<OUString> pValStr, pNumStr;
+        ::std::unique_ptr<OUString> pValStr, pNumStr;
         const HTMLOptions& rOptions = static_cast<HTMLParser*>(rInfo.pParser)->GetOptions();
         HTMLOptions::const_iterator itr = rOptions.begin(), itrEnd = rOptions.end();
         sal_uInt32 nNumberFormat = NUMBERFORMAT_ENTRY_NOT_FOUND;
@@ -2369,19 +2403,19 @@ void ScHTMLTable::DataOn( const HtmlImportInfo& rInfo )
         {
             switch (itr->GetToken())
             {
-                case HtmlOptionId::COLSPAN:
+                case HTML_O_COLSPAN:
                     aSpanSize.mnCols = static_cast<SCCOL>( getLimitedValue<sal_Int32>( itr->GetString().toInt32(), 1, 256 ) );
                 break;
-                case HtmlOptionId::ROWSPAN:
+                case HTML_O_ROWSPAN:
                     aSpanSize.mnRows = static_cast<SCROW>( getLimitedValue<sal_Int32>( itr->GetString().toInt32(), 1, 256 ) );
                 break;
-                case HtmlOptionId::SDVAL:
+                case HTML_O_SDVAL:
                     pValStr.reset(new OUString(itr->GetString()));
                 break;
-                case HtmlOptionId::SDNUM:
+                case HTML_O_SDNUM:
                     pNumStr.reset(new OUString(itr->GetString()));
                 break;
-                case HtmlOptionId::CLASS:
+                case HTML_O_CLASS:
                 {
                     // Pick up the number format associated with this class (if
                     // any).
@@ -2406,7 +2440,6 @@ void ScHTMLTable::DataOn( const HtmlImportInfo& rInfo )
                     }
                 }
                 break;
-                default: break;
             }
         }
 
@@ -2424,7 +2457,7 @@ void ScHTMLTable::DataOn( const HtmlImportInfo& rInfo )
         CreateNewEntry( rInfo );
 }
 
-void ScHTMLTable::DataOff( const HtmlImportInfo& rInfo )
+void ScHTMLTable::DataOff( const ImportInfo& rInfo )
 {
     PushEntry( rInfo, true );
     if( mpParentTable && !mbPreFormText )   // no cells allowed in global and preformatted tables
@@ -2432,7 +2465,7 @@ void ScHTMLTable::DataOff( const HtmlImportInfo& rInfo )
     CreateNewEntry( rInfo );
 }
 
-void ScHTMLTable::BodyOn( const HtmlImportInfo& rInfo )
+void ScHTMLTable::BodyOn( const ImportInfo& rInfo )
 {
     bool bPushed = PushEntry( rInfo );
     if( !mpParentTable )
@@ -2447,7 +2480,7 @@ void ScHTMLTable::BodyOn( const HtmlImportInfo& rInfo )
     CreateNewEntry( rInfo );
 }
 
-void ScHTMLTable::BodyOff( const HtmlImportInfo& rInfo )
+void ScHTMLTable::BodyOff( const ImportInfo& rInfo )
 {
     PushEntry( rInfo );
     if( !mpParentTable )
@@ -2458,7 +2491,7 @@ void ScHTMLTable::BodyOff( const HtmlImportInfo& rInfo )
     CreateNewEntry( rInfo );
 }
 
-ScHTMLTable* ScHTMLTable::CloseTable( const HtmlImportInfo& rInfo )
+ScHTMLTable* ScHTMLTable::CloseTable( const ImportInfo& rInfo )
 {
     if( mpParentTable )     // not allowed to close global table
     {
@@ -2485,8 +2518,8 @@ SCCOLROW ScHTMLTable::GetDocSize( ScHTMLOrient eOrient, SCCOLROW nCellPos ) cons
 SCCOLROW ScHTMLTable::GetDocSize( ScHTMLOrient eOrient, SCCOLROW nCellBegin, SCCOLROW nCellEnd ) const
 {
     const ScSizeVec& rSizes = maCumSizes[ eOrient ];
-    size_t nBeginIdx = static_cast< size_t >( std::max< SCCOLROW >( nCellBegin, 0 ) );
-    size_t nEndIdx = static_cast< size_t >( std::min< SCCOLROW >( nCellEnd, static_cast< SCCOLROW >( rSizes.size() ) ) );
+    size_t nBeginIdx = static_cast< size_t >( ::std::max< SCCOLROW >( nCellBegin, 0 ) );
+    size_t nEndIdx = static_cast< size_t >( ::std::min< SCCOLROW >( nCellEnd, static_cast< SCCOLROW >( rSizes.size() ) ) );
     if (nBeginIdx >= nEndIdx ) return 0;
     return rSizes[ nEndIdx - 1 ] - ((nBeginIdx == 0) ? 0 : rSizes[ nBeginIdx - 1 ]);
 }
@@ -2520,12 +2553,7 @@ ScHTMLPos ScHTMLTable::GetDocPos( const ScHTMLPos& rCellPos ) const
 void ScHTMLTable::GetDocRange( ScRange& rRange ) const
 {
     rRange.aStart = rRange.aEnd = maDocBasePos.MakeAddr();
-    ScAddress aErrorPos( ScAddress::UNINITIALIZED );
-    if (!rRange.aEnd.Move( static_cast< SCCOL >( GetDocSize( tdCol ) ) - 1,
-                static_cast< SCROW >( GetDocSize( tdRow ) ) - 1, 0, aErrorPos))
-    {
-        assert(!"can't move");
-    }
+    rRange.aEnd.Move( static_cast< SCsCOL >( GetDocSize( tdCol ) ) - 1, static_cast< SCsROW >( GetDocSize( tdRow ) ) - 1, 0 );
 }
 
 void ScHTMLTable::ApplyCellBorders( ScDocument* pDoc, const ScAddress& rFirstPos ) const
@@ -2537,8 +2565,8 @@ void ScHTMLTable::ApplyCellBorders( ScDocument* pDoc, const ScAddress& rFirstPos
         const SCROW nLastRow = maSize.mnRows - 1;
         const long nOuterLine = DEF_LINE_WIDTH_2;
         const long nInnerLine = DEF_LINE_WIDTH_0;
-        SvxBorderLine aOuterLine(nullptr, nOuterLine, SvxBorderLineStyle::SOLID);
-        SvxBorderLine aInnerLine(nullptr, nInnerLine, SvxBorderLineStyle::SOLID);
+        SvxBorderLine aOuterLine(0, nOuterLine, table::BorderLineStyle::SOLID);
+        SvxBorderLine aInnerLine(0, nInnerLine, table::BorderLineStyle::SOLID);
         SvxBoxItem aBorderItem( ATTR_BORDER );
 
         for( SCCOL nCol = 0; nCol <= nLastCol; ++nCol )
@@ -2555,12 +2583,12 @@ void ScHTMLTable::ApplyCellBorders( ScDocument* pDoc, const ScAddress& rFirstPos
                 SCROW nCellRow2 = nCellRow1 + GetDocSize( tdRow, nRow ) - 1;
                 for( SCCOL nCellCol = nCellCol1; nCellCol <= nCellCol2; ++nCellCol )
                 {
-                    aBorderItem.SetLine( (nCellCol == nCellCol1) ? pLeftLine : nullptr, SvxBoxItemLine::LEFT );
-                    aBorderItem.SetLine( (nCellCol == nCellCol2) ? pRightLine : nullptr, SvxBoxItemLine::RIGHT );
+                    aBorderItem.SetLine( (nCellCol == nCellCol1) ? pLeftLine : 0, BOX_LINE_LEFT );
+                    aBorderItem.SetLine( (nCellCol == nCellCol2) ? pRightLine : 0, BOX_LINE_RIGHT );
                     for( SCROW nCellRow = nCellRow1; nCellRow <= nCellRow2; ++nCellRow )
                     {
-                        aBorderItem.SetLine( (nCellRow == nCellRow1) ? pTopLine : nullptr, SvxBoxItemLine::TOP );
-                        aBorderItem.SetLine( (nCellRow == nCellRow2) ? pBottomLine : nullptr, SvxBoxItemLine::BOTTOM );
+                        aBorderItem.SetLine( (nCellRow == nCellRow1) ? pTopLine : 0, BOX_LINE_TOP );
+                        aBorderItem.SetLine( (nCellRow == nCellRow2) ? pBottomLine : 0, BOX_LINE_BOTTOM );
                         pDoc->ApplyAttr( nCellCol, nCellRow, rFirstPos.Tab(), aBorderItem );
                     }
                 }
@@ -2582,17 +2610,17 @@ bool ScHTMLTable::IsEmptyCell() const
     return mpCurrEntryList && mpCurrEntryList->empty();
 }
 
-bool ScHTMLTable::IsSpaceCharInfo( const HtmlImportInfo& rInfo )
+bool ScHTMLTable::IsSpaceCharInfo( const ImportInfo& rInfo )
 {
-    return (rInfo.nToken == HtmlTokenId::TEXTTOKEN) && (rInfo.aText.getLength() == 1) && (rInfo.aText[ 0 ] == ' ');
+    return (rInfo.nToken == HTML_TEXTTOKEN) && (rInfo.aText.getLength() == 1) && (rInfo.aText[ 0 ] == ' ');
 }
 
 ScHTMLTable::ScHTMLEntryPtr ScHTMLTable::CreateEntry() const
 {
-    return o3tl::make_unique<ScHTMLEntry>( GetCurrItemSet() );
+    return ScHTMLEntryPtr( new ScHTMLEntry( GetCurrItemSet() ) );
 }
 
-void ScHTMLTable::CreateNewEntry( const HtmlImportInfo& rInfo )
+void ScHTMLTable::CreateNewEntry( const ImportInfo& rInfo )
 {
     OSL_ENSURE( !mxCurrEntry.get(), "ScHTMLTable::CreateNewEntry - old entry still present" );
     mxCurrEntry = CreateEntry();
@@ -2639,7 +2667,7 @@ bool ScHTMLTable::PushEntry( ScHTMLEntryPtr& rxEntry )
     return bPushed;
 }
 
-bool ScHTMLTable::PushEntry( const HtmlImportInfo& rInfo, bool bLastInCell )
+bool ScHTMLTable::PushEntry( const ImportInfo& rInfo, bool bLastInCell )
 {
     OSL_ENSURE( mxCurrEntry.get(), "ScHTMLTable::PushEntry - no current entry" );
     bool bPushed = false;
@@ -2663,25 +2691,27 @@ bool ScHTMLTable::PushEntry( const HtmlImportInfo& rInfo, bool bLastInCell )
     return bPushed;
 }
 
-void ScHTMLTable::PushTableEntry( ScHTMLTableId nTableId )
+bool ScHTMLTable::PushTableEntry( ScHTMLTableId nTableId )
 {
     OSL_ENSURE( nTableId != SC_HTML_GLOBAL_TABLE, "ScHTMLTable::PushTableEntry - cannot push global table" );
+    bool bPushed = false;
     if( nTableId != SC_HTML_GLOBAL_TABLE )
     {
         ScHTMLEntryPtr xEntry( new ScHTMLEntry( maTableItemSet, nTableId ) );
-        PushEntry( xEntry );
+        bPushed = PushEntry( xEntry );
     }
+    return bPushed;
 }
 
 ScHTMLTable* ScHTMLTable::GetExistingTable( ScHTMLTableId nTableId ) const
 {
     ScHTMLTable* pTable = ((nTableId != SC_HTML_GLOBAL_TABLE) && mxNestedTables.get()) ?
-        mxNestedTables->FindTable( nTableId, false ) : nullptr;
+        mxNestedTables->FindTable( nTableId, false ) : 0;
     OSL_ENSURE( pTable || (nTableId == SC_HTML_GLOBAL_TABLE), "ScHTMLTable::GetExistingTable - table not found" );
     return pTable;
 }
 
-ScHTMLTable* ScHTMLTable::InsertNestedTable( const HtmlImportInfo& rInfo, bool bPreFormText )
+ScHTMLTable* ScHTMLTable::InsertNestedTable( const ImportInfo& rInfo, bool bPreFormText )
 {
     if( !mxNestedTables.get() )
         mxNestedTables.reset( new ScHTMLTableMap( *this ) );
@@ -2696,7 +2726,7 @@ void ScHTMLTable::InsertNewCell( const ScHTMLSize& rSpanSize )
 
     /*  Find an unused cell by skipping all merged ranges that cover the
         current cell position stored in maCurrCell. */
-    while( ((pRange = maVMergedCells.Find( maCurrCell.MakeAddr() )) != nullptr) || ((pRange = maHMergedCells.Find( maCurrCell.MakeAddr() )) != nullptr) )
+    while( ((pRange = maVMergedCells.Find( maCurrCell.MakeAddr() )) != 0) || ((pRange = maHMergedCells.Find( maCurrCell.MakeAddr() )) != 0) )
         maCurrCell.mnCol = pRange->aEnd.Col() + 1;
     mpCurrEntryList = &maEntryMap[ maCurrCell ];
 
@@ -2705,16 +2735,12 @@ void ScHTMLTable::InsertNewCell( const ScHTMLSize& rSpanSize )
         vertically merged ranges (do not shrink the new cell). */
     SCCOL nColEnd = maCurrCell.mnCol + rSpanSize.mnCols;
     for( ScAddress aAddr( maCurrCell.MakeAddr() ); aAddr.Col() < nColEnd; aAddr.IncCol() )
-        if( (pRange = maVMergedCells.Find( aAddr )) != nullptr )
+        if( (pRange = maVMergedCells.Find( aAddr )) != 0 )
             pRange->aEnd.SetRow( maCurrCell.mnRow - 1 );
 
     // insert the new range into the cell lists
     ScRange aNewRange( maCurrCell.MakeAddr() );
-    ScAddress aErrorPos( ScAddress::UNINITIALIZED );
-    if (!aNewRange.aEnd.Move( rSpanSize.mnCols - 1, rSpanSize.mnRows - 1, 0, aErrorPos))
-    {
-        assert(!"can't move");
-    }
+    aNewRange.aEnd.Move( rSpanSize.mnCols - 1, rSpanSize.mnRows - 1, 0 );
     if( rSpanSize.mnRows > 1 )
     {
         maVMergedCells.Append( aNewRange );
@@ -2732,8 +2758,8 @@ void ScHTMLTable::InsertNewCell( const ScHTMLSize& rSpanSize )
     }
 
     // adjust table size
-    maSize.mnCols = std::max< SCCOL >( maSize.mnCols, aNewRange.aEnd.Col() + 1 );
-    maSize.mnRows = std::max< SCROW >( maSize.mnRows, aNewRange.aEnd.Row() + 1 );
+    maSize.mnCols = ::std::max< SCCOL >( maSize.mnCols, aNewRange.aEnd.Col() + 1 );
+    maSize.mnRows = ::std::max< SCROW >( maSize.mnRows, aNewRange.aEnd.Row() + 1 );
 }
 
 void ScHTMLTable::ImplRowOn()
@@ -2776,18 +2802,18 @@ void ScHTMLTable::ImplDataOff()
     {
         mxDataItemSet.reset();
         ++maCurrCell.mnCol;
-        mpCurrEntryList = nullptr;
+        mpCurrEntryList = 0;
         mbDataOn = false;
     }
 }
 
-void ScHTMLTable::ProcessFormatOptions( SfxItemSet& rItemSet, const HtmlImportInfo& rInfo )
+void ScHTMLTable::ProcessFormatOptions( SfxItemSet& rItemSet, const ImportInfo& rInfo )
 {
     // special handling for table header cells
-    if( rInfo.nToken == HtmlTokenId::TABLEHEADER_ON )
+    if( rInfo.nToken == HTML_TABLEHEADER_ON )
     {
         rItemSet.Put( SvxWeightItem( WEIGHT_BOLD, ATTR_FONT_WEIGHT ) );
-        rItemSet.Put( SvxHorJustifyItem( SvxCellHorJustify::Center, ATTR_HOR_JUSTIFY ) );
+        rItemSet.Put( SvxHorJustifyItem( SVX_HOR_JUSTIFY_CENTER, ATTR_HOR_JUSTIFY ) );
     }
 
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(rInfo.pParser)->GetOptions();
@@ -2796,22 +2822,22 @@ void ScHTMLTable::ProcessFormatOptions( SfxItemSet& rItemSet, const HtmlImportIn
     {
         switch( itr->GetToken() )
         {
-            case HtmlOptionId::ALIGN:
+            case HTML_O_ALIGN:
             {
-                SvxCellHorJustify eVal = SvxCellHorJustify::Standard;
+                SvxCellHorJustify eVal = SVX_HOR_JUSTIFY_STANDARD;
                 const OUString& rOptVal = itr->GetString();
                 if( rOptVal.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_AL_right ) )
-                    eVal = SvxCellHorJustify::Right;
+                    eVal = SVX_HOR_JUSTIFY_RIGHT;
                 else if( rOptVal.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_AL_center ) )
-                    eVal = SvxCellHorJustify::Center;
+                    eVal = SVX_HOR_JUSTIFY_CENTER;
                 else if( rOptVal.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_AL_left ) )
-                    eVal = SvxCellHorJustify::Left;
-                if( eVal != SvxCellHorJustify::Standard )
+                    eVal = SVX_HOR_JUSTIFY_LEFT;
+                if( eVal != SVX_HOR_JUSTIFY_STANDARD )
                     rItemSet.Put( SvxHorJustifyItem( eVal, ATTR_HOR_JUSTIFY ) );
             }
             break;
 
-            case HtmlOptionId::VALIGN:
+            case HTML_O_VALIGN:
             {
                 SvxCellVerJustify eVal = SVX_VER_JUSTIFY_STANDARD;
                 const OUString& rOptVal = itr->GetString();
@@ -2826,14 +2852,13 @@ void ScHTMLTable::ProcessFormatOptions( SfxItemSet& rItemSet, const HtmlImportIn
             }
             break;
 
-            case HtmlOptionId::BGCOLOR:
+            case HTML_O_BGCOLOR:
             {
                 Color aColor;
                 itr->GetColor( aColor );
                 rItemSet.Put( SvxBrushItem( aColor, ATTR_BACKGROUND ) );
             }
             break;
-            default: break;
         }
     }
 }
@@ -2848,7 +2873,7 @@ void ScHTMLTable::SetDocSize( ScHTMLOrient eOrient, SCCOLROW nCellPos, SCCOLROW 
         rSizes.push_back( rSizes.empty() ? 1 : (rSizes.back() + 1) );
     // update size of passed position and all following
     // #i109987# only grow, don't shrink - use the largest needed size
-    SCCOLROW nDiff = nSize - ((nIndex == 0) ? rSizes.front() : (rSizes[ nIndex ] - rSizes[ nIndex - 1 ]));
+    SCsCOLROW nDiff = nSize - ((nIndex == 0) ? rSizes.front() : (rSizes[ nIndex ] - rSizes[ nIndex - 1 ]));
     if( nDiff > 0 )
         for( ScSizeVec::iterator aIt = rSizes.begin() + nIndex, aEnd = rSizes.end(); aIt != aEnd; ++aIt )
             *aIt += nDiff;
@@ -2866,7 +2891,7 @@ void ScHTMLTable::CalcNeededDocSize(
         ++nCellPos;
     }
     // set remaining needed size to last column/row
-    nRealDocSize -= std::min< SCCOLROW >( nRealDocSize - 1, nDiffSize );
+    nRealDocSize -= ::std::min< SCCOLROW >( nRealDocSize - 1, nDiffSize );
     SetDocSize( eOrient, nCellPos, nRealDocSize );
 }
 
@@ -2944,7 +2969,7 @@ void ScHTMLTable::RecalcDocSize()
                     ScHTMLTable* pTable = GetExistingTable( (*aListIter)->GetTableId() );
                     // find entry with maximum width
                     if( bProcessColWidth && pTable )
-                        aDocSize.mnCols = std::max( aDocSize.mnCols, static_cast< SCCOL >( pTable->GetDocSize( tdCol ) ) );
+                        aDocSize.mnCols = ::std::max( aDocSize.mnCols, static_cast< SCCOL >( pTable->GetDocSize( tdCol ) ) );
                     // add up height of each entry
                     if( bProcessRowHeight )
                         aDocSize.mnRows += pTable ? pTable->GetDocSize( tdRow ) : 1;
@@ -2979,7 +3004,7 @@ void ScHTMLTable::RecalcDocPos( const ScHTMLPos& rBasePos )
         ScHTMLPos aEntryDocPos( aCellDocPos );
 
         ScHTMLEntryList& rEntryList = aMapIter->second;
-        ScHTMLEntry* pEntry = nullptr;
+        ScHTMLEntry* pEntry = 0;
         ScHTMLEntryList::iterator aListIterEnd = rEntryList.end();
         for( ScHTMLEntryList::iterator aListIter = rEntryList.begin(); aListIter != aListIterEnd; ++aListIter )
         {
@@ -3046,7 +3071,7 @@ ScHTMLGlobalTable::ScHTMLGlobalTable(
     SfxItemPool& rPool,
     EditEngine& rEditEngine,
 #ifdef NO_LIBO_HTML_TABLE_LEAK_FIX
-    std::vector< ScEEParseEntry* >& rEEParseList,
+    ::std::vector< ScEEParseEntry* >& rEEParseList,
 #else	// NO_LIBO_HTML_TABLE_LEAK_FIX
     std::vector<std::shared_ptr<ScEEParseEntry>>& rEEParseList,
 #endif	// NO_LIBO_HTML_TABLE_LEAK_FIX
@@ -3088,7 +3113,7 @@ ScHTMLQueryParser::~ScHTMLQueryParser()
 sal_uLong ScHTMLQueryParser::Read( SvStream& rStrm, const OUString& rBaseURL  )
 {
     SvKeyValueIteratorRef xValues;
-    SvKeyValueIterator* pAttributes = nullptr;
+    SvKeyValueIterator* pAttributes = 0;
 
     SfxObjectShell* pObjSh = mpDoc->GetDocumentShell();
     if( pObjSh && pObjSh->IsLoading() )
@@ -3106,15 +3131,15 @@ sal_uLong ScHTMLQueryParser::Read( SvStream& rStrm, const OUString& rBaseURL  )
             aContentType += OUString::createFromAscii( pCharSet );
 
             xValues = new SvKeyValueIterator;
-            xValues->Append( SvKeyValue( OOO_STRING_SVTOOLS_HTML_META_content_type, aContentType ) );
-            pAttributes = xValues.get();
+            xValues->Append( SvKeyValue( OUString( OOO_STRING_SVTOOLS_HTML_META_content_type ), aContentType ) );
+            pAttributes = xValues;
         }
     }
 
-    Link<HtmlImportInfo&,void> aOldLink = pEdit->GetHtmlImportHdl();
-    pEdit->SetHtmlImportHdl( LINK( this, ScHTMLQueryParser, HTMLImportHdl ) );
+    Link aOldLink = pEdit->GetImportHdl();
+    pEdit->SetImportHdl( LINK( this, ScHTMLQueryParser, HTMLImportHdl ) );
     sal_uLong nErr = pEdit->Read( rStrm, rBaseURL, EE_FORMAT_HTML, pAttributes );
-    pEdit->SetHtmlImportHdl( aOldLink );
+    pEdit->SetImportHdl( aOldLink );
 
     mxGlobTable->Recalc();
     nColMax = static_cast< SCCOL >( mxGlobTable->GetDocSize( tdCol ) - 1 );
@@ -3128,97 +3153,96 @@ const ScHTMLTable* ScHTMLQueryParser::GetGlobalTable() const
     return mxGlobTable.get();
 }
 
-void ScHTMLQueryParser::ProcessToken( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::ProcessToken( const ImportInfo& rInfo )
 {
     switch( rInfo.nToken )
     {
 // --- meta data ---
-        case HtmlTokenId::META:             MetaOn( rInfo );                break;  // <meta>
+        case HTML_META:             MetaOn( rInfo );                break;  // <meta>
 
 // --- title handling ---
-        case HtmlTokenId::TITLE_ON:         TitleOn( rInfo );               break;  // <title>
-        case HtmlTokenId::TITLE_OFF:        TitleOff( rInfo );              break;  // </title>
+        case HTML_TITLE_ON:         TitleOn( rInfo );               break;  // <title>
+        case HTML_TITLE_OFF:        TitleOff( rInfo );              break;  // </title>
 
-        case HtmlTokenId::STYLE_ON:                                         break;
-        case HtmlTokenId::STYLE_OFF:        ParseStyle(rInfo.aText);        break;
+        case HTML_STYLE_ON:                                         break;
+        case HTML_STYLE_OFF:        ParseStyle(rInfo.aText);        break;
 
 // --- body handling ---
-        case HtmlTokenId::BODY_ON:          mpCurrTable->BodyOn( rInfo );   break;  // <body>
-        case HtmlTokenId::BODY_OFF:         mpCurrTable->BodyOff( rInfo );  break;  // </body>
+        case HTML_BODY_ON:          mpCurrTable->BodyOn( rInfo );   break;  // <body>
+        case HTML_BODY_OFF:         mpCurrTable->BodyOff( rInfo );  break;  // </body>
 
 // --- insert text ---
-        case HtmlTokenId::TEXTTOKEN:        InsertText( rInfo );            break;  // any text
-        case HtmlTokenId::LINEBREAK:        mpCurrTable->BreakOn();         break;  // <br>
-        case HtmlTokenId::HEAD1_ON:                                                 // <h1>
-        case HtmlTokenId::HEAD2_ON:                                                 // <h2>
-        case HtmlTokenId::HEAD3_ON:                                                 // <h3>
-        case HtmlTokenId::HEAD4_ON:                                                 // <h4>
-        case HtmlTokenId::HEAD5_ON:                                                 // <h5>
-        case HtmlTokenId::HEAD6_ON:                                                 // <h6>
-        case HtmlTokenId::PARABREAK_ON:     mpCurrTable->HeadingOn();       break;  // <p>
+        case HTML_TEXTTOKEN:        InsertText( rInfo );            break;  // any text
+        case HTML_LINEBREAK:        mpCurrTable->BreakOn();         break;  // <br>
+        case HTML_HEAD1_ON:                                                 // <h1>
+        case HTML_HEAD2_ON:                                                 // <h2>
+        case HTML_HEAD3_ON:                                                 // <h3>
+        case HTML_HEAD4_ON:                                                 // <h4>
+        case HTML_HEAD5_ON:                                                 // <h5>
+        case HTML_HEAD6_ON:                                                 // <h6>
+        case HTML_PARABREAK_ON:     mpCurrTable->HeadingOn();       break;  // <p>
 
 // --- misc. contents ---
-        case HtmlTokenId::ANCHOR_ON:        mpCurrTable->AnchorOn();        break;  // <a>
+        case HTML_ANCHOR_ON:        mpCurrTable->AnchorOn();        break;  // <a>
 
 // --- table handling ---
-        case HtmlTokenId::TABLE_ON:         TableOn( rInfo );               break;  // <table>
-        case HtmlTokenId::TABLE_OFF:        TableOff( rInfo );              break;  // </table>
-        case HtmlTokenId::TABLEROW_ON:      mpCurrTable->RowOn( rInfo );    break;  // <tr>
-        case HtmlTokenId::TABLEROW_OFF:     mpCurrTable->RowOff( rInfo );   break;  // </tr>
-        case HtmlTokenId::TABLEHEADER_ON:                                           // <th>
-        case HtmlTokenId::TABLEDATA_ON:     mpCurrTable->DataOn( rInfo );   break;  // <td>
-        case HtmlTokenId::TABLEHEADER_OFF:                                          // </th>
-        case HtmlTokenId::TABLEDATA_OFF:    mpCurrTable->DataOff( rInfo );  break;  // </td>
-        case HtmlTokenId::PREFORMTXT_ON:    PreOn( rInfo );                 break;  // <pre>
-        case HtmlTokenId::PREFORMTXT_OFF:   PreOff( rInfo );                break;  // </pre>
+        case HTML_TABLE_ON:         TableOn( rInfo );               break;  // <table>
+        case HTML_TABLE_OFF:        TableOff( rInfo );              break;  // </table>
+        case HTML_TABLEROW_ON:      mpCurrTable->RowOn( rInfo );    break;  // <tr>
+        case HTML_TABLEROW_OFF:     mpCurrTable->RowOff( rInfo );   break;  // </tr>
+        case HTML_TABLEHEADER_ON:                                           // <th>
+        case HTML_TABLEDATA_ON:     mpCurrTable->DataOn( rInfo );   break;  // <td>
+        case HTML_TABLEHEADER_OFF:                                          // </th>
+        case HTML_TABLEDATA_OFF:    mpCurrTable->DataOff( rInfo );  break;  // </td>
+        case HTML_PREFORMTXT_ON:    PreOn( rInfo );                 break;  // <pre>
+        case HTML_PREFORMTXT_OFF:   PreOff( rInfo );                break;  // </pre>
 
 // --- formatting ---
-        case HtmlTokenId::FONT_ON:          FontOn( rInfo );                break;  // <font>
+        case HTML_FONT_ON:          FontOn( rInfo );                break;  // <font>
 
-        case HtmlTokenId::BIGPRINT_ON:      // <big>
+        case HTML_BIGPRINT_ON:      // <big>
             //! TODO: store current font size, use following size
             mpCurrTable->PutItem( SvxFontHeightItem( maFontHeights[ 3 ], 100, ATTR_FONT_HEIGHT ) );
         break;
-        case HtmlTokenId::SMALLPRINT_ON:    // <small>
+        case HTML_SMALLPRINT_ON:    // <small>
             //! TODO: store current font size, use preceding size
             mpCurrTable->PutItem( SvxFontHeightItem( maFontHeights[ 0 ], 100, ATTR_FONT_HEIGHT ) );
         break;
 
-        case HtmlTokenId::BOLD_ON:          // <b>
-        case HtmlTokenId::STRONG_ON:        // <strong>
+        case HTML_BOLD_ON:          // <b>
+        case HTML_STRONG_ON:        // <strong>
             mpCurrTable->PutItem( SvxWeightItem( WEIGHT_BOLD, ATTR_FONT_WEIGHT ) );
         break;
 
-        case HtmlTokenId::ITALIC_ON:        // <i>
-        case HtmlTokenId::EMPHASIS_ON:      // <em>
-        case HtmlTokenId::ADDRESS_ON:       // <address>
-        case HtmlTokenId::BLOCKQUOTE_ON:    // <blockquote>
-        case HtmlTokenId::BLOCKQUOTE30_ON:  // <bq>
-        case HtmlTokenId::CITIATION_ON:     // <cite>
-        case HtmlTokenId::VARIABLE_ON:      // <var>
+        case HTML_ITALIC_ON:        // <i>
+        case HTML_EMPHASIS_ON:      // <em>
+        case HTML_ADDRESS_ON:       // <address>
+        case HTML_BLOCKQUOTE_ON:    // <blockquote>
+        case HTML_BLOCKQUOTE30_ON:  // <bq>
+        case HTML_CITIATION_ON:     // <cite>
+        case HTML_VARIABLE_ON:      // <var>
             mpCurrTable->PutItem( SvxPostureItem( ITALIC_NORMAL, ATTR_FONT_POSTURE ) );
         break;
 
-        case HtmlTokenId::DEFINSTANCE_ON:   // <dfn>
+        case HTML_DEFINSTANCE_ON:   // <dfn>
             mpCurrTable->PutItem( SvxWeightItem( WEIGHT_BOLD, ATTR_FONT_WEIGHT ) );
             mpCurrTable->PutItem( SvxPostureItem( ITALIC_NORMAL, ATTR_FONT_POSTURE ) );
         break;
 
-        case HtmlTokenId::UNDERLINE_ON:     // <u>
-            mpCurrTable->PutItem( SvxUnderlineItem( LINESTYLE_SINGLE, ATTR_FONT_UNDERLINE ) );
+        case HTML_UNDERLINE_ON:     // <u>
+            mpCurrTable->PutItem( SvxUnderlineItem( UNDERLINE_SINGLE, ATTR_FONT_UNDERLINE ) );
         break;
-        default: break;
     }
 }
 
-void ScHTMLQueryParser::InsertText( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::InsertText( const ImportInfo& rInfo )
 {
     mpCurrTable->PutText( rInfo );
     if( mbTitleOn )
         maTitle.append(rInfo.aText);
 }
 
-void ScHTMLQueryParser::FontOn( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::FontOn( const ImportInfo& rInfo )
 {
     const HTMLOptions& rOptions = static_cast<HTMLParser*>(rInfo.pParser)->GetOptions();
     HTMLOptions::const_iterator itr = rOptions.begin(), itrEnd = rOptions.end();
@@ -3226,7 +3250,7 @@ void ScHTMLQueryParser::FontOn( const HtmlImportInfo& rInfo )
     {
         switch( itr->GetToken() )
         {
-            case HtmlOptionId::FACE :
+            case HTML_O_FACE :
             {
                 const OUString& rFace = itr->GetString();
                 OUString aFontName;
@@ -3243,25 +3267,24 @@ void ScHTMLQueryParser::FontOn( const HtmlImportInfo& rInfo )
                         RTL_TEXTENCODING_DONTKNOW, ATTR_FONT ) );
             }
             break;
-            case HtmlOptionId::SIZE :
+            case HTML_O_SIZE :
             {
                 sal_uInt32 nSize = getLimitedValue< sal_uInt32 >( itr->GetNumber(), 1, SC_HTML_FONTSIZES );
                 mpCurrTable->PutItem( SvxFontHeightItem( maFontHeights[ nSize - 1 ], 100, ATTR_FONT_HEIGHT ) );
             }
             break;
-            case HtmlOptionId::COLOR :
+            case HTML_O_COLOR :
             {
                 Color aColor;
                 itr->GetColor( aColor );
                 mpCurrTable->PutItem( SvxColorItem( aColor, ATTR_FONT_COLOR ) );
             }
             break;
-            default: break;
         }
     }
 }
 
-void ScHTMLQueryParser::MetaOn( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::MetaOn( const ImportInfo& rInfo )
 {
     if( mpDoc->GetDocumentShell() )
     {
@@ -3275,13 +3298,13 @@ void ScHTMLQueryParser::MetaOn( const HtmlImportInfo& rInfo )
     }
 }
 
-void ScHTMLQueryParser::TitleOn( const HtmlImportInfo& /*rInfo*/ )
+void ScHTMLQueryParser::TitleOn( const ImportInfo& /*rInfo*/ )
 {
     mbTitleOn = true;
-    maTitle.setLength(0);
+    maTitle.makeStringAndClear();
 }
 
-void ScHTMLQueryParser::TitleOff( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::TitleOff( const ImportInfo& rInfo )
 {
     if( mbTitleOn )
     {
@@ -3298,30 +3321,32 @@ void ScHTMLQueryParser::TitleOff( const HtmlImportInfo& rInfo )
     }
 }
 
-void ScHTMLQueryParser::TableOn( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::TableOn( const ImportInfo& rInfo )
 {
     mpCurrTable = mpCurrTable->TableOn( rInfo );
 }
 
-void ScHTMLQueryParser::TableOff( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::TableOff( const ImportInfo& rInfo )
 {
     mpCurrTable = mpCurrTable->TableOff( rInfo );
 }
 
-void ScHTMLQueryParser::PreOn( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::PreOn( const ImportInfo& rInfo )
 {
     mpCurrTable = mpCurrTable->PreOn( rInfo );
 }
 
-void ScHTMLQueryParser::PreOff( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::PreOff( const ImportInfo& rInfo )
 {
     mpCurrTable = mpCurrTable->PreOff( rInfo );
 }
 
-void ScHTMLQueryParser::CloseTable( const HtmlImportInfo& rInfo )
+void ScHTMLQueryParser::CloseTable( const ImportInfo& rInfo )
 {
     mpCurrTable = mpCurrTable->CloseTable( rInfo );
 }
+
+#if ENABLE_ORCUS
 
 namespace {
 
@@ -3335,8 +3360,9 @@ class CSSHandler
         const char* mp;
         size_t      mn;
 
-        MemStr() : mp(nullptr), mn(0) {}
+        MemStr() : mp(NULL), mn(0) {}
         MemStr(const char* p, size_t n) : mp(p), mn(n) {}
+        MemStr(const MemStr& r) : mp(r.mp), mn(r.mn) {}
         MemStr& operator=(const MemStr& r)
         {
             mp = r.mp;
@@ -3353,11 +3379,18 @@ class CSSHandler
 
     ScHTMLStyles& mrStyles;
 public:
-    explicit CSSHandler(ScHTMLStyles& rStyles) : mrStyles(rStyles) {}
+    CSSHandler(ScHTMLStyles& rStyles) : mrStyles(rStyles) {}
 
-    static void at_rule_name(const char* /*p*/, size_t /*n*/)
+    void at_rule_name(const char* /*p*/, size_t /*n*/)
     {
         // TODO: For now, we ignore at-rule properties.
+    }
+
+    void selector_name(const char* p_elem, size_t n_elem, const char* p_class, size_t n_class)
+    {
+        MemStr aElem(p_elem, n_elem), aClass(p_class, n_class);
+        SelectorName aName(aElem, aClass);
+        maSelectorNames.push_back(aName);
     }
 
     void property_name(const char* p, size_t n)
@@ -3370,18 +3403,18 @@ public:
         maPropValue = MemStr(p, n);
     }
 
-    static void begin_parse() {}
+    void begin_parse() {}
 
-    static void end_parse() {}
+    void end_parse() {}
 
-    static void begin_block() {}
+    void begin_block() {}
 
     void end_block()
     {
         maSelectorNames.clear();
     }
 
-    static void begin_property() {}
+    void begin_property() {}
 
     void end_property()
     {
@@ -3399,34 +3432,6 @@ public:
         maPropName = MemStr();
         maPropValue = MemStr();
     }
-
-    // new members
-    static void simple_selector_type(const char* /*p*/, size_t /*n*/) {}
-
-    static void simple_selector_class(const char* /*p*/, size_t /*n*/) {}
-
-    static void simple_selector_pseudo_element(orcus::css::pseudo_element_t /*pe*/) {}
-
-    static void simple_selector_pseudo_class(orcus::css::pseudo_class_t /*pc*/) {}
-
-    static void simple_selector_id(const char* /*p*/, size_t /*n*/) {}
-
-    static void end_simple_selector() {}
-
-    static void end_selector() {}
-
-    static void combinator(orcus::css::combinator_t /*combinator*/) {}
-
-    static void rgb(uint8_t /*red*/ , uint8_t /*green*/ , uint8_t /*blue*/ ) {}
-
-    static void rgba(uint8_t /*red*/ , uint8_t /*green*/ , uint8_t /*blue*/ , double /*alpha*/ ) {}
-
-    static void hsl(uint8_t /*hue*/ , uint8_t /*sat*/ , uint8_t /*light*/ ) {}
-
-    static void hsla(uint8_t /*hue*/ , uint8_t /*sat*/ , uint8_t /*light*/ , double /*alpha*/ ) {}
-
-    static void url(const char* /*p*/, size_t /*n*/) {}
-
 };
 
 }
@@ -3440,40 +3445,48 @@ void ScHTMLQueryParser::ParseStyle(const OUString& rStrm)
     {
         aParser.parse();
     }
-    catch (const orcus::css::parse_error&)
+    catch (const orcus::css_parse_error&)
     {
         // TODO: Parsing of CSS failed.  Do nothing for now.
     }
 }
 
-IMPL_LINK( ScHTMLQueryParser, HTMLImportHdl, HtmlImportInfo&, rInfo, void )
+#else
+
+void ScHTMLQueryParser::ParseStyle(const OUString&) {}
+
+#endif
+
+IMPL_LINK( ScHTMLQueryParser, HTMLImportHdl, const ImportInfo*, pInfo )
 {
-    switch( rInfo.eState )
+    switch( pInfo->eState )
     {
-        case HtmlImportState::Start:
+        case HTMLIMP_START:
         break;
 
-        case HtmlImportState::NextToken:
-            ProcessToken( rInfo );
+        case HTMLIMP_NEXTTOKEN:
+        case HTMLIMP_UNKNOWNATTR:
+            ProcessToken( *pInfo );
         break;
 
-        case HtmlImportState::InsertPara:
-            mpCurrTable->InsertPara( rInfo );
+        case HTMLIMP_INSERTPARA:
+            mpCurrTable->InsertPara( *pInfo );
         break;
 
-        case HtmlImportState::SetAttr:
-        case HtmlImportState::InsertText:
-        case HtmlImportState::InsertField:
+        case HTMLIMP_SETATTR:
+        case HTMLIMP_INSERTTEXT:
+        case HTMLIMP_INSERTFIELD:
         break;
 
-        case HtmlImportState::End:
+        case HTMLIMP_END:
             while( mpCurrTable->GetTableId() != SC_HTML_GLOBAL_TABLE )
-                CloseTable( rInfo );
+                CloseTable( *pInfo );
         break;
 
         default:
             OSL_FAIL( "ScHTMLQueryParser::HTMLImportHdl - unknown ImportInfo::eState" );
     }
+    return 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

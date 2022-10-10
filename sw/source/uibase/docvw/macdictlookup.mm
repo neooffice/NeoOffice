@@ -33,17 +33,13 @@
  *
  ************************************************************************/
 
+#include <osl/objcutils.h>
 #include <sfx2/app.hxx>
 #include <tools/rcid.h>
-#include <tools/resmgr.hxx>
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "macdictlookup.hxx"
 
-static ResMgr *pSwResMgr = nullptr;
+static ResMgr *pSwResMgr = NULL;
 
 OUString GetMacDictLoookupResString( int nId )
 {
@@ -98,12 +94,11 @@ void LookupInMacDict( const OUString &aString )
 
 	if ( aString.getLength() )
 	{
-		NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aString.getStr() ) length:aString.getLength()];
+		NSString *pString = [NSString stringWithCharacters:aString.getStr() length:aString.getLength()];
 		if ( pString )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			SWPerformMacDictService *pSWPerformMacDictService = [SWPerformMacDictService create];
-			[pSWPerformMacDictService performSelectorOnMainThread:@selector(lookupInMacDict:) withObject:pString waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pSWPerformMacDictService, @selector(lookupInMacDict:), pString, YES );
 		}
 	}
 

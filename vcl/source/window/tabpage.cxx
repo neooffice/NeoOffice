@@ -24,6 +24,8 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <tools/rc.h>
+
 #include <vcl/event.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/svapp.hxx>
@@ -41,22 +43,22 @@ void TabPage::ImplInit( vcl::Window* pParent, WinBits nStyle )
     if ( !(nStyle & WB_NODIALOGCONTROL) )
         nStyle |= WB_DIALOGCONTROL;
 
-    Window::ImplInit( pParent, nStyle, nullptr );
+    Window::ImplInit( pParent, nStyle, NULL );
 
     ImplInitSettings();
 
-    // if the tabpage is drawn (ie filled) by a native widget, make sure all controls will have transparent background
+    // if the tabpage is drawn (ie filled) by a native widget, make sure all contols will have transparent background
     // otherwise they will paint with a wrong background
-    if( IsNativeControlSupported(ControlType::TabBody, ControlPart::Entire) && GetParent() && (GetParent()->GetType() == WindowType::TABCONTROL) )
-        EnableChildTransparentMode();
+    if( IsNativeControlSupported(CTRL_TAB_BODY, PART_ENTIRE_CONTROL) && GetParent() && (GetParent()->GetType() == WINDOW_TABCONTROL) )
+        EnableChildTransparentMode( true );
 #if defined USE_JAVA && defined MACOSX
-    else if ( IsNativeControlSupported( ControlType::TabPane, ControlPart::Entire ) && GetParent() )
+    else if ( IsNativeControlSupported( CTRL_TAB_PANE, PART_ENTIRE_CONTROL ) && GetParent() )
     {
-        if ( GetParent()->GetType() == WindowType::CONTAINER )
+        if ( GetParent()->GetType() == WINDOW_CONTAINER )
         {
             SetMouseTransparent( true );
             EnableChildTransparentMode( true );
-            SetParentClipMode( ParentClipMode::NoClip );
+            SetParentClipMode( PARENTCLIPMODE_NOCLIP );
             SetPaintTransparent( true );
             SetBackground();
         }
@@ -67,11 +69,11 @@ void TabPage::ImplInit( vcl::Window* pParent, WinBits nStyle )
             for ( sal_uInt16 i = 0; i < GetParent()->GetChildCount(); i++ )
             {
                 Window* pChild = GetParent()->GetChild( i );
-                if ( pChild->GetType() == WindowType::CONTAINER )
+                if ( pChild->GetType() == WINDOW_CONTAINER )
                 {
                     SetMouseTransparent( true );
                     EnableChildTransparentMode( true );
-                    SetParentClipMode( ParentClipMode::NoClip );
+                    SetParentClipMode( PARENTCLIPMODE_NOCLIP );
                     SetPaintTransparent( true );
                     SetBackground();
                     break;
@@ -87,15 +89,15 @@ void TabPage::ImplInitSettings()
     vcl::Window* pParent = GetParent();
     if ( pParent->IsChildTransparentModeEnabled() && !IsControlBackground() )
     {
-        EnableChildTransparentMode();
-        SetParentClipMode( ParentClipMode::NoClip );
+        EnableChildTransparentMode( true );
+        SetParentClipMode( PARENTCLIPMODE_NOCLIP );
         SetPaintTransparent( true );
         SetBackground();
     }
     else
     {
         EnableChildTransparentMode( false );
-        SetParentClipMode();
+        SetParentClipMode( 0 );
         SetPaintTransparent( false );
 
         if ( IsControlBackground() )
@@ -106,46 +108,33 @@ void TabPage::ImplInitSettings()
 }
 
 TabPage::TabPage( vcl::Window* pParent, WinBits nStyle ) :
-    Window( WindowType::TABPAGE )
-    , IContext()
+    Window( WINDOW_TABPAGE )
 {
     ImplInit( pParent, nStyle );
 }
 
 TabPage::TabPage(vcl::Window *pParent, const OString& rID, const OUString& rUIXMLDescription)
-    : Window(WindowType::TABPAGE)
-    , IContext()
+    : Window(WINDOW_TABPAGE)
 {
     ImplInit(pParent, 0);
-    m_pUIBuilder.reset( new VclBuilder(this, getUIRootDir(), rUIXMLDescription, rID) );
+    m_pUIBuilder = new VclBuilder(this, getUIRootDir(), rUIXMLDescription, rID);
     set_hexpand(true);
     set_vexpand(true);
     set_expand(true);
-}
-
-TabPage::~TabPage()
-{
-    disposeOnce();
-}
-
-void TabPage::dispose()
-{
-    disposeBuilder();
-    vcl::Window::dispose();
 }
 
 void TabPage::StateChanged( StateChangedType nType )
 {
     Window::StateChanged( nType );
 
-    if ( nType == StateChangedType::InitShow )
+    if ( nType == StateChangedType::INITSHOW )
     {
-        if (GetSettings().GetStyleSettings().GetAutoMnemonic())
-            Accelerator::GenerateAutoMnemonicsOnHierarchy(this);
+        if ( GetSettings().GetStyleSettings().GetAutoMnemonic() )
+            ImplWindowAutoMnemonic( this );
         // FIXME: no layouting, workaround some clipping issues
         ImplAdjustNWFSizes();
     }
-    else if ( nType == StateChangedType::ControlBackground )
+    else if ( nType == StateChangedType::CONTROLBACKGROUND )
     {
         ImplInitSettings();
         Invalidate();
@@ -156,36 +145,37 @@ void TabPage::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Window::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
-         (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
+    if ( (rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
+         (rDCEvt.GetFlags() & SETTINGS_STYLE) )
     {
         ImplInitSettings();
         Invalidate();
     }
 }
 
-void TabPage::Paint( vcl::RenderContext& rRenderContext, const tools::Rectangle& )
+void TabPage::Paint( const Rectangle& )
 {
     // draw native tabpage only inside tabcontrols, standalone tabpages look ugly (due to bad dialog design)
-    if( IsNativeControlSupported(ControlType::TabBody, ControlPart::Entire) && GetParent() && (GetParent()->GetType() == WindowType::TABCONTROL) )
+    if( IsNativeControlSupported(CTRL_TAB_BODY, PART_ENTIRE_CONTROL) && GetParent() && (GetParent()->GetType() == WINDOW_TABCONTROL) )
     {
         const ImplControlValue aControlValue;
 
-        ControlState nState = ControlState::ENABLED;
-        ControlPart part = ControlPart::Entire;
+        ControlState nState = CTRL_STATE_ENABLED;
+        int part = PART_ENTIRE_CONTROL;
         if ( !IsEnabled() )
-            nState &= ~ControlState::ENABLED;
+            nState &= ~CTRL_STATE_ENABLED;
         if ( HasFocus() )
-            nState |= ControlState::FOCUSED;
+            nState |= CTRL_STATE_FOCUSED;
+        Point aPoint;
         // pass the whole window region to NWF as the tab body might be a gradient or bitmap
         // that has to be scaled properly, clipping makes sure that we do not paint too much
-        tools::Rectangle aCtrlRegion( Point(), GetOutputSizePixel() );
-        rRenderContext.DrawNativeControl( ControlType::TabBody, part, aCtrlRegion, nState,
+        Rectangle aCtrlRegion( aPoint, GetOutputSizePixel() );
+        DrawNativeControl( CTRL_TAB_BODY, part, aCtrlRegion, nState,
                 aControlValue, OUString() );
     }
 }
 
-void TabPage::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags )
+void TabPage::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong )
 {
     Point aPos = pDev->LogicToPixel( rPos );
     Size aSize = pDev->LogicToPixel( rSize );
@@ -206,7 +196,7 @@ void TabPage::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, Dr
             pDev->SetFillColor( GetSettings().GetStyleSettings().GetDialogColor() );
         else
             pDev->SetFillColor( aWallpaper.GetColor() );
-        pDev->DrawRect( tools::Rectangle( aPos, aSize ) );
+        pDev->DrawRect( Rectangle( aPos, aSize ) );
     }
 
     pDev->Pop();
@@ -224,14 +214,14 @@ OString TabPage::GetConfigId() const
 {
     OString sId(GetHelpId());
     if (sId.isEmpty() && isLayoutEnabled(this))
-        sId = GetWindow(GetWindowType::FirstChild)->GetHelpId();
+        sId = GetWindow(WINDOW_FIRSTCHILD)->GetHelpId();
     return sId;
 }
 
 Size TabPage::GetOptimalSize() const
 {
     if (isLayoutEnabled(this))
-        return VclContainer::getLayoutRequisition(*GetWindow(GetWindowType::FirstChild));
+        return VclContainer::getLayoutRequisition(*GetWindow(WINDOW_FIRSTCHILD));
     return getLegacyBestSizeForChildren(*this);
 }
 
@@ -239,14 +229,14 @@ void TabPage::SetPosSizePixel(const Point& rAllocPos, const Size& rAllocation)
 {
     Window::SetPosSizePixel(rAllocPos, rAllocation);
     if (isLayoutEnabled(this) && rAllocation.Width() && rAllocation.Height())
-        VclContainer::setLayoutAllocation(*GetWindow(GetWindowType::FirstChild), Point(0, 0), rAllocation);
+        VclContainer::setLayoutAllocation(*GetWindow(WINDOW_FIRSTCHILD), Point(0, 0), rAllocation);
 }
 
 void TabPage::SetSizePixel(const Size& rAllocation)
 {
     Window::SetSizePixel(rAllocation);
     if (isLayoutEnabled(this) && rAllocation.Width() && rAllocation.Height())
-        VclContainer::setLayoutAllocation(*GetWindow(GetWindowType::FirstChild), Point(0, 0), rAllocation);
+        VclContainer::setLayoutAllocation(*GetWindow(WINDOW_FIRSTCHILD), Point(0, 0), rAllocation);
 }
 
 void TabPage::SetPosPixel(const Point& rAllocPos)
@@ -255,7 +245,7 @@ void TabPage::SetPosPixel(const Point& rAllocPos)
     Size aAllocation(GetOutputSizePixel());
     if (isLayoutEnabled(this) && aAllocation.Width() && aAllocation.Height())
     {
-        VclContainer::setLayoutAllocation(*GetWindow(GetWindowType::FirstChild), Point(0, 0), aAllocation);
+        VclContainer::setLayoutAllocation(*GetWindow(WINDOW_FIRSTCHILD), Point(0, 0), aAllocation);
     }
 }
 

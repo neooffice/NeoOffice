@@ -162,7 +162,7 @@ namespace
 
     /* we only need to call stat or lstat if one of the
        following flags is set */
-    inline bool is_stat_call_necessary(sal_uInt32 field_mask, oslFileType file_type)
+    inline bool is_stat_call_necessary(sal_uInt32 field_mask, oslFileType file_type = osl_File_Type_Unknown)
     {
         return (
                 ((field_mask & osl_FileStatus_Mask_Type) && (file_type == osl_File_Type_Unknown)) ||
@@ -192,7 +192,7 @@ namespace
     inline oslFileError setup_osl_getFileStatus(
         DirectoryItem_Impl * pImpl, oslFileStatus* pStat, rtl::OUString& file_path)
     {
-        if ((pImpl == nullptr) || (pStat == nullptr))
+        if ((NULL == pImpl) || (NULL == pStat))
             return osl_File_E_INVAL;
 
         file_path = rtl::OUString(pImpl->m_ustrFilePath);
@@ -212,13 +212,13 @@ oslFileError SAL_CALL osl_getFileStatus(oslDirectoryItem Item, oslFileStatus* pS
 
     rtl::OUString file_path;
     oslFileError  osl_error = setup_osl_getFileStatus(pImpl, pStat, file_path);
-    if (osl_error != osl_File_E_None)
+    if (osl_File_E_None != osl_error)
         return osl_error;
 
     struct stat file_stat;
 
     bool bStatNeeded = is_stat_call_necessary(uFieldMask, pImpl->getFileType());
-    if (bStatNeeded && (osl::lstat(file_path, file_stat) != 0))
+    if (bStatNeeded && (0 != osl::lstat(file_path, file_stat)))
         return oslTranslateFileError(OSL_FET_ERROR, errno);
 
     if (bStatNeeded)
@@ -361,7 +361,7 @@ static oslFileError osl_psz_setFileTime (
     fprintf(stderr,"Modification is '%s'\n",ctime(&aTimeBuffer.modtime));
 #endif
 
-    if ( pLastAccessTime != nullptr )
+    if ( pLastAccessTime != 0 )
     {
         aTimeBuffer.actime=pLastAccessTime->Seconds;
     }
@@ -370,7 +370,7 @@ static oslFileError osl_psz_setFileTime (
         aTimeBuffer.actime=aFileStat.st_atime;
     }
 
-    if ( pLastWriteTime != nullptr )
+    if ( pLastWriteTime != 0 )
     {
         aTimeBuffer.modtime=pLastWriteTime->Seconds;
     }
@@ -437,19 +437,21 @@ oslFileError SAL_CALL osl_setFileTime (
 sal_Bool
 SAL_CALL osl_identicalDirectoryItem( oslDirectoryItem a, oslDirectoryItem b)
 {
-    DirectoryItem_Impl *pA = static_cast<DirectoryItem_Impl *>(a);
-    DirectoryItem_Impl *pB = static_cast<DirectoryItem_Impl *>(b);
+    DirectoryItem_Impl *pA = (DirectoryItem_Impl *) a;
+    DirectoryItem_Impl *pB = (DirectoryItem_Impl *) b;
     if (a == b)
-        return true;
+        return sal_True;
     /* same name => same item, unless renaming / moving madness has occurred */
-    if (pA->m_ustrFilePath == pB->m_ustrFilePath)
-        return true;
+    if (rtl_ustr_compare_WithLength(
+                pA->m_ustrFilePath->buffer, pA->m_ustrFilePath->length,
+                pB->m_ustrFilePath->buffer, pB->m_ustrFilePath->length ) == 0)
+        return sal_True;
 
     struct stat a_stat, b_stat;
 
     if (osl::lstat(rtl::OUString(pA->m_ustrFilePath), a_stat) != 0 ||
         osl::lstat(rtl::OUString(pB->m_ustrFilePath), b_stat) != 0)
-        return false;
+        return sal_False;
 
     return (a_stat.st_ino == b_stat.st_ino);
 }

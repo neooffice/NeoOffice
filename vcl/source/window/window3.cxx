@@ -24,9 +24,9 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <vcl/window.hxx>
-#include <vcl/waitobj.hxx>
-#include <vcl/button.hxx>
+#include "vcl/window.hxx"
+#include "vcl/waitobj.hxx"
+#include "vcl/button.hxx"
 
 #ifdef USE_JAVA
 #include "salgdi.hxx"
@@ -49,20 +49,20 @@ void Window::ImplAdjustNWFSizes()
 {
     switch( GetType() )
     {
-    case WindowType::CHECKBOX:
+    case WINDOW_CHECKBOX:
         static_cast<CheckBox*>(this)->ImplSetMinimumNWFSize();
         break;
-    case WindowType::RADIOBUTTON:
+    case WINDOW_RADIOBUTTON:
         static_cast<RadioButton*>(this)->ImplSetMinimumNWFSize();
         break;
     default:
         {
             // iterate over children
-            vcl::Window* pWin = GetWindow( GetWindowType::FirstChild );
+            vcl::Window* pWin = GetWindow( WINDOW_FIRSTCHILD );
             while( pWin )
             {
                 pWin->ImplAdjustNWFSizes();
-                pWin = pWin->GetWindow( GetWindowType::Next );
+                pWin = pWin->GetWindow( WINDOW_NEXT );
             }
         }
         break;

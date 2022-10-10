@@ -36,13 +36,13 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #define _SV_SALATSLAYOUT_HXX
 
-#include <unordered_map>
 #include <vector>
+
+#include <boost/unordered_map.hpp>
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
-#undef check
 
 #include "sallayout.hxx"
 
@@ -66,22 +66,22 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
-	::std::unordered_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
+	::boost::unordered_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 	DeviceCoordinate	mfOrigWidth;
 	float				mfGlyphScaleX;
 
 public:
-	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, tools::Rectangle &rRect );
+	static void			GetGlyphBounds( sal_Int32 nGlyph, JavaImplFont *pFont, Rectangle &rRect );
 	static void			ClearLayoutDataCache();
 
-						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel, JavaImplFont *pFont );
+						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );
 	virtual				~SalATSLayout();
 
-	virtual void		AdjustLayout( ImplLayoutArgs& rArgs ) override;
-	virtual bool		LayoutText( ImplLayoutArgs& rArgs ) override;
-	virtual void		DrawText( SalGraphics& rGraphics ) const override;
-	virtual bool		GetBoundRect( SalGraphics& rGraphics, tools::Rectangle& rRect ) const override;
-	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const override;
+	virtual void		AdjustLayout( ImplLayoutArgs& rArgs ) SAL_OVERRIDE;
+	virtual bool		LayoutText( ImplLayoutArgs& rArgs ) SAL_OVERRIDE;
+	virtual void		DrawText( SalGraphics& rGraphics ) const SAL_OVERRIDE;
+	virtual bool		GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const SAL_OVERRIDE;
+	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const SAL_OVERRIDE;
 
 	ImplATSLayoutData*	GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, DeviceCoordinate& fX, DeviceCoordinate& fY ) const;
 	DeviceCoordinate	GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;

@@ -38,7 +38,7 @@ namespace abp
     using namespace ::com::sun::star::sdbc;
 
     // TypeSelectionPage
-    TypeSelectionPage::TypeSelectionPage( OAddressBookSourcePilot* _pParent )
+    TypeSelectionPage::TypeSelectionPage( OAddessBookSourcePilot* _pParent )
       : AddressBookSourcePage(_pParent, "SelectTypePage",
           "modules/sabpilot/ui/selecttypepage.ui")
     {
@@ -49,6 +49,9 @@ namespace abp
         get(m_pThunderbird, "thunderbird");
         get(m_pKab, "kde");
         get(m_pMacab, "macosx");
+        get(m_pLDAP, "ldap");
+        get(m_pOutlook, "outlook");
+        get(m_pOE, "windows");
         get(m_pOther, "other");
 
 #ifdef USE_JAVA
@@ -81,21 +84,29 @@ namespace abp
         // - OTHER
         //
         // On Windows:
-        // - MORK, THUNDERBIRD
+        // - MORK, THUNDERBIRD, LDAP, OUTLOOK, OUTLOOKEXPRESS (via mozab driver,
+        //   if WITH_MOZILLA)
         // - OTHER
 
+        bool bWithMozilla = false;
         bool bHaveEvolution = false;
         bool bHaveKab = false;
         bool bHaveMacab = false;
+        bool bWithMork = false;
 
-#if !defined(_WIN32)
+#if defined WNT
+#if defined WITH_MOZILLA
+        bWithMozilla = true;
+#endif
+#else
+        bWithMork = true;
 
         Reference< XDriverManager2 > xManager = DriverManager::create( _pParent->getORB() );
 
         try
         {
             // check whether Evolution is available
-            Reference< XDriver > xDriver( xManager->getDriverByURL("sdbc:address:evolution:local") );
+            Reference< XDriver > xDriver( xManager->getDriverByURL(OUString("sdbc:address:evolution:local")) );
             if ( xDriver.is() )
                 bHaveEvolution = true;
         }
@@ -106,7 +117,7 @@ namespace abp
         // check whether KDE address book is available
         try
         {
-            Reference< XDriver > xDriver( xManager->getDriverByURL("sdbc:address:kab") );
+            Reference< XDriver > xDriver( xManager->getDriverByURL(OUString("sdbc:address:kab")) );
             if ( xDriver.is() )
                 bHaveKab = true;
         }
@@ -117,7 +128,7 @@ namespace abp
         try
         {
             // check whether Mac OS X address book is available
-            Reference< XDriver > xDriver( xManager->getDriverByURL("sdbc:address:macab") );
+            Reference< XDriver > xDriver( xManager->getDriverByURL(OUString("sdbc:address:macab")) );
             if ( xDriver.is() )
                 bHaveMacab = true;
         }
@@ -131,14 +142,17 @@ namespace abp
         m_aAllTypes.push_back( ButtonItem( m_pEvolution, AST_EVOLUTION, bHaveEvolution ) );
         m_aAllTypes.push_back( ButtonItem( m_pEvolutionGroupwise, AST_EVOLUTION_GROUPWISE, bHaveEvolution ) );
         m_aAllTypes.push_back( ButtonItem( m_pEvolutionLdap, AST_EVOLUTION_LDAP, bHaveEvolution ) );
-        m_aAllTypes.push_back( ButtonItem( m_pMORK, AST_MORK, true ) );
-        m_aAllTypes.push_back( ButtonItem( m_pThunderbird, AST_THUNDERBIRD, true ) );
+        m_aAllTypes.push_back( ButtonItem( m_pMORK, AST_MORK, bWithMozilla || bWithMork) );
+        m_aAllTypes.push_back( ButtonItem( m_pThunderbird, AST_THUNDERBIRD, bWithMozilla || bWithMork) );
         m_aAllTypes.push_back( ButtonItem( m_pKab, AST_KAB, bHaveKab ) );
         m_aAllTypes.push_back( ButtonItem( m_pMacab, AST_MACAB, bHaveMacab ) );
+        m_aAllTypes.push_back( ButtonItem( m_pLDAP, AST_LDAP, bWithMozilla ) );
+        m_aAllTypes.push_back( ButtonItem( m_pOutlook, AST_OUTLOOK, bWithMozilla ) );
+        m_aAllTypes.push_back( ButtonItem( m_pOE, AST_OE, bWithMozilla ) );
         m_aAllTypes.push_back( ButtonItem( m_pOther, AST_OTHER, true ) );
 
-        Link<Button*,void> aTypeSelectionHandler = LINK(this, TypeSelectionPage, OnTypeSelected );
-        for ( std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
+        Link aTypeSelectionHandler = LINK(this, TypeSelectionPage, OnTypeSelected );
+        for ( ::std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
               loop != m_aAllTypes.end(); ++loop )
         {
             ButtonItem aItem = *loop;
@@ -155,25 +169,11 @@ namespace abp
 
     TypeSelectionPage::~TypeSelectionPage()
     {
-        disposeOnce();
-    }
-
-    void TypeSelectionPage::dispose()
-    {
-        for ( std::vector< ButtonItem >::iterator loop = m_aAllTypes.begin();
+        for ( ::std::vector< ButtonItem >::iterator loop = m_aAllTypes.begin();
               loop != m_aAllTypes.end(); ++loop )
         {
             loop->m_bVisible = false;
         }
-        m_pEvolution.clear();
-        m_pEvolutionGroupwise.clear();
-        m_pEvolutionLdap.clear();
-        m_pMORK.clear();
-        m_pThunderbird.clear();
-        m_pKab.clear();
-        m_pMacab.clear();
-        m_pOther.clear();
-        AddressBookSourcePage::dispose();
     }
 
 
@@ -181,7 +181,7 @@ namespace abp
     {
         AddressBookSourcePage::ActivatePage();
 
-        for ( std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
+        for ( ::std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
               loop != m_aAllTypes.end(); ++loop )
         {
             const ButtonItem& rItem = (*loop);
@@ -192,20 +192,20 @@ namespace abp
             }
         }
 
-        getDialog()->enableButtons(WizardButtonFlags::PREVIOUS, false);
+        getDialog()->enableButtons(WZB_PREVIOUS, false);
     }
 
 
     void TypeSelectionPage::DeactivatePage()
     {
         AddressBookSourcePage::DeactivatePage();
-        getDialog()->enableButtons(WizardButtonFlags::PREVIOUS, true);
+        getDialog()->enableButtons(WZB_PREVIOUS, true);
     }
 
 
     void TypeSelectionPage::selectType( AddressSourceType _eType )
     {
-        for ( std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
+        for ( ::std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
               loop != m_aAllTypes.end(); ++loop )
         {
             ButtonItem aItem = (*loop);
@@ -216,11 +216,11 @@ namespace abp
 
     AddressSourceType TypeSelectionPage::getSelectedType() const
     {
-        for ( std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
+        for ( ::std::vector< ButtonItem >::const_iterator loop = m_aAllTypes.begin();
               loop != m_aAllTypes.end(); ++loop )
         {
             ButtonItem aItem = (*loop);
-            if ( aItem.m_pItem->IsChecked() && aItem.m_bVisible )
+            if ( aItem.m_pItem->IsChecked() )
                 return aItem.m_eType;
         }
 
@@ -244,8 +244,8 @@ namespace abp
 
         if (AST_INVALID == getSelectedType( ))
         {
-            ScopedVclPtrInstance< MessageDialog > aError(this, ModuleRes(RID_STR_NEEDTYPESELECTION));
-            aError->Execute();
+            MessageDialog aError(this, ModuleRes(RID_STR_NEEDTYPESELECTION));
+            aError.Execute();
             return false;
         }
 
@@ -263,10 +263,11 @@ namespace abp
     }
 
 
-    IMPL_LINK_NOARG( TypeSelectionPage, OnTypeSelected, Button*, void )
+    IMPL_LINK( TypeSelectionPage, OnTypeSelected, void*, /*NOTINTERESTEDIN*/ )
     {
         getDialog()->typeSelectionChanged( getSelectedType() );
         updateDialogTravelUI();
+        return 0L;
     }
 
 

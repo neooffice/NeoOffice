@@ -25,7 +25,6 @@
 #include <sot/storage.hxx>
 #include <svl/zforlist.hxx>
 #include <svtools/ctrltool.hxx>
-#include <unotools/configmgr.hxx>
 #include <unotools/lingucfg.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/sfxmodelfactory.hxx>
@@ -49,8 +48,6 @@
 #include <editeng/tstpitem.hxx>
 #include <editeng/langitem.hxx>
 #include <editeng/colritem.hxx>
-#include <editeng/orphitem.hxx>
-#include <editeng/widwitem.hxx>
 #include <editeng/hyphenzoneitem.hxx>
 #include <editeng/svxacorr.hxx>
 #include <vcl/svapp.hxx>
@@ -88,13 +85,10 @@
 #include <swerror.h>
 #include <globals.hrc>
 #include <unochart.hxx>
-#include <drawdoc.hxx>
-
-#include <svx/CommonStyleManager.hxx>
 
 // text grid
 #include <tgrditem.hxx>
-#include <memory>
+#include <boost/scoped_ptr.hpp>
 
 using namespace ::com::sun::star::i18n;
 using namespace ::com::sun::star::lang;
@@ -105,63 +99,60 @@ using namespace ::com::sun::star;
 bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
 {
     bool bRet = SfxObjectShell::InitNew( xStor );
-    OSL_ENSURE( GetMapUnit() == MapUnit::MapTwip, "map unit is not twip!" );
+    OSL_ENSURE( GetMapUnit() == MAP_TWIP, "map unit is not twip!" );
     bool bHTMLTemplSet = false;
     if( bRet )
     {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        AddLink();      // create m_pDoc / pIo if applicable
+        AddLink();      // create mpDoc / pIo if applicable
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         AddLink();      // create m_xDoc / pIo if applicable
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-        bool bWeb = dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr;
+        bool bWeb = ISA( SwWebDocShell );
         if ( bWeb )
             bHTMLTemplSet = SetHTMLTemplate( *GetDoc() );// Styles from HTML.vor
-        else if( dynamic_cast< const SwGlobalDocShell *>( this ) !=  nullptr )
-            GetDoc()->getIDocumentSettingAccess().set(DocumentSettingId::GLOBAL_DOCUMENT, true);       // Globaldokument
+        else if( ISA( SwGlobalDocShell ) )
+            GetDoc()->getIDocumentSettingAccess().set(IDocumentSettingAccess::GLOBAL_DOCUMENT, true);       // Globaldokument
 
-        if ( GetCreateMode() ==  SfxObjectCreateMode::EMBEDDED )
+        if ( GetCreateMode() ==  SFX_CREATE_MODE_EMBEDDED )
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            SwTransferable::InitOle( this, *m_pDoc );
+            SwTransferable::InitOle( this, *mpDoc );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             SwTransferable::InitOle( this, *m_xDoc );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         // set forbidden characters if necessary
-        if (!utl::ConfigManager::IsAvoidConfig())
+        SvxAsianConfig aAsian;
+        Sequence<lang::Locale> aLocales =  aAsian.GetStartEndCharLocales();
+        if(aLocales.getLength())
         {
-            SvxAsianConfig aAsian;
-            Sequence<lang::Locale> aLocales =  aAsian.GetStartEndCharLocales();
-            if (aLocales.getLength())
+            const lang::Locale* pLocales = aLocales.getConstArray();
+            for(sal_Int32 i = 0; i < aLocales.getLength(); i++)
             {
-                const lang::Locale* pLocales = aLocales.getConstArray();
-                for(sal_Int32 i = 0; i < aLocales.getLength(); i++)
-                {
-                    ForbiddenCharacters aForbidden;
-                    aAsian.GetStartEndChars( pLocales[i], aForbidden.beginLine, aForbidden.endLine);
-                    LanguageType  eLang = LanguageTag::convertToLanguageType(pLocales[i]);
+                ForbiddenCharacters aForbidden;
+                aAsian.GetStartEndChars( pLocales[i], aForbidden.beginLine, aForbidden.endLine);
+                LanguageType  eLang = LanguageTag::convertToLanguageType(pLocales[i]);
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                    m_pDoc->getIDocumentSettingAccess().setForbiddenCharacters( eLang, aForbidden);
+                mpDoc->getIDocumentSettingAccess().setForbiddenCharacters( eLang, aForbidden);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     m_xDoc->getIDocumentSettingAccess().setForbiddenCharacters( eLang, aForbidden);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                }
             }
+        }
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pDoc->getIDocumentSettingAccess().set(DocumentSettingId::KERN_ASIAN_PUNCTUATION,
+        mpDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::KERN_ASIAN_PUNCTUATION,
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_xDoc->getIDocumentSettingAccess().set(DocumentSettingId::KERN_ASIAN_PUNCTUATION,
+            m_xDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::KERN_ASIAN_PUNCTUATION,
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                   !aAsian.IsKerningWesternTextOnly());
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pDoc->getIDocumentSettingAccess().setCharacterCompressionType(aAsian.GetCharDistanceCompression());
-            m_pDoc->getIDocumentDeviceAccess().setPrintData(*SW_MOD()->GetPrtOptions(bWeb));
+        mpDoc->getIDocumentSettingAccess().setCharacterCompressionType(static_cast<SwCharCompressType>(aAsian.GetCharDistanceCompression()));
+        mpDoc->getIDocumentDeviceAccess().setPrintData(*SW_MOD()->GetPrtOptions(bWeb));
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_xDoc->getIDocumentSettingAccess().setCharacterCompressionType(aAsian.GetCharDistanceCompression());
+            m_xDoc->getIDocumentSettingAccess().setCharacterCompressionType(static_cast<SwCharCompressType>(aAsian.GetCharDistanceCompression()));
             m_xDoc->getIDocumentDeviceAccess().setPrintData(*SW_MOD()->GetPrtOptions(bWeb));
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        }
 
         SubInitNew();
 
@@ -169,36 +160,36 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
 
         SwStdFontConfig* pStdFont = SW_MOD()->GetStdFontConfig();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SfxPrinter* pPrt = m_pDoc->getIDocumentDeviceAccess().getPrinter( false );
+        SfxPrinter* pPrt = mpDoc->getIDocumentDeviceAccess().getPrinter( false );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SfxPrinter* pPrt = m_xDoc->getIDocumentDeviceAccess().getPrinter( false );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
         OUString sEntry;
-        static const sal_uInt16 aFontWhich[] =
+        sal_uInt16 aFontWhich[] =
         {   RES_CHRATR_FONT,
             RES_CHRATR_CJK_FONT,
             RES_CHRATR_CTL_FONT
         };
-        static const sal_uInt16 aFontHeightWhich[] =
+        sal_uInt16 aFontHeightWhich[] =
         {
             RES_CHRATR_FONTSIZE,
             RES_CHRATR_CJK_FONTSIZE,
             RES_CHRATR_CTL_FONTSIZE
         };
-        static const sal_uInt16 aFontIds[] =
+        sal_uInt16 aFontIds[] =
         {
             FONT_STANDARD,
             FONT_STANDARD_CJK,
             FONT_STANDARD_CTL
         };
-        static const DefaultFontType nFontTypes[] =
+        sal_uInt16 nFontTypes[] =
         {
-            DefaultFontType::LATIN_TEXT,
-            DefaultFontType::CJK_TEXT,
-            DefaultFontType::CTL_TEXT
+            DEFAULTFONT_LATIN_TEXT,
+            DEFAULTFONT_CJK_TEXT,
+            DEFAULTFONT_CTL_TEXT
         };
-        static const sal_uInt16 aLangTypes[] =
+        sal_uInt16 aLangTypes[] =
         {
             RES_CHRATR_LANGUAGE,
             RES_CHRATR_CJK_LANGUAGE,
@@ -209,9 +200,9 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
         {
             sal_uInt16 nFontWhich = aFontWhich[i];
             sal_uInt16 nFontId = aFontIds[i];
-            std::unique_ptr<SvxFontItem> pFontItem;
+            boost::scoped_ptr<SvxFontItem> pFontItem;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            const SvxLanguageItem& rLang = static_cast<const SvxLanguageItem&>(m_pDoc->GetDefault( aLangTypes[i] ));
+            const SvxLanguageItem& rLang = (const SvxLanguageItem&)mpDoc->GetDefault( aLangTypes[i] );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             const SvxLanguageItem& rLang = static_cast<const SvxLanguageItem&>(m_xDoc->GetDefault( aLangTypes[i] ));
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -226,7 +217,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                     aFont = pPrt->GetFontMetric( aFont );
                 }
 
-                pFontItem.reset(new SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
+                pFontItem.reset(new SvxFontItem(aFont.GetFamily(), aFont.GetName(),
                                                 aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
             }
             else
@@ -242,41 +233,41 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                 vcl::Font aLangDefFont = OutputDevice::GetDefaultFont(
                     nFontTypes[i],
                     eLanguage,
-                    GetDefaultFontFlags::OnlyOne );
-                pFontItem.reset(new SvxFontItem(aLangDefFont.GetFamilyType(), aLangDefFont.GetFamilyName(),
+                    DEFAULTFONT_FLAGS_ONLYONE );
+                pFontItem.reset(new SvxFontItem(aLangDefFont.GetFamily(), aLangDefFont.GetName(),
                                                 aEmptyOUStr, aLangDefFont.GetPitch(), aLangDefFont.GetCharSet(), nFontWhich));
             }
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pDoc->SetDefault(*pFontItem);
+            mpDoc->SetDefault(*pFontItem);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_xDoc->SetDefault(*pFontItem);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             if( !bHTMLTemplSet )
             {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                SwTextFormatColl *pColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD);
+                SwTxtFmtColl *pColl = mpDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                SwTextFormatColl *pColl = m_xDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD);
+                SwTxtFmtColl *pColl = m_xDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pColl->ResetFormatAttr(nFontWhich);
+                pColl->ResetFmtAttr(nFontWhich);
             }
             pFontItem.reset();
             sal_Int32 nFontHeight = pStdFont->GetFontHeight( FONT_STANDARD, i, eLanguage );
             if(nFontHeight <= 0)
                 nFontHeight = SwStdFontConfig::GetDefaultHeightFor( nFontId, eLanguage );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pDoc->SetDefault(SvxFontHeightItem( nFontHeight, 100, aFontHeightWhich[i] ));
+            mpDoc->SetDefault(SvxFontHeightItem( nFontHeight, 100, aFontHeightWhich[i] ));
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             m_xDoc->SetDefault(SvxFontHeightItem( nFontHeight, 100, aFontHeightWhich[i] ));
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             if( !bHTMLTemplSet )
             {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                SwTextFormatColl *pColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD);
+                SwTxtFmtColl *pColl = mpDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                SwTextFormatColl *pColl = m_xDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(RES_POOLCOLL_STANDARD);
+                SwTxtFmtColl *pColl = m_xDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pColl->ResetFormatAttr(aFontHeightWhich[i]);
+                pColl->ResetFmtAttr(aFontHeightWhich[i]);
             }
 
         }
@@ -299,7 +290,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
         sal_uInt16 nFontWhich = RES_CHRATR_FONT;
         sal_uInt16 nFontHeightWhich = RES_CHRATR_FONTSIZE;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        LanguageType eLanguage = static_cast<const SvxLanguageItem&>(m_pDoc->GetDefault( RES_CHRATR_LANGUAGE )).GetLanguage();
+        LanguageType eLanguage = static_cast<const SvxLanguageItem&>(mpDoc->GetDefault( RES_CHRATR_LANGUAGE )).GetLanguage();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         LanguageType eLanguage = static_cast<const SvxLanguageItem&>(m_xDoc->GetDefault( RES_CHRATR_LANGUAGE )).GetLanguage();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -310,7 +301,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                 nFontWhich = RES_CHRATR_CJK_FONT;
                 nFontHeightWhich = RES_CHRATR_CJK_FONTSIZE;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                eLanguage = static_cast<const SvxLanguageItem&>(m_pDoc->GetDefault( RES_CHRATR_CJK_LANGUAGE )).GetLanguage();
+                eLanguage = static_cast<const SvxLanguageItem&>(mpDoc->GetDefault( RES_CHRATR_CJK_LANGUAGE )).GetLanguage();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 eLanguage = static_cast<const SvxLanguageItem&>(m_xDoc->GetDefault( RES_CHRATR_CJK_LANGUAGE )).GetLanguage();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -320,12 +311,12 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                 nFontWhich = RES_CHRATR_CTL_FONT;
                 nFontHeightWhich = RES_CHRATR_CTL_FONTSIZE;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                eLanguage = static_cast<const SvxLanguageItem&>(m_pDoc->GetDefault( RES_CHRATR_CTL_LANGUAGE )).GetLanguage();
+                eLanguage = static_cast<const SvxLanguageItem&>(mpDoc->GetDefault( RES_CHRATR_CTL_LANGUAGE )).GetLanguage();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 eLanguage = static_cast<const SvxLanguageItem&>(m_xDoc->GetDefault( RES_CHRATR_CTL_LANGUAGE )).GetLanguage();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             }
-            SwTextFormatColl *pColl = nullptr;
+            SwTxtFmtColl *pColl = 0;
             if(!pStdFont->IsFontDefault(aFontIdPoolId[nIdx]))
             {
                 sEntry = pStdFont->GetFontFor(aFontIdPoolId[nIdx]);
@@ -335,15 +326,15 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                     aFont = pPrt->GetFontMetric( aFont );
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(aFontIdPoolId[nIdx + 1]);
+                pColl = mpDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(aFontIdPoolId[nIdx + 1]);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pColl = m_xDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(aFontIdPoolId[nIdx + 1]);
+                pColl = m_xDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(aFontIdPoolId[nIdx + 1]);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( !bHTMLTemplSet ||
                     SfxItemState::SET != pColl->GetAttrSet().GetItemState(
                                                     nFontWhich, false ) )
                 {
-                    pColl->SetFormatAttr(SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
+                    pColl->SetFmtAttr(SvxFontItem(aFont.GetFamily(), aFont.GetName(),
                                                   aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
                 }
             }
@@ -352,15 +343,15 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
                 nFontHeight = SwStdFontConfig::GetDefaultHeightFor( aFontIdPoolId[nIdx], eLanguage );
             if(!pColl)
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pColl = m_pDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(aFontIdPoolId[nIdx + 1]);
+                pColl = mpDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(aFontIdPoolId[nIdx + 1]);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                pColl = m_xDoc->getIDocumentStylePoolAccess().GetTextCollFromPool(aFontIdPoolId[nIdx + 1]);
+                pColl = m_xDoc->getIDocumentStylePoolAccess().GetTxtCollFromPool(aFontIdPoolId[nIdx + 1]);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            SvxFontHeightItem aFontHeight( static_cast<const SvxFontHeightItem&>(pColl->GetFormatAttr( nFontHeightWhich )));
+            SvxFontHeightItem aFontHeight( (const SvxFontHeightItem&)pColl->GetFmtAttr( nFontHeightWhich, true ));
             if(aFontHeight.GetHeight() != sal::static_int_cast<sal_uInt32, sal_Int32>(nFontHeight))
             {
                 aFontHeight.SetHeight(nFontHeight);
-                pColl->SetFormatAttr( aFontHeight );
+                pColl->SetFmtAttr( aFontHeight );
             }
         }
 
@@ -368,28 +359,26 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
         // (old documents, where this property was not yet implemented, will get the
         // value 'false' in the SwDoc c-tor)
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_pDoc->getIDocumentSettingAccess().set( DocumentSettingId::MATH_BASELINE_ALIGNMENT,
+        mpDoc->getIDocumentSettingAccess().set( IDocumentSettingAccess::MATH_BASELINE_ALIGNMENT,
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_xDoc->getIDocumentSettingAccess().set( DocumentSettingId::MATH_BASELINE_ALIGNMENT,
+        m_xDoc->getIDocumentSettingAccess().set( IDocumentSettingAccess::MATH_BASELINE_ALIGNMENT,
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 SW_MOD()->GetUsrPref( bWeb )->IsAlignMathObjectsToBaseline() );
     }
 
     /* #106748# If the default frame direction of a document is RTL
-        the default adjustment is to the right. */
+        the default adjusment is to the right. */
     if( !bHTMLTemplSet &&
-        SvxFrameDirection::Horizontal_RL_TB == GetDefaultFrameDirection(GetAppLanguage()) )
-    {
+        FRMDIR_HORI_RIGHT_TOP == GetDefaultFrameDirection(GetAppLanguage()) )
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_pDoc->SetDefault( SvxAdjustItem(SvxAdjust::Right, RES_PARATR_ADJUST ) );
+        mpDoc->SetDefault( SvxAdjustItem(SVX_ADJUST_RIGHT, RES_PARATR_ADJUST ) );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_xDoc->SetDefault( SvxAdjustItem(SvxAdjust::Right, RES_PARATR_ADJUST ) );
+        m_xDoc->SetDefault( SvxAdjustItem(SVX_ADJUST_RIGHT, RES_PARATR_ADJUST ) );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    }
 
 // #i29550#
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->SetDefault( SfxBoolItem( RES_COLLAPSING_BORDERS, true ) );
+    mpDoc->SetDefault( SfxBoolItem( RES_COLLAPSING_BORDERS, true ) );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->SetDefault( SfxBoolItem( RES_COLLAPSING_BORDERS, true ) );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -397,7 +386,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
 
     //#i16874# AutoKerning as default for new documents
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->SetDefault( SvxAutoKernItem( true, RES_CHRATR_AUTOKERN ) );
+    mpDoc->SetDefault( SvxAutoKernItem( true, RES_CHRATR_AUTOKERN ) );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->SetDefault( SvxAutoKernItem( true, RES_CHRATR_AUTOKERN ) );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -406,7 +395,7 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
     // at the document instance, the document is modified. Thus, reset this
     // status here. Note: In method <SubInitNew()> this is also done.
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->getIDocumentState().ResetModified();
+    mpDoc->getIDocumentState().ResetModified();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->getIDocumentState().ResetModified();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -415,60 +404,54 @@ bool SwDocShell::InitNew( const uno::Reference < embed::XStorage >& xStor )
 }
 
 // Ctor with SfxCreateMode ?????
-SwDocShell::SwDocShell( SfxObjectCreateMode const eMode )
-    : SfxObjectShell(eMode)
+SwDocShell::SwDocShell( SfxObjectCreateMode eMode ) :
+    SfxObjectShell ( eMode ),
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_pDoc(nullptr)
+    mpDoc(0),
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_pFontList(nullptr)
-    , m_IsInUpdateFontList(false)
-    , m_pStyleManager(new svx::CommonStyleManager(*this))
-    , m_pView(nullptr)
-    , m_pWrtShell(nullptr)
-    , m_pOLEChildList(nullptr)
-    , m_nUpdateDocMode(document::UpdateDocMode::ACCORDING_TO_CONFIG)
-    , m_IsATemplate(false)
-    , m_IsRemovedInvisibleContent(false)
+    mpFontList(0),
+    mbInUpdateFontList(false),
+    mpView( 0 ),
+    mpWrtShell( 0 ),
+    mpOLEChildList( 0 ),
+    mnUpdateDocMode(document::UpdateDocMode::ACCORDING_TO_CONFIG),
+    bIsATemplate(false)
 {
     Init_Impl();
 }
 
 // Ctor / Dtor
-SwDocShell::SwDocShell( const SfxModelFlags i_nSfxCreationFlags )
-    : SfxObjectShell ( i_nSfxCreationFlags )
+SwDocShell::SwDocShell( const sal_uInt64 i_nSfxCreationFlags ) :
+    SfxObjectShell ( i_nSfxCreationFlags ),
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_pDoc(nullptr)
+    mpDoc(0),
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_pFontList(nullptr)
-    , m_IsInUpdateFontList(false)
-    , m_pStyleManager(new svx::CommonStyleManager(*this))
-    , m_pView(nullptr)
-    , m_pWrtShell(nullptr)
-    , m_pOLEChildList(nullptr)
-    , m_nUpdateDocMode(document::UpdateDocMode::ACCORDING_TO_CONFIG)
-    , m_IsATemplate(false)
-    , m_IsRemovedInvisibleContent(false)
+    mpFontList(0),
+    mbInUpdateFontList(false),
+    mpView( 0 ),
+    mpWrtShell( 0 ),
+    mpOLEChildList( 0 ),
+    mnUpdateDocMode(document::UpdateDocMode::ACCORDING_TO_CONFIG),
+    bIsATemplate(false)
 {
     Init_Impl();
 }
 
 // Ctor / Dtor
-SwDocShell::SwDocShell( SwDoc *const pD, SfxObjectCreateMode const eMode )
-    : SfxObjectShell(eMode)
+SwDocShell::SwDocShell( SwDoc *pD, SfxObjectCreateMode eMode ):
+    SfxObjectShell ( eMode ),
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_pDoc(pD)
+    mpDoc(pD),
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_xDoc(pD)
+    m_xDoc(pD),
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    , m_pFontList(nullptr)
-    , m_IsInUpdateFontList(false)
-    , m_pStyleManager(new svx::CommonStyleManager(*this))
-    , m_pView(nullptr)
-    , m_pWrtShell(nullptr)
-    , m_pOLEChildList(nullptr)
-    , m_nUpdateDocMode(document::UpdateDocMode::ACCORDING_TO_CONFIG)
-    , m_IsATemplate(false)
-    , m_IsRemovedInvisibleContent(false)
+    mpFontList(0),
+    mbInUpdateFontList(false),
+    mpView( 0 ),
+    mpWrtShell( 0 ),
+    mpOLEChildList( 0 ),
+    mnUpdateDocMode(document::UpdateDocMode::ACCORDING_TO_CONFIG),
+    bIsATemplate(false)
 {
     Init_Impl();
 }
@@ -478,14 +461,14 @@ SwDocShell::~SwDocShell()
 {
     // disable chart related objects now because in ~SwDoc it may be to late for this
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if (m_pDoc)
+    if( mpDoc )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (m_xDoc.get())
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_pDoc->getIDocumentChartDataProviderAccess().GetChartControllerHelper().Disconnect();
-        SwChartDataProvider *pPCD = m_pDoc->getIDocumentChartDataProviderAccess().GetChartDataProvider();
+        mpDoc->getIDocumentChartDataProviderAccess().GetChartControllerHelper().Disconnect();
+        SwChartDataProvider *pPCD = mpDoc->getIDocumentChartDataProviderAccess().GetChartDataProvider();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_xDoc->getIDocumentChartDataProviderAccess().GetChartControllerHelper().Disconnect();
         SwChartDataProvider *pPCD = m_xDoc->getIDocumentChartDataProviderAccess().GetChartDataProvider();
@@ -495,13 +478,13 @@ SwDocShell::~SwDocShell()
     }
 
     RemoveLink();
-    delete m_pFontList;
+    delete mpFontList;
 
     // we, as BroadCaster also become our own Listener
     // (for DocInfo/FileNames/....)
     EndListening( *this );
 
-    delete m_pOLEChildList;
+    delete mpOLEChildList;
 }
 
 void  SwDocShell::Init_Impl()
@@ -515,46 +498,46 @@ void  SwDocShell::Init_Impl()
     SetAutoStyleFilterIndex(3);
 
     // set map unit to twip
-    SetMapUnit( MapUnit::MapTwip );
+    SetMapUnit( MAP_TWIP );
 }
 
 void SwDocShell::AddLink()
 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if (!m_pDoc)
+    if( !mpDoc )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (!m_xDoc.get())
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
         SwDocFac aFactory;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_pDoc = aFactory.GetDoc();
-        m_pDoc->acquire();
-        m_pDoc->getIDocumentSettingAccess().set(DocumentSettingId::HTML_MODE, dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr );
+        mpDoc = aFactory.GetDoc();
+        mpDoc->acquire();
+        mpDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, ISA(SwWebDocShell) );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_xDoc = aFactory.GetDoc();
-        m_xDoc->getIDocumentSettingAccess().set(DocumentSettingId::HTML_MODE, dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr );
+        m_xDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     }
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     else
-        m_pDoc->acquire();
-    m_pDoc->SetDocShell( this );      // set the DocShell-Pointer for Doc
+        mpDoc->acquire();
+    mpDoc->SetDocShell( this );      // set the DocShell-Pointer for Doc
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->SetDocShell( this );      // set the DocShell-Pointer for Doc
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     uno::Reference< text::XTextDocument >  xDoc(GetBaseModel(), uno::UNO_QUERY);
-    static_cast<SwXTextDocument*>(xDoc.get())->Reactivate(this);
+    ((SwXTextDocument*)xDoc.get())->Reactivate(this);
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SetPool(&m_pDoc->GetAttrPool());
+    SetPool(&mpDoc->GetAttrPool());
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SetPool(&m_xDoc->GetAttrPool());
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
     // most suitably not until a sdbcx::View is created!!!
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->SetOle2Link(LINK(this, SwDocShell, Ole2ModifiedHdl));
+    mpDoc->SetOle2Link(LINK(this, SwDocShell, Ole2ModifiedHdl));
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->SetOle2Link(LINK(this, SwDocShell, Ole2ModifiedHdl));
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -563,26 +546,26 @@ void SwDocShell::AddLink()
 // create new FontList Change Printer
 void SwDocShell::UpdateFontList()
 {
-    if (!m_IsInUpdateFontList)
+    if(!mbInUpdateFontList)
     {
-        m_IsInUpdateFontList = true;
+        mbInUpdateFontList = true;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        OSL_ENSURE(m_pDoc, "No Doc no FontList");
-        if (m_pDoc)
+        OSL_ENSURE(mpDoc, "No Doc no FontList");
+        if( mpDoc )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         OSL_ENSURE(m_xDoc.get(), "No Doc no FontList");
         if (m_xDoc.get())
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         {
-            delete m_pFontList;
+            delete mpFontList;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pFontList = new FontList( m_pDoc->getIDocumentDeviceAccess().getReferenceDevice(true) );
+            mpFontList = new FontList( mpDoc->getIDocumentDeviceAccess().getReferenceDevice( true ) );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pFontList = new FontList( m_xDoc->getIDocumentDeviceAccess().getReferenceDevice(true) );
+            mpFontList = new FontList( m_xDoc->getIDocumentDeviceAccess().getReferenceDevice(true) );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            PutItem( SvxFontListItem( m_pFontList, SID_ATTR_CHAR_FONTLIST ) );
+            PutItem( SvxFontListItem( mpFontList, SID_ATTR_CHAR_FONTLIST ) );
         }
-        m_IsInUpdateFontList = false;
+        mbInUpdateFontList = false;
     }
 }
 
@@ -590,27 +573,28 @@ void SwDocShell::RemoveLink()
 {
     // disconnect Uno-Object
     uno::Reference< text::XTextDocument >  xDoc(GetBaseModel(), uno::UNO_QUERY);
-    static_cast<SwXTextDocument*>(xDoc.get())->Invalidate();
+    ((SwXTextDocument*)xDoc.get())->Invalidate();
+    aFinishedTimer.Stop();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if (m_pDoc)
+    if (mpDoc)
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (m_xDoc.get())
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     {
-        if (m_xBasePool.is())
+        if( mxBasePool.is() )
         {
-            static_cast<SwDocStyleSheetPool*>(m_xBasePool.get())->dispose();
-            m_xBasePool.clear();
+            static_cast<SwDocStyleSheetPool*>(mxBasePool.get())->dispose();
+            mxBasePool.clear();
         }
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        sal_Int8 nRefCt = static_cast< sal_Int8 >(m_pDoc->release());
-        m_pDoc->SetOle2Link(Link<bool,void>());
-        m_pDoc->SetDocShell( nullptr );
+        sal_Int8 nRefCt = static_cast< sal_Int8 >(mpDoc->release());
+        mpDoc->SetOle2Link(Link());
+        mpDoc->SetDocShell( 0 );
         if( !nRefCt )
-            delete m_pDoc;
-        m_pDoc = nullptr;       // we don't have the Doc anymore!!
+            delete mpDoc;
+        mpDoc = 0;       // we don't have the Doc anymore!!
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_xDoc->SetOle2Link(Link<bool,void>());
+        m_xDoc->SetOle2Link(Link());
         m_xDoc->SetDocShell( nullptr );
         m_xDoc.clear();       // we don't have the Doc anymore!!
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -620,41 +604,27 @@ void SwDocShell::InvalidateModel()
 {
     // disconnect Uno-Object
     uno::Reference< text::XTextDocument >  xDoc(GetBaseModel(), uno::UNO_QUERY);
-    static_cast<SwXTextDocument*>(xDoc.get())->Invalidate();
+    ((SwXTextDocument*)xDoc.get())->Invalidate();
 }
 void SwDocShell::ReactivateModel()
 {
     // disconnect Uno-Object
     uno::Reference< text::XTextDocument >  xDoc(GetBaseModel(), uno::UNO_QUERY);
-    static_cast<SwXTextDocument*>(xDoc.get())->Reactivate(this);
+    ((SwXTextDocument*)xDoc.get())->Reactivate(this);
 }
 
 // Load, Default-Format
 bool  SwDocShell::Load( SfxMedium& rMedium )
 {
     bool bRet = false;
-
-    // If this is an ODF file being loaded, then by default, use legacy processing
-    // for tdf#99729 (if required, it will be overridden in *::ReadUserDataSequence())
-    if (IsOwnStorageFormat(rMedium))
-    {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if (m_pDoc && m_pDoc->getIDocumentDrawModelAccess().GetDrawModel())
-            m_pDoc->getIDocumentDrawModelAccess().GetDrawModel()->SetAnchoredTextOverflowLegacy(true);
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if (m_xDoc.get() && m_xDoc->getIDocumentDrawModelAccess().GetDrawModel())
-            m_xDoc->getIDocumentDrawModelAccess().GetDrawModel()->SetAnchoredTextOverflowLegacy(true);
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    }
-
-    if (SfxObjectShell::Load(rMedium))
+    if( SfxObjectShell::Load( rMedium ))
     {
         comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = getEmbeddedObjectContainer();
         rEmbeddedObjectContainer.setUserAllowsLinkUpdate(false);
 
         SAL_INFO( "sw.ui", "after SfxInPlaceObject::Load" );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if (m_pDoc)              // for last version!!
+        if (mpDoc)              // for last version!!
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if (m_xDoc.get())       // for last version!!
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -664,29 +634,29 @@ bool  SwDocShell::Load( SfxMedium& rMedium )
 
         // Loading
         // for MD
-        OSL_ENSURE( !m_xBasePool.is(), "who hasn't destroyed their Pool?" );
+        OSL_ENSURE( !mxBasePool.is(), "who hasn't destroyed their Pool?" );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_xBasePool = new SwDocStyleSheetPool( *m_pDoc, SfxObjectCreateMode::ORGANIZER == GetCreateMode() );
+        mxBasePool = new SwDocStyleSheetPool( *mpDoc, SFX_CREATE_MODE_ORGANIZER == GetCreateMode() );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_xBasePool = new SwDocStyleSheetPool( *m_xDoc, SfxObjectCreateMode::ORGANIZER == GetCreateMode() );
+        mxBasePool = new SwDocStyleSheetPool( *m_xDoc, SFX_CREATE_MODE_ORGANIZER == GetCreateMode() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if(GetCreateMode() != SfxObjectCreateMode::ORGANIZER)
+        if(GetCreateMode() != SFX_CREATE_MODE_ORGANIZER)
         {
-            const SfxUInt16Item* pUpdateDocItem = SfxItemSet::GetItem<SfxUInt16Item>(rMedium.GetItemSet(), SID_UPDATEDOCMODE, false);
-            m_nUpdateDocMode = pUpdateDocItem ? pUpdateDocItem->GetValue() : document::UpdateDocMode::NO_UPDATE;
+            SFX_ITEMSET_ARG( rMedium.GetItemSet(), pUpdateDocItem, SfxUInt16Item, SID_UPDATEDOCMODE, false);
+            mnUpdateDocMode = pUpdateDocItem ? pUpdateDocItem->GetValue() : document::UpdateDocMode::NO_UPDATE;
         }
 
         SwWait aWait( *this, true );
         sal_uInt32 nErr = ERR_SWG_READ_ERROR;
         switch( GetCreateMode() )
         {
-            case SfxObjectCreateMode::ORGANIZER:
+            case SFX_CREATE_MODE_ORGANIZER:
                 {
                     if( ReadXML )
                     {
                         ReadXML->SetOrganizerMode( true );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        SwReader aRdr( rMedium, aEmptyOUStr, m_pDoc );
+                        SwReader aRdr( rMedium, aEmptyOUStr, mpDoc );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         SwReader aRdr( rMedium, aEmptyOUStr, m_xDoc.get() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -696,20 +666,21 @@ bool  SwDocShell::Load( SfxMedium& rMedium )
                 }
                 break;
 
-            case SfxObjectCreateMode::INTERNAL:
-            case SfxObjectCreateMode::EMBEDDED:
+            case SFX_CREATE_MODE_INTERNAL:
+            case SFX_CREATE_MODE_EMBEDDED:
                 {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                    SwTransferable::InitOle( this, *m_pDoc );
+                    SwTransferable::InitOle( this, *mpDoc );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     SwTransferable::InitOle( this, *m_xDoc );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 }
                 // suppress SfxProgress, when we are Embedded
                 SW_MOD()->SetEmbeddedLoadSave( true );
-                SAL_FALLTHROUGH;
+                // no break;
 
-            case SfxObjectCreateMode::STANDARD:
+            case SFX_CREATE_MODE_STANDARD:
+            case SFX_CREATE_MODE_PREVIEW:
                 {
                     Reader *pReader = ReadXML;
                     if( pReader )
@@ -717,7 +688,7 @@ bool  SwDocShell::Load( SfxMedium& rMedium )
                         // set Doc's DocInfo at DocShell-Medium
                         SAL_INFO( "sw.ui", "before ReadDocInfo" );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                        SwReader aRdr( rMedium, aEmptyOUStr, m_pDoc );
+                        SwReader aRdr( rMedium, aEmptyOUStr, mpDoc );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         SwReader aRdr( rMedium, aEmptyOUStr, m_xDoc.get() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -727,24 +698,24 @@ bool  SwDocShell::Load( SfxMedium& rMedium )
                         // If a XML document is loaded, the global doc/web doc
                         // flags have to be set, because they aren't loaded
                         // by this formats.
-                        if( dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr )
+                        if( ISA( SwWebDocShell ) )
                         {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            if (!m_pDoc->getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE))
-                                m_pDoc->getIDocumentSettingAccess().set(DocumentSettingId::HTML_MODE, true);
+                            if( !mpDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::HTML_MODE) )
+                                mpDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, true);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            if (!m_xDoc->getIDocumentSettingAccess().get(DocumentSettingId::HTML_MODE))
-                                m_xDoc->getIDocumentSettingAccess().set(DocumentSettingId::HTML_MODE, true);
+                            if (!m_xDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::HTML_MODE))
+                                m_xDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::HTML_MODE, true);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         }
-                        if( dynamic_cast< const SwGlobalDocShell *>( this ) !=  nullptr )
+                        if( ISA( SwGlobalDocShell ) )
                         {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            if (!m_pDoc->getIDocumentSettingAccess().get(DocumentSettingId::GLOBAL_DOCUMENT))
-                                m_pDoc->getIDocumentSettingAccess().set(DocumentSettingId::GLOBAL_DOCUMENT, true);
+                            if( !mpDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::GLOBAL_DOCUMENT) )
+                                mpDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::GLOBAL_DOCUMENT, true);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                            if (!m_xDoc->getIDocumentSettingAccess().get(DocumentSettingId::GLOBAL_DOCUMENT))
-                                m_xDoc->getIDocumentSettingAccess().set(DocumentSettingId::GLOBAL_DOCUMENT, true);
+                            if (!m_xDoc->getIDocumentSettingAccess().get(IDocumentSettingAccess::GLOBAL_DOCUMENT))
+                                m_xDoc->getIDocumentSettingAccess().set(IDocumentSettingAccess::GLOBAL_DOCUMENT, true);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         }
                     }
@@ -757,20 +728,20 @@ bool  SwDocShell::Load( SfxMedium& rMedium )
 
         UpdateFontList();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        InitDrawModelAndDocShell(this, m_pDoc ? m_pDoc->getIDocumentDrawModelAccess().GetDrawModel() : nullptr);
+        InitDrawModelAndDocShell(this, mpDoc ? mpDoc->getIDocumentDrawModelAccess().GetDrawModel() : 0);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         InitDrawModelAndDocShell(this, m_xDoc.get() ? m_xDoc->getIDocumentDrawModelAccess().GetDrawModel() : nullptr);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-        SetError(nErr);
+        SetError( nErr, OUString( OSL_LOG_PREFIX ) );
         bRet = !IsError( nErr );
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        if (bRet && !m_pDoc->IsInLoadAsynchron() &&
+        if ( bRet && !mpDoc->IsInLoadAsynchron() &&
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if (bRet && !m_xDoc->IsInLoadAsynchron() &&
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            GetCreateMode() == SfxObjectCreateMode::STANDARD)
+             GetCreateMode() == SFX_CREATE_MODE_STANDARD )
         {
             LoadingFinished();
         }
@@ -786,7 +757,7 @@ bool  SwDocShell::LoadFrom( SfxMedium& rMedium )
 {
     bool bRet = false;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    if (m_pDoc)
+    if( mpDoc )
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     if (m_xDoc.get())
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -803,17 +774,17 @@ bool  SwDocShell::LoadFrom( SfxMedium& rMedium )
             // Loading
             SwWait aWait( *this, true );
             {
-                OSL_ENSURE( !m_xBasePool.is(), "who hasn't destroyed their Pool?" );
+                OSL_ENSURE( !mxBasePool.is(), "who hasn't destroyed their Pool?" );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                m_xBasePool = new SwDocStyleSheetPool( *m_pDoc, SfxObjectCreateMode::ORGANIZER == GetCreateMode() );
+                mxBasePool = new SwDocStyleSheetPool( *mpDoc, SFX_CREATE_MODE_ORGANIZER == GetCreateMode() );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                m_xBasePool = new SwDocStyleSheetPool( *m_xDoc, SfxObjectCreateMode::ORGANIZER == GetCreateMode() );
+                mxBasePool = new SwDocStyleSheetPool( *m_xDoc, SFX_CREATE_MODE_ORGANIZER == GetCreateMode() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( ReadXML )
                 {
                     ReadXML->SetOrganizerMode( true );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                    SwReader aRdr( rMedium, aEmptyOUStr, m_pDoc );
+                    SwReader aRdr( rMedium, aEmptyOUStr, mpDoc );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     SwReader aRdr( rMedium, aEmptyOUStr, m_xDoc.get() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -827,14 +798,14 @@ bool  SwDocShell::LoadFrom( SfxMedium& rMedium )
             OSL_FAIL("Code removed!");
         }
 
-        SetError(nErr);
+        SetError( nErr, OUString( OSL_LOG_PREFIX ) );
         bRet = !IsError( nErr );
 
     } while( false );
 
     SfxObjectShell::LoadFrom( rMedium );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->getIDocumentState().ResetModified();
+    mpDoc->getIDocumentState().ResetModified();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->getIDocumentState().ResetModified();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -843,28 +814,28 @@ bool  SwDocShell::LoadFrom( SfxMedium& rMedium )
 
 void SwDocShell::SubInitNew()
 {
-    OSL_ENSURE( !m_xBasePool.is(), "who hasn't destroyed their Pool?" );
+    OSL_ENSURE( !mxBasePool.is(), "who hasn't destroyed their Pool?" );
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_xBasePool = new SwDocStyleSheetPool( *m_pDoc, SfxObjectCreateMode::ORGANIZER == GetCreateMode() );
+    mxBasePool = new SwDocStyleSheetPool( *mpDoc, SFX_CREATE_MODE_ORGANIZER == GetCreateMode() );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_xBasePool = new SwDocStyleSheetPool( *m_xDoc, SfxObjectCreateMode::ORGANIZER == GetCreateMode() );
+    mxBasePool = new SwDocStyleSheetPool( *m_xDoc, SFX_CREATE_MODE_ORGANIZER == GetCreateMode() );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     UpdateFontList();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    InitDrawModelAndDocShell(this, m_pDoc ? m_pDoc->getIDocumentDrawModelAccess().GetDrawModel() : nullptr);
+    InitDrawModelAndDocShell(this, mpDoc ? mpDoc->getIDocumentDrawModelAccess().GetDrawModel() : 0);
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    InitDrawModelAndDocShell(this, m_xDoc ? m_xDoc->getIDocumentDrawModelAccess().GetDrawModel() : nullptr);
+    InitDrawModelAndDocShell(this, m_xDoc.is() ? m_xDoc->getIDocumentDrawModelAccess().GetDrawModel() : nullptr);
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->getIDocumentSettingAccess().setLinkUpdateMode( GLOBALSETTING );
-    m_pDoc->getIDocumentSettingAccess().setFieldUpdateFlags( AUTOUPD_GLOBALSETTING );
+    mpDoc->getIDocumentSettingAccess().setLinkUpdateMode( GLOBALSETTING );
+    mpDoc->getIDocumentSettingAccess().setFieldUpdateFlags( AUTOUPD_GLOBALSETTING );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->getIDocumentSettingAccess().setLinkUpdateMode( GLOBALSETTING );
     m_xDoc->getIDocumentSettingAccess().setFieldUpdateFlags( AUTOUPD_GLOBALSETTING );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-    bool bWeb = dynamic_cast< const SwWebDocShell *>( this ) !=  nullptr;
+    bool bWeb = ISA(SwWebDocShell);
 
     sal_uInt16 nRange[] =   {
         RES_PARATR_ADJUST, RES_PARATR_ADJUST,
@@ -875,11 +846,11 @@ void SwDocShell::SubInitNew()
         0, 0, 0  };
     if(!bWeb)
     {
-        nRange[ SAL_N_ELEMENTS(nRange) - 3 ] = RES_PARATR_TABSTOP;
-        nRange[ SAL_N_ELEMENTS(nRange) - 2 ] = RES_PARATR_HYPHENZONE;
+        nRange[ (sizeof(nRange)/sizeof(nRange[0])) - 3 ] = RES_PARATR_TABSTOP;
+        nRange[ (sizeof(nRange)/sizeof(nRange[0])) - 2 ] = RES_PARATR_HYPHENZONE;
     }
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    SfxItemSet aDfltSet( m_pDoc->GetAttrPool(), nRange );
+    SfxItemSet aDfltSet( mpDoc->GetAttrPool(), nRange );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SfxItemSet aDfltSet( m_xDoc->GetAttrPool(), nRange );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -887,12 +858,11 @@ void SwDocShell::SubInitNew()
     //! get lingu options without loading lingu DLL
     SvtLinguOptions aLinguOpt;
 
-    if (!utl::ConfigManager::IsAvoidConfig())
-        SvtLinguConfig().GetOptions(aLinguOpt);
+    SvtLinguConfig().GetOptions( aLinguOpt );
 
-    LanguageType nVal = MsLangId::resolveSystemLanguageByScriptType(aLinguOpt.nDefaultLanguage, css::i18n::ScriptType::LATIN),
-                 eCJK = MsLangId::resolveSystemLanguageByScriptType(aLinguOpt.nDefaultLanguage_CJK, css::i18n::ScriptType::ASIAN),
-                 eCTL = MsLangId::resolveSystemLanguageByScriptType(aLinguOpt.nDefaultLanguage_CTL, css::i18n::ScriptType::COMPLEX);
+    sal_Int16   nVal = MsLangId::resolveSystemLanguageByScriptType(aLinguOpt.nDefaultLanguage, ::com::sun::star::i18n::ScriptType::LATIN),
+                eCJK = MsLangId::resolveSystemLanguageByScriptType(aLinguOpt.nDefaultLanguage_CJK, ::com::sun::star::i18n::ScriptType::ASIAN),
+                eCTL = MsLangId::resolveSystemLanguageByScriptType(aLinguOpt.nDefaultLanguage_CTL, ::com::sun::star::i18n::ScriptType::COMPLEX);
     aDfltSet.Put( SvxLanguageItem( nVal, RES_CHRATR_LANGUAGE ) );
     aDfltSet.Put( SvxLanguageItem( eCJK, RES_CHRATR_CJK_LANGUAGE ) );
     aDfltSet.Put( SvxLanguageItem( eCTL, RES_CHRATR_CTL_LANGUAGE ) );
@@ -900,11 +870,12 @@ void SwDocShell::SubInitNew()
     if(!bWeb)
     {
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        SvxHyphenZoneItem aHyp( static_cast<const SvxHyphenZoneItem&>( m_pDoc->GetDefault(
+        SvxHyphenZoneItem aHyp( (SvxHyphenZoneItem&) mpDoc->GetDefault(
+                                                        RES_PARATR_HYPHENZONE) );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxHyphenZoneItem aHyp( static_cast<const SvxHyphenZoneItem&>( m_xDoc->GetDefault(
+                                                         RES_PARATR_HYPHENZONE)  ) );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-                                                        RES_PARATR_HYPHENZONE)  ) );
         aHyp.GetMinLead()   = static_cast< sal_uInt8 >(aLinguOpt.nHyphMinLeading);
         aHyp.GetMinTrail()  = static_cast< sal_uInt8 >(aLinguOpt.nHyphMinTrailing);
 
@@ -913,12 +884,12 @@ void SwDocShell::SubInitNew()
         sal_uInt16 nNewPos = static_cast< sal_uInt16 >(SW_MOD()->GetUsrPref(false)->GetDefTab());
         if( nNewPos )
             aDfltSet.Put( SvxTabStopItem( 1, nNewPos,
-                                          SvxTabAdjust::Default, RES_PARATR_TABSTOP ) );
+                                          SVX_TAB_ADJUST_DEFAULT, RES_PARATR_TABSTOP ) );
     }
     aDfltSet.Put( SvxColorItem( Color( COL_AUTO ), RES_CHRATR_COLOR ) );
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->SetDefault( aDfltSet );
+    mpDoc->SetDefault( aDfltSet );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->SetDefault( aDfltSet );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -928,26 +899,14 @@ void SwDocShell::SubInitNew()
     {
         bool bSquaredPageMode = SW_MOD()->GetUsrPref(false)->IsSquaredPageMode();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        m_pDoc->SetDefaultPageMode( bSquaredPageMode );
+        mpDoc->SetDefaultPageMode( bSquaredPageMode );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         m_xDoc->SetDefaultPageMode( bSquaredPageMode );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-
-        // only set Widow/Orphan defaults on a new, non-web document - not an opened one
-        if( GetMedium() && GetMedium()->GetOrigURL().isEmpty() )
-        {
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_pDoc->SetDefault( SvxWidowsItem(  (sal_uInt8) 2, RES_PARATR_WIDOWS)  );
-            m_pDoc->SetDefault( SvxOrphansItem( (sal_uInt8) 2, RES_PARATR_ORPHANS) );
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-            m_xDoc->SetDefault( SvxWidowsItem(  (sal_uInt8) 2, RES_PARATR_WIDOWS)  );
-            m_xDoc->SetDefault( SvxOrphansItem( (sal_uInt8) 2, RES_PARATR_ORPHANS) );
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-        }
     }
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    m_pDoc->getIDocumentState().ResetModified();
+    mpDoc->getIDocumentState().ResetModified();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     m_xDoc->getIDocumentState().ResetModified();
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -956,22 +915,14 @@ void SwDocShell::SubInitNew()
 /*
  * Document Interface Access
  */
-IDocumentDeviceAccess& SwDocShell::getIDocumentDeviceAccess()
-{
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return m_pDoc->getIDocumentDeviceAccess();
+IDocumentDeviceAccess* SwDocShell::getIDocumentDeviceAccess() { return &mpDoc->getIDocumentDeviceAccess(); }
+const IDocumentSettingAccess* SwDocShell::getIDocumentSettingAccess() const { return &mpDoc->getIDocumentSettingAccess(); }
+IDocumentChartDataProviderAccess* SwDocShell::getIDocumentChartDataProviderAccess() { return &mpDoc->getIDocumentChartDataProviderAccess(); }
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    return m_xDoc->getIDocumentDeviceAccess();
+IDocumentDeviceAccess* SwDocShell::getIDocumentDeviceAccess() { return &m_xDoc->getIDocumentDeviceAccess(); }
+const IDocumentSettingAccess* SwDocShell::getIDocumentSettingAccess() const { return &m_xDoc->getIDocumentSettingAccess(); }
+IDocumentChartDataProviderAccess* SwDocShell::getIDocumentChartDataProviderAccess() { return &m_xDoc->getIDocumentChartDataProviderAccess(); }
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-}
-
-IDocumentChartDataProviderAccess& SwDocShell::getIDocumentChartDataProviderAccess()
-{
-#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-     return m_pDoc->getIDocumentChartDataProviderAccess();
-#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-     return m_xDoc->getIDocumentChartDataProviderAccess();
-#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-}
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

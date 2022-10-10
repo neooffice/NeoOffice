@@ -1,5 +1,5 @@
---- hsqldb/UnpackedTarball_hsqldb.mk	2018-05-09 05:27:29.000000000 -0500
-+++ hsqldb/UnpackedTarball_hsqldb.mk	2018-12-30 15:38:46.000000000 -0600
+--- hsqldb/UnpackedTarball_hsqldb.mk	2015-11-25 04:55:38.000000000 -0800
++++ hsqldb/UnpackedTarball_hsqldb.mk	2016-11-13 13:52:01.000000000 -0800
 @@ -27,6 +27,7 @@
  	$(if $(HSQLDB_USE_JDBC_4_1),\
  		external/hsqldb/patches/jdbc-4.1.patch \
@@ -8,16 +8,6 @@
  ))
  
  # vim: set noet sw=4 ts=4:
---- redland/ExternalProject_raptor.mk	2018-05-09 05:27:29.000000000 -0500
-+++ redland/ExternalProject_raptor.mk	2018-12-30 15:35:04.000000000 -0600
-@@ -28,6 +28,7 @@
- 			 --enable-parsers="rdfxml ntriples turtle trig guess rss-tag-soup" \
- 			--with-www=xml \
- 			--without-xslt-config \
-+			$(if $(filter MACOSX,$(OS)),--with-xml2-config=/usr/bin/xml2-config) \
- 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) \
- 			$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
- 			$(if $(filter MACOSX,$(OS)),--prefix=/@.__________________________________________________OOO) \
 --- opencollada/patches/opencollada.libxml.patch.0	2015-11-25 05:55:38.000000000 -0700
 +++ opencollada/patches/opencollada.libxml.patch.0	2018-10-15 19:04:44.000000000 -0600
 @@ -10,3 +10,14 @@
@@ -35,180 +25,420 @@
 + #include <memory>
 + #include <string.h>
 + #include <limits>
---- curl/curl-osx.patch.1	2018-05-09 05:27:29.000000000 -0500
-+++ curl/curl-osx.patch.1	2018-12-30 18:53:54.000000000 -0600
-@@ -283,3 +283,14 @@
-  /* Define to 1 if compiler supports C99 variadic macro style. */
-  #cmakedefine HAVE_VARIADIC_MACROS_C99 1
-  
-+--- a/acinclude.m4	2016-12-19 01:27:56.000000000 -0600
-++++ b/acinclude.m4	2018-12-30 18:52:22.000000000 -0600
-+@@ -3224,7 +3224,7 @@
-+     AC_MSG_CHECKING([for *version-min in CFLAGS])
-+     min=""
-+     if test -z "$(echo $CFLAGS | grep m.*os.*-version-min)"; then
-+-      min="-mmacosx-version-min=10.8"
-++      min="-mmacosx-version-min=10.14"
-+       CFLAGS="$CFLAGS $min"
-+     fi
-+     if test -z "$min"; then
---- curl/UnpackedTarball_curl.mk	2018-05-09 05:27:29.000000000 -0500
-+++ curl/UnpackedTarball_curl.mk	2018-12-30 19:12:02.000000000 -0600
-@@ -35,11 +35,9 @@
- endif
+--- libvisio/UnpackedTarball_libvisio.mk	2015-11-25 04:55:38.000000000 -0800
++++ libvisio/UnpackedTarball_libvisio.mk	2019-08-07 19:37:41.000000000 -0700
+@@ -13,6 +13,7 @@
  
- ifeq ($(OS),MACOSX)
--ifneq ($(filter 1090 101000,$(MAC_OS_X_VERSION_MIN_REQUIRED)),)
- $(eval $(call gb_UnpackedTarball_add_patches,curl,\
- 	external/curl/curl-osx.patch.1 \
+ $(eval $(call gb_UnpackedTarball_add_patches,libvisio,\
+        external/libvisio/vsd-msvc-max.patch.1 \
++       external/libvisio/libvisio.patch.1 \
  ))
- endif
--endif
  
  # vim: set noet sw=4 ts=4:
---- opencollada/patches/libc++.patch.0	2018-05-09 05:27:29.000000000 -0500
-+++ opencollada/patches/libc++.patch.0	2018-12-30 19:58:11.000000000 -0600
-@@ -9,13 +9,3 @@
-      #include <unordered_map>
-      #include <unordered_set>
-      #define COLLADABU_HASH_MAP std::unordered_map
----- GeneratedSaxParser/src/GeneratedSaxParserUtils.cpp
--+++ GeneratedSaxParser/src/GeneratedSaxParserUtils.cpp
--@@ -10,6 +10,7 @@
-- 
-- #include "GeneratedSaxParserUtils.h"
-- #include <math.h>
--+#include <cmath>
-- #include <memory>
-- #include <string.h>
-- #include <limits>
---- hunspell/ExternalProject_hunspell.mk	2018-05-09 05:27:29.000000000 -0500
-+++ hunspell/ExternalProject_hunspell.mk	2018-12-31 07:34:38.000000000 -0600
-@@ -27,6 +27,7 @@
- 		LIBS="$(gb_STDLIBS) $(LIBS)" \
- 		autoreconf && \
- 		$(SHELL) ./configure --disable-shared --disable-nls --with-pic \
-+			--disable-dependency-tracking \
- 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM))\
- 			$(if $(filter AIX,$(OS)),CFLAGS="-D_LINUX_SOURCE_COMPAT") \
- 			$(if $(hunspell_CPPFLAGS),CPPFLAGS='$(hunspell_CPPFLAGS)') \
---- libvisio/UnpackedTarball_libvisio.mk	2018-05-09 03:27:29.000000000 -0700
-+++ libvisio/UnpackedTarball_libvisio.mk	2019-08-07 21:48:55.000000000 -0700
-@@ -15,6 +15,7 @@
+--- libabw/UnpackedTarball_libabw.mk	2015-11-25 04:55:38.000000000 -0800
++++ libabw/UnpackedTarball_libabw.mk	2019-08-16 10:44:25.000000000 -0700
+@@ -11,4 +11,8 @@
  
- $(eval $(call gb_UnpackedTarball_add_patches,libvisio, \
-     external/libvisio/ubsan.patch \
-+    external/libvisio/libvisio.patch \
- ))
+ $(eval $(call gb_UnpackedTarball_set_tarball,libabw,$(ABW_TARBALL)))
  
- ifeq ($(COM_IS_CLANG),TRUE)
---- libabw/UnpackedTarball_libabw.mk	2018-05-09 03:27:29.000000000 -0700
-+++ libabw/UnpackedTarball_libabw.mk	2019-08-16 11:38:06.000000000 -0700
-@@ -21,4 +21,8 @@
- endif
- endif
- 
-+$(eval $(call gb_UnpackedTarball_add_patches,libabw, \
-+    external/libabw/libabw.patch \
++$(eval $(call gb_UnpackedTarball_add_patches,libabw,\
++       external/libabw/libabw.patch.1 \
 +))
 +
  # vim: set noet sw=4 ts=4:
---- expat/ExternalProject_expat.mk	2018-05-09 03:27:29.000000000 -0700
-+++ expat/ExternalProject_expat.mk	2019-09-22 18:50:39.000000000 -0700
-@@ -15,7 +15,7 @@
- 
- $(call gb_ExternalProject_get_state_target,expat,configure) :
- 	$(call gb_ExternalProject_run,configure,\
--		./configure \
-+		./configure --without-docbook \
- 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM) \
- 			$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
- 	,,expat_configure.log)
---- expat/StaticLibrary_expat.mk	2018-05-09 03:27:29.000000000 -0700
-+++ expat/StaticLibrary_expat.mk	2019-09-22 18:52:00.000000000 -0700
+--- Module_external.mk	2015-11-25 07:55:38.000000000 -0500
++++ Module_external.mk	2021-10-27 08:43:49.000000000 -0400
+@@ -64,6 +64,7 @@
+ 	$(call gb_Helper_optional,LIBXML2,libxml2) \
+ 	$(call gb_Helper_optional,LIBXSLT,libxslt) \
+ 	$(call gb_Helper_optional,LPSOLVE,lpsolve) \
++	$(call gb_Helper_optional,LIBTOMMATH,libtommath) \
+ 	$(call gb_Helper_optional,MARIADB,libmariadb) \
+ 	$(call gb_Helper_optional,MDDS,mdds) \
+ 	$(if $(WITH_EXTRA_EXTENSIONS),misc_extensions) \
+--- libcmis/UnpackedTarball_libcmis.mk	2020-12-09 13:56:14.000000000 -0500
++++ libcmis/UnpackedTarball_libcmis.mk	2020-12-21 06:56:15.000000000 -0500
 @@ -9,7 +9,7 @@
  
- $(eval $(call gb_StaticLibrary_StaticLibrary,expat))
+ $(eval $(call gb_UnpackedTarball_UnpackedTarball,libcmis))
  
--$(eval $(call gb_StaticLibrary_set_warnings_not_errors,expat))
-+$(eval $(call gb_StaticLibrary_set_warnings_disabled,expat))
+-$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(LIBCMIS_TARBALL)))
++$(eval $(call gb_UnpackedTarball_set_tarball,libcmis,$(CMIS_TARBALL)))
  
- $(eval $(call gb_StaticLibrary_use_unpacked,expat,expat))
+ $(eval $(call gb_UnpackedTarball_set_patchlevel,libcmis,1))
  
-@@ -42,13 +42,7 @@
+--- libpng/UnpackedTarball_libpng.mk	2020-12-17 16:59:38.000000000 -0500
++++ libpng/UnpackedTarball_libpng.mk	2020-12-28 12:49:19.000000000 -0500
+@@ -9,7 +9,7 @@
+ 
+ $(eval $(call gb_UnpackedTarball_UnpackedTarball,libpng))
+ 
+-$(eval $(call gb_UnpackedTarball_set_tarball,libpng,$(LIBPNG_TARBALL)))
++$(eval $(call gb_UnpackedTarball_set_tarball,libpng,$(PNG_TARBALL)))
+ 
+ $(eval $(call gb_UnpackedTarball_add_files,libpng,.,\
+ 	external/libpng/configs/pnglibconf.h \
+--- libgltf/ExternalProject_libgltf.mk	2015-11-25 07:55:38.000000000 -0500
++++ libgltf/ExternalProject_libgltf.mk	2020-12-28 16:36:15.000000000 -0500
+@@ -62,6 +62,7 @@
+ 	$(call gb_ExternalProject_run,build,\
+ 		export PKG_CONFIG="" \
+ 		&& ./configure \
++			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
+ 			--disable-shared \
+ 			--enable-static \
+ 			--with-pic \
+--- openssl/ExternalProject_openssl.mk	2015-11-25 07:55:38.000000000 -0500
++++ openssl/ExternalProject_openssl.mk	2020-12-29 12:42:21.000000000 -0500
+@@ -52,6 +52,7 @@
+             $(if $(filter POWERPC,$(CPUNAME)),darwin-ppc-cc)\
+             $(if $(filter INTEL,$(CPUNAME)),darwin-i386-cc)\
+             $(if $(filter X86_64,$(CPUNAME)),darwin64-x86_64-cc)\
++            $(if $(filter AARCH64,$(CPUNAME)),darwin64-arm64-cc)\
+           )\
+         )\
+       )\
+--- openssl/UnpackedTarball_openssl.mk	2015-11-25 07:55:38.000000000 -0500
++++ openssl/UnpackedTarball_openssl.mk	2020-12-29 12:41:34.000000000 -0500
+@@ -31,6 +31,7 @@
+ 	external/openssl/opensslios.patch \
+ 	external/openssl/opensslosxppc.patch \
+ 	external/openssl/openssl-3650-masm.patch.1 \
++	external/openssl/openssl-macos-arm64.patch.1 \
  ))
- endif
  
--# suppress warning spam
--$(eval $(call gb_StaticLibrary_add_cflags,expat,\
--	-w \
--))
--
- $(eval $(call gb_StaticLibrary_add_generated_cobjects,expat,\
--	UnpackedTarball/expat/lib/loadlibrary \
- 	UnpackedTarball/expat/lib/xmlparse \
- 	UnpackedTarball/expat/lib/xmlrole \
- 	UnpackedTarball/expat/lib/xmltok \
---- expat/StaticLibrary_expat_x64.mk	2018-05-09 03:27:29.000000000 -0700
-+++ expat/StaticLibrary_expat_x64.mk	2019-09-22 18:52:16.000000000 -0700
-@@ -11,7 +11,7 @@
- 
- $(eval $(call gb_StaticLibrary_set_x64,expat_x64,YES))
- 
--$(eval $(call gb_StaticLibrary_set_warnings_not_errors,expat_x64))
-+$(eval $(call gb_StaticLibrary_set_warnings_disabled,expat_x64))
- 
- $(eval $(call gb_StaticLibrary_use_unpacked,expat_x64,expat))
- 
-@@ -25,7 +25,6 @@
- ))
- 
- $(eval $(call gb_StaticLibrary_add_x64_generated_cobjects,expat_x64,\
--	UnpackedTarball/expat/lib/loadlibrary_x64 \
- 	UnpackedTarball/expat/lib/xmlparse_x64 \
- 	UnpackedTarball/expat/lib/xmltok_x64 \
- 	UnpackedTarball/expat/lib/xmlrole_x64 \
---- expat/UnpackedTarball_expat.mk	2018-05-09 03:27:29.000000000 -0700
-+++ expat/UnpackedTarball_expat.mk	2019-09-22 18:52:26.000000000 -0700
-@@ -11,6 +11,8 @@
- 
- $(eval $(call gb_UnpackedTarball_set_tarball,expat,$(EXPAT_TARBALL)))
- 
-+$(eval $(call gb_UnpackedTarball_update_autoconf_configs,expat,conftools))
-+
- $(eval $(call gb_UnpackedTarball_add_patches,expat,\
- 	external/expat/expat-winapi.patch \
- ))
-@@ -24,7 +26,6 @@
- 
- $(eval $(call gb_UnpackedTarball_set_post_action,expat,\
- 	$(if $(filter $(BUILD_X64),TRUE),         \
--	  cp lib/loadlibrary.c lib/loadlibrary_x64.c && \
- 	  cp lib/xmlparse.c lib/xmlparse_x64.c && \
- 	  cp lib/xmltok.c lib/xmltok_x64.c     && \
- 	  cp lib/xmlrole.c lib/xmlrole_x64.c) \
---- expat/expat-winapi.patch	2018-05-09 03:27:29.000000000 -0700
-+++ expat/expat-winapi.patch	2019-09-22 18:52:47.000000000 -0700
-@@ -1,13 +1,13 @@
- --- misc/expat-2.1.0/lib/expat_external.h	2009-11-16 08:53:17.375000000 +0000
- +++ misc/build/expat-2.1.0/lib/expat_external.h	2009-11-16 08:53:34.703125000 +0000
--@@ -7,10 +7,6 @@
-+@@ -81,10 +81,6 @@
-+ #  ifndef XML_BUILDING_EXPAT
-+ /* using Expat from an application */
+ # vim: set noet sw=4 ts=4:
+--- /dev/null	2020-12-29 12:49:06.000000000 -0500
++++ openssl/openssl-macos-arm64.patch.1	2020-12-29 12:47:48.000000000 -0500
+@@ -0,0 +1,11 @@
++--- a/Configure
+++++ b/Configure
++@@ -626,6 +626,8 @@
++ "debug-darwin-i386-cc","cc:-arch i386 -g3 -DL_ENDIAN::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:BN_LLONG RC4_INT RC4_CHUNK DES_UNROLL BF_PTR:${x86_asm}:macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch i386 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ "darwin64-x86_64-cc","cc:-arch x86_64 -O3 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:".eval{my $asm=$x86_64_asm;$asm=~s/rc4\-[^:]+//;$asm}.":macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ "debug-darwin64-x86_64-cc","cc:-arch x86_64 -ggdb -g2 -O0 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:".eval{my $asm=$x86_64_asm;$asm=~s/rc4\-[^:]+//;$asm}.":macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
+++"darwin64-arm64-cc","cc:-arch arm64 -O3 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:${no_asm}:macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
+++"debug-darwin64-arm64-cc","cc:-arch arm64 -ggdb -g2 -O0 -DL_ENDIAN -Wall::-D_REENTRANT:MACOSX:-Wl,-search_paths_first%:SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_UNROLL:${no_asm}:macosx:dlfcn:darwin-shared:-fPIC -fno-common:-arch x86_64 -dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ "debug-darwin-ppc-cc","cc:-DBN_DEBUG -DREF_CHECK -DCONF_DEBUG -DCRYPTO_MDEBUG -DB_ENDIAN -g -Wall -O::-D_REENTRANT:MACOSX::BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR:${ppc32_asm}:osx32:dlfcn:darwin-shared:-fPIC:-dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
++ # iPhoneOS/iOS
++ "iphoneos-cross","llvm-gcc:-O3 -isysroot \$(CROSS_TOP)/SDKs/\$(CROSS_SDK) -fomit-frame-pointer -fno-common::-D_REENTRANT:iOS:-Wl,-search_paths_first%:BN_LLONG RC4_CHAR RC4_CHUNK DES_UNROLL BF_PTR:${no_asm}:dlfcn:darwin-shared:-fPIC -fno-common:-dynamiclib:.\$(SHLIB_MAJOR).\$(SHLIB_MINOR).dylib",
+--- openldap/openldap-2.4.31.patch	2015-11-25 07:55:38.000000000 -0500
++++ openldap/openldap-2.4.31.patch	2020-12-29 19:07:54.000000000 -0500
+@@ -71,3 +71,13 @@
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  /* end confdefs.h.  */
   
-- /* External API definitions */
-- 
---#if defined(_MSC_EXTENSIONS) && !defined(__BEOS__) && !defined(__CYGWIN__)
---#define XML_USE_MSC_EXTENSIONS 1
---#endif
-+-#    if defined(_MSC_EXTENSIONS) && ! defined(__BEOS__) && ! defined(__CYGWIN__)
-+-#      define XMLIMPORT __declspec(dllimport)
-+-#    endif
- -
-- /* Expat tries very hard to make the API boundary very specifically
--    defined.  There are two macros defined to control this boundary;
--    each of these can be defined before including this header to
-+ #  endif
-+ #endif /* not defined XML_STATIC */
++--- misc/openldap-2.4.31/build/config.sub	2012-04-22 16:25:08.000000000 -0400
+++++ misc/build/openldap-2.4.31/build/config.sub	2020-12-29 19:01:06.000000000 -0500
++@@ -340,6 +340,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- coinmp/macosx.build.patch.1	2015-11-25 07:55:38.000000000 -0500
++++ coinmp/macosx.build.patch.1	2020-12-29 19:43:52.000000000 -0500
+@@ -313,3 +313,63 @@
+  	echo ${UNAME_PROCESSOR}-apple-darwin${UNAME_RELEASE}
+  	exit ;;
+      *:procnto*:*:* | *:QNX:[0123456789]*:*)
++--- coinmp/Cgl/config.sub	2010-06-13 13:52:57.000000000 -0400
+++++ coinmp/Cgl/config.sub	2020-12-29 19:32:06.000000000 -0500
++@@ -314,6 +314,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
++--- coinmp/CoinUtils/config.sub	2010-06-13 13:53:51.000000000 -0400
+++++ coinmp/CoinUtils/config.sub	2020-12-29 19:25:30.000000000 -0500
++@@ -314,6 +314,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
++--- coinmp/Cbc/config.sub	2010-06-13 13:52:10.000000000 -0400
+++++ coinmp/Cbc/config.sub	2020-12-29 19:33:56.000000000 -0500
++@@ -314,6 +314,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
++--- coinmp/CoinMP/config.sub	2011-08-07 11:09:46.000000000 -0400
+++++ coinmp/CoinMP/config.sub	2020-12-29 19:35:34.000000000 -0500
++@@ -314,6 +314,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
++--- coinmp/Osi/config.sub	2010-06-13 13:59:18.000000000 -0400
+++++ coinmp/Osi/config.sub	2020-12-29 19:29:21.000000000 -0500
++@@ -314,6 +314,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
++--- coinmp/Clp/config.sub	2010-06-13 13:53:25.000000000 -0400
+++++ coinmp/Clp/config.sub	2020-12-29 19:30:15.000000000 -0500
++@@ -314,6 +314,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- hunspell/UnpackedTarball_hunspell.mk	2015-11-25 07:55:38.000000000 -0500
++++ hunspell/UnpackedTarball_hunspell.mk	2020-12-29 20:38:16.000000000 -0500
+@@ -20,6 +20,7 @@
+ 	external/hunspell/hunspell-fdo48017-wfopen.patch \
+ 	external/hunspell/hunspell-morph-overflow.patch \
+ 	external/hunspell/hunspell-1.3.3-rhbz1261421.patch \
++	external/hunspell/hunspell-macos.patch \
+ ))
+ 
+ ifeq ($(COM),MSC)
+--- /dev/null	2020-12-29 20:39:01.000000000 -0500
++++ hunspell/hunspell-macos.patch	2020-12-29 20:36:11.000000000 -0500
+@@ -0,0 +1,10 @@
++--- misc/hunspell-1.3.2/config.sub	2020-12-29 20:26:31.000000000 -0500
+++++ misc/build/hunspell-1.3.2/config.sub	2020-12-29 20:32:05.000000000 -0500
++@@ -293,6 +293,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- libmspub/UnpackedTarball_libmspub.mk	2015-11-25 07:55:38.000000000 -0500
++++ libmspub/UnpackedTarball_libmspub.mk	2020-12-29 21:06:22.000000000 -0500
+@@ -11,4 +11,8 @@
+ 
+ $(eval $(call gb_UnpackedTarball_set_tarball,libmspub,$(MSPUB_TARBALL)))
+ 
++$(eval $(call gb_UnpackedTarball_add_patches,libmspub,\
++    external/libmspub/libmspub-macos.patch \
++))
++
+ # vim: set noet sw=4 ts=4:
+--- /dev/null	2020-12-29 21:10:06.000000000 -0500
++++ libmspub/libmspub-macos.patch	2020-12-29 21:09:20.000000000 -0500
+@@ -0,0 +1,10 @@
++--- a/libmspub/config.sub	2012-06-30 08:54:32.000000000 -0400
+++++ b/libmspub/config.sub	2020-12-29 21:00:35.000000000 -0500
++@@ -355,6 +355,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- cppunit/unix.patch	2015-11-25 07:55:38.000000000 -0500
++++ cppunit/unix.patch	2020-12-30 17:13:19.000000000 -0500
+@@ -8,3 +8,13 @@
+  }
+  
+  
++--- misc/cppunit-1.13.1/config/config.sub	2012-07-07 11:34:23.000000000 -0400
+++++ misc/build/cppunit-1.13.1/config/config.sub	2020-12-30 17:10:56.000000000 -0500
++@@ -327,6 +327,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* | aarch64_be-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- liborcus/ExternalProject_liborcus.mk	2015-11-25 07:55:38.000000000 -0500
++++ liborcus/ExternalProject_liborcus.mk	2021-04-30 07:12:43.000000000 -0400
+@@ -95,6 +95,7 @@
+ 			--disable-werror \
+ 			$(if $(SYSTEM_BOOST),,--with-boost=$(WORKDIR)/UnpackedTarball/boost) \
+ 			$(if $(CROSS_COMPILING),--build=$(BUILD_PLATFORM) --host=$(HOST_PLATFORM)) \
++		&& rm -f VERSION \
+ 		&& $(if $(VERBOSE)$(verbose),V=1) \
+ 		   $(MAKE) \
+ 	)
+--- lcms2/UnpackedTarball_lcms2.mk	2015-11-25 07:55:38.000000000 -0500
++++ lcms2/UnpackedTarball_lcms2.mk	2021-05-02 15:10:02.000000000 -0400
+@@ -19,6 +19,7 @@
+ 	external/lcms2/lcms2-vc2013-project.patch \
+ 	external/lcms2/lcms2-config-guess.patch.0 \
+ 	external/lcms2/ubsan.patch.0 \
++	external/lcms2/c++17.patch.0 \
+ ))
+ 
+ # vim: set noet sw=4 ts=4:
+--- /dev/null	2021-05-02 15:11:02.000000000 -0400
++++ lcms2/c++17.patch.0	2021-05-02 15:08:39.000000000 -0400
+@@ -0,0 +1,23 @@
++--- include/lcms2.h
+++++ include/lcms2.h
++@@ -1243,13 +1243,13 @@
++ CMSAPI void*             CMSEXPORT cmsStageData(const cmsStage* mpe);
 + 
++ // Sampling
++-typedef cmsInt32Number (* cmsSAMPLER16)   (register const cmsUInt16Number In[],
++-                                            register cmsUInt16Number Out[],
++-                                            register void * Cargo);
++-
++-typedef cmsInt32Number (* cmsSAMPLERFLOAT)(register const cmsFloat32Number In[],
++-                                            register cmsFloat32Number Out[],
++-                                            register void * Cargo);
+++typedef cmsInt32Number (* cmsSAMPLER16)   (const cmsUInt16Number In[],
+++                                            cmsUInt16Number Out[],
+++                                            void * Cargo);
+++
+++typedef cmsInt32Number (* cmsSAMPLERFLOAT)(const cmsFloat32Number In[],
+++                                            cmsFloat32Number Out[],
+++                                            void * Cargo);
++ 
++ // Use this flag to prevent changes being written to destination
++ #define SAMPLER_INSPECT     0x01000000
+--- boost/clang-cl.patch.0	2021-10-05 20:34:15.000000000 -0400
++++ boost/clang-cl.patch.0	2021-10-25 15:26:15.000000000 -0400
+@@ -18,3 +18,24 @@
+    // Deal with VC 2010 output_iterator_tag requirement
+    typedef array_iterator<T,T*,mpl::size_t<NumDims>,reference,
+                           mutable_iterator_tag> iterator;
++--- boost/ptr_container/ptr_sequence_adapter.hpp	2020-12-03 00:00:59.000000000 -0500
+++++ boost/ptr_container/ptr_sequence_adapter.hpp	2021-10-25 15:23:37.000000000 -0400
++@@ -714,6 +714,8 @@
++             BOOST_ASSERT( first <= last && "out of range unique()/erase_if()" );
++             BOOST_ASSERT( this->begin() <= first && "out of range unique()/erase_if()" );
++             BOOST_ASSERT( last <= this->end() && "out of range unique()/erase_if)(" );             
+++            (void)first;
+++            (void)last;
++         }
++         
++         void range_check( iterator first, iterator last )
++--- boost/bind.hpp	2020-12-03 00:00:59.000000000 -0500
+++++ boost/bind.hpp	2021-10-25 15:21:52.000000000 -0400
++@@ -25,6 +25,7 @@
++ //  adding the using directive locally where appropriate.
++ //  Alternatively, the existing behavior may be preserved by defining
++ //  the macro BOOST_BIND_GLOBAL_PLACEHOLDERS.
+++#define BOOST_BIND_GLOBAL_PLACEHOLDERS
++ 
++ #include <boost/bind/bind.hpp>
++ #include <boost/config/pragma_message.hpp>
+--- libxmlsec/xmlsec1-configure.patch	2015-11-25 07:55:38.000000000 -0500
++++ libxmlsec/xmlsec1-configure.patch	2021-10-31 20:10:11.000000000 -0400
+@@ -28,6 +28,14 @@
+  pkgconfig_DATA = xmlsec1.pc @XMLSEC_CRYPTO_PC_FILES_LIST@
+ --- misc/xmlsec1-1.2.14/configure.in	2009-06-25 22:53:18.000000000 +0200
+ +++ misc/build/xmlsec1-1.2.14/configure.in	2009-10-01 10:28:50.990755126 +0200
++@@ -29,6 +29,7 @@
++ dnl Check the environment
++ dnl
++ AC_PROG_CC
+++AC_PROG_CPP
++ AC_PROG_INSTALL
++ AC_HEADER_STDC
++ 
+ @@ -192,8 +192,8 @@
+  dnl ==========================================================================
+  LIBXML_MIN_VERSION="2.7.4"
+--- expat/ExternalProject_expat.mk	2022-02-19 14:34:37.000000000 -0500
++++ expat/ExternalProject_expat.mk	2022-02-19 19:13:33.000000000 -0500
+@@ -17,7 +17,7 @@
+ 	$(call gb_Trace_StartRange,expat,EXTERNAL)
+ 	$(call gb_ExternalProject_run,configure,\
+ 		$(gb_RUN_CONFIGURE) ./configure --without-docbook \
+-			$(gb_CONFIGURE_PLATFORMS) \
++			--host=$(HOST_PLATFORM) \
+ 			$(if $(CROSS_COMPILING),$(if $(filter INTEL ARM,$(CPUNAME)),ac_cv_c_bigendian=no)) \
+ 	,,expat_configure.log)
+ 	$(call gb_Trace_EndRange,expat,EXTERNAL)
+--- firebird/macos-arm64.patch.0	2021-10-05 20:34:15.000000000 -0400
++++ firebird/macos-arm64.patch.0	2022-03-23 13:32:40.000000000 -0400
+@@ -115,3 +115,13 @@
+  #include <architecture/i386/io.h>
+  #else
+  #include <io.h>
++--- builds/make.new/config/config.sub	2020-10-20 04:40:51.000000000 -0400
+++++ builds/make.new/config/config.sub	2022-03-23 13:21:34.000000000 -0400
++@@ -339,6 +339,7 @@
++ 	# Recognize the basic CPU types with company name.
++ 	580-* \
++ 	| a29k-* \
+++	| aarch64-* \
++ 	| alpha-* | alphaev[4-8]-* | alphaev56-* | alphaev6[78]-* \
++ 	| alpha64-* | alpha64ev[4-8]-* | alpha64ev56-* | alpha64ev6[78]-* \
++ 	| alphapca5[67]-* | alpha64pca5[67]-* | arc-* \
+--- python3/ExternalProject_python3.mk	2021-10-05 20:34:15.000000000 -0400
++++ python3/ExternalProject_python3.mk	2022-04-03 10:44:40.000000000 -0400
+@@ -100,9 +100,9 @@
+ 			--enable-shared \
+ 			$(if $(filter 1090 101000 101100 101200,$(MAC_OS_X_VERSION_MIN_REQUIRED)),ac_cv_func_utimensat=no) \
+ 		) \
+-		$(if $(ENABLE_OPENSSL),$(if $(SYSTEM_OPENSSL),,\
++		$(if $(SYSTEM_OPENSSL)$(DISABLE_OPENSSL),,\
+ 			--with-openssl=$(call gb_UnpackedTarball_get_dir,openssl) \
+-		) ) \
++		) \
+ 		$(if $(filter LINUX,$(OS)), \
+ 			PKG_CONFIG_LIBDIR="$(call gb_UnpackedTarball_get_dir,libffi)/$(HOST_PLATFORM)$${PKG_CONFIG_LIBDIR:+:$$PKG_CONFIG_LIBDIR}" \
+ 		) \
+--- python3/ExternalPackage_python3.mk	2021-10-05 20:34:15.000000000 -0400
++++ python3/ExternalPackage_python3.mk	2022-04-03 10:41:22.000000000 -0400
+@@ -79,7 +79,7 @@
+ 	LO_lib/_elementtree.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/fcntl.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/grp.$(python3_EXTENSION_MODULE_SUFFIX).so \
+-	$(if $(ENABLE_OPENSSL), \
++	$(if $(DISABLE_OPENSSL),, \
+ 		LO_lib/_hashlib.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	) \
+ 	LO_lib/_heapq.$(python3_EXTENSION_MODULE_SUFFIX).so \
+@@ -107,7 +107,7 @@
+ 	LO_lib/_sha512.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/_socket.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	LO_lib/spwd.$(python3_EXTENSION_MODULE_SUFFIX).so \
+-	$(if $(ENABLE_OPENSSL), \
++	$(if $(DISABLE_OPENSSL),, \
+ 		LO_lib/_ssl.$(python3_EXTENSION_MODULE_SUFFIX).so \
+ 	) \
+ 	LO_lib/_statistics.$(python3_EXTENSION_MODULE_SUFFIX).so \
+--- python3/UnpackedTarball_python3.mk	2021-10-05 20:34:15.000000000 -0400
++++ python3/UnpackedTarball_python3.mk	2022-05-30 09:23:58.000000000 -0400
+@@ -27,6 +27,7 @@
+ 	external/python3/python-3.5.tweak.strip.soabi.patch \
+ 	external/python3/darwin.patch.0 \
+ 	external/python3/macos-11.patch.0 \
++	external/python3/openssl.patch.0 \
+ ))
+ 
+ ifneq ($(filter DRAGONFLY FREEBSD LINUX NETBSD OPENBSD SOLARIS,$(OS)),)
+--- /dev/null	2022-05-30 09:40:46.000000000 -0400
++++ python3/openssl.patch.0	2022-05-30 09:38:43.000000000 -0400
+@@ -0,0 +1,11 @@
++--- configure	2022-05-30 09:37:27.000000000 -0400
+++++ configure	2022-05-30 09:38:13.000000000 -0400
++@@ -17295,7 +17295,7 @@
++ $as_echo_n "checking for openssl/ssl.h in $ssldir... " >&6; }
++             if test -f "$ssldir/include/openssl/ssl.h"; then
++                 OPENSSL_INCLUDES="-I$ssldir/include"
++-                OPENSSL_LDFLAGS="-L$ssldir/lib"
+++                OPENSSL_LDFLAGS="-L$ssldir"
++                 OPENSSL_LIBS="-lssl -lcrypto"
++                 found=true
++                 { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5

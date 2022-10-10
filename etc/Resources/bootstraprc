@@ -1,3 +1,6 @@
+[ErrorReport]
+ErrorReportPort=80
+ErrorReportServer=
 [Bootstrap]
 InstallMode=<installmode>
 ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)

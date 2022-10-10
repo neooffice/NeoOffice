@@ -28,12 +28,9 @@
         <menu:menupopup>
             <menu:menuitem menu:id=".uno:AddDirect"/>
             <menu:menuitem menu:id=".uno:Open"/>
-            <menu:menuitem menu:id=".uno:OpenRemote"/>
             <menu:menuitem menu:id=".uno:RecentFileList"/>
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:AutoPilotMenu"/>
-            <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:SignPDF"/>
             
             
         </menu:menupopup>
@@ -44,7 +41,7 @@
                 <menu:menupopup>
                     <menu:menuitem menu:id=".uno:MacroRecorder"/>
                     <menu:menuitem menu:id=".uno:RunMacro"/>
-                    <menu:menuitem menu:id=".uno:ScriptOrganizer"/>
+                    <menu:menu menu:id=".uno:ScriptOrganizer"/>
                     <menu:menuseparator/>
                     <menu:menuitem menu:id=".uno:MacroOrganizer?TabId:short=1"/>
                 </menu:menupopup>
@@ -60,14 +57,8 @@
             <menu:menuitem menu:id=".uno:HelpIndex"/>
             <!-- Remove feedback and license menu items
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:QuestionAnswers"/>
             <menu:menuitem menu:id=".uno:SendFeedback"/>
-            <menu:menuitem menu:id=".uno:Documentation"/>
-            -->
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:SafeMode"/>
-            <menu:menuseparator/>
-            <!-- Remove feedback and license menu items
             <menu:menuitem menu:id=".uno:ShowLicense"/>
             -->
             <!-- Add back About menu item -->

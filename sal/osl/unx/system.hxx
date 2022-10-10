@@ -50,7 +50,7 @@
 #include <sys/types.h>
 
 /* Make sockets of type AF_UNIX use underlying FS rights */
-#if defined(__sun) && !defined(_XOPEN_SOURCE)
+#if defined(SOLARIS) && !defined(_XOPEN_SOURCE)
 #   define _XOPEN_SOURCE 500
 #   include <sys/socket.h>
 #   undef _XOPEN_SOURCE
@@ -80,6 +80,13 @@
 #   include <dlfcn.h>
 #   include <endian.h>
 #   include <sys/time.h>
+#   if __BYTE_ORDER == __LITTLE_ENDIAN
+#       define _LITTLE_ENDIAN
+#   elif __BYTE_ORDER == __BIG_ENDIAN
+#               ifndef _BIG_ENDIAN
+#               define _BIG_ENDIAN
+#               endif
+#   endif
 #   define  IORESOURCE_TRANSFER_BSD
 #   define  IOCHANNEL_TRANSFER_BSD_RENO
 #   define  pthread_testcancel()
@@ -92,7 +99,7 @@
 
 #endif
 
-#if defined(ANDROID)
+#ifdef ANDROID
 #   include <pthread.h>
 #   include <sys/file.h>
 #   include <sys/ioctl.h>
@@ -185,11 +192,20 @@
 #   include <sys/un.h>
 #   include <netinet/tcp.h>
 #   include <sys/machine.h>
+#   if BYTE_ORDER == LITTLE_ENDIAN
+#       ifndef _LITTLE_ENDIAN
+#           define _LITTLE_ENDIAN
+#       endif
+#   elif BYTE_ORDER == BIG_ENDIAN
+#       ifndef _BIG_ENDIAN
+#           define _BIG_ENDIAN
+#       endif
+#   endif
 #   define  SLEEP_TIMESPEC(timespec)    nsleep(&timespec, 0)
 #   define  LIBPATH "LIBPATH"
 #endif
 
-#ifdef __sun
+#ifdef SOLARIS
 #   include <shadow.h>
 #   include <sys/un.h>
 #   include <stropts.h>
@@ -204,6 +220,7 @@
 #endif
 
 #ifdef MACOSX
+#define __OPENTRANSPORTPROVIDERS__ // these are already defined
 #define TimeValue CFTimeValue      // Do not conflict with TimeValue in sal/inc/osl/time.h
 #ifdef USE_JAVA
 #include <CoreFoundation/CoreFoundation.h>
@@ -223,7 +240,19 @@
 #   include <netinet/tcp.h>
 #   include <machine/endian.h>
 #   include <sys/time.h>
+/* fixme are premac and postmac still needed here? */
+#   include <premac.h>
 #   include <mach-o/dyld.h>
+#   include <postmac.h>
+#   if BYTE_ORDER == LITTLE_ENDIAN
+#       ifndef _LITTLE_ENDIAN
+#       define _LITTLE_ENDIAN
+#       endif
+#   elif BYTE_ORDER == BIG_ENDIAN
+#       ifndef _BIG_ENDIAN
+#       define _BIG_ENDIAN
+#       endif
+#   endif
 #   define  IOCHANNEL_TRANSFER_BSD_RENO
 #   define  NO_PTHREAD_RTL
 /* for NSGetArgc/Argv/Environ */
@@ -254,6 +283,15 @@ int macxp_resolveAlias(char *path, int buflen);
 #   include <netinet/tcp.h>
 #   include <machine/endian.h>
 #   include <sys/time.h>
+#   if BYTE_ORDER == LITTLE_ENDIAN
+#       ifndef _LITTLE_ENDIAN
+#       define _LITTLE_ENDIAN
+#       endif
+#   elif BYTE_ORDER == BIG_ENDIAN
+#       ifndef _BIG_ENDIAN
+#       define _BIG_ENDIAN
+#       endif
+#   endif
 #   define  IOCHANNEL_TRANSFER_BSD_RENO
 #   define  NO_PTHREAD_RTL
 #endif
@@ -261,7 +299,7 @@ int macxp_resolveAlias(char *path, int buflen);
 #if !defined(_WIN32)  && \
     !defined(LINUX)   && !defined(NETBSD) && !defined(FREEBSD) && \
     !defined(AIX)     && \
-    !defined(__sun) && !defined(MACOSX) && \
+    !defined(SOLARIS) && !defined(MACOSX) && \
     !defined(OPENBSD) && !defined(DRAGONFLY) && \
     !defined(IOS) && !defined(ANDROID)
 #   error "Target platform not specified!"
@@ -285,13 +323,16 @@ int macxp_resolveAlias(char *path, int buflen);
 #endif
 
 #ifndef SLEEP_TIMESPEC
-#   define SLEEP_TIMESPEC(timespec) nanosleep(&timespec, nullptr)
+#   define SLEEP_TIMESPEC(timespec) nanosleep(&timespec, 0)
 #endif
 
 #ifndef INIT_GROUPS
 #   define  INIT_GROUPS(name, gid)  ((setgid((gid)) == 0) && (initgroups((name), (gid)) == 0))
 #endif
 
+#ifndef PTHREAD_VALUE
+#   define PTHREAD_VALUE(t)             (t)
+#endif
 #ifndef PTHREAD_NONE
 #   define PTHREAD_NONE                 _pthread_none_
 #   ifndef PTHREAD_NONE_INIT
@@ -300,13 +341,13 @@ int macxp_resolveAlias(char *path, int buflen);
 #endif
 
 #ifndef PTHREAD_ATTR_DEFAULT
-#   define PTHREAD_ATTR_DEFAULT         nullptr
+#   define PTHREAD_ATTR_DEFAULT         NULL
 #endif
 #ifndef PTHREAD_MUTEXATTR_DEFAULT
-#   define PTHREAD_MUTEXATTR_DEFAULT    nullptr
+#   define PTHREAD_MUTEXATTR_DEFAULT    NULL
 #endif
 #ifndef PTHREAD_CONDATTR_DEFAULT
-#   define PTHREAD_CONDATTR_DEFAULT     nullptr
+#   define PTHREAD_CONDATTR_DEFAULT     NULL
 #endif
 
 #ifndef PTHREAD_SIGACTION
@@ -347,6 +388,13 @@ int macxp_resolveAlias(char *path, int buflen);
 #ifndef SA_FAMILY_DECL
 #   define SA_FAMILY_DECL short sa_family
 #endif
+
+typedef struct sockaddr_ipx {
+    SA_FAMILY_DECL;
+    char  sa_netnum[4];
+    char  sa_nodenum[6];
+    unsigned short sa_socket;
+} SOCKADDR_IPX;
 
 #define NSPROTO_IPX      1000
 #define NSPROTO_SPX      1256

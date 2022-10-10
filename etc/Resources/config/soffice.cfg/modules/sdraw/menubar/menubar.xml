@@ -28,23 +28,19 @@
     <menu:menupopup>
       <menu:menuitem menu:id=".uno:AddDirect"/>
       <menu:menuitem menu:id=".uno:Open"/>
-      <menu:menuitem menu:id=".uno:OpenRemote"/>
       <menu:menuitem menu:id=".uno:RecentFileList"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:AutoPilotMenu"/>
       <menu:menuseparator/>
             <menu:menu menu:id=".uno:TemplateMenu">
                 <menu:menupopup>
-                    <menu:menuitem menu:id=".uno:OpenTemplate"/>
                     <menu:menuitem menu:id=".uno:SaveAsTemplate"/>
-                    <menu:menuseparator/>
                     <menu:menuitem menu:id=".uno:NewDoc"/>
                 </menu:menupopup>
             </menu:menu>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:CloseDoc"/>
       <menu:menuitem menu:id=".uno:Save"/>
-      <menu:menuitem menu:id=".uno:SaveAsRemote"/>
       <menu:menuitem menu:id=".uno:SaveAs"/>
       <menu:menuitem menu:id=".uno:SaveACopy"/>
       <menu:menuitem menu:id=".uno:SaveAll"/>
@@ -65,12 +61,7 @@
       </menu:menu>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:SetDocumentProperties"/>
-      <menu:menu menu:id=".uno:SignaturesMenu">
-        <menu:menupopup>
-          <menu:menuitem menu:id=".uno:Signature"/>
-          <menu:menuitem menu:id=".uno:SignPDF"/>
-        </menu:menupopup>
-      </menu:menu>
+      <menu:menuitem menu:id=".uno:Signature"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:WebHtml"/>
       <menu:menuseparator/>
@@ -104,6 +95,7 @@
       <menu:menuitem menu:id=".uno:DeletePage"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:ManageLinks"/>
+      <menu:menuitem menu:id=".uno:PlugInsActive"/>
       <menu:menuitem menu:id=".uno:ImageMapDialog"/>
       <menu:menuitem menu:id=".uno:ObjectMenue"/>
       <menu:menuitem menu:id=".uno:EditHyperlink"/>
@@ -127,7 +119,6 @@
           <menu:menuitem menu:id=".uno:GridVisible"/>
           <menu:menuitem menu:id=".uno:GridUse"/>
           <menu:menuitem menu:id=".uno:GridFront"/>
-          <menu:menuitem menu:id=".uno:HelplinesMove"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menu menu:id=".uno:SnapLinesMenu">
@@ -207,9 +198,7 @@
           <menu:menuitem menu:id=".uno:Gallery"/>
           <menu:menu menu:id=".uno:Scan">
             <menu:menupopup>
-              <!-- Remove select scanner menu item
-              <menu:menuitem menu:id=".uno:TwainSelect"/>
-              -->
+              <!--<menu:menuitem menu:id=".uno:TwainSelect"/>-->
               <menu:menuitem menu:id=".uno:TwainTransfer"/>
             </menu:menupopup>
           </menu:menu>
@@ -221,6 +210,7 @@
       <menu:menu menu:id=".uno:ObjectMenu">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:InsertObject"/>
+          <menu:menuitem menu:id=".uno:InsertPlugin"/>
           <menu:menuitem menu:id=".uno:InsertMath"/>
         </menu:menupopup>
       </menu:menu>
@@ -287,7 +277,7 @@
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:MacroRecorder"/>
           <menu:menuitem menu:id=".uno:RunMacro"/>
-          <menu:menuitem menu:id=".uno:ScriptOrganizer"/>
+          <menu:menu menu:id=".uno:ScriptOrganizer"/>
           <menu:menuitem menu:id=".uno:MacroSignature"/>
           <menu:menuseparator/>
           <menu:menuitem menu:id=".uno:MacroOrganizer?TabId:short=1"/>
@@ -364,9 +354,6 @@
           <menu:menuitem menu:id=".uno:Merge"/>
           <menu:menuitem menu:id=".uno:Substract"/>
           <menu:menuitem menu:id=".uno:Intersect"/>
-          <menu:menuseparator/>
-          <menu:menuitem menu:id=".uno:EqualizeWidth"/>
-          <menu:menuitem menu:id=".uno:EqualizeHeight"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menuseparator/>
@@ -386,15 +373,9 @@
       <menu:menuitem menu:id=".uno:HelpIndex"/>
       <menu:menuitem menu:id=".uno:ExtendedHelp"/>
       <!-- Remove feedback and license menu items
-      <menu:menuitem menu:id=".uno:Documentation"/>
       <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:QuestionAnswers"/>
       <menu:menuitem menu:id=".uno:SendFeedback"/>
-      -->
       <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:SafeMode"/>
-      <menu:menuseparator/>
-      <!-- Remove feedback and license menu items
       <menu:menuitem menu:id=".uno:ShowLicense"/>
       -->
       <!-- Add back About menu item -->

@@ -24,10 +24,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cassert>
-
 #include <vcl/outdev.hxx>
-#include <vcl/virdev.hxx>
 #include <vcl/window.hxx>
 
 #include <vcl/salnativewidgets.hxx>
@@ -58,9 +55,11 @@ static bool EnableNativeWidget( const OutputDevice& i_rDevice )
 
     case OUTDEV_VIRDEV:
     {
-        const vcl::ExtOutDevData* pOutDevData( i_rDevice.GetExtOutDevData() );
-        const vcl::PDFExtOutDevData* pPDFData( dynamic_cast< const vcl::PDFExtOutDevData* >( pOutDevData ) );
-        return pPDFData == nullptr;
+        const ::vcl::ExtOutDevData* pOutDevData( i_rDevice.GetExtOutDevData() );
+        const ::vcl::PDFExtOutDevData* pPDFData( dynamic_cast< const ::vcl::PDFExtOutDevData* >( pOutDevData ) );
+        if ( pPDFData != NULL )
+            return false;
+        return true;
     }
 
     default:
@@ -183,9 +182,9 @@ bool OutputDevice::IsNativeControlSupported( ControlType nType, ControlPart nPar
     return( mpGraphics->IsNativeControlSupported(nType, nPart) );
 }
 
-bool OutputDevice::HitTestNativeScrollbar(
+bool OutputDevice::HitTestNativeControl( ControlType nType,
                               ControlPart nPart,
-                              const tools::Rectangle& rControlRegion,
+                              const Rectangle& rControlRegion,
                               const Point& aPos,
                               bool& rIsInside ) const
 {
@@ -197,19 +196,19 @@ bool OutputDevice::HitTestNativeScrollbar(
             return false;
 
     Point aWinOffs( mnOutOffX, mnOutOffY );
-    tools::Rectangle screenRegion( rControlRegion );
+    Rectangle screenRegion( rControlRegion );
     screenRegion.Move( aWinOffs.X(), aWinOffs.Y());
 
-    return mpGraphics->HitTestNativeScrollbar( nPart, screenRegion, Point( aPos.X() + mnOutOffX, aPos.Y() + mnOutOffY ),
-        rIsInside, this );
+    return( mpGraphics->HitTestNativeControl(nType, nPart, screenRegion, Point( aPos.X() + mnOutOffX, aPos.Y() + mnOutOffY ),
+        rIsInside, this ) );
 }
 
-static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplControlValue& rVal, const OutputDevice& rDev )
+static boost::shared_ptr< ImplControlValue > TransformControlValue( const ImplControlValue& rVal, const OutputDevice& rDev )
 {
-    std::shared_ptr< ImplControlValue > aResult;
+    boost::shared_ptr< ImplControlValue > aResult;
     switch( rVal.getType() )
     {
-    case ControlType::Slider:
+    case CTRL_SLIDER:
         {
             const SliderValue* pSlVal = static_cast<const SliderValue*>(&rVal);
             SliderValue* pNew = new SliderValue( *pSlVal );
@@ -217,7 +216,7 @@ static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplCont
             pNew->maThumbRect = rDev.ImplLogicToDevicePixel( pSlVal->maThumbRect );
         }
         break;
-    case ControlType::Scrollbar:
+    case CTRL_SCROLLBAR:
         {
             const ScrollbarValue* pScVal = static_cast<const ScrollbarValue*>(&rVal);
             ScrollbarValue* pNew = new ScrollbarValue( *pScVal );
@@ -227,7 +226,7 @@ static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplCont
             pNew->maButton2Rect = rDev.ImplLogicToDevicePixel( pScVal->maButton2Rect );
         }
         break;
-    case ControlType::SpinButtons:
+    case CTRL_SPINBUTTONS:
         {
             const SpinbuttonValue* pSpVal = static_cast<const SpinbuttonValue*>(&rVal);
             SpinbuttonValue* pNew = new SpinbuttonValue( *pSpVal );
@@ -236,7 +235,7 @@ static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplCont
             pNew->maLowerRect = rDev.ImplLogicToDevicePixel( pSpVal->maLowerRect );
         }
         break;
-    case ControlType::Toolbar:
+    case CTRL_TOOLBAR:
         {
             const ToolbarValue* pTVal = static_cast<const ToolbarValue*>(&rVal);
             ToolbarValue* pNew = new ToolbarValue( *pTVal );
@@ -244,32 +243,31 @@ static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplCont
             pNew->maGripRect = rDev.ImplLogicToDevicePixel( pTVal->maGripRect );
         }
         break;
-    case ControlType::TabItem:
+    case CTRL_TAB_ITEM:
         {
             const TabitemValue* pTIVal = static_cast<const TabitemValue*>(&rVal);
             TabitemValue* pNew = new TabitemValue( *pTIVal );
-            pNew->maContentRect = rDev.ImplLogicToDevicePixel(pTIVal->maContentRect);
             aResult.reset( pNew );
         }
         break;
-    case ControlType::Menubar:
+    case CTRL_MENUBAR:
         {
             const MenubarValue* pMVal = static_cast<const MenubarValue*>(&rVal);
             MenubarValue* pNew = new MenubarValue( *pMVal );
             aResult.reset( pNew );
         }
         break;
-    case ControlType::Pushbutton:
+    case CTRL_PUSHBUTTON:
         {
             const PushButtonValue* pBVal = static_cast<const PushButtonValue*>(&rVal);
             PushButtonValue* pNew = new PushButtonValue( *pBVal );
             aResult.reset( pNew );
         }
         break;
-    case ControlType::Generic:
+    case CTRL_GENERIC:
             aResult.reset( new ImplControlValue( rVal ) );
             break;
-    case ControlType::MenuPopup:
+    case CTRL_MENU_POPUP:
         {
             const MenupopupValue* pMVal = static_cast<const MenupopupValue*>(&rVal);
             MenupopupValue* pNew = new MenupopupValue( *pMVal );
@@ -278,7 +276,7 @@ static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplCont
         }
         break;
 #ifdef USE_JAVA
-    case ControlType::ListViewHeader:
+    case CTRL_LISTVIEWHEADER:
         {
             const ListViewHeaderValue* pLVal = static_cast<const ListViewHeaderValue*>(&rVal);
             ListViewHeaderValue* pNew = new ListViewHeaderValue( *pLVal );
@@ -294,13 +292,11 @@ static std::shared_ptr< ImplControlValue > TransformControlValue( const ImplCont
 }
 bool OutputDevice::DrawNativeControl( ControlType nType,
                             ControlPart nPart,
-                            const tools::Rectangle& rControlRegion,
+                            const Rectangle& rControlRegion,
                             ControlState nState,
                             const ImplControlValue& aValue,
                             const OUString& aCaption )
 {
-    assert(!is_double_buffered_window());
-
     if( !EnableNativeWidget( *this ) )
         return false;
 
@@ -321,16 +317,13 @@ bool OutputDevice::DrawNativeControl( ControlType nType,
 
     // Convert the coordinates from relative to Window-absolute, so we draw
     // in the correct place in platform code
-    std::shared_ptr< ImplControlValue > aScreenCtrlValue( TransformControlValue( aValue, *this ) );
-    tools::Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
+    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( TransformControlValue( aValue, *this ) );
+    Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
 
     vcl::Region aTestRegion( GetActiveClipRegion() );
     aTestRegion.Intersect( rControlRegion );
     if (aTestRegion == vcl::Region(rControlRegion))
-        nState |= ControlState::CACHING_ALLOWED;   // control is not clipped, caching allowed
-
-    if (dynamic_cast<VirtualDevice*>(this))
-        nState |= ControlState::DOUBLEBUFFERING;
+        nState |= CTRL_CACHING_ALLOWED;   // control is not clipped, caching allowed
 
     bool bRet = mpGraphics->DrawNativeControl(nType, nPart, screenRegion, nState, *aScreenCtrlValue, aCaption, this );
 
@@ -339,11 +332,12 @@ bool OutputDevice::DrawNativeControl( ControlType nType,
 
 bool OutputDevice::GetNativeControlRegion(  ControlType nType,
                                 ControlPart nPart,
-                                const tools::Rectangle& rControlRegion,
+                                const Rectangle& rControlRegion,
                                 ControlState nState,
                                 const ImplControlValue& aValue,
-                                tools::Rectangle &rNativeBoundingRegion,
-                                tools::Rectangle &rNativeContentRegion ) const
+                                const OUString& aCaption,
+                                Rectangle &rNativeBoundingRegion,
+                                Rectangle &rNativeContentRegion ) const
 {
     if( !EnableNativeWidget( *this ) )
         return false;
@@ -354,11 +348,11 @@ bool OutputDevice::GetNativeControlRegion(  ControlType nType,
 
     // Convert the coordinates from relative to Window-absolute, so we draw
     // in the correct place in platform code
-    std::shared_ptr< ImplControlValue > aScreenCtrlValue( TransformControlValue( aValue, *this ) );
-    tools::Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
+    boost::shared_ptr< ImplControlValue > aScreenCtrlValue( TransformControlValue( aValue, *this ) );
+    Rectangle screenRegion( ImplLogicToDevicePixel( rControlRegion ) );
 
     bool bRet = mpGraphics->GetNativeControlRegion(nType, nPart, screenRegion, nState, *aScreenCtrlValue,
-                                rNativeBoundingRegion,
+                                aCaption, rNativeBoundingRegion,
                                 rNativeContentRegion, this );
     if( bRet )
     {
@@ -369,13 +363,5 @@ bool OutputDevice::GetNativeControlRegion(  ControlType nType,
 
     return bRet;
 }
-
-#ifdef USE_JAVA
-
-ListViewHeaderValue::~ListViewHeaderValue()
-{
-}
-
-#endif	// USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

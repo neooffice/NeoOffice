@@ -1,0 +1,183 @@
+--- source/msfilter/svdfppt.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/msfilter/svdfppt.cxx	2021-05-10 09:04:12.000000000 -0400
+@@ -3797,11 +3797,6 @@
+     }
+ }
+ 
+-PPTCharSheet::PPTCharSheet( const PPTCharSheet& rAttr )
+-{
+-    *this = rAttr;
+-}
+-
+ void PPTCharSheet::Read( SvStream& rIn, bool /*bMasterStyle*/, sal_uInt32 nLevel, bool /*bFirst*/)
+ {
+     // Zeichenattribute
+@@ -3893,11 +3888,6 @@
+     }
+ }
+ 
+-PPTParaSheet::PPTParaSheet( const PPTParaSheet& rSheet )
+-{
+-    *this = rSheet;
+-}
+-
+ bool PPTParaSheet::Read( SdrPowerPointImport&
+ #ifdef DBG_UTIL
+                     rManager
+--- source/graphicfilter/icgm/bundles.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/graphicfilter/icgm/bundles.hxx	2021-05-10 16:28:25.000000000 -0400
+@@ -65,7 +65,6 @@
+     {}
+ 
+     virtual Bundle* Clone() SAL_OVERRIDE { return new LineBundle( *this ); }
+-    LineBundle& operator=( LineBundle& rLineBundle );
+ };
+ 
+ 
+@@ -101,7 +100,6 @@
+         , nEdgeWidth(0)
+     {}
+     virtual Bundle*     Clone() SAL_OVERRIDE { return new EdgeBundle( *this ); }
+-    EdgeBundle& operator=( EdgeBundle& rEdgeBundle );
+ };
+ 
+ 
+@@ -143,7 +141,6 @@
+         , nFillHatchIndex(0)
+     {}
+     virtual Bundle*     Clone() SAL_OVERRIDE { return new FillBundle( *this ); }
+-    FillBundle& operator=( FillBundle& rFillBundle );
+ };
+ 
+ 
+--- source/graphicfilter/icgm/bundles.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/graphicfilter/icgm/bundles.cxx	2021-05-10 16:30:04.000000000 -0400
+@@ -40,14 +40,6 @@
+ 
+ 
+ 
+-LineBundle& LineBundle::operator=( LineBundle& rSource )
+-{
+-    SetIndex( rSource.GetIndex() );
+-    eLineType = rSource.eLineType;
+-    nLineWidth = rSource.nLineWidth;
+-    return *this;
+-};
+-
+ MarkerBundle& MarkerBundle::operator=( MarkerBundle& rSource )
+ {
+     SetIndex( rSource.GetIndex() );
+@@ -56,14 +48,6 @@
+     return *this;
+ };
+ 
+-EdgeBundle& EdgeBundle::operator=( EdgeBundle& rSource )
+-{
+-    SetIndex( rSource.GetIndex() );
+-    eEdgeType = rSource.eEdgeType;
+-    nEdgeWidth = rSource.nEdgeWidth;
+-    return *this;
+-};
+-
+ TextBundle& TextBundle::operator=( TextBundle& rSource )
+ {
+     SetIndex( rSource.GetIndex() );
+@@ -74,15 +58,6 @@
+     return *this;
+ };
+ 
+-FillBundle& FillBundle::operator=( FillBundle& rSource )
+-{
+-    SetIndex( rSource.GetIndex() );
+-    eFillInteriorStyle = rSource.eFillInteriorStyle;
+-    nFillPatternIndex = rSource.nFillPatternIndex;
+-    nFillHatchIndex = rSource.nFillHatchIndex;
+-    return *this;
+-};
+-
+ FontEntry::FontEntry() :
+     pFontName       ( NULL ),
+     eCharSetType    ( CST_CCOMPLETE ),
+--- source/xsltdialog/xmlfiltercommon.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/xsltdialog/xmlfiltercommon.hxx	2021-05-10 16:37:01.000000000 -0400
+@@ -70,7 +70,6 @@
+     bool        mbNeedsXSLT2;
+ 
+     filter_info_impl();
+-    filter_info_impl( const filter_info_impl& rInfo );
+     bool operator==( const filter_info_impl& ) const;
+ 
+     com::sun::star::uno::Sequence< OUString > getFilterUserData() const;
+--- source/xsltdialog/xmlfiltersettingsdialog.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/xsltdialog/xmlfiltersettingsdialog.cxx	2021-05-10 16:39:00.000000000 -0400
+@@ -1574,30 +1574,6 @@
+ 
+ 
+ 
+-filter_info_impl::filter_info_impl( const filter_info_impl& rInfo ) :
+-    maFilterName( rInfo.maFilterName ),
+-    maType( rInfo.maType ),
+-    maDocumentService( rInfo.maDocumentService ),
+-    maFilterService( rInfo.maFilterService ),
+-    maInterfaceName( rInfo.maInterfaceName ),
+-    maComment( rInfo.maComment ),
+-    maExtension( rInfo.maExtension ),
+-    maExportXSLT( rInfo.maExportXSLT ),
+-    maImportXSLT( rInfo.maImportXSLT ),
+-    maImportTemplate( rInfo.maImportTemplate ),
+-    maDocType( rInfo.maDocType ),
+-    maImportService( rInfo.maImportService ),
+-    maExportService( rInfo.maExportService ),
+-    maFlags( rInfo.maFlags ),
+-    maFileFormatVersion( rInfo.maFileFormatVersion ),
+-    mnDocumentIconID( rInfo.mnDocumentIconID ),
+-    mbReadonly( rInfo.mbReadonly ),
+-    mbNeedsXSLT2( rInfo.mbNeedsXSLT2 )
+-{
+-}
+-
+-
+-
+ bool filter_info_impl::operator==( const filter_info_impl& r ) const
+ {
+     return maFilterName == r.maFilterName &&
+--- source/graphicfilter/idxf/dxfvec.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/graphicfilter/idxf/dxfvec.hxx	2021-05-10 16:41:16.000000000 -0400
+@@ -43,16 +43,6 @@
+         nDotCount(0),
+         fDotLen(0),
+         fDistance(0) {}
+-
+-    DXFLineInfo(const DXFLineInfo& x) :
+-        eStyle(x.eStyle),
+-        fWidth(x.fWidth),
+-        nDashCount(x.nDashCount),
+-        fDashLen(x.fDashLen),
+-        nDotCount(x.nDotCount),
+-        fDotLen(x.fDotLen),
+-        fDistance(x.fDistance) {}
+-
+ };
+ 
+ 
+@@ -68,7 +58,6 @@
+     double fx,fy,fz; // public ! - why not?
+ 
+     inline DXFVector(double fX=0.0, double fY=0.0, double fZ=0.0);
+-    inline DXFVector(const DXFVector & rV);
+ 
+     // summation/subtraktion:
+     DXFVector & operator += (const DXFVector & rV);
+@@ -178,12 +167,6 @@
+ }
+ 
+ 
+-inline DXFVector::DXFVector(const DXFVector & rV)
+-{
+-    fx=rV.fx; fy=rV.fy; fz=rV.fz;
+-}
+-
+-
+ inline DXFVector & DXFVector::operator += (const DXFVector & rV)
+ {
+     fx+=rV.fx; fy+=rV.fy; fz+=rV.fz;

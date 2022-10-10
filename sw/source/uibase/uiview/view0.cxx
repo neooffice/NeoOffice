@@ -57,9 +57,15 @@
 #include "shells.hrc"
 
 #define SwView
+#define GlobalContents
 #define Text
 #define TextDrawText
-
+#define TextInTable
+#define ListInText
+#define ListInTable
+#define WebTextInTable
+#define WebListInText
+#define WebListInTable
 #include <sfx2/msg.hxx>
 #include "swslots.hxx"
 #include <PostItMgr.hxx>
@@ -71,9 +77,7 @@ using namespace ::com::sun::star;
 #include <IDocumentSettingAccess.hxx>
 
 #include <unomid.h>
-#include <memory>
-#include "swabstdlg.hxx"
-#include "misc.hrc"
+#include <boost/scoped_ptr.hpp>
 
 SFX_IMPL_NAMED_VIEWFACTORY(SwView, "Default")
 {
@@ -84,7 +88,7 @@ SFX_IMPL_NAMED_VIEWFACTORY(SwView, "Default")
     }
 }
 
-SFX_IMPL_INTERFACE(SwView, SfxViewShell)
+SFX_IMPL_INTERFACE(SwView, SfxViewShell, SW_RES(RID_TOOLS_TOOLBOX) )
 
 void SwView::InitInterface_Impl()
 {
@@ -92,7 +96,6 @@ void SwView::InitInterface_Impl()
     GetStaticInterface()->RegisterChildWindow(SID_NAVIGATOR, true);
 
     GetStaticInterface()->RegisterChildWindow(::sfx2::sidebar::SidebarChildWindow::GetChildWindowId());
-
     GetStaticInterface()->RegisterChildWindow(SfxInfoBarContainerChild::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(SvxSearchDialogWrapper::GetChildWindowId());
     GetStaticInterface()->RegisterChildWindow(SwSpellDialogChildWindow::GetChildWindowId());
@@ -104,15 +107,17 @@ void SwView::InitInterface_Impl()
 #endif
     GetStaticInterface()->RegisterChildWindow(FN_INSERT_FIELD_DATA_ONLY);
 
-    GetStaticInterface()->RegisterChildWindow(FN_SYNC_LABELS, false, SfxShellFeature::SwChildWindowLabel);
+    GetStaticInterface()->RegisterChildWindow(FN_SYNC_LABELS, false, CHILDWIN_LABEL);
+    GetStaticInterface()->RegisterChildWindow(FN_MAILMERGE_CHILDWINDOW, false, CHILDWIN_MAILMERGE);
 
-    GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_TOOLS, SfxVisibilityFlags::Standard|SfxVisibilityFlags::Server,
-                                            RID_TOOLS_TOOLBOX);
+    GetStaticInterface()->RegisterObjectBar(SFX_OBJECTBAR_TOOLS|SFX_VISIBILITY_STANDARD|SFX_VISIBILITY_SERVER,
+                                            SW_RES(RID_TOOLS_TOOLBOX));
 #endif
 }
 
+TYPEINIT1(SwView,SfxViewShell)
 
-ShellMode SwView::GetShellMode()
+ShellModes  SwView::GetShellMode()
 {
     return m_pViewImpl->GetShellMode();
 }
@@ -127,21 +132,35 @@ void SwView::ApplyAccessiblityOptions(SvtAccessibilityOptions& rAccessibilityOpt
     m_pWrtShell->ApplyAccessiblityOptions(rAccessibilityOptions);
     //to enable the right state of the selection cursor in readonly documents
     if(GetDocShell()->IsReadOnly())
-        m_pWrtShell->ShowCursor();
+        m_pWrtShell->ShowCrsr();
 
 }
 
-void SwView::SetMailMergeConfigItem(std::shared_ptr<SwMailMergeConfigItem>& rConfigItem,
-                                    sal_uInt16 nRestart)
+#if HAVE_FEATURE_DBCONNECTIVITY
+
+void SwView::SetMailMergeConfigItem(SwMailMergeConfigItem*  pConfigItem,
+                sal_uInt16 nRestart, bool bIsSource)
 {
-    m_pViewImpl->SetMailMergeConfigItem(rConfigItem, nRestart);
+    m_pViewImpl->SetMailMergeConfigItem(pConfigItem, nRestart, bIsSource);
     UIFeatureChanged();
 }
 
-std::shared_ptr<SwMailMergeConfigItem> SwView::GetMailMergeConfigItem() const
+SwMailMergeConfigItem* SwView::GetMailMergeConfigItem()
 {
     return m_pViewImpl->GetMailMergeConfigItem();
 }
+
+sal_uInt16 SwView::GetMailMergeRestartPage() const
+{
+    return m_pViewImpl->GetMailMergeRestartPage();
+}
+
+bool SwView::IsMailMergeSourceView() const
+{
+    return m_pViewImpl->IsMailMergeSourceView();
+}
+
+#endif
 
 static bool lcl_IsViewMarks( const SwViewOption& rVOpt )
 {
@@ -154,7 +173,7 @@ static void lcl_SetViewMarks(SwViewOption& rVOpt, bool bOn )
     rVOpt.SetHardBlank(bOn);
     rVOpt.SetSoftHyph(bOn);
     SwViewOption::SetAppearanceFlag(
-            ViewOptFlags::FieldShadings, bOn, true);
+            VIEWOPT_FIELD_SHADINGS, bOn, true);
 }
 
 static void lcl_SetViewMetaChars( SwViewOption& rVOpt, bool bOn)
@@ -208,7 +227,7 @@ void SwView::RecheckBrowseMode()
     CheckVisArea();
 
     SvxZoomType eType;
-    if( GetWrtShell().GetViewOptions()->getBrowseMode() && SvxZoomType::PERCENT != (eType =
+    if( GetWrtShell().GetViewOptions()->getBrowseMode() && SVX_ZOOM_PERCENT != (eType = (SvxZoomType)
         GetWrtShell().GetViewOptions()->GetZoomType()) )
         SetZoom( eType );
     InvalidateBorder();
@@ -222,6 +241,7 @@ void SwView::StateViewOptions(SfxItemSet &rSet)
     sal_uInt16 nWhich = aIter.FirstWhich();
     SfxBoolItem aBool;
     const SwViewOption* pOpt = GetWrtShell().GetViewOptions();
+    const IDocumentSettingAccess* pIDSA = GetDocShell()->getIDocumentSettingAccess();
 
     while(nWhich)
     {
@@ -256,18 +276,18 @@ void SwView::StateViewOptions(SfxItemSet &rSet)
             case FN_VIEW_BOUNDS:
                 aBool.SetValue( SwViewOption::IsDocBoundaries()); break;
             case FN_VIEW_GRAPHIC:
-                aBool.SetValue( pOpt->IsGraphic() ); break;
+                aBool.SetValue( !pOpt->IsGraphic() ); break;
             case FN_VIEW_FIELDS:
                 aBool.SetValue( SwViewOption::IsFieldShadings() ); break;
             case FN_VIEW_FIELDNAME:
-                aBool.SetValue( pOpt->IsFieldName() ); break;
+                aBool.SetValue( pOpt->IsFldName() ); break;
             case FN_VIEW_MARKS:
                 aBool.SetValue( lcl_IsViewMarks(*pOpt) ); break;
             case FN_VIEW_META_CHARS:
                 aBool.SetValue( pOpt->IsViewMetaChars() ); break;
             case FN_VIEW_TABLEGRID:
                 aBool.SetValue( SwViewOption::IsTableBoundaries() ); break;
-            case SID_TOGGLE_NOTES:
+            case FN_VIEW_NOTES:
             {
 #ifdef NO_LIBO_TOGGLE_NOTES_PUT_LEAK_FIX
                 aBool.SetValue( pOpt->IsPostIts());
@@ -289,18 +309,6 @@ void SwView::StateViewOptions(SfxItemSet &rSet)
             }
             case FN_VIEW_HIDDEN_PARA:
                 aBool.SetValue( pOpt->IsShowHiddenPara()); break;
-            case FN_VIEW_HIDE_WHITESPACE:
-            {
-                if (pOpt->getBrowseMode() ||
-                    !pOpt->CanHideWhitespace())
-                {
-                    rSet.DisableItem(nWhich);
-                    nWhich = 0;
-                }
-                else
-                    aBool.SetValue(pOpt->IsHideWhitespaceMode());
-            }
-            break;
             case SID_GRID_VISIBLE:
                 aBool.SetValue( pOpt->IsGridVisible() ); break;
             case SID_GRID_USE:
@@ -318,15 +326,14 @@ void SwView::StateViewOptions(SfxItemSet &rSet)
                     nWhich = 0;
                 }
                 else
-                    aBool.SetValue( IsHScrollbarVisible() );
-                break;
+                    aBool.SetValue( IsHScrollbarVisible() ); break;
             case FN_VSCROLLBAR:
                 aBool.SetValue( IsVScrollbarVisible() ); break;
             case SID_AUTOSPELL_CHECK:
                 aBool.SetValue( pOpt->IsOnlineSpell() );
             break;
             case FN_SHADOWCURSOR:
-                if ( pOpt->getBrowseMode() )
+                if (pIDSA == 0 || pOpt->getBrowseMode() )
                 {
                     rSet.DisableItem( nWhich );
                     nWhich = 0;
@@ -350,20 +357,20 @@ void SwView::StateViewOptions(SfxItemSet &rSet)
 
 void SwView::ExecViewOptions(SfxRequest &rReq)
 {
-    std::unique_ptr<SwViewOption> pOpt(new SwViewOption( *GetWrtShell().GetViewOptions() ));
+    boost::scoped_ptr<SwViewOption> pOpt(new SwViewOption( *GetWrtShell().GetViewOptions() ));
     bool bModified = GetWrtShell().IsModified();
 
     int eState = STATE_TOGGLE;
-    bool bSet = false;
+    sal_Bool bSet = sal_False;
     bool bBrowseModeChanged = false;
 
     const SfxItemSet *pArgs = rReq.GetArgs();
     sal_uInt16 nSlot = rReq.GetSlot();
-    const SfxPoolItem* pAttr=nullptr;
+    const SfxPoolItem* pAttr=NULL;
 
     if( pArgs && SfxItemState::SET == pArgs->GetItemState( nSlot , false, &pAttr ))
     {
-        bSet = static_cast<const SfxBoolItem*>(pAttr)->GetValue();
+        bSet = ((SfxBoolItem*)pAttr)->GetValue();
         eState = bSet ? STATE_ON : STATE_OFF;
     }
 
@@ -381,13 +388,13 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
     case FN_VIEW_FIELDS:
         if( STATE_TOGGLE == eState )
             bFlag = !SwViewOption::IsFieldShadings() ;
-        SwViewOption::SetAppearanceFlag(ViewOptFlags::FieldShadings, bFlag, true );
+        SwViewOption::SetAppearanceFlag(VIEWOPT_FIELD_SHADINGS, bFlag, true );
         break;
 
     case FN_VIEW_BOUNDS:
         if( STATE_TOGGLE == eState )
             bFlag = !SwViewOption::IsDocBoundaries();
-        SwViewOption::SetAppearanceFlag(ViewOptFlags::DocBoundaries, bFlag, true );
+        SwViewOption::SetAppearanceFlag(VIEWOPT_DOC_BOUNDARIES, bFlag, true );
         break;
 
     case SID_GRID_VISIBLE:
@@ -418,10 +425,12 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
         else if( nSlot == FN_PRINT_LAYOUT )
             bFlag = !bFlag;
         bBrowseModeChanged = bFlag != pOpt->getBrowseMode();
+        // Disable "multiple layout"
+        GetDocShell()->ToggleBrowserMode( bFlag, this );
         pOpt->setBrowseMode( bFlag );
         break;
 
-    case SID_TOGGLE_NOTES:
+    case FN_VIEW_NOTES:
         if ( STATE_TOGGLE == eState )
             bFlag = !pOpt->IsPostIts();
 
@@ -436,13 +445,6 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
             bFlag = !pOpt->IsShowHiddenPara();
 
         pOpt->SetShowHiddenPara( bFlag );
-        break;
-
-    case FN_VIEW_HIDE_WHITESPACE:
-        if ( STATE_TOGGLE == eState )
-            bFlag = !pOpt->IsHideWhitespaceMode();
-
-        pOpt->SetHideWhitespaceMode(bFlag);
         break;
 
     case FN_VIEW_SMOOTH_SCROLL:
@@ -484,14 +486,14 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
     case FN_VIEW_TABLEGRID:
         if( STATE_TOGGLE == eState )
             bFlag = !SwViewOption::IsTableBoundaries();
-        SwViewOption::SetAppearanceFlag(ViewOptFlags::TableBoundaries, bFlag, true );
+        SwViewOption::SetAppearanceFlag(VIEWOPT_TABLE_BOUNDARIES, bFlag, true );
         break;
 
     case FN_VIEW_FIELDNAME:
         if( STATE_TOGGLE == eState )
-            bFlag = !pOpt->IsFieldName() ;
+            bFlag = !pOpt->IsFldName() ;
 
-        pOpt->SetFieldName( bFlag );
+        pOpt->SetFldName( bFlag );
         break;
 
     case FN_VIEW_MARKS:
@@ -517,10 +519,11 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
 
         pOpt->SetOnlineSpell(bSet);
         {
+            uno::Any aVal( &bSet, ::getCppuBooleanType() );
             OUString aPropName(UPN_IS_SPELL_AUTO);
 
             SvtLinguConfig  aCfg;
-            aCfg.SetProperty( aPropName, uno::makeAny( bSet ) );
+            aCfg.SetProperty( aPropName, aVal );
 
             if (xLngProp.is())
                 xLngProp->setIsSpellAuto( bSet );
@@ -530,7 +533,7 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
             if (bSet)
             {
                 SwDocShell *pDocSh = GetDocShell();
-                SwDoc *pDoc = pDocSh? pDocSh->GetDoc() : nullptr;
+                SwDoc *pDoc = pDocSh? pDocSh->GetDoc() : NULL;
 
                 // right now we don't have view options for automatic grammar checking. Thus...
                 bool bIsAutoGrammar = false;
@@ -558,7 +561,7 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
     }
 
     // Set UserPrefs, mark request as modified
-    bool bWebView =  dynamic_cast<const SwWebView*>(this) !=  nullptr;
+    bool bWebView =  0 != dynamic_cast<const SwWebView*>(this);
     SwWrtShell &rSh = GetWrtShell();
     rSh.StartAction();
     SwModule* pModule = SW_MOD();
@@ -567,19 +570,20 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
         rSh.ApplyViewOptions( *pOpt );
         if( bBrowseModeChanged )
         {
-            GetDocShell()->ToggleLayoutMode(this);
+            RecheckBrowseMode();
+            CheckVisArea();
         }
 
         // The UsrPref must be marked as modified.
         // call for initialization
         pModule->GetUsrPref(bWebView);
-        SwModule::CheckSpellChanges( pOpt->IsOnlineSpell(), false, false, false );
+        pModule->CheckSpellChanges( pOpt->IsOnlineSpell(), false, false, false );
     }
     //OS: Set back modified again, because view/fields sets the Doc modified.
     if( !bModified )
         rSh.ResetModified();
 
-    pModule->ApplyUsrPref( *pOpt, this, bWebView ? SvViewOpt::DestWeb : SvViewOpt::DestText );
+    pModule->ApplyUsrPref( *pOpt, this, bWebView ? VIEWOPT_DEST_WEB : VIEWOPT_DEST_TEXT );
 
     // #i6193# let postits know about new spellcheck setting
     if ( nSlot == SID_AUTOSPELL_CHECK )
@@ -597,28 +601,6 @@ void SwView::ExecViewOptions(SfxRequest &rReq)
     if(!pArgs)
         rReq.AppendItem(SfxBoolItem(nSlot, bFlag));
     rReq.Done();
-}
-
-void SwView::ExecFormatFootnote()
-{
-    SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
-    OSL_ENSURE(pFact, "SwAbstractDialogFactory fail!");
-
-    ScopedVclPtr<VclAbstractDialog> pDlg(pFact->CreateSwFootNoteOptionDlg(GetWindow(), GetWrtShell()));
-    OSL_ENSURE(pDlg, "Dialog creation failed!");
-    pDlg->Execute();
-}
-
-void SwView::ExecNumberingOutline(SfxItemPool & rPool)
-{
-    SfxItemSet aTmp(rPool, FN_PARAM_1, FN_PARAM_1);
-    SwAbstractDialogFactory* pFact = SwAbstractDialogFactory::Create();
-    OSL_ENSURE(pFact, "Dialog creation failed!");
-    ScopedVclPtr<SfxAbstractTabDialog> pDlg(pFact->CreateSwTabDialog( DLG_TAB_OUTLINE,
-                                                GetWindow(), &aTmp, GetWrtShell()));
-    OSL_ENSURE(pDlg, "Dialog creation failed!");
-    pDlg->Execute();
-    pDlg.disposeAndClear();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

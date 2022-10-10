@@ -55,34 +55,53 @@ public:
 	// Generic data
 	JavaSalFrame*			mpParentFrame;		// pointer to the parent frame
 	bool					mbIsMenuBarMenu;	// true for menu bars
-	Menu*					mpParentVCLMenu;
+	Menu*					mpVCLMenu;
+	JavaSalMenu*			mpParentSalMenu;
 
 							JavaSalMenu();
 	virtual					~JavaSalMenu();
 
-	virtual bool			VisibleMenuBar() override;
-	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos ) override;
-	virtual void			RemoveItem( unsigned nPos ) override;
-	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos ) override;
-	virtual void			SetFrame( const SalFrame* pFrame ) override;
-	virtual void			CheckItem( unsigned nPos, bool bCheck ) override;
-	virtual void			EnableItem( unsigned nPos, bool bEnable ) override;
-	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const OUString& rText ) override;
-	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage ) override;
-	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& rKeyName ) override;
-	virtual void			GetSystemMenuData( SystemMenuData* pData ) override;
+	virtual bool			VisibleMenuBar() SAL_OVERRIDE;
+	virtual void			InsertItem( SalMenuItem* pSalMenuItem, unsigned nPos ) SAL_OVERRIDE;
+	virtual void			RemoveItem( unsigned nPos ) SAL_OVERRIDE;
+	virtual void			SetSubMenu( SalMenuItem* pSalMenuItem, SalMenu* pSubMenu, unsigned nPos ) SAL_OVERRIDE;
+	virtual void			SetFrame( const SalFrame* pFrame ) SAL_OVERRIDE;
+	virtual void			CheckItem( unsigned nPos, bool bCheck ) SAL_OVERRIDE;
+	virtual void			EnableItem( unsigned nPos, bool bEnable ) SAL_OVERRIDE;
+	virtual void			SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const OUString& rText ) SAL_OVERRIDE;
+	virtual void			SetItemImage( unsigned nPos, SalMenuItem* pSalMenuItem, const Image& rImage ) SAL_OVERRIDE;
+	virtual void			SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, const vcl::KeyCode& rKeyCode, const OUString& rKeyName ) SAL_OVERRIDE;
+	virtual void			GetSystemMenuData( SystemMenuData* pData ) SAL_OVERRIDE;
+	virtual bool			ShowNativePopupMenu( FloatingWindow *pWin, const Rectangle& rRect, sal_uLong nFlags ) SAL_OVERRIDE;
+};
+
+enum JavaSalMenuItemType
+{
+	NONE	= 0,
+	HELP	= 1,
+	WINDOWS	= 2
 };
 
 class JavaSalMenuItem : public SalMenuItem
 {
 public:
 	id						mpMenuItem;
+	JavaSalMenuItemType		meMenuType;
 	JavaSalMenu*			mpSalSubmenu;	// Submenu SalMenu if this item has a submenu
+	JavaSalMenu*			mpParentSalMenu;
 
 							JavaSalMenuItem();
 	virtual					~JavaSalMenuItem();
+
+	void					SetCommand( const OUString& rCommand );
 };
 
 SAL_DLLPRIVATE void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus );
+SAL_DLLPRIVATE void VCLMenu_updateNativeWindowsMenu();
+
+#ifdef __OBJC__
+SAL_DLLPRIVATE BOOL VCLMenu_isPopUpMenu( NSMenu *pMenu );
+SAL_DLLPRIVATE BOOL VCLMenu_isShowingPopUpMenu();
+#endif	// __OBJC__
 
 #endif // _SV_SALMENU_H

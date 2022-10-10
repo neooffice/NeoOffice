@@ -49,24 +49,17 @@
 #include <wrtsh.hxx>
 #include <comcore.hrc>
 #include <view.hxx>
-#include <IDocumentLayoutAccess.hxx>
 
 #include <svx/sdr/overlay/overlaymanager.hxx>
 #include <svx/sdrpaintwindow.hxx>
-#include <svx/srchdlg.hxx>
 #include <vcl/svapp.hxx>
 #include <svx/sdr/overlay/overlayselection.hxx>
 #include <overlayrangesoutline.hxx>
 
-#include <memory>
-#include <boost/property_tree/json_parser.hpp>
+#include <boost/scoped_ptr.hpp>
 
-#include <LibreOfficeKit/LibreOfficeKitEnums.h>
-#include <comphelper/lok.hxx>
-#include <sfx2/lokhelper.hxx>
-#include <comphelper/string.hxx>
+#include <touch/touch.h>
 #include <paintfrm.hxx>
-#include <PostItMgr.hxx>
 
 #ifdef USE_JAVA
 
@@ -90,7 +83,7 @@ static bool UseNativeHighlightColor()
     CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseNativeHighlightColor" ), kCFPreferencesCurrentApplication );
     if( aPref ) 
     {
-        if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanFalse )
+        if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
             bUseNativeHighlightColor = false;
         CFRelease( aPref );
     }
@@ -102,102 +95,101 @@ static bool UseNativeHighlightColor()
 #endif	// USE_JAVA
 
 // Here static members are defined. They will get changed on alteration of the
-// MapMode. This is done so that on ShowCursor the same size does not have to be
+// MapMode. This is done so that on ShowCrsr the same size does not have to be
 // expensively determined again and again.
 
-long SwSelPaintRects::s_nPixPtX = 0;
-long SwSelPaintRects::s_nPixPtY = 0;
-MapMode* SwSelPaintRects::s_pMapMode = nullptr;
+long SwSelPaintRects::nPixPtX = 0;
+long SwSelPaintRects::nPixPtY = 0;
+MapMode* SwSelPaintRects::pMapMode = 0;
 
 // Starting from here: classes / methods for the non-text-cursor
-SwVisibleCursor::SwVisibleCursor( const SwCursorShell * pCShell )
-    : m_pCursorShell( pCShell )
-    , m_nPageLastTime(0)
+SwVisCrsr::SwVisCrsr( const SwCrsrShell * pCShell )
+    : m_pCrsrShell( pCShell )
 {
-    pCShell->GetWin()->SetCursor( &m_aTextCursor );
-    m_bIsVisible = m_aTextCursor.IsVisible();
-    m_bIsDragCursor = false;
-    m_aTextCursor.SetWidth( 0 );
+    pCShell->GetWin()->SetCursor( &m_aTxtCrsr );
+    m_bIsVisible = m_aTxtCrsr.IsVisible();
+    m_bIsDragCrsr = false;
+    m_aTxtCrsr.SetWidth( 0 );
 }
 
-SwVisibleCursor::~SwVisibleCursor()
+SwVisCrsr::~SwVisCrsr()
 {
-    if( m_bIsVisible && m_aTextCursor.IsVisible() )
-        m_aTextCursor.Hide();
+    if( m_bIsVisible && m_aTxtCrsr.IsVisible() )
+        m_aTxtCrsr.Hide();
 
-    m_pCursorShell->GetWin()->SetCursor( nullptr );
+    m_pCrsrShell->GetWin()->SetCursor( 0 );
 }
 
-void SwVisibleCursor::Show()
+void SwVisCrsr::Show()
 {
     if( !m_bIsVisible )
     {
         m_bIsVisible = true;
 
         // display at all?
-        if( m_pCursorShell->VisArea().IsOver( m_pCursorShell->m_aCharRect ) || comphelper::LibreOfficeKit::isActive() )
-            SetPosAndShow(nullptr);
+        if( m_pCrsrShell->VisArea().IsOver( m_pCrsrShell->m_aCharRect ) )
+            _SetPosAndShow();
     }
 }
 
-void SwVisibleCursor::Hide()
+void SwVisCrsr::Hide()
 {
     if( m_bIsVisible )
     {
         m_bIsVisible = false;
 
-        if( m_aTextCursor.IsVisible() )      // Shouldn't the flags be in effect?
-            m_aTextCursor.Hide();
+        if( m_aTxtCrsr.IsVisible() )      // Shouldn't the flags be in effect?
+            m_aTxtCrsr.Hide();
     }
 }
 
-void SwVisibleCursor::SetPosAndShow(SfxViewShell* pViewShell)
+void SwVisCrsr::_SetPosAndShow()
 {
     SwRect aRect;
-    long nTmpY = m_pCursorShell->m_aCursorHeight.getY();
+    long nTmpY = m_pCrsrShell->m_aCrsrHeight.getY();
     if( 0 > nTmpY )
     {
         nTmpY = -nTmpY;
-        m_aTextCursor.SetOrientation( 900 );
-        aRect = SwRect( m_pCursorShell->m_aCharRect.Pos(),
-           Size( m_pCursorShell->m_aCharRect.Height(), nTmpY ) );
-        aRect.Pos().setX(aRect.Pos().getX() + m_pCursorShell->m_aCursorHeight.getX());
-        if( m_pCursorShell->IsOverwriteCursor() )
+        m_aTxtCrsr.SetOrientation( 900 );
+        aRect = SwRect( m_pCrsrShell->m_aCharRect.Pos(),
+           Size( m_pCrsrShell->m_aCharRect.Height(), nTmpY ) );
+        aRect.Pos().setX(aRect.Pos().getX() + m_pCrsrShell->m_aCrsrHeight.getX());
+        if( m_pCrsrShell->IsOverwriteCrsr() )
             aRect.Pos().setY(aRect.Pos().getY() + aRect.Width());
     }
     else
     {
-        m_aTextCursor.SetOrientation();
-        aRect = SwRect( m_pCursorShell->m_aCharRect.Pos(),
-           Size( m_pCursorShell->m_aCharRect.Width(), nTmpY ) );
-        aRect.Pos().setY(aRect.Pos().getY() + m_pCursorShell->m_aCursorHeight.getX());
+        m_aTxtCrsr.SetOrientation( 0 );
+        aRect = SwRect( m_pCrsrShell->m_aCharRect.Pos(),
+           Size( m_pCrsrShell->m_aCharRect.Width(), nTmpY ) );
+        aRect.Pos().setY(aRect.Pos().getY() + m_pCrsrShell->m_aCrsrHeight.getX());
     }
 
     // check if cursor should show the current cursor bidi level
-    m_aTextCursor.SetDirection();
-    const SwCursor* pTmpCursor = m_pCursorShell->GetCursor_();
+    m_aTxtCrsr.SetDirection( CURSOR_DIRECTION_NONE );
+    const SwCursor* pTmpCrsr = m_pCrsrShell->_GetCrsr();
 
-    if ( pTmpCursor && !m_pCursorShell->IsOverwriteCursor() )
+    if ( pTmpCrsr && !m_pCrsrShell->IsOverwriteCrsr() )
     {
-        SwNode& rNode = pTmpCursor->GetPoint()->nNode.GetNode();
-        if( rNode.IsTextNode() )
+        SwNode& rNode = pTmpCrsr->GetPoint()->nNode.GetNode();
+        if( rNode.IsTxtNode() )
         {
-            const SwTextNode& rTNd = *rNode.GetTextNode();
-            const SwFrame* pFrame = rTNd.getLayoutFrame( m_pCursorShell->GetLayout(), nullptr, nullptr, false );
-            if ( pFrame )
+            const SwTxtNode& rTNd = *rNode.GetTxtNode();
+            const SwFrm* pFrm = rTNd.getLayoutFrm( m_pCrsrShell->GetLayout(), 0, 0, false );
+            if ( pFrm )
             {
-                const SwScriptInfo* pSI = static_cast<const SwTextFrame*>(pFrame)->GetScriptInfo();
+                const SwScriptInfo* pSI = static_cast<const SwTxtFrm*>(pFrm)->GetScriptInfo();
                  // cursor level has to be shown
                 if ( pSI && pSI->CountDirChg() > 1 )
                 {
-                    m_aTextCursor.SetDirection(
-                        ( pTmpCursor->GetCursorBidiLevel() % 2 ) ?
-                          CursorDirection::RTL :
-                          CursorDirection::LTR );
+                    m_aTxtCrsr.SetDirection(
+                        ( pTmpCrsr->GetCrsrBidiLevel() % 2 ) ?
+                          CURSOR_DIRECTION_RTL :
+                          CURSOR_DIRECTION_LTR );
                 }
-                if ( pFrame->IsRightToLeft() )
+                if ( pFrm->IsRightToLeft() )
                 {
-                    const OutputDevice *pOut = m_pCursorShell->GetOut();
+                    const OutputDevice *pOut = m_pCrsrShell->GetOut();
                     if ( pOut )
                     {
                         long nSize = pOut->GetSettings().GetStyleSettings().GetCursorSize();
@@ -210,85 +202,42 @@ void SwVisibleCursor::SetPosAndShow(SfxViewShell* pViewShell)
         }
     }
 
-    if( aRect.Height())
+    if( aRect.Height() )
     {
-        ::SwCalcPixStatics( m_pCursorShell->GetOut() );
-
-        // Disable pixel alignment when tiled rendering, so that twip values of
-        // the cursor don't depend on statics.
-        if (!comphelper::LibreOfficeKit::isActive())
-            ::SwAlignRect( aRect, static_cast<SwViewShell const *>(m_pCursorShell), m_pCursorShell->GetOut() );
+        ::SwCalcPixStatics( m_pCrsrShell->GetOut() );
+        ::SwAlignRect( aRect, (SwViewShell*)m_pCrsrShell );
     }
-    if( !m_pCursorShell->IsOverwriteCursor() || m_bIsDragCursor ||
-        m_pCursorShell->IsSelection() )
+    if( !m_pCrsrShell->IsOverwriteCrsr() || m_bIsDragCrsr ||
+        m_pCrsrShell->IsSelection() )
         aRect.Width( 0 );
 
-    m_aTextCursor.SetSize( aRect.SSize() );
+    m_aTxtCrsr.SetSize( aRect.SSize() );
 
-    m_aTextCursor.SetPos( aRect.Pos() );
-
-    bool bPostItActive = false;
-    if (auto pView = dynamic_cast<SwView*>(m_pCursorShell->GetSfxViewShell()))
+    m_aTxtCrsr.SetPos( aRect.Pos() );
+    if ( !m_pCrsrShell->IsCrsrReadonly()  || m_pCrsrShell->GetViewOptions()->IsSelectionInReadonly() )
     {
-        if (SwPostItMgr* pPostItMgr = pView->GetPostItMgr())
-            bPostItActive = pPostItMgr->GetActiveSidebarWin() != nullptr;
-    }
+        if ( m_pCrsrShell->GetDrawView() )
+            const_cast<SwDrawView*>(static_cast<const SwDrawView*>(m_pCrsrShell->GetDrawView()))->SetAnimationEnabled(
+                    !m_pCrsrShell->IsSelection() );
 
-    if (comphelper::LibreOfficeKit::isActive() && !bPostItActive)
-    {
-        // notify about page number change (if that happened)
-        sal_uInt16 nPage, nVirtPage;
-        // bCalcFrame=false is important to avoid calculating the layout when
-        // we're in the middle of doing that already.
-        const_cast<SwCursorShell*>(m_pCursorShell)->GetPageNum(nPage, nVirtPage, /*bAtCursorPos=*/true, /*bCalcFrame=*/false);
-        if (nPage != m_nPageLastTime)
+        sal_uInt16 nStyle = m_bIsDragCrsr ? CURSOR_SHADOW : 0;
+        if( nStyle != m_aTxtCrsr.GetStyle() )
         {
-            m_nPageLastTime = nPage;
-            OString aPayload = OString::number(nPage - 1);
-            m_pCursorShell->GetSfxViewShell()->libreOfficeKitViewCallback(LOK_CALLBACK_SET_PART, aPayload.getStr());
+            m_aTxtCrsr.SetStyle( nStyle );
+            m_aTxtCrsr.SetWindow( m_bIsDragCrsr ? m_pCrsrShell->GetWin() : 0 );
         }
 
-        // notify about the cursor position & size
-        tools::Rectangle aSVRect(aRect.Pos().getX(), aRect.Pos().getY(), aRect.Pos().getX() + aRect.SSize().Width(), aRect.Pos().getY() + aRect.SSize().Height());
-        OString sRect = aSVRect.toString();
-        if (pViewShell)
-        {
-            if (pViewShell == m_pCursorShell->GetSfxViewShell())
-                pViewShell->libreOfficeKitViewCallback(LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR, sRect.getStr());
-            else
-                SfxLokHelper::notifyOtherView(m_pCursorShell->GetSfxViewShell(), pViewShell, LOK_CALLBACK_INVALIDATE_VIEW_CURSOR, "rectangle", sRect);
-        }
-        else
-        {
-            m_pCursorShell->GetSfxViewShell()->libreOfficeKitViewCallback(LOK_CALLBACK_INVALIDATE_VISIBLE_CURSOR, sRect.getStr());
-            SfxLokHelper::notifyOtherViews(m_pCursorShell->GetSfxViewShell(), LOK_CALLBACK_INVALIDATE_VIEW_CURSOR, "rectangle", sRect);
-        }
-    }
-
-    if ( !m_pCursorShell->IsCursorReadonly()  || m_pCursorShell->GetViewOptions()->IsSelectionInReadonly() )
-    {
-        if ( m_pCursorShell->GetDrawView() )
-            const_cast<SwDrawView*>(static_cast<const SwDrawView*>(m_pCursorShell->GetDrawView()))->SetAnimationEnabled(
-                    !m_pCursorShell->IsSelection() );
-
-        sal_uInt16 nStyle = m_bIsDragCursor ? CURSOR_SHADOW : 0;
-        if( nStyle != m_aTextCursor.GetStyle() )
-        {
-            m_aTextCursor.SetStyle( nStyle );
-            m_aTextCursor.SetWindow( m_bIsDragCursor ? m_pCursorShell->GetWin() : nullptr );
-        }
-
-        m_aTextCursor.Show();
+        m_aTxtCrsr.Show();
     }
 }
 
-SwSelPaintRects::SwSelPaintRects( const SwCursorShell& rCSh )
+SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
     : SwRects()
-    , m_pCursorShell( &rCSh )
+    , pCShell( &rCSh )
 #if HAVE_FEATURE_DESKTOP
-    , m_pCursorOverlay(nullptr)
-    , m_bShowTextInputFieldOverlay(true)
-    , m_pTextInputFieldOverlay(nullptr)
+    , mpCursorOverlay( 0 )
+    , mbShowTxtInputFldOverlay( true )
+    , mpTxtInputFldOverlay( NULL )
 #endif
 {
 #ifdef USE_JAVA
@@ -316,34 +265,34 @@ void SwSelPaintRects::swapContent(SwSelPaintRects& rSwap)
     SwRects::swap(rSwap);
 
 #if HAVE_FEATURE_DESKTOP
-    // #i75172# also swap m_pCursorOverlay
+    // #i75172# also swap mpCursorOverlay
     sdr::overlay::OverlayObject* pTempOverlay = getCursorOverlay();
     setCursorOverlay(rSwap.getCursorOverlay());
     rSwap.setCursorOverlay(pTempOverlay);
 
-    const bool bTempShowTextInputFieldOverlay = m_bShowTextInputFieldOverlay;
-    m_bShowTextInputFieldOverlay = rSwap.m_bShowTextInputFieldOverlay;
-    rSwap.m_bShowTextInputFieldOverlay = bTempShowTextInputFieldOverlay;
+    const bool bTempShowTxtInputFldOverlay = mbShowTxtInputFldOverlay;
+    mbShowTxtInputFldOverlay = rSwap.mbShowTxtInputFldOverlay;
+    rSwap.mbShowTxtInputFldOverlay = bTempShowTxtInputFldOverlay;
 
-    sw::overlay::OverlayRangesOutline* pTempTextInputFieldOverlay = m_pTextInputFieldOverlay;
-    m_pTextInputFieldOverlay = rSwap.m_pTextInputFieldOverlay;
-    rSwap.m_pTextInputFieldOverlay = pTempTextInputFieldOverlay;
+    sw::overlay::OverlayRangesOutline* pTempTxtInputFldOverlay = mpTxtInputFldOverlay;
+    mpTxtInputFldOverlay = rSwap.mpTxtInputFldOverlay;
+    rSwap.mpTxtInputFldOverlay = pTempTxtInputFldOverlay;
 #endif
 }
 
 void SwSelPaintRects::Hide()
 {
 #if HAVE_FEATURE_DESKTOP
-    if (m_pCursorOverlay)
+    if(mpCursorOverlay)
     {
-        delete m_pCursorOverlay;
-        m_pCursorOverlay = nullptr;
+        delete mpCursorOverlay;
+        mpCursorOverlay = 0;
     }
 
-    if (m_pTextInputFieldOverlay != nullptr)
+    if ( mpTxtInputFldOverlay != NULL )
     {
-        delete m_pTextInputFieldOverlay;
-        m_pTextInputFieldOverlay = nullptr;
+        delete mpTxtInputFldOverlay;
+        mpTxtInputFldOverlay = NULL;
     }
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
@@ -359,17 +308,17 @@ void SwSelPaintRects::Hide()
             {
                 for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
                 {
-                    tools::Rectangle aPaintRect( sit->SVRect() );
+                    Rectangle aPaintRect( sit->SVRect() );
                     if ( !aPaintRect.IsEmpty() )
-                        pWin->Invalidate( tools::Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
+                        pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
                 }
 
                 for( sal_uInt16 n = 0; n < size(); ++n )
                 {
                     const SwRect aNextRect( (*this)[n] );
-                    tools::Rectangle aPaintRect( aNextRect.SVRect() );
+                    Rectangle aPaintRect( aNextRect.SVRect() );
                     if ( !aPaintRect.IsEmpty() )
-                        pWin->Invalidate( tools::Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
+                        pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
                 }
             }
         }
@@ -381,33 +330,9 @@ void SwSelPaintRects::Hide()
     SwRects::clear();
 }
 
-/**
- * Return a layout rectangle (typically with minimal width) that represents a
- * cursor at rPosition.
- *
- * @param rPoint layout position as a hint about what layout frame contains
- * rPosition (there might be multiple frames for a single node)
- * @param rPosition the doc model position (paragraph / character index)
- */
-static SwRect lcl_getLayoutRect(const Point& rPoint, const SwPosition& rPosition)
+void SwSelPaintRects::Show()
 {
-    const SwContentNode* pNode = rPosition.nNode.GetNode().GetContentNode();
-    const SwContentFrame* pFrame = pNode->getLayoutFrame(pNode->GetDoc()->getIDocumentLayoutAccess().GetCurrentLayout(), &rPoint, &rPosition);
-    SwRect aRect;
-    pFrame->GetCharRect(aRect, rPosition);
-    return aRect;
-}
-
-void SwShellCursor::FillStartEnd(SwRect& rStart, SwRect& rEnd) const
-{
-    const SwShellCursor* pCursor = GetShell()->getShellCursor(false);
-    rStart = lcl_getLayoutRect(pCursor->GetSttPos(), *pCursor->Start());
-    rEnd = lcl_getLayoutRect(pCursor->GetEndPos(), *pCursor->End());
-}
-
-void SwSelPaintRects::Show(std::vector<OString>* pSelectionRectangles)
-{
-    SdrView *const pView = const_cast<SdrView*>(m_pCursorShell->GetDrawView());
+    SdrView* pView = (SdrView*)pCShell->GetDrawView();
 
     if(pView && pView->PaintWindowCount())
     {
@@ -458,9 +383,9 @@ void SwSelPaintRects::Show(std::vector<OString>* pSelectionRectangles)
                 {
                     for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
                     {
-                        tools::Rectangle aPaintRect( sit->SVRect() );
+                        Rectangle aPaintRect( sit->SVRect() );
                         if ( !aPaintRect.IsEmpty() )
-                            pWin->Invalidate( tools::Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
+                            pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
                     }
 
                     aLastSelectionPixelRects.clear();
@@ -468,10 +393,10 @@ void SwSelPaintRects::Show(std::vector<OString>* pSelectionRectangles)
                     for( sal_uInt16 n = 0; n < size(); ++n )
                     {
                         const SwRect aNextRect( (*this)[n] );
-                        tools::Rectangle aPaintRect( aNextRect.SVRect() );
+                        Rectangle aPaintRect( aNextRect.SVRect() );
                         if ( !aPaintRect.IsEmpty() )
                         {
-                            pWin->Invalidate( tools::Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
+                            pWin->Invalidate( Rectangle( Point( aPaintRect.Left() - 10, aPaintRect.Top() - 10 ), Size( aPaintRect.GetWidth() + 20, aPaintRect.GetHeight() + 20 ) ) );
                             aLastSelectionPixelRects.push_back( aNextRect );
                         }
                     }
@@ -485,32 +410,32 @@ void SwSelPaintRects::Show(std::vector<OString>* pSelectionRectangles)
         else
         {
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
-        for(size_type a = 0; a < size(); ++a)
+        for(sal_uInt16 a(0); a < size(); a++)
         {
             const SwRect aNextRect((*this)[a]);
-            const tools::Rectangle aPntRect(aNextRect.SVRect());
+            const Rectangle aPntRect(aNextRect.SVRect());
 
             aNewRanges.push_back(basegfx::B2DRange(
                 aPntRect.Left(), aPntRect.Top(),
                 aPntRect.Right() + 1, aPntRect.Bottom() + 1));
         }
 
-        if (m_pCursorOverlay)
+        if(mpCursorOverlay)
         {
             if(!aNewRanges.empty())
             {
-                static_cast<sdr::overlay::OverlaySelection*>(m_pCursorOverlay)->setRanges(aNewRanges);
+                static_cast< sdr::overlay::OverlaySelection* >(mpCursorOverlay)->setRanges(aNewRanges);
             }
             else
             {
-                delete m_pCursorOverlay;
-                m_pCursorOverlay = nullptr;
+                delete mpCursorOverlay;
+                mpCursorOverlay = 0;
             }
         }
         else if(!empty())
         {
             SdrPaintWindow* pCandidate = pView->GetPaintWindow(0);
-            rtl::Reference< sdr::overlay::OverlayManager > xTargetOverlay = pCandidate->GetOverlayManager();
+            rtl::Reference< ::sdr::overlay::OverlayManager > xTargetOverlay = pCandidate->GetOverlayManager();
 
             if (xTargetOverlay.is())
             {
@@ -519,109 +444,106 @@ void SwSelPaintRects::Show(std::vector<OString>* pSelectionRectangles)
                 const Color aHighlight(aSvtOptionsDrawinglayer.getHilightColor());
 
                 // create correct selection
-                m_pCursorOverlay = new sdr::overlay::OverlaySelection(
-                    sdr::overlay::OverlayType::Transparent,
+                mpCursorOverlay = new sdr::overlay::OverlaySelection(
+                    sdr::overlay::OVERLAY_TRANSPARENT,
                     aHighlight,
                     aNewRanges,
                     true);
 
-                xTargetOverlay->add(*m_pCursorOverlay);
+                xTargetOverlay->add(*mpCursorOverlay);
             }
         }
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
         }
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 
-        HighlightInputField();
-#endif
-
-        // Tiled editing does not expose the draw and writer cursor, it just
-        // talks about "the" cursor at the moment. As long as that's true,
-        // don't say anything about the Writer cursor till a draw object is
-        // being edited.
-        if (comphelper::LibreOfficeKit::isActive() && !pView->GetTextEditObject())
+        HighlightInputFld();
+#else
+        const OutputDevice* pOut = GetShell()->GetWin();
+        if ( ! pOut )
+            pOut = GetShell()->GetOut();
+        SwWrtShell *pWrtShell = dynamic_cast<SwWrtShell*>(const_cast<SwCrsrShell*>(GetShell()));
+        if (!empty())
         {
-            // If pSelectionRectangles is set, we're just collecting the text selections -> don't emit start/end.
-            if (!empty() && !pSelectionRectangles)
+            if (pWrtShell)
             {
-                // The selection may be a complex polygon, emit the logical
-                // start/end cursor rectangle of the selection as separate
-                // events, if there is a real selection.
-                // This can be used to easily show selection handles on the
-                // client side.
-                SwRect aStartRect;
-                SwRect aEndRect;
-                FillStartEnd(aStartRect, aEndRect);
-
-                if (aStartRect.HasArea())
+                // Buffer will be deallocated in the UI layer
+                MLORect *rects = (MLORect *) malloc((sizeof(MLORect))*size());
+                for (size_t i = 0; i < size(); ++i)
                 {
-                    OString sRect = aStartRect.SVRect().toString();
-                    GetShell()->GetSfxViewShell()->libreOfficeKitViewCallback(LOK_CALLBACK_TEXT_SELECTION_START, sRect.getStr());
+                    Point origin = pOut->LogicToPixel((*this)[i].Pos());
+                    Size ssize = pOut->LogicToPixel((*this)[i].SSize());
+#ifdef IOS
+                    rects[i] = CGRectMake(origin.X(), origin.Y(),
+                                          ssize.Width(), ssize.Height());
+#else
+                    // Not yet implemented
+                    (void) origin;
+                    (void) ssize;
+#endif
                 }
-                if (aEndRect.HasArea())
-                {
-                    OString sRect = aEndRect.SVRect().toString();
-                    GetShell()->GetSfxViewShell()->libreOfficeKitViewCallback(LOK_CALLBACK_TEXT_SELECTION_END, sRect.getStr());
-                }
+                // GetShell returns a SwCrsrShell which actually is a SwWrtShell
+                touch_ui_selection_start(MLOSelectionText, pWrtShell, rects, size(), NULL);
             }
-
-            std::vector<OString> aRect;
-            for (size_type i = 0; i < size(); ++i)
-            {
-                const SwRect& rRect = (*this)[i];
-                aRect.push_back(rRect.SVRect().toString());
-            }
-            OString sRect = comphelper::string::join("; ", aRect);
-            if (!pSelectionRectangles)
-            {
-                GetShell()->GetSfxViewShell()->libreOfficeKitViewCallback(LOK_CALLBACK_TEXT_SELECTION, sRect.getStr());
-                SfxLokHelper::notifyOtherViews(GetShell()->GetSfxViewShell(), LOK_CALLBACK_TEXT_VIEW_SELECTION, "selection", sRect);
-            }
-            else
-                pSelectionRectangles->push_back(sRect);
         }
+        else
+        {
+            touch_ui_selection_none();
+        }
+#endif
     }
 }
 
-void SwSelPaintRects::HighlightInputField()
+#if !HAVE_FEATURE_DESKTOP
+
+extern "C" void touch_lo_selection_attempt_resize(const void * /* documentHandle */,
+                                                  MLORect * /* selectedRectangles */,
+                                                  int /* numberOfRectangles */)
 {
-    std::vector< basegfx::B2DRange > aInputFieldRanges;
+}
 
-    if (m_bShowTextInputFieldOverlay)
+#endif
+
+void SwSelPaintRects::HighlightInputFld()
+{
+    std::vector< basegfx::B2DRange > aInputFldRanges;
+
+    if ( mbShowTxtInputFldOverlay )
     {
-        SwTextInputField* pCurTextInputFieldAtCursor =
-            dynamic_cast<SwTextInputField*>(SwCursorShell::GetTextFieldAtPos( GetShell()->GetCursor()->Start(), false ));
-        if ( pCurTextInputFieldAtCursor != nullptr )
+        SwTxtInputFld* pCurTxtInputFldAtCrsr =
+            dynamic_cast<SwTxtInputFld*>(GetShell()->GetTxtFldAtPos( GetShell()->GetCrsr()->Start(), false ));
+        if ( pCurTxtInputFldAtCrsr != NULL )
         {
-            SwTextNode* pTextNode = pCurTextInputFieldAtCursor->GetpTextNode();
-            std::unique_ptr<SwShellCursor> pCursorForInputTextField(
-                new SwShellCursor( *GetShell(), SwPosition( *pTextNode, pCurTextInputFieldAtCursor->GetStart() ) ) );
-            pCursorForInputTextField->SetMark();
-            pCursorForInputTextField->GetMark()->nNode = *pTextNode;
-            pCursorForInputTextField->GetMark()->nContent.Assign( pTextNode, *(pCurTextInputFieldAtCursor->End()) );
+            SwTxtNode* pTxtNode = pCurTxtInputFldAtCrsr->GetpTxtNode();
+            ::boost::scoped_ptr<SwShellCrsr> pCrsrForInputTxtFld(
+                new SwShellCrsr( *GetShell(), SwPosition( *pTxtNode, pCurTxtInputFldAtCrsr->GetStart() ) ) );
+            pCrsrForInputTxtFld->SetMark();
+            pCrsrForInputTxtFld->GetMark()->nNode = *pTxtNode;
+            pCrsrForInputTxtFld->GetMark()->nContent.Assign( pTxtNode, *(pCurTxtInputFldAtCrsr->End()) );
 
-            pCursorForInputTextField->FillRects();
-            SwRects* pRects = static_cast<SwRects*>(pCursorForInputTextField.get());
-            for (const SwRect & rNextRect : *pRects)
+            pCrsrForInputTxtFld->FillRects();
+
+            for (size_t a(0); a < pCrsrForInputTxtFld->size(); ++a)
             {
-                const tools::Rectangle aPntRect(rNextRect.SVRect());
+                const SwRect aNextRect((*pCrsrForInputTxtFld)[a]);
+                const Rectangle aPntRect(aNextRect.SVRect());
 
-                aInputFieldRanges.push_back(basegfx::B2DRange(
+                aInputFldRanges.push_back(basegfx::B2DRange(
                     aPntRect.Left(), aPntRect.Top(),
                     aPntRect.Right() + 1, aPntRect.Bottom() + 1));
             }
         }
     }
 
-    if ( aInputFieldRanges.size() > 0 )
+    if ( aInputFldRanges.size() > 0 )
     {
-        if (m_pTextInputFieldOverlay != nullptr)
+        if ( mpTxtInputFldOverlay != NULL )
         {
-            m_pTextInputFieldOverlay->setRanges( aInputFieldRanges );
+            mpTxtInputFldOverlay->setRanges( aInputFldRanges );
         }
         else
         {
-            SdrView* pView = const_cast<SdrView*>(GetShell()->GetDrawView());
+            SdrView* pView = (SdrView*)GetShell()->GetDrawView();
             SdrPaintWindow* pCandidate = pView->GetPaintWindow(0);
             rtl::Reference<sdr::overlay::OverlayManager> xTargetOverlay = pCandidate->GetOverlayManager();
 
@@ -632,25 +554,24 @@ void SwSelPaintRects::HighlightInputField()
                 Color aHighlight(aSvtOptionsDrawinglayer.getHilightColor());
                 aHighlight.DecreaseLuminance( 128 );
 
-                m_pTextInputFieldOverlay = new sw::overlay::OverlayRangesOutline(
-                        aHighlight, aInputFieldRanges );
-                xTargetOverlay->add( *m_pTextInputFieldOverlay );
+                mpTxtInputFldOverlay = new sw::overlay::OverlayRangesOutline( aHighlight, aInputFldRanges );
+                xTargetOverlay->add( *mpTxtInputFldOverlay );
             }
         }
     }
     else
     {
-        if (m_pTextInputFieldOverlay != nullptr)
+        if ( mpTxtInputFldOverlay != NULL )
         {
-            delete m_pTextInputFieldOverlay;
-            m_pTextInputFieldOverlay = nullptr;
+            delete mpTxtInputFldOverlay;
+            mpTxtInputFldOverlay = NULL;
         }
     }
 }
 
 void SwSelPaintRects::Invalidate( const SwRect& rRect )
 {
-    size_type nSz = size();
+    sal_uInt16 nSz = size();
     if( !nSz )
         return;
 
@@ -672,11 +593,16 @@ void SwSelPaintRects::Invalidate( const SwRect& rRect )
         {
             SwRect& rRectIt = *it;
             if( rRectIt.Right() == GetShell()->m_aOldRBPos.X() )
-                rRectIt.Right( rRectIt.Right() + s_nPixPtX );
+                rRectIt.Right( rRectIt.Right() + nPixPtX );
             if( rRectIt.Bottom() == GetShell()->m_aOldRBPos.Y() )
-                rRectIt.Bottom( rRectIt.Bottom() + s_nPixPtY );
+                rRectIt.Bottom( rRectIt.Bottom() + nPixPtY );
         }
     }
+}
+
+void SwSelPaintRects::Paint( const Rectangle& /*rRect*/ )
+{
+    // nothing to do with overlays
 }
 
 // check current MapMode of the shell and set possibly the static members.
@@ -689,172 +615,154 @@ void SwSelPaintRects::Get1PixelInLogic( const SwViewShell& rSh,
         pOut = rSh.GetOut();
 
     const MapMode& rMM = pOut->GetMapMode();
-    if (s_pMapMode->GetMapUnit() != rMM.GetMapUnit() ||
-        s_pMapMode->GetScaleX() != rMM.GetScaleX() ||
-        s_pMapMode->GetScaleY() != rMM.GetScaleY())
+    if( pMapMode->GetMapUnit() != rMM.GetMapUnit() ||
+        pMapMode->GetScaleX() != rMM.GetScaleX() ||
+        pMapMode->GetScaleY() != rMM.GetScaleY() )
     {
-        *s_pMapMode = rMM;
+        *pMapMode = rMM;
         Size aTmp( 1, 1 );
         aTmp = pOut->PixelToLogic( aTmp );
-        s_nPixPtX = aTmp.Width();
-        s_nPixPtY = aTmp.Height();
+        nPixPtX = aTmp.Width();
+        nPixPtY = aTmp.Height();
     }
     if( pX )
-        *pX = s_nPixPtX;
+        *pX = nPixPtX;
     if( pY )
-        *pY = s_nPixPtY;
+        *pY = nPixPtY;
 }
 
-SwShellCursor::SwShellCursor(
-    const SwCursorShell& rCShell,
+SwShellCrsr::SwShellCrsr(
+    const SwCrsrShell& rCShell,
     const SwPosition &rPos )
-    : SwCursor(rPos,nullptr)
+    : SwCursor(rPos,0,false)
     , SwSelPaintRects(rCShell)
-    , m_pInitialPoint(SwPaM::GetPoint())
+    , pPt(SwPaM::GetPoint())
 {}
 
-SwShellCursor::SwShellCursor(
-    const SwCursorShell& rCShell,
+SwShellCrsr::SwShellCrsr(
+    const SwCrsrShell& rCShell,
     const SwPosition &rPos,
     const Point& rPtPos,
     SwPaM* pRing )
-    : SwCursor(rPos, pRing)
+    : SwCursor(rPos, pRing, false)
     , SwSelPaintRects(rCShell)
-    , m_MarkPt(rPtPos)
-    , m_PointPt(rPtPos)
-    , m_pInitialPoint(SwPaM::GetPoint())
+    , aMkPt(rPtPos)
+    , aPtPt(rPtPos)
+    , pPt(SwPaM::GetPoint())
 {}
 
-SwShellCursor::SwShellCursor( SwShellCursor& rICursor )
-    : SwCursor(rICursor, &rICursor)
-    , SwSelPaintRects(*rICursor.GetShell())
-    , m_MarkPt(rICursor.GetMkPos())
-    , m_PointPt(rICursor.GetPtPos())
-    , m_pInitialPoint(SwPaM::GetPoint())
+SwShellCrsr::SwShellCrsr( SwShellCrsr& rICrsr )
+    : SwCursor(rICrsr)
+    , SwSelPaintRects(*rICrsr.GetShell())
+    , aMkPt(rICrsr.GetMkPos())
+    , aPtPt(rICrsr.GetPtPos())
+    , pPt(SwPaM::GetPoint())
 {}
 
-SwShellCursor::~SwShellCursor()
+SwShellCrsr::~SwShellCrsr()
 {}
 
-bool SwShellCursor::IsReadOnlyAvailable() const
+bool SwShellCrsr::IsReadOnlyAvailable() const
 {
     return GetShell()->IsReadOnlyAvailable();
 }
 
-void SwShellCursor::SetMark()
+void SwShellCrsr::SetMark()
 {
-    if (SwPaM::GetPoint() == m_pInitialPoint)
-        m_MarkPt = m_PointPt;
+    if( SwPaM::GetPoint() == pPt )
+        aMkPt = aPtPt;
     else
-        m_PointPt = m_MarkPt;
+        aPtPt = aMkPt;
     SwPaM::SetMark();
 }
 
-void SwShellCursor::FillRects()
+void SwShellCrsr::FillRects()
 {
     // calculate the new rectangles
     if( HasMark() &&
-        GetPoint()->nNode.GetNode().IsContentNode() &&
-        GetPoint()->nNode.GetNode().GetContentNode()->getLayoutFrame( GetShell()->GetLayout() ) &&
+        GetPoint()->nNode.GetNode().IsCntntNode() &&
+        GetPoint()->nNode.GetNode().GetCntntNode()->getLayoutFrm( GetShell()->GetLayout() ) &&
         (GetMark()->nNode == GetPoint()->nNode ||
-        (GetMark()->nNode.GetNode().IsContentNode() &&
-         GetMark()->nNode.GetNode().GetContentNode()->getLayoutFrame( GetShell()->GetLayout() ) )   ))
-        GetShell()->GetLayout()->CalcFrameRects( *this );
+        (GetMark()->nNode.GetNode().IsCntntNode() &&
+         GetMark()->nNode.GetNode().GetCntntNode()->getLayoutFrm( GetShell()->GetLayout() ) )   ))
+        GetShell()->GetLayout()->CalcFrmRects( *this );
 }
 
-void SwShellCursor::Show(SfxViewShell* pViewShell)
+void SwShellCrsr::Show()
 {
-    std::vector<OString> aSelectionRectangles;
-    for(SwPaM& rPaM : GetRingContainer())
-    {
-        SwShellCursor* pShCursor = dynamic_cast<SwShellCursor*>(&rPaM);
-        if(pShCursor)
-            pShCursor->SwSelPaintRects::Show(&aSelectionRectangles);
-    }
-
-    if (comphelper::LibreOfficeKit::isActive())
-    {
-        std::vector<OString> aRect;
-        for (const OString & rSelectionRectangle : aSelectionRectangles)
-        {
-            if (rSelectionRectangle.isEmpty())
-                continue;
-            aRect.push_back(rSelectionRectangle);
-        }
-        OString sRect = comphelper::string::join("; ", aRect);
-        if (pViewShell)
-        {
-            // Just notify pViewShell about our existing selection.
-            if (pViewShell != GetShell()->GetSfxViewShell())
-                SfxLokHelper::notifyOtherView(GetShell()->GetSfxViewShell(), pViewShell, LOK_CALLBACK_TEXT_VIEW_SELECTION, "selection", sRect);
-        }
-        else
-        {
-            GetShell()->GetSfxViewShell()->libreOfficeKitViewCallback(LOK_CALLBACK_TEXT_SELECTION, sRect.getStr());
-            SfxLokHelper::notifyOtherViews(GetShell()->GetSfxViewShell(), LOK_CALLBACK_TEXT_VIEW_SELECTION, "selection", sRect);
-        }
-    }
+    SwShellCrsr * pTmp = this;
+    do {
+        if (pTmp)
+            pTmp->SwSelPaintRects::Show();
+    } while( this != ( pTmp = dynamic_cast<SwShellCrsr*>(pTmp->GetNext()) ) );
 }
 
 // This rectangle gets painted anew, therefore the SSelection in this
 // area is invalid.
-void SwShellCursor::Invalidate( const SwRect& rRect )
+void SwShellCrsr::Invalidate( const SwRect& rRect )
 {
-    for(SwPaM& rPaM : GetRingContainer())
+    SwShellCrsr * pTmp = this;
+
+    do
     {
-        SwShellCursor* pShCursor = dynamic_cast<SwShellCursor*>(&rPaM);
-        // skip any non SwShellCursor objects in the ring
+        pTmp->SwSelPaintRects::Invalidate( rRect );
+
+        // skip any non SwShellCrsr objects in the ring
         // see also: SwAutoFormat::DeleteSel()
-        if(pShCursor)
-            pShCursor->SwSelPaintRects::Invalidate(rRect);
+        Ring* pTmpRing = pTmp;
+        pTmp = 0;
+        do
+        {
+            pTmpRing = pTmpRing->GetNext();
+            pTmp = dynamic_cast<SwShellCrsr*>(pTmpRing);
+        }
+        while ( !pTmp );
     }
+    while( this != pTmp );
 }
 
-void SwShellCursor::Hide()
+void SwShellCrsr::Hide()
 {
-    for(SwPaM& rPaM : GetRingContainer())
-    {
-        SwShellCursor* pShCursor = dynamic_cast<SwShellCursor*>(&rPaM);
-        if(pShCursor)
-            pShCursor->SwSelPaintRects::Hide();
-    }
+    SwShellCrsr * pTmp = this;
+    do {
+        if (pTmp)
+            pTmp->SwSelPaintRects::Hide();
+    } while( this != ( pTmp = dynamic_cast<SwShellCrsr*>(pTmp->GetNext()) ) );
 }
 
-SwCursor* SwShellCursor::Create( SwPaM* pRing ) const
+SwCursor* SwShellCrsr::Create( SwPaM* pRing ) const
 {
-    return new SwShellCursor( *GetShell(), *GetPoint(), GetPtPos(), pRing );
+    return new SwShellCrsr( *GetShell(), *GetPoint(), GetPtPos(), pRing );
 }
 
-short SwShellCursor::MaxReplaceArived()
+short SwShellCrsr::MaxReplaceArived()
 {
     short nRet = RET_YES;
-    vcl::Window* pDlg = SwView::GetSearchDialog();
+    vcl::Window* pDlg = (vcl::Window*) SwView::GetSearchDialog();
     if( pDlg )
     {
         // Terminate old actions. The table-frames get constructed and
         // a SSelection can be created.
-        std::vector<sal_uInt16> vActionCounts;
-        for(SwViewShell& rShell : const_cast< SwCursorShell* >( GetShell() )->GetRingContainer())
+        std::vector<sal_uInt16> aArr;
+        sal_uInt16 nActCnt;
+        SwViewShell *pShell = const_cast< SwCrsrShell* >( GetShell() ),
+                  *pSh = pShell;
+        do {
+            for( nActCnt = 0; pSh->ActionPend(); ++nActCnt )
+                pSh->EndAction();
+            aArr.push_back( nActCnt );
+        } while( pShell != ( pSh = static_cast<SwViewShell*>(pSh->GetNext()) ) );
+
         {
-            sal_uInt16 nActCnt = 0;
-            while(rShell.ActionPend())
-            {
-                rShell.EndAction();
-                ++nActCnt;
-            }
-            vActionCounts.push_back(nActCnt);
+            nRet = MessageDialog(pDlg, "AskSearchDialog",
+                                 "modules/swriter/ui/asksearchdialog.ui").Execute();
         }
-        nRet = ScopedVclPtrInstance<MessageDialog>(pDlg, "AskSearchDialog",
-                "modules/swriter/ui/asksearchdialog.ui")->Execute();
-        auto pActionCount = vActionCounts.begin();
-        for(SwViewShell& rShell : const_cast< SwCursorShell* >( GetShell() )->GetRingContainer())
+
+        for( sal_uInt16 n = 0; n < aArr.size(); ++n )
         {
-            while(*pActionCount)
-            {
-                rShell.StartAction();
-                --(*pActionCount);
-            }
-            ++pActionCount;
+            for( nActCnt = aArr[n]; nActCnt--; )
+                pSh->StartAction();
+            pSh = static_cast<SwViewShell*>(pSh->GetNext());
         }
     }
     else
@@ -864,19 +772,19 @@ short SwShellCursor::MaxReplaceArived()
     return nRet;
 }
 
-void SwShellCursor::SaveTableBoxContent( const SwPosition* pPos )
+void SwShellCrsr::SaveTblBoxCntnt( const SwPosition* pPos )
 {
-    const_cast<SwCursorShell*>(GetShell())->SaveTableBoxContent( pPos );
+    ((SwCrsrShell*)GetShell())->SaveTblBoxCntnt( pPos );
 }
 
-bool SwShellCursor::UpDown( bool bUp, sal_uInt16 nCnt )
+bool SwShellCrsr::UpDown( bool bUp, sal_uInt16 nCnt )
 {
     return SwCursor::UpDown( bUp, nCnt,
                             &GetPtPos(), GetShell()->GetUpDownX() );
 }
 
 // if <true> than the cursor can be set to the position.
-bool SwShellCursor::IsAtValidPos( bool bPoint ) const
+bool SwShellCrsr::IsAtValidPos( bool bPoint ) const
 {
     if( GetShell() && ( GetShell()->IsAllProtect() ||
         GetShell()->GetViewOptions()->IsReadonly() ||
@@ -889,7 +797,7 @@ bool SwShellCursor::IsAtValidPos( bool bPoint ) const
 
 #ifdef USE_JAVA
 
-void SwShellCursor::GetNativeHightlightColorRects( std::vector< tools::Rectangle >& rPixelRects )
+void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixelRects )
 {
     rPixelRects.clear();
 
@@ -937,16 +845,16 @@ void SwShellCursor::GetNativeHightlightColorRects( std::vector< tools::Rectangle
 
 #endif	// USE_JAVA
 
-SwShellTableCursor::SwShellTableCursor( const SwCursorShell& rCursorSh,
+SwShellTableCrsr::SwShellTableCrsr( const SwCrsrShell& rCrsrSh,
                                     const SwPosition& rPos )
-    : SwCursor(rPos,nullptr), SwShellCursor(rCursorSh, rPos), SwTableCursor(rPos)
+    : SwCursor(rPos,0,false), SwShellCrsr(rCrsrSh, rPos), SwTableCursor(rPos)
 {
 }
 
-SwShellTableCursor::SwShellTableCursor( const SwCursorShell& rCursorSh,
+SwShellTableCrsr::SwShellTableCrsr( const SwCrsrShell& rCrsrSh,
                     const SwPosition& rMkPos, const Point& rMkPt,
                     const SwPosition& rPtPos, const Point& rPtPt )
-    : SwCursor(rPtPos,nullptr), SwShellCursor(rCursorSh, rPtPos), SwTableCursor(rPtPos)
+    : SwCursor(rPtPos,0,false), SwShellCrsr(rCrsrSh, rPtPos), SwTableCursor(rPtPos)
 {
     SetMark();
     *GetMark() = rMkPos;
@@ -954,121 +862,106 @@ SwShellTableCursor::SwShellTableCursor( const SwCursorShell& rCursorSh,
     GetPtPos() = rPtPt;
 }
 
-SwShellTableCursor::~SwShellTableCursor() {}
+SwShellTableCrsr::~SwShellTableCrsr() {}
 
-void SwShellTableCursor::SetMark()                { SwShellCursor::SetMark(); }
+void SwShellTableCrsr::SetMark()                { SwShellCrsr::SetMark(); }
 
-SwCursor* SwShellTableCursor::Create( SwPaM* pRing ) const
+SwCursor* SwShellTableCrsr::Create( SwPaM* pRing ) const
 {
-    return SwShellCursor::Create( pRing );
+    return SwShellCrsr::Create( pRing );
 }
 
-short SwShellTableCursor::MaxReplaceArived()
+short SwShellTableCrsr::MaxReplaceArived()
 {
-    return SwShellCursor::MaxReplaceArived();
+    return SwShellCrsr::MaxReplaceArived();
 }
 
-void SwShellTableCursor::SaveTableBoxContent( const SwPosition* pPos )
+void SwShellTableCrsr::SaveTblBoxCntnt( const SwPosition* pPos )
 {
-    SwShellCursor::SaveTableBoxContent( pPos );
+    SwShellCrsr::SaveTblBoxCntnt( pPos );
 }
 
-void SwShellTableCursor::FillRects()
+void SwShellTableCrsr::FillRects()
 {
     // Calculate the new rectangles. If the cursor is still "parked" do nothing
-    if (m_SelectedBoxes.empty() || m_bParked || !GetPoint()->nNode.GetIndex())
+    if (m_SelectedBoxes.empty() || bParked || !GetPoint()->nNode.GetIndex())
         return;
 
-    bool bStart = true;
     SwRegionRects aReg( GetShell()->VisArea() );
-    if (comphelper::LibreOfficeKit::isActive())
-        aReg = GetShell()->getIDocumentLayoutAccess().GetCurrentLayout()->Frame();
     SwNodes& rNds = GetDoc()->GetNodes();
-    SwFrame* pEndFrame = nullptr;
     for (size_t n = 0; n < m_SelectedBoxes.size(); ++n)
     {
         const SwStartNode* pSttNd = m_SelectedBoxes[n]->GetSttNd();
-        const SwTableNode* pSelTableNd = pSttNd->FindTableNode();
+#ifdef USE_JAVA
+        // Fix Mac App Store crash by checking for NULL start node
+        if ( !pSttNd )
+            continue;
+#endif	// USE_JAVA
+        const SwTableNode* pSelTblNd = pSttNd->FindTableNode();
 
         SwNodeIndex aIdx( *pSttNd );
-        SwContentNode* pCNd = rNds.GoNextSection( &aIdx, true, false );
+        SwCntntNode* pCNd = rNds.GoNextSection( &aIdx, true, false );
 
         // table in table
         // (see also lcl_FindTopLevelTable in unoobj2.cxx for a different
         // version to do this)
-        const SwTableNode* pCurTableNd = pCNd ? pCNd->FindTableNode() : nullptr;
-        while ( pSelTableNd != pCurTableNd && pCurTableNd )
+        const SwTableNode* pCurTblNd = pCNd ? pCNd->FindTableNode() : NULL;
+        while ( pSelTblNd != pCurTblNd && pCurTblNd )
         {
-            aIdx = pCurTableNd->EndOfSectionIndex();
+            aIdx = pCurTblNd->EndOfSectionIndex();
             pCNd = rNds.GoNextSection( &aIdx, true, false );
-            pCurTableNd = pCNd->FindTableNode();
+            pCurTblNd = pCNd->FindTableNode();
         }
 
         if( !pCNd )
             continue;
 
-        SwFrame* pFrame = pCNd->getLayoutFrame( GetShell()->GetLayout(), &GetSttPos() );
-        while( pFrame && !pFrame->IsCellFrame() )
-            pFrame = pFrame->GetUpper();
+        SwFrm* pFrm = pCNd->getLayoutFrm( GetShell()->GetLayout(), &GetSttPos() );
+        while( pFrm && !pFrm->IsCellFrm() )
+            pFrm = pFrm->GetUpper();
 
-        OSL_ENSURE( pFrame, "Node not in a table" );
+        OSL_ENSURE( pFrm, "Node not in a table" );
 
-        while ( pFrame )
+        while ( pFrm )
         {
-            if( aReg.GetOrigin().IsOver( pFrame->Frame() ) )
-            {
-                aReg -= pFrame->Frame();
-                if (bStart)
-                {
-                    bStart = false;
-                    m_aStart = SwRect(pFrame->Frame().Left(), pFrame->Frame().Top(), 1, pFrame->Frame().Height());
-                }
-            }
+            if( aReg.GetOrigin().IsOver( pFrm->Frm() ) )
+                aReg -= pFrm->Frm();
 
-            pEndFrame = pFrame;
-            pFrame = pFrame->GetNextCellLeaf();
+            pFrm = pFrm->GetNextCellLeaf( MAKEPAGE_NONE );
         }
     }
-    if (pEndFrame)
-        m_aEnd = SwRect(pEndFrame->Frame().Right(), pEndFrame->Frame().Top(), 1, pEndFrame->Frame().Height());
     aReg.Invert();
     insert( begin(), aReg.begin(), aReg.end() );
 }
 
-void SwShellTableCursor::FillStartEnd(SwRect& rStart, SwRect& rEnd) const
-{
-    rStart = m_aStart;
-    rEnd = m_aEnd;
-}
-
 // Check if the SPoint is within the Table-SSelection.
-bool SwShellTableCursor::IsInside( const Point& rPt ) const
+bool SwShellTableCrsr::IsInside( const Point& rPt ) const
 {
     // Calculate the new rectangles. If the cursor is still "parked" do nothing
-    if (m_SelectedBoxes.empty() || m_bParked || !GetPoint()->nNode.GetIndex())
+    if (m_SelectedBoxes.empty() || bParked || !GetPoint()->nNode.GetIndex())
         return false;
 
     SwNodes& rNds = GetDoc()->GetNodes();
     for (size_t n = 0; n < m_SelectedBoxes.size(); ++n)
     {
         SwNodeIndex aIdx( *m_SelectedBoxes[n]->GetSttNd() );
-        SwContentNode* pCNd = rNds.GoNextSection( &aIdx, true, false );
+        SwCntntNode* pCNd = rNds.GoNextSection( &aIdx, true, false );
         if( !pCNd )
             continue;
 
-        SwFrame* pFrame = pCNd->getLayoutFrame( GetShell()->GetLayout(), &GetPtPos() );
-        while( pFrame && !pFrame->IsCellFrame() )
-            pFrame = pFrame->GetUpper();
-        OSL_ENSURE( pFrame, "Node not in a table" );
-        if( pFrame && pFrame->Frame().IsInside( rPt ) )
+        SwFrm* pFrm = pCNd->getLayoutFrm( GetShell()->GetLayout(), &GetPtPos() );
+        while( pFrm && !pFrm->IsCellFrm() )
+            pFrm = pFrm->GetUpper();
+        OSL_ENSURE( pFrm, "Node not in a table" );
+        if( pFrm && pFrm->Frm().IsInside( rPt ) )
             return true;
     }
     return false;
 }
 
-bool SwShellTableCursor::IsAtValidPos( bool bPoint ) const
+bool SwShellTableCrsr::IsAtValidPos( bool bPoint ) const
 {
-    return SwShellCursor::IsAtValidPos( bPoint );
+    return SwShellCrsr::IsAtValidPos( bPoint );
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

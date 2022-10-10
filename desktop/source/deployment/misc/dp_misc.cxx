@@ -26,7 +26,6 @@
 
 #include <config_folders.h>
 #include <config_features.h>
-#include <chrono>
 
 #include "dp_misc.h"
 #include "dp_version.hxx"
@@ -35,7 +34,6 @@
 #include <rtl/digest.h>
 #include <rtl/random.h>
 #include <rtl/bootstrap.hxx>
-#include <sal/log.hxx>
 #include <unotools/bootstrap.hxx>
 #include <osl/file.hxx>
 #include <osl/pipe.hxx>
@@ -49,12 +47,12 @@
 #include <com/sun/star/bridge/XUnoUrlResolver.hpp>
 #include <com/sun/star/deployment/ExtensionManager.hpp>
 #include <com/sun/star/task/OfficeRestartManager.hpp>
-#include <memory>
-#include <comphelper/lok.hxx>
+#include <boost/scoped_array.hpp>
+#include <boost/shared_ptr.hpp>
 #include <comphelper/processfactory.hxx>
 #include <salhelper/linkhelper.hxx>
 
-#ifdef _WIN32
+#ifdef WNT
 #define UNICODE
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -63,7 +61,7 @@
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 
-#if defined(_WIN32)
+#if defined WNT
 #define SOFFICE1 "soffice.exe"
 #define SBASE "sbase.exe"
 #define SCALC "scalc.exe"
@@ -82,13 +80,13 @@ namespace dp_misc {
 namespace {
 
 struct UnoRc : public rtl::StaticWithInit<
-    std::shared_ptr<rtl::Bootstrap>, UnoRc> {
-    const std::shared_ptr<rtl::Bootstrap> operator () () {
+    boost::shared_ptr<rtl::Bootstrap>, UnoRc> {
+    const boost::shared_ptr<rtl::Bootstrap> operator () () {
         OUString unorc( "$BRAND_BASE_DIR/" LIBO_ETC_FOLDER "/" SAL_CONFIGFILE("louno") );
         ::rtl::Bootstrap::expandMacros( unorc );
-        std::shared_ptr< ::rtl::Bootstrap > ret(
+        ::boost::shared_ptr< ::rtl::Bootstrap > ret(
             new ::rtl::Bootstrap( unorc ) );
-        OSL_ASSERT( ret->getHandle() != nullptr );
+        OSL_ASSERT( ret->getHandle() != 0 );
         return ret;
     }
 };
@@ -105,19 +103,19 @@ const OUString OfficePipeId::operator () ()
     if (!(aLocateResult == ::utl::Bootstrap::PATH_EXISTS ||
         aLocateResult == ::utl::Bootstrap::PATH_VALID))
     {
-        throw Exception("Extension Manager: Could not obtain path for UserInstallation.", nullptr);
+        throw Exception("Extension Manager: Could not obtain path for UserInstallation.", 0);
     }
 
     rtlDigest digest = rtl_digest_create( rtl_Digest_AlgorithmMD5 );
     if (!digest) {
-        throw RuntimeException("cannot get digest rtl_Digest_AlgorithmMD5!", nullptr );
+        throw RuntimeException("cannot get digest rtl_Digest_AlgorithmMD5!", 0 );
     }
 
     sal_uInt8 const * data =
         reinterpret_cast<sal_uInt8 const *>(userPath.getStr());
-    std::size_t size = (userPath.getLength() * sizeof (sal_Unicode));
+    sal_Size size = (userPath.getLength() * sizeof (sal_Unicode));
     sal_uInt32 md5_key_len = rtl_digest_queryLength( digest );
-    std::unique_ptr<sal_uInt8[]> md5_buf( new sal_uInt8 [ md5_key_len ] );
+    ::boost::scoped_array<sal_uInt8> md5_buf( new sal_uInt8 [ md5_key_len ] );
 
     rtl_digest_init( digest, data, static_cast<sal_uInt32>(size) );
     rtl_digest_update( digest, data, static_cast<sal_uInt32>(size) );
@@ -128,9 +126,9 @@ const OUString OfficePipeId::operator () ()
     // the string size minimal
     OUStringBuffer buf;
 #ifdef PRODUCT_NAME
-    buf.append( OUString( "Single" PRODUCT_NAME "IPC_" ) );
+    buf.appendAscii( "Single" PRODUCT_NAME "IPC_" );
 #else	// PRODUCT_NAME
-    buf.append( "SingleOfficeIPC_" );
+    buf.appendAscii( "SingleOfficeIPC_" );
 #endif	// PRODUCT_NAME
     for ( sal_uInt32 i = 0; i < md5_key_len; ++i ) {
         buf.append( static_cast<sal_Int32>(md5_buf[ i ]), 0x10 );
@@ -149,7 +147,7 @@ bool existsOfficePipe()
 }
 
 //get modification time
-bool getModifyTimeTargetFile(const OUString &rFileURL, TimeValue &rTime)
+static bool getModifyTimeTargetFile(const OUString &rFileURL, TimeValue &rTime)
 {
     salhelper::LinkResolver aResolver(osl_FileStatus_Mask_ModifyTime);
 
@@ -251,6 +249,7 @@ bool needToSyncRepository(OUString const & name)
 } // anon namespace
 
 
+
 namespace {
 inline OUString encodeForRcFile( OUString const & str )
 {
@@ -305,15 +304,18 @@ OUString makeURL( OUString const & baseURL, OUString const & relPath_ )
     return buf.makeStringAndClear();
 }
 
-OUString makeURLAppendSysPathSegment( OUString const & baseURL, OUString const & segment )
+OUString makeURLAppendSysPathSegment( OUString const & baseURL, OUString const & relPath_ )
 {
-    OSL_ASSERT(segment.indexOf(u'/') == -1);
+    OUString segment = relPath_;
+    OSL_ASSERT(segment.indexOf(static_cast<sal_Unicode>('/')) == -1);
 
     ::rtl::Uri::encode(
         segment, rtl_UriCharClassPchar, rtl_UriEncodeIgnoreEscapes,
         RTL_TEXTENCODING_UTF8);
     return makeURL(baseURL, segment);
 }
+
+
 
 
 OUString expandUnoRcTerm( OUString const & term_ )
@@ -413,7 +415,7 @@ oslProcess raiseProcess(
     OUString const & appURL, Sequence<OUString> const & args )
 {
     ::osl::Security sec;
-    oslProcess hProcess = nullptr;
+    oslProcess hProcess = 0;
     oslProcessError rc = osl_executeProcess(
         appURL.pData,
         reinterpret_cast<rtl_uString **>(
@@ -421,24 +423,24 @@ oslProcess raiseProcess(
         args.getLength(),
         osl_Process_DETACHED,
         sec.getHandle(),
-        nullptr, // => current working dir
-        nullptr, 0, // => no env vars
+        0, // => current working dir
+        0, 0, // => no env vars
         &hProcess );
 
     switch (rc) {
     case osl_Process_E_None:
         break;
     case osl_Process_E_NotFound:
-        throw RuntimeException( "image not found!", nullptr );
+        throw RuntimeException( "image not found!", 0 );
     case osl_Process_E_TimedOut:
-        throw RuntimeException( "timeout occurred!", nullptr );
+        throw RuntimeException( "timeout occurred!", 0 );
     case osl_Process_E_NoPermission:
-        throw RuntimeException( "permission denied!", nullptr );
+        throw RuntimeException( "permission denied!", 0 );
     case osl_Process_E_Unknown:
-        throw RuntimeException( "unknown error!", nullptr );
+        throw RuntimeException( "unknown error!", 0 );
     case osl_Process_E_InvalidError:
     default:
-        throw RuntimeException( "unmapped error!", nullptr );
+        throw RuntimeException( "unmapped error!", 0 );
     }
 
     return hProcess;
@@ -449,16 +451,16 @@ OUString generateRandomPipeId()
 {
     // compute some good pipe id:
     static rtlRandomPool s_hPool = rtl_random_createPool();
-    if (s_hPool == nullptr)
-        throw RuntimeException( "cannot create random pool!?", nullptr );
+    if (s_hPool == 0)
+        throw RuntimeException( "cannot create random pool!?", 0 );
     sal_uInt8 bytes[ 32 ];
     if (rtl_random_getBytes(
             s_hPool, bytes, ARLEN(bytes) ) != rtl_Random_E_None) {
-        throw RuntimeException( "random pool error!?", nullptr );
+        throw RuntimeException( "random pool error!?", 0 );
     }
     OUStringBuffer buf;
-    for (unsigned char byte : bytes) {
-        buf.append( static_cast<sal_Int32>(byte), 0x10 );
+    for ( sal_uInt32 i = 0; i < ARLEN(bytes); ++i ) {
+        buf.append( static_cast<sal_Int32>(bytes[ i ]), 0x10 );
     }
     return buf.makeStringAndClear();
 }
@@ -474,7 +476,7 @@ Reference<XInterface> resolveUnoURL(
 
     for (int i = 0; i <= 20; ++i) // 10 seconds
     {
-        if (abortChannel != nullptr && abortChannel->isAborted()) {
+        if (abortChannel != 0 && abortChannel->isAborted()) {
             throw ucb::CommandAbortedException( "abort!" );
         }
         try {
@@ -483,20 +485,21 @@ Reference<XInterface> resolveUnoURL(
         catch (const connection::NoConnectException &) {
             if (i < 20)
             {
-                ::osl::Thread::wait( std::chrono::milliseconds(500) );
+                TimeValue tv = { 0 /* secs */, 500000000 /* nanosecs */ };
+                ::osl::Thread::wait( tv );
             }
             else throw;
         }
     }
-    return nullptr; // warning C4715
+    return 0; // warning C4715
 }
 
-#ifdef _WIN32
+#ifdef WNT
 void writeConsoleWithStream(OUString const & sText, HANDLE stream)
 {
     DWORD nWrittenChars = 0;
     WriteFile(stream, sText.getStr(),
-        sText.getLength() * 2, &nWrittenChars, nullptr);
+        sText.getLength() * 2, &nWrittenChars, NULL);
 }
 #else
 void writeConsoleWithStream(OUString const & sText, FILE * stream)
@@ -509,7 +512,7 @@ void writeConsoleWithStream(OUString const & sText, FILE * stream)
 
 void writeConsole(OUString const & sText)
 {
-#ifdef _WIN32
+#ifdef WNT
     writeConsoleWithStream(sText, GetStdHandle(STD_OUTPUT_HANDLE));
 #else
     writeConsoleWithStream(sText, stdout);
@@ -518,7 +521,7 @@ void writeConsole(OUString const & sText)
 
 void writeConsoleError(OUString const & sText)
 {
-#ifdef _WIN32
+#ifdef WNT
     writeConsoleWithStream(sText, GetStdHandle(STD_ERROR_HANDLE));
 #else
     writeConsoleWithStream(sText, stderr);
@@ -527,11 +530,11 @@ void writeConsoleError(OUString const & sText)
 
 OUString readConsole()
 {
-#ifdef _WIN32
+#ifdef WNT
     sal_Unicode aBuffer[1024];
     DWORD   dwRead = 0;
     //unopkg.com feeds unopkg.exe with wchar_t|s
-    if (ReadFile( GetStdHandle(STD_INPUT_HANDLE), &aBuffer, sizeof(aBuffer), &dwRead, nullptr ) )
+    if (ReadFile( GetStdHandle(STD_INPUT_HANDLE), &aBuffer, sizeof(aBuffer), &dwRead, NULL ) )
     {
         OSL_ASSERT((dwRead % 2) == 0);
         OUString value( aBuffer, dwRead / 2);
@@ -541,13 +544,13 @@ OUString readConsole()
     char buf[1024];
     memset(buf, 0, 1024);
     // read one char less so that the last char in buf is always zero
-    if (fgets(buf, 1024, stdin) != nullptr)
+    if (fgets(buf, 1024, stdin) != NULL)
     {
         OUString value = OStringToOUString(OString(buf), osl_getThreadTextEncoding());
         return value.trim();
     }
 #endif
-    throw css::uno::RuntimeException("reading from stdin failed");
+    return OUString();
 }
 
 void TRACE(OUString const & sText)
@@ -564,7 +567,7 @@ void syncRepositories(
         return;
 
     Reference<deployment::XExtensionManager> xExtensionManager;
-    //synchronize shared before bundled otherwise there are
+    //synchronize shared before bundled otherewise there are
     //more revoke and registration calls.
     bool bModified = false;
     if (force || needToSyncRepository("shared") || needToSyncRepository("bundled"))
@@ -580,11 +583,12 @@ void syncRepositories(
         }
     }
 #if !HAVE_FEATURE_MACOSX_SANDBOX
-    if (bModified && !comphelper::LibreOfficeKit::isActive())
+    if (bModified)
     {
         Reference<task::XRestartManager> restarter(task::OfficeRestartManager::get(comphelper::getProcessComponentContext()));
         if (restarter.is())
         {
+            OSL_TRACE( "Request restart for modified extensions manager" );
             restarter->requestRestart(xCmdEnv.is() ? xCmdEnv->getInteractionHandler() :
                                       Reference<task::XInteractionHandler>());
         }

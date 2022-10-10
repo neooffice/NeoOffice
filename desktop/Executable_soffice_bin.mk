@@ -47,6 +47,7 @@ ifneq ($(strip $(GUIBASE)),java)
 $(eval $(call gb_Executable_use_libraries,soffice_bin,\
     sal \
     sofficeapp \
+	$(gb_UWINAPI) \
 ))
 endif	# GUIBASE != java
 
@@ -86,6 +87,11 @@ endif
 
 ifeq ($(OS),WNT)
 
+$(eval $(call gb_Executable_use_static_libraries,soffice_bin,\
+    ooopathutils \
+    winextendloaderenv \
+))
+
 $(eval $(call gb_Executable_set_targettype_gui,soffice_bin,YES))
 
 $(eval $(call gb_Executable_add_nativeres,soffice_bin,sofficebin/officeloader))
@@ -99,5 +105,18 @@ $(eval $(call gb_Executable_add_ldflags,soffice_bin,\
 endif
 
 endif
+
+ifeq ($(strip $(GUIBASE)),java)
+ifeq ($(OS),MACOSX)
+ifneq ($(strip $(ENABLE_ASAN)),)
+$(eval $(call gb_Executable_add_cflags,soffice_bin,\
+    -fsanitize=address \
+))
+$(eval $(call gb_Executable_add_libs,soffice_bin,\
+    -fsanitize=address \
+))
+endif	# ENABLE_ASAN != ""
+endif	# OS == MACOSX
+endif	# GUIBASE == java
 
 # vim: set ts=4 sw=4 et:

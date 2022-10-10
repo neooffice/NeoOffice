@@ -25,14 +25,14 @@
  */
 
 #include "AppIconControl.hxx"
+#include <tools/debug.hxx>
 #include "dbaccess_helpid.hrc"
 #include "moduledbu.hxx"
 #include "dbu_app.hrc"
-#include "bitmaps.hlst"
 #include <vcl/image.hxx>
 #include "callbacks.hxx"
 #include "AppElementType.hxx"
-#include <memory>
+#include <boost/scoped_ptr.hpp>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -40,7 +40,7 @@
 
 typedef sal_Bool Application_canUseJava_Type();
 
-static Application_canUseJava_Type *pApplication_canUseJava = nullptr;
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -50,49 +50,44 @@ OApplicationIconControl::OApplicationIconControl(vcl::Window* _pParent)
     : SvtIconChoiceCtrl(_pParent,WB_ICON | WB_NOCOLUMNHEADER | WB_HIGHLIGHTFRAME | /*!WB_NOSELECTION |*/
                                 WB_TABSTOP | WB_CLIPCHILDREN | WB_NOVSCROLL | WB_SMART_ARRANGE | WB_NOHSCROLL | WB_CENTER)
     ,DropTargetHelper(this)
-    ,m_pActionListener(nullptr)
+    ,m_pActionListener(NULL)
 {
 
-    const struct CategoryDescriptor
+    struct CategoryDescriptor
     {
-        sal_uInt16 nLabelResId;
+        sal_uInt16      nLabelResId;
         ElementType eType;
-        const char* aImageResId;
+        sal_uInt16      nImageResId;
     }   aCategories[] = {
-        { RID_STR_TABLES_CONTAINER,     E_TABLE,    BMP_TABLEFOLDER_TREE_L  },
-        { RID_STR_QUERIES_CONTAINER,    E_QUERY,    BMP_QUERYFOLDER_TREE_L  },
-        { RID_STR_FORMS_CONTAINER,      E_FORM,     BMP_FORMFOLDER_TREE_L   },
-        { RID_STR_REPORTS_CONTAINER,    E_REPORT,   BMP_REPORTFOLDER_TREE_L }
+        { RID_STR_TABLES_CONTAINER,     E_TABLE,    IMG_TABLEFOLDER_TREE_L  },
+        { RID_STR_QUERIES_CONTAINER,    E_QUERY,    IMG_QUERYFOLDER_TREE_L  },
+        { RID_STR_FORMS_CONTAINER,      E_FORM,     IMG_FORMFOLDER_TREE_L   },
+        { RID_STR_REPORTS_CONTAINER,    E_REPORT,   IMG_REPORTFOLDER_TREE_L }
     };
-    for (const CategoryDescriptor& aCategorie : aCategories)
+    for ( size_t i=0; i < sizeof(aCategories)/sizeof(aCategories[0]); ++i)
     {
 #if defined USE_JAVA && defined MACOSX
         if ( !pApplication_canUseJava )
-            pApplication_canUseJava = reinterpret_cast< Application_canUseJava_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" ) );
+            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
         if ( !pApplication_canUseJava || !pApplication_canUseJava() )
         {
             // All report options require Java
-            if ( aCategorie.eType == E_REPORT )
+            if ( aCategories[i].eType == E_REPORT )
                 continue;
         }
 #endif	// USE_JAVA && defined MACOSX
         SvxIconChoiceCtrlEntry* pEntry = InsertEntry(
-            OUString( ModuleRes( aCategorie.nLabelResId ) ) ,
-            Image(BitmapEx(OUString::createFromAscii(aCategorie.aImageResId))));
+            OUString( ModuleRes( aCategories[i].nLabelResId ) ) ,
+            Image(  ModuleRes( aCategories[i].nImageResId ) ) );
         if ( pEntry )
-            pEntry->SetUserData( new ElementType( aCategorie.eType ) );
+            pEntry->SetUserData( new ElementType( aCategories[i].eType ) );
     }
 
-    SetChoiceWithCursor();
-    SetSelectionMode(SelectionMode::Single);
+    SetChoiceWithCursor( true );
+    SetSelectionMode(SINGLE_SELECTION);
 }
 
 OApplicationIconControl::~OApplicationIconControl()
-{
-    disposeOnce();
-}
-
-void OApplicationIconControl::dispose()
 {
     sal_uLong nCount = GetEntryCount();
     for ( sal_uLong i = 0; i < nCount; ++i )
@@ -100,12 +95,11 @@ void OApplicationIconControl::dispose()
         SvxIconChoiceCtrlEntry* pEntry = GetEntry( i );
         if ( pEntry )
         {
-            std::unique_ptr<ElementType> aType(static_cast<ElementType*>(pEntry->GetUserData()));
-            pEntry->SetUserData(nullptr);
+            boost::scoped_ptr<ElementType> aType(static_cast<ElementType*>(pEntry->GetUserData()));
+            pEntry->SetUserData(NULL);
         }
     }
-    DropTargetHelper::dispose();
-    SvtIconChoiceCtrl::dispose();
+
 }
 
 sal_Int8 OApplicationIconControl::AcceptDrop( const AcceptDropEvent& _rEvt )

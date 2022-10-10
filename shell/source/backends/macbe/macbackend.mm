@@ -48,6 +48,12 @@
 #define SPACE      ' '
 #define SEMI_COLON ';'
 
+typedef struct
+{
+    rtl::OUString Server;
+    sal_Int32 Port;
+} ProxyEntry;
+
 typedef enum {
     sHTTP,
     sHTTPS,
@@ -55,7 +61,10 @@ typedef enum {
 } ServiceType;
 
 
-namespace
+// helper functions
+
+
+namespace // private
 {
 
 /*
@@ -74,7 +83,7 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
     CFNumberRef         portNum;
     int                 portInt;
 
-    proxyDict = SCDynamicStoreCopyProxies(nullptr);
+    proxyDict = SCDynamicStoreCopyProxies(NULL);
 
     if (!proxyDict)
         return false;
@@ -99,10 +108,10 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
             break;
     }
     // Proxy enabled?
-    enableNum = static_cast<CFNumberRef>(CFDictionaryGetValue( proxyDict,
-                                                   proxiesEnable ));
+    enableNum = (CFNumberRef) CFDictionaryGetValue( proxyDict,
+                                                   proxiesEnable );
 
-    result = (enableNum != nullptr) && (CFGetTypeID(enableNum) == CFNumberGetTypeID());
+    result = (enableNum != NULL) && (CFGetTypeID(enableNum) == CFNumberGetTypeID());
 
     if (result)
         result = CFNumberGetValue(enableNum, kCFNumberIntType, &enable) && (enable != 0);
@@ -110,10 +119,10 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
     // Proxy enabled -> get hostname
     if (result)
     {
-        hostStr = static_cast<CFStringRef>(CFDictionaryGetValue( proxyDict,
-                                                     proxiesProxy ));
+        hostStr = (CFStringRef) CFDictionaryGetValue( proxyDict,
+                                                     proxiesProxy );
 
-        result = (hostStr != nullptr) && (CFGetTypeID(hostStr) == CFStringGetTypeID());
+        result = (hostStr != NULL) && (CFGetTypeID(hostStr) == CFStringGetTypeID());
     }
 
     if (result)
@@ -122,10 +131,10 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
     // Get proxy port
     if (result)
     {
-        portNum = static_cast<CFNumberRef>(CFDictionaryGetValue( proxyDict,
-                                                     proxiesPort ));
+        portNum = (CFNumberRef) CFDictionaryGetValue( proxyDict,
+                                                     proxiesPort );
 
-        result = (portNum != nullptr) && (CFGetTypeID(portNum) == CFNumberGetTypeID());
+        result = (portNum != NULL) && (CFGetTypeID(portNum) == CFNumberGetTypeID());
     }
     else
     {
@@ -151,20 +160,28 @@ bool GetProxySetting(ServiceType sType, char *host, size_t hostSize, UInt16 *por
     return result;
 }
 
-} // unnamed namespace
+} // end private namespace
+
+
 
 MacOSXBackend::MacOSXBackend()
 {
 }
 
+
+
 MacOSXBackend::~MacOSXBackend(void)
 {
 }
+
+
 
 MacOSXBackend* MacOSXBackend::createInstance()
 {
     return new MacOSXBackend;
 }
+
+
 
 rtl::OUString CFStringToOUString(const CFStringRef sOrig) {
     CFRetain(sOrig);
@@ -178,7 +195,7 @@ rtl::OUString CFStringToOUString(const CFStringRef sOrig) {
 
     CFRelease(sOrig);
 
-    return rtl::OUString::createFromAscii(sBuffer);
+    return rtl::OUString::createFromAscii((sal_Char*)sBuffer);
 }
 
 rtl::OUString GetOUString( NSString* pStr )
@@ -191,21 +208,28 @@ rtl::OUString GetOUString( NSString* pStr )
 
     rtl::OUStringBuffer aBuf( nLen+1 );
     aBuf.setLength( nLen );
-    [pStr getCharacters:
-     reinterpret_cast<unichar *>(const_cast<sal_Unicode*>(aBuf.getStr()))];
+    [pStr getCharacters: const_cast<sal_Unicode*>(aBuf.getStr())];
     return aBuf.makeStringAndClear();
 }
 
 void MacOSXBackend::setPropertyValue(
     rtl::OUString const &, css::uno::Any const &)
+    throw (
+        css::beans::UnknownPropertyException, css::beans::PropertyVetoException,
+        css::lang::IllegalArgumentException, css::lang::WrappedTargetException,
+        css::uno::RuntimeException, std::exception)
 {
     throw css::lang::IllegalArgumentException(
-        "setPropertyValue not supported",
+        rtl::OUString(
+            "setPropertyValue not supported"),
         static_cast< cppu::OWeakObject * >(this), -1);
 }
 
 css::uno::Any MacOSXBackend::getPropertyValue(
     rtl::OUString const & PropertyName)
+    throw (
+        css::beans::UnknownPropertyException, css::lang::WrappedTargetException,
+        css::uno::RuntimeException, std::exception)
 {
     if ( PropertyName == "WorkPathVariable" )
     {
@@ -228,12 +252,12 @@ css::uno::Any MacOSXBackend::getPropertyValue(
             }
             else
             {
-                SAL_WARN("shell", "user documents list contains empty file path or conversion failed" );
+                OSL_TRACE( "user documents list contains empty file path or conversion failed" );
             }
         }
         else
         {
-            SAL_WARN("shell", "Got nil or empty list of user document directories" );
+            OSL_TRACE( "Got nil or empty list of user document directories" );
         }
 #ifdef USE_JAVA
         [pPool release];
@@ -241,6 +265,8 @@ css::uno::Any MacOSXBackend::getPropertyValue(
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetFTPProxyName" )
     {
+        ProxyEntry aFtpProxy;
+
         char host[MAXHOSTNAMELEN];
         UInt16 port;
         bool retVal;
@@ -249,32 +275,44 @@ css::uno::Any MacOSXBackend::getPropertyValue(
 
         if (retVal)
         {
-            auto const Server = rtl::OUString::createFromAscii( host );
-            if( Server.getLength() > 0 )
-            {
-                return css::uno::makeAny(
-                    css::beans::Optional< css::uno::Any >(
-                        true, uno::makeAny( Server ) ) );
-            }
+            aFtpProxy.Server = rtl::OUString::createFromAscii( host );
+        }
+
+        // ftp proxy name
+        if( aFtpProxy.Server.getLength() > 0 )
+        {
+            return css::uno::makeAny(
+                css::beans::Optional< css::uno::Any >(
+                    true, uno::makeAny( aFtpProxy.Server ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetFTPProxyPort" )
     {
+        ProxyEntry aFtpProxy;
+
         char host[MAXHOSTNAMELEN];
         UInt16 port;
         bool retVal;
 
         retVal = GetProxySetting(sFTP, host, 100, &port);
 
-        if (retVal && port > 0)
+        if (retVal)
+        {
+            aFtpProxy.Port = port;
+        }
+
+        // ftp proxy port
+        if( aFtpProxy.Port > 0 )
         {
             return css::uno::makeAny(
                 css::beans::Optional< css::uno::Any >(
-                    true, uno::makeAny( sal_Int32(port) ) ) );
+                    true, uno::makeAny( aFtpProxy.Port ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetHTTPProxyName" )
     {
+        ProxyEntry aHttpProxy;
+
         char host[MAXHOSTNAMELEN];
         UInt16 port;
         bool retVal;
@@ -283,32 +321,44 @@ css::uno::Any MacOSXBackend::getPropertyValue(
 
         if (retVal)
         {
-            auto const Server = rtl::OUString::createFromAscii( host );
-            if( Server.getLength() > 0 )
-            {
-                return css::uno::makeAny(
-                    css::beans::Optional< css::uno::Any >(
-                        true, uno::makeAny( Server ) ) );
-            }
+            aHttpProxy.Server = rtl::OUString::createFromAscii( host );
+        }
+
+        // http proxy name
+        if( aHttpProxy.Server.getLength() > 0 )
+        {
+            return css::uno::makeAny(
+                css::beans::Optional< css::uno::Any >(
+                    true, uno::makeAny( aHttpProxy.Server ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetHTTPProxyPort" )
     {
+        ProxyEntry aHttpProxy;
+
         char host[MAXHOSTNAMELEN];
         UInt16 port;
         bool retVal;
 
         retVal = GetProxySetting(sHTTP, host, 100, &port);
 
-        if (retVal && port > 0)
+        if (retVal)
+        {
+            aHttpProxy.Port = port;
+        }
+
+        // http proxy port
+        if( aHttpProxy.Port > 0 )
         {
             return css::uno::makeAny(
                 css::beans::Optional< css::uno::Any >(
-                    true, uno::makeAny( sal_Int32(port) ) ) );
+                    true, uno::makeAny( aHttpProxy.Port ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetHTTPSProxyName" )
     {
+        ProxyEntry aHttpsProxy;
+
         char host[MAXHOSTNAMELEN];
         UInt16 port;
         bool retVal;
@@ -317,28 +367,38 @@ css::uno::Any MacOSXBackend::getPropertyValue(
 
         if (retVal)
         {
-            auto const Server = rtl::OUString::createFromAscii( host );
-            if( Server.getLength() > 0 )
-            {
-                return css::uno::makeAny(
-                    css::beans::Optional< css::uno::Any >(
-                        true, uno::makeAny( Server ) ) );
-            }
+            aHttpsProxy.Server = rtl::OUString::createFromAscii( host );
+        }
+
+        // https proxy name
+        if( aHttpsProxy.Server.getLength() > 0 )
+        {
+            return css::uno::makeAny(
+                css::beans::Optional< css::uno::Any >(
+                    true, uno::makeAny( aHttpsProxy.Server ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetHTTPSProxyPort" )
     {
+        ProxyEntry aHttpsProxy;
+
         char host[MAXHOSTNAMELEN];
         UInt16 port;
         bool retVal;
 
         retVal = GetProxySetting(sHTTPS, host, 100, &port);
 
-        if (retVal && port > 0)
+        if (retVal)
+        {
+            aHttpsProxy.Port = port;
+        }
+
+        // https proxy port
+        if( aHttpsProxy.Port > 0 )
         {
             return css::uno::makeAny(
                 css::beans::Optional< css::uno::Any >(
-                    true, uno::makeAny( sal_Int32(port) ) ) );
+                    true, uno::makeAny( aHttpsProxy.Port ) ) );
         }
         return css::uno::makeAny(css::beans::Optional< css::uno::Any >());
     } else if ( PropertyName == "ooInetProxyType" )
@@ -353,21 +413,21 @@ css::uno::Any MacOSXBackend::getPropertyValue(
         rtl::OUString aProxyBypassList;
 
         CFArrayRef rExceptionsList;
-        CFDictionaryRef rProxyDict = SCDynamicStoreCopyProxies(nullptr);
+        CFDictionaryRef rProxyDict = SCDynamicStoreCopyProxies(NULL);
 
         if (!rProxyDict)
-            rExceptionsList = nullptr;
+            rExceptionsList = 0;
         else
-            rExceptionsList = static_cast<CFArrayRef>(CFDictionaryGetValue(rProxyDict, kSCPropNetProxiesExceptionsList));
+            rExceptionsList = (CFArrayRef) CFDictionaryGetValue(rProxyDict, kSCPropNetProxiesExceptionsList);
 
         if (rExceptionsList)
         {
             for (CFIndex idx = 0; idx < CFArrayGetCount(rExceptionsList); idx++)
             {
-                CFStringRef rException = static_cast<CFStringRef>(CFArrayGetValueAtIndex(rExceptionsList, idx));
+                CFStringRef rException = (CFStringRef) CFArrayGetValueAtIndex(rExceptionsList, idx);
 
                 if (idx>0)
-                    aProxyBypassList += ";";
+                    aProxyBypassList += rtl::OUString(";");
 
                 aProxyBypassList += CFStringToOUString(rException);
             }
@@ -391,29 +451,37 @@ css::uno::Any MacOSXBackend::getPropertyValue(
     }
 }
 
+
+
 rtl::OUString SAL_CALL MacOSXBackend::getBackendName(void)
 {
     return rtl::OUString("com.sun.star.comp.configuration.backend.MacOSXBackend");
 }
 
+
+
 rtl::OUString SAL_CALL MacOSXBackend::getImplementationName(void)
+    throw (uno::RuntimeException, std::exception)
 {
     return getBackendName();
 }
 
 uno::Sequence<rtl::OUString> SAL_CALL MacOSXBackend::getBackendServiceNames(void)
 {
-    uno::Sequence<OUString> aServiceNameList { "com.sun.star.configuration.backend.MacOSXBackend" };
+    uno::Sequence<rtl::OUString> aServiceNameList(1);
+    aServiceNameList[0] = rtl::OUString( "com.sun.star.configuration.backend.MacOSXBackend");
 
     return aServiceNameList;
 }
 
 sal_Bool SAL_CALL MacOSXBackend::supportsService(const rtl::OUString& aServiceName)
+    throw (uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, aServiceName);
 }
 
 uno::Sequence<rtl::OUString> SAL_CALL MacOSXBackend::getSupportedServiceNames(void)
+    throw (uno::RuntimeException, std::exception)
 {
     return getBackendServiceNames();
 }

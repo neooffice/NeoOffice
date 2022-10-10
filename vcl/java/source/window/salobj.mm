@@ -53,7 +53,7 @@ JavaSalObject::JavaSalObject( SalFrame *pParent ) :
 
 	// Set window value now as the avmedia module needs access to it before
 	// it is actually shown
-	maSysData.mpNSView = static_cast< NSView* >( mpChildView );
+	maSysData.mpNSView = (NSView *)mpChildView;
 
 	if ( mpParent )
 		mpParent->AddObject( this, false );
@@ -75,11 +75,11 @@ void JavaSalObject::Destroy()
 	if ( mpParent )
 	{
 		mpParent->RemoveObject( this, true );
-		mpParent = nullptr;
+		mpParent = NULL;
 	}
 
 	VCLChildView_release( mpChildView );
-	mpChildView = nullptr;
+	mpChildView = NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -98,22 +98,29 @@ void JavaSalObject::Flush()
 
 void JavaSalObject::ResetClipRegion()
 {
-	maClipRect = tools::Rectangle();
+	maClipRect = Rectangle();
 	VCLChildView_setClip( mpChildView, NSZeroRect );
+}
+
+// -----------------------------------------------------------------------
+
+sal_uInt16 JavaSalObject::GetClipRegionType()
+{
+	return SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::BeginSetClipRegion( sal_uLong /* nRects */ )
 {
-	maClipRect = tools::Rectangle();
+	maClipRect = Rectangle();
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-	tools::Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
+	Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
 	if ( !aRect.IsEmpty() )
 	{
 		if ( maClipRect.IsEmpty() )
@@ -159,16 +166,30 @@ void JavaSalObject::Show( bool bVisible )
 	if ( mbVisible && mbInFlush && mpParent )
 		pParentNSWindow = mpParent->GetNativeWindow();
 	else
-		pParentNSWindow = nullptr;
+		pParentNSWindow = NULL;
 
 	if ( mpParent )
 		mpParent->RemoveObject( this, false );
 
 	// Don't attach subview unless we are in the Flush() method
-	VCLChildView_show( mpChildView, static_cast< id >( pParentNSWindow ), mbVisible && pParentNSWindow ? sal_True : sal_False );
+	VCLChildView_show( mpChildView, (id)pParentNSWindow, mbVisible && pParentNSWindow ? sal_True : sal_False );
 
 	if ( mpParent )
 		mpParent->AddObject( this, mbVisible );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalObject::SetBackground()
+{
+	VCLChildView_setBackgroundColor( mpChildView, 0xffffffff );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalObject::SetBackground( SalColor nSalColor )
+{
+	VCLChildView_setBackgroundColor( mpChildView, nSalColor | 0xff000000 );
 }
 
 // -----------------------------------------------------------------------

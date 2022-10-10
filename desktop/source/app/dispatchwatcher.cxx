@@ -24,9 +24,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sal/config.h>
 
-#include <sal/log.hxx>
 #include <sfx2/docfile.hxx>
 #include <sfx2/docfilt.hxx>
 #include <sfx2/fcontnr.hxx>
@@ -38,7 +36,6 @@
 #include <rtl/ustring.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/synchronousdispatch.hxx>
-#include <com/sun/star/io/IOException.hpp>
 #include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/util/CloseVetoException.hpp>
 #include <com/sun/star/task/InteractionHandler.hpp>
@@ -66,6 +63,7 @@
 #include <osl/thread.hxx>
 #include <osl/file.hxx>
 #include <osl/file.h>
+#include <rtl/instance.hxx>
 #include <iostream>
 
 using namespace ::osl;
@@ -89,13 +87,14 @@ struct DispatchHolder
         aURL( rURL ), xDispatch( rDispatch ) {}
 
     URL aURL;
+    OUString cwdUrl;
     Reference< XDispatch > xDispatch;
 };
 
 namespace
 {
 
-std::shared_ptr<const SfxFilter> impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory )
+const SfxFilter* impl_lookupExportFilterForUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory )
 {
     // create the list of filters
     OUStringBuffer sQuery(256);
@@ -103,16 +102,16 @@ std::shared_ptr<const SfxFilter> impl_lookupExportFilterForUrl( const rtl::OUStr
     sQuery.append(":module=");
     sQuery.append(rFactory); // use long name here !
     sQuery.append(":iflags=");
-    sQuery.append(OUString::number(static_cast<sal_Int32>(SfxFilterFlags::EXPORT)));
+    sQuery.append(OUString::number(SFX_FILTER_EXPORT));
     sQuery.append(":eflags=");
-    sQuery.append(OUString::number(static_cast<int>(SFX_FILTER_NOTINSTALLED)));
+    sQuery.append(OUString::number(SFX_FILTER_NOTINSTALLED));
 
     const Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
     const Reference< XContainerQuery > xFilterFactory(
             xContext->getServiceManager()->createInstanceWithContext( "com.sun.star.document.FilterFactory", xContext ),
             UNO_QUERY_THROW );
 
-    std::shared_ptr<const SfxFilter> pBestMatch;
+    const SfxFilter* pBestMatch = 0;
 
     const Reference< XEnumeration > xFilterEnum(
             xFilterFactory->createSubSetEnumerationByQuery( sQuery.makeStringAndClear() ), UNO_QUERY_THROW );
@@ -122,10 +121,10 @@ std::shared_ptr<const SfxFilter> impl_lookupExportFilterForUrl( const rtl::OUStr
         const rtl::OUString aName( aFilterProps.getUnpackedValueOrDefault( "Name", rtl::OUString() ) );
         if ( !aName.isEmpty() )
         {
-            std::shared_ptr<const SfxFilter> pFilter( SfxFilter::GetFilterByName( aName ) );
+            const SfxFilter* const pFilter( SfxFilter::GetFilterByName( aName ) );
             if ( pFilter && pFilter->CanExport() && pFilter->GetWildcard().Matches( rUrl ) )
             {
-                if ( !pBestMatch || ( SfxFilterFlags::PREFERED & pFilter->GetFilterFlags() ) )
+                if ( !pBestMatch || ( SFX_FILTER_PREFERED & pFilter->GetFilterFlags() ) )
                     pBestMatch = pFilter;
             }
         }
@@ -134,10 +133,7 @@ std::shared_ptr<const SfxFilter> impl_lookupExportFilterForUrl( const rtl::OUStr
     return pBestMatch;
 }
 
-std::shared_ptr<const SfxFilter> impl_getExportFilterFromUrl(
-        const rtl::OUString& rUrl, const rtl::OUString& rFactory)
-{
-try
+const SfxFilter* impl_getExportFilterFromUrl( const rtl::OUString& rUrl, const rtl::OUString& rFactory ) try
 {
     const Reference< XComponentContext > xContext( comphelper::getProcessComponentContext() );
     const Reference< document::XTypeDetection > xTypeDetector(
@@ -145,7 +141,7 @@ try
             UNO_QUERY_THROW );
     const rtl::OUString aTypeName( xTypeDetector->queryTypeByURL( rUrl ) );
 
-    std::shared_ptr<const SfxFilter> pFilter( SfxFilterMatcher( rFactory ).GetFilter4EA( aTypeName, SfxFilterFlags::EXPORT ) );
+    const SfxFilter* pFilter( SfxFilterMatcher( rFactory ).GetFilter4EA( aTypeName, SFX_FILTER_EXPORT ) );
     if ( !pFilter )
         pFilter = impl_lookupExportFilterForUrl( rUrl, rFactory );
     if ( !pFilter )
@@ -153,22 +149,23 @@ try
         OUString aTempName;
         FileBase::getSystemPathFromFileURL( rUrl, aTempName );
         OString aSource = OUStringToOString ( aTempName, osl_getThreadTextEncoding() );
-        std::cerr << "Error: no export filter for " << aSource << " found, aborting." << std::endl;
+        OString aFactory = OUStringToOString ( rFactory, osl_getThreadTextEncoding() );
+        std::cerr << "Error:  no export filter for " << aSource << " found, now using the default filter for " << aFactory << std::endl;
 
+        pFilter = SfxFilter::GetDefaultFilterFromFactory( rFactory );
     }
 
     return pFilter;
 }
 catch ( const Exception& )
 {
-    return nullptr;
-}
+    return 0;
 }
 
 OUString impl_GuessFilter( const OUString& rUrlOut, const OUString& rDocService )
 {
     OUString aOutFilter;
-    std::shared_ptr<const SfxFilter> pOutFilter = impl_getExportFilterFromUrl( rUrlOut, rDocService );
+    const SfxFilter* pOutFilter = impl_getExportFilterFromUrl( rUrlOut, rDocService );
     if (pOutFilter)
         aOutFilter = pOutFilter->GetFilterName();
 
@@ -176,6 +173,40 @@ OUString impl_GuessFilter( const OUString& rUrlOut, const OUString& rDocService 
 }
 
 }
+
+namespace
+{
+    class theWatcherMutex : public rtl::Static<Mutex, theWatcherMutex> {};
+}
+
+Mutex& DispatchWatcher::GetMutex()
+{
+    return theWatcherMutex::get();
+}
+
+// Create or get the dispatch watcher implementation. This implementation must be
+// a singleton to prevent access to the framework after it wants to terminate.
+DispatchWatcher* DispatchWatcher::GetDispatchWatcher()
+{
+    static Reference< XInterface > xDispatchWatcher;
+    static DispatchWatcher*        pDispatchWatcher = NULL;
+
+    if ( !xDispatchWatcher.is() )
+    {
+        ::osl::MutexGuard aGuard( GetMutex() );
+
+        if ( !xDispatchWatcher.is() )
+        {
+            pDispatchWatcher = new DispatchWatcher();
+
+            // We have to hold a reference to ourself forever to prevent our own destruction.
+            xDispatchWatcher = static_cast< cppu::OWeakObject *>( pDispatchWatcher );
+        }
+    }
+
+    return pDispatchWatcher;
+}
+
 
 DispatchWatcher::DispatchWatcher()
     : m_nRequestCount(0)
@@ -188,17 +219,20 @@ DispatchWatcher::~DispatchWatcher()
 }
 
 
-bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest>& aDispatchRequestsList, bool bNoTerminate )
+bool DispatchWatcher::executeDispatchRequests( const DispatchList& aDispatchRequestsList, bool bNoTerminate )
 {
     Reference< XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
 
+    DispatchList::const_iterator    p;
     std::vector< DispatchHolder >   aDispatches;
     OUString                 aAsTemplateArg( "AsTemplate" );
     bool                     bSetInputFilter = false;
     OUString                 aForcedInputFilter;
 
-    for (auto const & aDispatchRequest: aDispatchRequestsList)
+    for ( p = aDispatchRequestsList.begin(); p != aDispatchRequestsList.end(); ++p )
     {
+        const DispatchRequest&  aDispatchRequest = *p;
+
         // create parameter array
         sal_Int32 nCount = 4;
         if ( !aDispatchRequest.aPreselectedFactory.isEmpty() )
@@ -209,7 +243,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         {
             bSetInputFilter = true;
             aForcedInputFilter = aDispatchRequest.aURL;
-            RequestHandler::RequestsCompleted();
+            OfficeIPCThread::RequestsCompleted( 1 );
             continue;
         }
 
@@ -217,8 +251,12 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
              aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
              aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+#ifdef NO_LIBO_NEW_COMMAND_LINE_ARGS
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION)
+#else	// NO_LIBO_NEW_COMMAND_LINE_ARGS
              aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
              aDispatchRequest.aRequestType == REQUEST_CAT)
+#endif	// NO_LIBO_NEW_COMMAND_LINE_ARGS
             nCount++;
 
         Sequence < PropertyValue > aArgs( nCount );
@@ -230,8 +268,12 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
              aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
              aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+#ifdef NO_LIBO_NEW_COMMAND_LINE_ARGS
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION)
+#else	// NO_LIBO_NEW_COMMAND_LINE_ARGS
              aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
              aDispatchRequest.aRequestType == REQUEST_CAT)
+#endif	// NO_LIBO_NEW_COMMAND_LINE_ARGS
         {
             aArgs[1].Name = "ReadOnly";
             aArgs[2].Name = "OpenNewView";
@@ -241,16 +283,16 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         else
         {
             Reference < XInteractionHandler2 > xInteraction(
-                InteractionHandler::createWithParent(::comphelper::getProcessComponentContext(), nullptr) );
+                InteractionHandler::createWithParent(::comphelper::getProcessComponentContext(), 0) );
 
             aArgs[1].Name = "InteractionHandler";
             aArgs[1].Value <<= xInteraction;
 
-            sal_Int16 nMacroExecMode = css::document::MacroExecMode::USE_CONFIG;
+            sal_Int16 nMacroExecMode = ::com::sun::star::document::MacroExecMode::USE_CONFIG;
             aArgs[2].Name = "MacroExecutionMode";
             aArgs[2].Value <<= nMacroExecMode;
 
-            sal_Int16 nUpdateDoc = css::document::UpdateDocMode::ACCORDING_TO_CONFIG;
+            sal_Int16 nUpdateDoc = ::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG;
             aArgs[3].Name = "UpdateDocMode";
             aArgs[3].Value <<= nUpdateDoc;
         }
@@ -267,21 +309,25 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
              aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
              aDispatchRequest.aRequestType == REQUEST_BATCHPRINT ||
+#ifdef NO_LIBO_NEW_COMMAND_LINE_ARGS
+             aDispatchRequest.aRequestType == REQUEST_CONVERSION)
+#else	// NO_LIBO_NEW_COMMAND_LINE_ARGS
              aDispatchRequest.aRequestType == REQUEST_CONVERSION ||
              aDispatchRequest.aRequestType == REQUEST_CAT)
+#endif	// NO_LIBO_NEW_COMMAND_LINE_ARGS
         {
             // documents opened for printing are opened readonly because they must be opened as a new document and this
             // document could be open already
-            aArgs[1].Value <<= true;
+            aArgs[1].Value <<= sal_True;
 
             // always open a new document for printing, because it must be disposed afterwards
-            aArgs[2].Value <<= true;
+            aArgs[2].Value <<= sal_True;
 
             // printing is done in a hidden view
-            aArgs[3].Value <<= true;
+            aArgs[3].Value <<= sal_True;
 
             // load document for printing without user interaction
-            aArgs[4].Value <<= true;
+            aArgs[4].Value <<= sal_True;
 
             // hidden documents should never be put into open tasks
             aTarget = "_blank";
@@ -314,9 +360,9 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
             if( xDispatcher.is() )
             {
                 {
-                    ::osl::ClearableMutexGuard aGuard(m_mutex);
+                    ::osl::ClearableMutexGuard aGuard( GetMutex() );
                     // Remember request so we can find it in statusChanged!
-                    m_aRequestContainer.emplace(aURL.Complete, 1);
+                    m_aRequestContainer.insert( DispatchWatcherHashMap::value_type( aURL.Complete, (sal_Int32)1 ) );
                     m_nRequestCount++;
                 }
 
@@ -348,14 +394,14 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                     // window!!
                     Sequence < PropertyValue > aArgs2(1);
                     aArgs2[0].Name    = "SynchronMode";
-                    aArgs2[0].Value <<= true;
+                    aArgs2[0].Value <<= sal_True;
                     Reference < XNotifyingDispatch > xDisp( xDispatcher, UNO_QUERY );
                     if ( xDisp.is() )
-                        xDisp->dispatchWithNotification( aURL, aArgs2, this );
+                        xDisp->dispatchWithNotification( aURL, aArgs2, DispatchWatcher::GetDispatchWatcher() );
                     else
                         xDispatcher->dispatch( aURL, aArgs2 );
                 }
-                catch (const css::uno::Exception& e)
+                catch (const ::com::sun::star::uno::Exception& e)
                 {
                     SAL_WARN(
                         "desktop.app",
@@ -368,7 +414,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         else
         {
             INetURLObject aObj( aName );
-            if ( aObj.GetProtocol() == INetProtocol::PrivSoffice )
+            if ( aObj.GetProtocol() == INET_PROT_PRIVATE )
                 aTarget = "_default";
 
             // Set "AsTemplate" argument according to request type
@@ -379,9 +425,9 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                 aArgs.realloc( nIndex+1 );
                 aArgs[nIndex].Name = aAsTemplateArg;
                 if ( aDispatchRequest.aRequestType == REQUEST_FORCENEW )
-                    aArgs[nIndex].Value <<= true;
+                    aArgs[nIndex].Value <<= sal_True;
                 else
-                    aArgs[nIndex].Value <<= false;
+                    aArgs[nIndex].Value <<= sal_False;
             }
 
             // if we are called in viewmode, open document read-only
@@ -389,7 +435,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                 sal_Int32 nIndex = aArgs.getLength();
                 aArgs.realloc(nIndex+1);
                 aArgs[nIndex].Name = "ReadOnly";
-                aArgs[nIndex].Value <<= true;
+                aArgs[nIndex].Value <<= sal_True;
             }
 
             // if we are called with -start set Start in mediadescriptor
@@ -397,7 +443,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                 sal_Int32 nIndex = aArgs.getLength();
                 aArgs.realloc(nIndex+1);
                 aArgs[nIndex].Name = "StartPresentation";
-                aArgs[nIndex].Value <<= true;
+                aArgs[nIndex].Value <<= sal_True;
             }
 
             // Force input filter, if possible
@@ -426,16 +472,16 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
             // This is a synchron loading of a component so we don't have to deal with our statusChanged listener mechanism.
             try
             {
-                xDoc.set( ::comphelper::SynchronousDispatch::dispatch( xDesktop, aName, aTarget, 0, aArgs ), UNO_QUERY );
+                xDoc = Reference < XPrintable >( ::comphelper::SynchronousDispatch::dispatch( xDesktop, aName, aTarget, 0, aArgs ), UNO_QUERY );
             }
-            catch (const css::lang::IllegalArgumentException& iae)
+            catch (const ::com::sun::star::lang::IllegalArgumentException& iae)
             {
                 SAL_WARN(
                     "desktop.app",
                     "Dispatchwatcher IllegalArgumentException while calling"
                         " loadComponentFromURL: \"" << iae.Message << "\"");
             }
-            catch (const css::io::IOException& ioe)
+            catch (const com::sun::star::io::IOException& ioe)
             {
                 SAL_WARN(
                     "desktop.app",
@@ -458,7 +504,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                  aDispatchRequest.aRequestType == REQUEST_FORCENEW      )
             {
                 // request is completed
-                RequestHandler::RequestsCompleted();
+                OfficeIPCThread::RequestsCompleted( 1 );
             }
             else if ( aDispatchRequest.aRequestType == REQUEST_PRINT ||
                       aDispatchRequest.aRequestType == REQUEST_PRINTTO ||
@@ -502,7 +548,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                             OUString fileForCat;
                             if( aDispatchRequest.aRequestType == REQUEST_CAT )
                             {
-                                if( ::osl::FileBase::createTempFile(nullptr, nullptr, &fileForCat) != ::osl::FileBase::E_None )
+                                if( ::osl::FileBase::createTempFile(0, 0, &fileForCat) != ::osl::FileBase::E_None )
                                     std::cerr << "Error: Cannot create temporary file..." << std::endl ;
                                 aOutFile = fileForCat;
                             }
@@ -519,82 +565,75 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                                 aFilter = impl_GuessFilter( aOutFile, aDocService );
                             }
 
-                            if (aFilter.isEmpty())
+                            sal_Int32 nFilterOptionsIndex = aFilter.indexOf( ':' );
+                            Sequence<PropertyValue> conversionProperties( 0 < nFilterOptionsIndex ? 3 : 2 );
+                            conversionProperties[0].Name = "Overwrite";
+                            conversionProperties[0].Value <<= sal_True;
+
+                            conversionProperties[1].Name = "FilterName";
+                            if( 0 < nFilterOptionsIndex )
                             {
-                                std::cerr << "Error: no export filter" << std::endl;
+                                conversionProperties[1].Value <<= aFilter.copy( 0, nFilterOptionsIndex );
+
+                                conversionProperties[2].Name = "FilterOptions";
+                                conversionProperties[2].Value <<= aFilter.copy( nFilterOptionsIndex+1 );
                             }
                             else
                             {
-                                sal_Int32 nFilterOptionsIndex = aFilter.indexOf(':');
-                                Sequence<PropertyValue> conversionProperties( 0 < nFilterOptionsIndex ? 3 : 2 );
-                                conversionProperties[0].Name = "Overwrite";
-                                conversionProperties[0].Value <<= true;
+                                conversionProperties[1].Value <<= aFilter;
+                            }
 
-                                conversionProperties[1].Name = "FilterName";
-                                if( 0 < nFilterOptionsIndex )
+                            OUString aTempName;
+                            FileBase::getSystemPathFromFileURL( aName, aTempName );
+                            OString aSource8 = OUStringToOString ( aTempName, osl_getThreadTextEncoding() );
+                            FileBase::getSystemPathFromFileURL( aOutFile, aTempName );
+                            OString aTargetURL8 = OUStringToOString(aTempName, osl_getThreadTextEncoding() );
+                            if( aDispatchRequest.aRequestType != REQUEST_CAT )
+                            {
+                                std::cout << "convert " << aSource8 << " -> " << aTargetURL8;
+                                std::cout << " using filter : " << OUStringToOString( aFilter, osl_getThreadTextEncoding() ) << std::endl;
+                                if( FStatHelper::IsDocument( aOutFile ) )
+                                    std::cout << "Overwriting: " << OUStringToOString( aTempName, osl_getThreadTextEncoding() ) << std::endl ;
+                            }
+                            try
+                            {
+                                xStorable->storeToURL( aOutFile, conversionProperties );
+                            }
+                            catch (const Exception& rException)
+                            {
+                                std::cerr << "Error: Please verify input parameters...";
+                                if (!rException.Message.isEmpty())
+                                    std::cerr << " (" << rException.Message << ")";
+                                std::cerr << std::endl;
+                            }
+
+                            if( aDispatchRequest.aRequestType == REQUEST_CAT )
+                            {
+                                osl::File aFile( fileForCat );
+                                osl::File::RC aRC = aFile.open( osl_File_OpenFlag_Read );
+                                if( aRC != osl::File::E_None )
                                 {
-                                    conversionProperties[1].Value <<= aFilter.copy(0, nFilterOptionsIndex);
-
-                                    conversionProperties[2].Name = "FilterOptions";
-                                    conversionProperties[2].Value <<= aFilter.copy(nFilterOptionsIndex + 1);
+                                    std::cerr << "Error: Cannot read from temp file" << std::endl;
                                 }
                                 else
                                 {
-                                    conversionProperties[1].Value <<= aFilter;
-                                }
-
-                                OUString aTempName;
-                                FileBase::getSystemPathFromFileURL(aName, aTempName);
-                                OString aSource8 = OUStringToOString(aTempName, osl_getThreadTextEncoding());
-                                FileBase::getSystemPathFromFileURL(aOutFile, aTempName);
-                                OString aTargetURL8 = OUStringToOString(aTempName, osl_getThreadTextEncoding());
-                                if (aDispatchRequest.aRequestType != REQUEST_CAT)
-                                {
-                                    std::cout << "convert " << aSource8 << " -> " << aTargetURL8;
-                                    std::cout << " using filter : " << OUStringToOString(aFilter, osl_getThreadTextEncoding()) << std::endl;
-                                    if (FStatHelper::IsDocument(aOutFile))
-                                        std::cout << "Overwriting: " << OUStringToOString(aTempName, osl_getThreadTextEncoding()) << std::endl ;
-                                }
-                                try
-                                {
-                                    xStorable->storeToURL(aOutFile, conversionProperties);
-                                }
-                                catch (const Exception& rException)
-                                {
-                                    std::cerr << "Error: Please verify input parameters...";
-                                    if (!rException.Message.isEmpty())
-                                        std::cerr << " (" << rException.Message << ")";
-                                    std::cerr << std::endl;
-                                }
-
-                                if (aDispatchRequest.aRequestType == REQUEST_CAT)
-                                {
-                                    osl::File aFile(fileForCat);
-                                    osl::File::RC aRC = aFile.open(osl_File_OpenFlag_Read);
-                                    if (aRC != osl::File::E_None)
+                                    sal_Bool eof;
+                                    for( ;; )
                                     {
-                                        std::cerr << "Error: Cannot read from temp file" << std::endl;
-                                    }
-                                    else
-                                    {
-                                        sal_Bool eof;
-                                        for (;;)
+                                        aFile.isEndOfFile( &eof );
+                                        if( eof )
+                                            break;
+                                        rtl::ByteSequence bseq;
+                                        aFile.readLine( bseq );
+                                        unsigned const char * aStr = reinterpret_cast< unsigned char const * >( bseq.getConstArray() );
+                                        for( sal_Int32 i = 0; i < bseq.getLength(); i++ )
                                         {
-                                            aFile.isEndOfFile( &eof );
-                                            if (eof)
-                                                break;
-                                            rtl::ByteSequence bseq;
-                                            aFile.readLine(bseq);
-                                            unsigned const char * aStr = reinterpret_cast<unsigned char const *>(bseq.getConstArray());
-                                            for (sal_Int32 i = 0; i < bseq.getLength(); ++i)
-                                            {
-                                                std::cout << aStr[i];
-                                            }
-                                            std::cout << std::endl;
+                                            std::cout << aStr[i];
                                         }
-                                        aFile.close();
-                                        osl::File::remove(fileForCat);
+                                        std::cout << std::endl;
                                     }
+                                    aFile.close();
+                                    osl::File::remove( fileForCat );
                                 }
                             }
                         }
@@ -669,7 +708,7 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                 {
                     Reference < XCloseable > xClose( xDoc, UNO_QUERY );
                     if ( xClose.is() )
-                        xClose->close( true );
+                        xClose->close( sal_True );
                     else
                     {
                         Reference < XComponent > xComp( xDoc, UNO_QUERY );
@@ -677,12 +716,12 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
                             xComp->dispose();
                     }
                 }
-                catch (const css::util::CloseVetoException&)
+                catch (const com::sun::star::util::CloseVetoException&)
                 {
                 }
 
                 // request is completed
-                RequestHandler::RequestsCompleted();
+                OfficeIPCThread::RequestsCompleted( 1 );
             }
         }
     }
@@ -694,25 +733,25 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
         aArgs[0].Name = "Referer";
         aArgs[0].Value <<= OUString("private:OpenEvent");
         aArgs[1].Name = "SynchronMode";
-        aArgs[1].Value <<= true;
+        aArgs[1].Value <<= sal_True;
 
-        for (DispatchHolder & aDispatche : aDispatches)
+        for ( sal_uInt32 n = 0; n < aDispatches.size(); n++ )
         {
-            Reference< XDispatch > xDispatch = aDispatche.xDispatch;
+            Reference< XDispatch > xDispatch = aDispatches[n].xDispatch;
             Reference < XNotifyingDispatch > xDisp( xDispatch, UNO_QUERY );
             if ( xDisp.is() )
-                xDisp->dispatchWithNotification( aDispatche.aURL, aArgs, this );
+                xDisp->dispatchWithNotification( aDispatches[n].aURL, aArgs, this );
             else
             {
-                ::osl::ClearableMutexGuard aGuard(m_mutex);
+                ::osl::ClearableMutexGuard aGuard( GetMutex() );
                 m_nRequestCount--;
                 aGuard.clear();
-                xDispatch->dispatch( aDispatche.aURL, aArgs );
+                xDispatch->dispatch( aDispatches[n].aURL, aArgs );
             }
         }
     }
 
-    ::osl::ClearableMutexGuard aGuard(m_mutex);
+    ::osl::ClearableMutexGuard aGuard( GetMutex() );
     bool bEmpty = (m_nRequestCount == 0);
     aGuard.clear();
 
@@ -736,18 +775,19 @@ bool DispatchWatcher::executeDispatchRequests( const std::vector<DispatchRequest
 }
 
 
-void SAL_CALL DispatchWatcher::disposing( const css::lang::EventObject& )
+void SAL_CALL DispatchWatcher::disposing( const ::com::sun::star::lang::EventObject& )
+throw(::com::sun::star::uno::RuntimeException, std::exception)
 {
 }
 
 
-void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& )
+void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& ) throw( RuntimeException, std::exception )
 {
-    osl::ClearableMutexGuard aGuard(m_mutex);
+    osl::ClearableMutexGuard aGuard( GetMutex() );
     sal_Int16 nCount = --m_nRequestCount;
     aGuard.clear();
-    RequestHandler::RequestsCompleted();
-    if ( !nCount && !RequestHandler::AreRequestsPending() )
+    OfficeIPCThread::RequestsCompleted( 1 );
+    if ( !nCount && !OfficeIPCThread::AreRequestsPending() )
     {
         // We have to check if we have an open task otherwise we have to shutdown the office.
         Reference< XDesktop2 > xDesktop = css::frame::Desktop::create( ::comphelper::getProcessComponentContext() );
@@ -762,6 +802,12 @@ void SAL_CALL DispatchWatcher::dispatchFinished( const DispatchResultEvent& )
 }
 
 }
+
+
+
+
+
+
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

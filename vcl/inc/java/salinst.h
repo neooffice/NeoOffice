@@ -43,7 +43,23 @@
 #include <vcl/svapp.hxx>
 
 #include "salinst.hxx"
+#include "svdata.hxx"
 #include "java/salframe.h"
+
+// Custom event types
+#define SALEVENT_OPENDOCUMENT		((sal_uInt16)100)
+#define SALEVENT_PRINTDOCUMENT		((sal_uInt16)101)
+#define SALEVENT_DEMINIMIZED		((sal_uInt16)102)
+#define SALEVENT_MINIMIZED			((sal_uInt16)103)
+#define SALEVENT_FULLSCREENENTERED	((sal_uInt16)104)
+#define SALEVENT_FULLSCREENEXITED	((sal_uInt16)105)
+#define SALEVENT_SCREENPARAMSCHANGED	((sal_uInt16)106)
+#define SALEVENT_SYSTEMCOLORSCHANGED	((sal_uInt16)107)
+#define SALEVENT_COMMANDMEDIADATA	((sal_uInt16)120)
+#define SALEVENT_ABOUT				((sal_uInt16)130)
+#define SALEVENT_PREFS				((sal_uInt16)140)
+#define SALEVENT_WAKEUP				((sal_uInt16)150)
+#define SALEVENT_DELETEREFWRAPPER	((sal_uInt16)160)
 
 // -----------------
 // - SalYieldMutex -
@@ -54,15 +70,16 @@ class SalYieldMutex : public comphelper::SolarMutex
 	::osl::Mutex			maMutex;
 	sal_uLong				mnCount;
 	::osl::Condition		maMainThreadCondition;
+	::osl::Condition		maMainThreadWaitingCondition;
 	::osl::Condition		maReacquireThreadCondition;
 	oslThreadIdentifier		mnThreadId;
 	oslThreadIdentifier		mnReacquireThreadId;
 
 public:
 							SalYieldMutex();
-	virtual void			acquire() override;
-	virtual void			release() override;
-	virtual bool			tryToAcquire() override;
+	virtual void			acquire() SAL_OVERRIDE;
+	virtual void			release() SAL_OVERRIDE;
+	virtual bool			tryToAcquire() SAL_OVERRIDE;
 	oslThreadIdentifier		GetThreadId() { return mnThreadId; }
 	oslThreadIdentifier		GetReacquireThreadId() { return mnReacquireThreadId; }
 	sal_uLong				ReleaseAcquireCount();
@@ -81,42 +98,41 @@ public:
 							JavaSalInstance();
 	virtual					~JavaSalInstance();
 
-	virtual SalFrame*		CreateChildFrame( SystemParentData* pParent, SalFrameStyleFlags nStyle ) override;
-	virtual SalFrame*		CreateFrame( SalFrame* pParent, SalFrameStyleFlags nStyle ) override;
-	virtual void			DestroyFrame( SalFrame* pFrame ) override;
-	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, bool bShow = true ) override;
-	virtual void			DestroyObject( SalObject* pObject ) override;
-	virtual SalVirtualDevice*	CreateVirtualDevice( SalGraphics* pGraphics, long& rDX, long& rDY, DeviceFormat eFormat, const SystemGraphicsData *pData = nullptr ) override;
-	virtual SalInfoPrinter* CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo, ImplJobSetup* pSetupData ) override;
-	virtual void			DestroyInfoPrinter( SalInfoPrinter* pPrinter ) override;
-	virtual SalPrinter*		CreatePrinter( SalInfoPrinter* pInfoPrinter ) override;
-	virtual void			DestroyPrinter( SalPrinter* pPrinter ) override;
+	virtual SalFrame*		CreateChildFrame( SystemParentData* pParent, sal_uLong nStyle ) SAL_OVERRIDE;
+	virtual SalFrame*		CreateFrame( SalFrame* pParent, sal_uLong nStyle ) SAL_OVERRIDE;
+	virtual void			DestroyFrame( SalFrame* pFrame ) SAL_OVERRIDE;
+	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, bool bShow = true ) SAL_OVERRIDE;
+	virtual void			DestroyObject( SalObject* pObject ) SAL_OVERRIDE;
+	virtual SalVirtualDevice*	CreateVirtualDevice( SalGraphics* pGraphics, long& rDX, long& rDY, sal_uInt16 nBitCount, const SystemGraphicsData *pData = NULL ) SAL_OVERRIDE;
+	virtual SalInfoPrinter* CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo, ImplJobSetup* pSetupData ) SAL_OVERRIDE;
+	virtual void			DestroyInfoPrinter( SalInfoPrinter* pPrinter ) SAL_OVERRIDE;
+	virtual SalPrinter*		CreatePrinter( SalInfoPrinter* pInfoPrinter ) SAL_OVERRIDE;
+	virtual void			DestroyPrinter( SalPrinter* pPrinter ) SAL_OVERRIDE;
 
-	virtual void			GetPrinterQueueInfo( ImplPrnQueueList* pList ) override;
-	virtual void			GetPrinterQueueState( SalPrinterQueueInfo* pInfo ) override;
-	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo ) override;
-	virtual OUString		GetDefaultPrinter() override;
-	virtual SalTimer*		CreateSalTimer() override;
-	virtual SalI18NImeStatus*	CreateI18NImeStatus() override;
-	virtual SalSystem*		CreateSalSystem() override;
-	virtual SalBitmap*		CreateSalBitmap() override;
-	virtual comphelper::SolarMutex*	GetYieldMutex() override;
-	virtual sal_uLong		ReleaseYieldMutex() override;
-	virtual void			AcquireYieldMutex( sal_uLong nCount ) override;
-	virtual bool			CheckYieldMutex() override;
-	virtual SalYieldResult	DoYield( bool bWait, bool bHandleAllCurrentEvents, sal_uLong nReleased ) override;
-	virtual bool			AnyInput( VclInputFlags nType ) override;
-	virtual SalMenu*		CreateMenu( bool bMenuBar, Menu* pVCLMenu ) override;
-	virtual void			DestroyMenu( SalMenu* pMenu ) override;
-	virtual SalMenuItem*	CreateMenuItem( const SalItemParams* pItemData ) override;
-	virtual void			DestroyMenuItem( SalMenuItem* pItem ) override;
-	virtual SalSession*		CreateSalSession() override;
-	virtual OpenGLContext*	CreateOpenGLContext() override;
-	virtual OUString		GetConnectionIdentifier() override;
-    virtual css::uno::Reference< css::uno::XInterface >	CreateClipboard( const css::uno::Sequence< css::uno::Any >& rArguments ) override;
-    virtual css::uno::Reference< css::uno::XInterface >	CreateDragSource() override;
-    virtual css::uno::Reference< css::uno::XInterface >	CreateDropTarget() override;
-	virtual void			AddToRecentDocumentList( const OUString& rFileUrl, const OUString& rMimeType, const OUString& rDocumentService ) override;
+	virtual void			GetPrinterQueueInfo( ImplPrnQueueList* pList ) SAL_OVERRIDE;
+	virtual void			GetPrinterQueueState( SalPrinterQueueInfo* pInfo ) SAL_OVERRIDE;
+	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo ) SAL_OVERRIDE;
+	virtual OUString		GetDefaultPrinter() SAL_OVERRIDE;
+	virtual SalTimer*		CreateSalTimer() SAL_OVERRIDE;
+	virtual SalI18NImeStatus*	CreateI18NImeStatus() SAL_OVERRIDE;
+	virtual SalSystem*		CreateSalSystem() SAL_OVERRIDE;
+	virtual SalBitmap*		CreateSalBitmap() SAL_OVERRIDE;
+	virtual comphelper::SolarMutex*	GetYieldMutex() SAL_OVERRIDE;
+	virtual sal_uLong		ReleaseYieldMutex() SAL_OVERRIDE;
+	virtual void			AcquireYieldMutex( sal_uLong nCount ) SAL_OVERRIDE;
+	virtual bool			CheckYieldMutex() SAL_OVERRIDE;
+	virtual void			Yield( bool bWait, bool bHandleAllCurrentEvents ) SAL_OVERRIDE;
+	virtual bool			AnyInput( sal_uInt16 nType ) SAL_OVERRIDE;
+	virtual SalMenu*		CreateMenu( bool bMenuBar, Menu* pVCLMenu ) SAL_OVERRIDE;
+	virtual void			DestroyMenu( SalMenu* pMenu ) SAL_OVERRIDE;
+	virtual SalMenuItem*	CreateMenuItem( const SalItemParams* pItemData ) SAL_OVERRIDE;
+	virtual void			DestroyMenuItem( SalMenuItem* pItem ) SAL_OVERRIDE;
+	virtual SalSession*		CreateSalSession() SAL_OVERRIDE;
+	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes ) SAL_OVERRIDE;
+    virtual css::uno::Reference< css::uno::XInterface >	CreateClipboard( const css::uno::Sequence< css::uno::Any >& rArguments ) SAL_OVERRIDE;
+    virtual css::uno::Reference< css::uno::XInterface >	CreateDragSource() SAL_OVERRIDE;
+    virtual css::uno::Reference< css::uno::XInterface >	CreateDropTarget() SAL_OVERRIDE;
+	virtual void			AddToRecentDocumentList( const OUString& rFileUrl, const OUString& rMimeType, const OUString& rDocumentService ) SAL_OVERRIDE;
 };
 
 // ----------------
@@ -125,7 +141,7 @@ public:
 
 class JavaSalEvent
 {
-	SalEvent				mnID;
+	sal_uInt16				mnID;
 	JavaSalFrame*			mpFrame;
 	OUString				maPath;
 	bool					mbNative;
@@ -137,7 +153,7 @@ class JavaSalEvent
 	mutable oslInterlockedCount	mnRefCount;
 
 public:
-							JavaSalEvent( SalEvent nID, JavaSalFrame *pFrame, void *pData, const OString& rPath = OString(), sal_uLong nCommittedCharacters = 0, sal_uLong nCursorPosition = 0 );
+							JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const OString& rPath = OString(), sal_uLong nCommittedCharacters = 0, sal_uLong nCursorPosition = 0 );
 
 protected:
 	virtual					~JavaSalEvent();
@@ -145,7 +161,7 @@ protected:
 public:
 	void					addRepeatCount( sal_uInt16 nCount );
 	void					addOriginalKeyEvent( JavaSalEvent *pEvent );
-	void					addUpdateRect( const tools::Rectangle& rRect );
+	void					addUpdateRect( const Rectangle& rRect );
 	bool					addWheelRotationAndScrollLines( long nRotation, sal_uLong nScrollLines, sal_Bool bHorizontal );
 	void					cancelShutdown();
 	void					dispatch();
@@ -154,14 +170,14 @@ public:
 	JavaSalFrame*			getFrame();
 	sal_uInt16				getKeyChar();
 	sal_uInt16				getKeyCode();
-	SalEvent				getID();
+	sal_uInt16				getID();
 	sal_uInt16				getModifiers();
 	JavaSalEvent*			getNextOriginalKeyEvent();
 	OUString				getPath();
 	sal_uInt16				getRepeatCount();
 	OUString				getText();
-	const ExtTextInputAttr*	getTextAttributes();
-	const tools::Rectangle	getUpdateRect();
+	const sal_uInt16*		getTextAttributes();
+	const Rectangle			getUpdateRect();
 	sal_uLong				getWhen();
 	long					getX();
 	long					getY();
@@ -185,7 +201,7 @@ class SAL_DLLPRIVATE JavaSalEventQueueItem
 	JavaSalEvent*			mpEvent;
 	const ::std::list< JavaSalEventQueueItem* >*	mpEventQueue;
 	bool					mbRemove;
-	VclInputFlags			mnType;
+	sal_uInt16				mnType;
 
 public:
 							JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std::list< JavaSalEventQueueItem* > *pEventQueue );
@@ -193,7 +209,7 @@ public:
 
 	JavaSalEvent*			getEvent() { return mpEvent; }
 	const ::std::list< JavaSalEventQueueItem* >*	getEventQueue() { return mpEventQueue; }
-	VclInputFlags			getType() { return mnType; }
+	sal_uInt16				getType() { return mnType; }
 	bool					isRemove() { return mbRemove; }
 	void					remove() { mbRemove = true; }
 };
@@ -216,7 +232,7 @@ class JavaSalEventQueue
 
 public:
 	static void				purgeRemovedEventsFromFront( ::std::list< JavaSalEventQueueItem* > *pEventQueue );
-	static sal_Bool			anyCachedEvent( VclInputFlags nType );
+	static sal_Bool			anyCachedEvent( sal_uInt16 nType );
 	static void				dispatchNextEvent();
 	static double			getLastNativeEventTime();
 	static JavaSalEvent*	getNextCachedEvent( sal_uLong nTimeout, sal_Bool bNativeEvents );
@@ -226,5 +242,10 @@ public:
 	static void				setLastNativeEventTime( double nEventTime );
 	static void				setShutdownDisabled( sal_Bool bShutdownDisabled );
 };
+
+extern "C" inline sal_Bool ImplSalInstanceExists() { return ( ImplGetSVData() && ImplGetSVData()->mpDefInst ); }
+
+// Check if ImplSVData exists first since Application::IsShutDown() uses it
+extern "C" inline sal_Bool ImplApplicationIsRunning() { return ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() ); }
 
 #endif // _SV_SALINST_H

@@ -33,16 +33,68 @@
  *
  ************************************************************************/
 
-#include <tools/color.hxx>
-#include <tools/gen.hxx>
-#include <tools/stream.hxx>
-#include <vcl/fntstyle.hxx>
-
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include <vcl/settings.hxx>
+#include <vcl/svapp.hxx>
+
+#include "quartz/utils.h"
+
 #include "salgdi3_cocoa.h"
+
+static void AddFontToFontsDictWithAltName( NSFont *pFont, NSMutableDictionary *pFontDict, NSString *pAltName, BOOL bLocalization )
+{
+	if ( !pFont || !pFontDict )
+		return;
+
+	NSString *pKey = nil;
+	if ( pAltName )
+	{
+		if ( [pAltName length] && ![pFontDict valueForKey:pAltName] )
+			pKey = pAltName;
+	}
+	else
+	{
+		NSString *pFontName = [pFont fontName];
+		if ( pFontName && [pFontName length] && ![pFontDict valueForKey:pFontName] )
+			pKey = pFontName;
+	}
+
+	if ( !pKey )
+		return;
+
+	// Fix bug 3097 by using the printer font when the font is a bitmap font
+	NSFont *pPrinterFont = [pFont printerFont];
+	if ( pPrinterFont )
+		[pFontDict setObject:pPrinterFont forKey:pKey];
+
+	// Prevent infinite recursion
+	if ( bLocalization )
+		return;
+
+	CFStringRef aUILang = CreateCFString( Application::GetSettings().GetUILanguageTag().getLanguage() );
+	if ( aUILang )
+	{
+		CFStringRef aLang = nullptr;
+		CFStringRef aLocalizedName = CTFontCopyLocalizedName( (CTFontRef)pFont, pAltName ? kCTFontFamilyNameKey : kCTFontFullNameKey, &aLang );
+		if ( aLocalizedName )
+		{
+			if ( aLang && CFStringCompare( aUILang, aLang, 0 ) == kCFCompareEqualTo )
+				AddFontToFontsDictWithAltName( pFont, pFontDict, (NSString *)aLocalizedName, YES );
+
+			CFRelease( aLocalizedName );
+		}
+
+		CFRelease( aUILang );
+	}
+}
+
+static void AddFontToFontsDict( NSFont *pFont, NSMutableDictionary *pFontDict )
+{
+	AddFontToFontsDictWithAltName( pFont, pFontDict, nil, NO );
+}
 
 NSFont *NSFont_findPlainFont( NSFont *pNSFont )
 {
@@ -70,41 +122,133 @@ NSFont *NSFont_findPlainFont( NSFont *pNSFont )
 	return pRet;
 }
 
-NSArray *NSFontManager_getAllFonts()
+NSDictionary *NSFontManager_getAllFonts()
 {
-	NSArray *pRet = nil;
+	NSDictionary *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 	if ( pFontManager )
 	{
-		NSArray *pFontNames = [pFontManager availableFonts];
-		if ( pFontNames )
+		NSArray<NSString *> *pFontNames = [pFontManager availableFonts];
+		NSArray<NSString *> *pFamilyNames = [pFontManager availableFontFamilies];
+		if ( pFontNames && pFamilyNames )
 		{
-			unsigned nCount = [pFontNames count];
-			if ( nCount )
+			NSDictionary *pEmptyDict = [NSDictionary dictionary];
+			NSMutableDictionary *pFontDict = [NSMutableDictionary dictionaryWithCapacity:( [pFontNames count] + [pFamilyNames count] ) * 2];
+			if ( pEmptyDict && pFontDict )
 			{
-				NSMutableArray *pFontArray = [NSMutableArray arrayWithCapacity:nCount];
-				if ( pFontArray)
+				CGFloat aSystemFontSizes[ 7 ];
+				aSystemFontSizes[ 0 ] = [NSFont systemFontSize];
+				aSystemFontSizes[ 1 ] = [NSFont smallSystemFontSize];
+				aSystemFontSizes[ 2 ] = [NSFont labelFontSize];
+				aSystemFontSizes[ 3 ] = [NSFont systemFontSizeForControlSize:NSControlSizeMini];
+				aSystemFontSizes[ 4 ] = [NSFont systemFontSizeForControlSize:NSControlSizeRegular];
+				aSystemFontSizes[ 5 ] = [NSFont systemFontSizeForControlSize:NSControlSizeSmall];
+				aSystemFontSizes[ 6 ] = [NSFont systemFontSizeForControlSize:NSControlSizeLarge];
+				for ( size_t i = 0; i < sizeof( aSystemFontSizes ) / sizeof( CGFloat ); i++ )
 				{
-					unsigned i = 0;
-					for ( ; i < nCount; i++ )
+					CGFloat fFontSize = aSystemFontSizes[ i ];
+
+					// System fonts
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont boldSystemFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont labelFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont messageFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont menuBarFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont menuFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont controlContentFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont titleBarFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont paletteFontOfSize:fFontSize], pFontDict );
+					AddFontToFontsDict( [NSFont toolTipsFontOfSize:fFontSize], pFontDict );
+
+					// System fonts by weight
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightUltraLight], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightThin], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightLight], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightRegular], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightMedium], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightSemibold], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightBold], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightHeavy], pFontDict );
+					AddFontToFontsDict( [NSFont systemFontOfSize:fFontSize weight:NSFontWeightBlack], pFontDict );
+
+					// Monospaced system fonts by weight
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightUltraLight], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightThin], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightLight], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightRegular], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightMedium], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightSemibold], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightBold], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightHeavy], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedSystemFontOfSize:fFontSize weight:NSFontWeightBlack], pFontDict );
+
+					// Monospaced digit system fonts by weight
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightUltraLight], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightThin], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightLight], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightRegular], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightMedium], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightSemibold], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightBold], pFontDict );
+					AddFontToFontsDict( [NSFont monospacedDigitSystemFontOfSize:fFontSize weight:NSFontWeightHeavy], pFontDict );
+
+					// Preferred text style fonts
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleBody options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleCallout options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleCaption1 options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleCaption2 options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleFootnote options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleHeadline options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleSubheadline options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleLargeTitle options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleTitle1 options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleTitle2 options:pEmptyDict], pFontDict );
+					AddFontToFontsDict( [NSFont preferredFontForTextStyle:NSFontTextStyleTitle3 options:pEmptyDict], pFontDict );
+
+					// All other fonts
+					for ( NSString *pFontName : pFontNames )
 					{
-						NSFont *pCurrentFont = [NSFont fontWithName:static_cast< NSString* >( [pFontNames objectAtIndex:i] ) size:(float)12];
-						if ( pCurrentFont )
+						// Suppress CoreText messages when compiled on
+						// macOS 10.15 or higher by excluding font names that
+						// start with "."
+						if ( pFontName && [pFontName length] && ![pFontName hasPrefix:@"."] )
 						{
-							// Fix bug 3097 by using the printer font when the
-							// font is a bitmap font
-							pCurrentFont = [pCurrentFont printerFont];
-							if ( pCurrentFont )
-								[pFontArray addObject:pCurrentFont];
+							NSFont *pFont = [NSFont fontWithName:pFontName size:fFontSize];
+							if ( pFont )
+								AddFontToFontsDict( pFont, pFontDict );
 						}
 					}
 
-					[pFontArray retain];
-					pRet = pFontArray;
+					// Fix LibreOffice bug 145563 by creating a separate
+					// font with the family name set to the display name so
+					// that when opening a document saved by OpenOffice or
+					// LibreOffice, we can match the font. Also, the user
+					// can select the font with family name so that
+					// OpenOffice and LibreOffice can match the font when
+					// opening a document saved by NeoOffice.
+					for ( NSString *pFamilyName : pFamilyNames )
+					{
+						// Suppress CoreText messages when compiled on
+						// macOS 10.15 or higher by excluding font names that
+						// start with "."
+						if ( pFamilyName && [pFamilyName length] && ![pFamilyName hasPrefix:@"."] )
+						{
+							NSFont *pFont = [NSFont fontWithName:pFamilyName size:fFontSize];
+							if ( pFont )
+							{
+								NSString *pFontName = [pFont fontName];
+								if ( pFontName && ![pFontName hasPrefix:pFamilyName] )
+									AddFontToFontsDictWithAltName( pFont, pFontDict, pFamilyName, NO );
+							}
+						}
+					}
 				}
+
+				pRet = pFontDict;
+				[pRet retain];
 			}
 		}
 	}
@@ -123,7 +267,7 @@ sal_Bool NSFontManager_isFixedPitch( NSFont *pNSFont )
 	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-		if ( pFontManager && [pFontManager traitsOfFont:static_cast< NSFont* >( pNSFont )] & NSFixedPitchFontMask )
+		if ( pFontManager && [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSFixedPitchFontMask )
 			bRet = sal_True;
 	}
 
@@ -141,7 +285,7 @@ sal_Bool NSFontManager_isItalic( NSFont *pNSFont )
 	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
-		if ( pFontManager && [pFontManager traitsOfFont:static_cast< NSFont* >( pNSFont )] & NSItalicFontMask )
+		if ( pFontManager && [pFontManager traitsOfFont:(NSFont *)pNSFont] & NSItalicFontMask )
 			bRet = sal_True;
 	}
 
@@ -161,7 +305,7 @@ FontWidth NSFontManager_widthOfFont( NSFont *pNSFont )
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 		if ( pFontManager )
 		{
-			NSFontTraitMask nTraits = [pFontManager traitsOfFont:static_cast< NSFont* >( pNSFont )];
+			NSFontTraitMask nTraits = [pFontManager traitsOfFont:(NSFont *)pNSFont];
 			if ( nTraits & NSCompressedFontMask )
 				nRet = WIDTH_ULTRA_CONDENSED;
 			else if ( nTraits & NSCondensedFontMask )
@@ -191,13 +335,13 @@ FontWeight NSFontManager_weightOfFont( NSFont *pNSFont )
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 		if ( pFontManager )
 		{
-			int nWeight = [pFontManager weightOfFont:static_cast< NSFont* >( pNSFont )];
+			int nWeight = [pFontManager weightOfFont:(NSFont *)pNSFont];
 
 			// Convert from NSFont weights to FontWeight values
 			if ( nWeight <= 1 )
 				nRet = WEIGHT_THIN;
 			else if ( nWeight <= 6 )
-				nRet = static_cast< FontWeight >( nWeight );
+				nRet = (FontWeight)nWeight;
 			else if ( nWeight <= 8 )
 				nRet = WEIGHT_SEMIBOLD;
 			else if ( nWeight <= 9 )

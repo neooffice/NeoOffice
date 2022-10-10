@@ -18,7 +18,7 @@
  */
 
 #include <hintids.hxx>
-#include <vcl/commandevent.hxx>
+#include <vcl/cmdevt.hxx>
 #include <unotools/charclass.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
@@ -41,7 +41,6 @@
 #include <frame.hxx>
 #include <cntfrm.hxx>
 #include <pam.hxx>
-#include <pamtyp.hxx>
 #include <ndtxt.hxx>
 #include <grfatr.hxx>
 #include <flyfrm.hxx>
@@ -54,6 +53,7 @@
 #include <txtfrm.hxx>
 #include <rootfrm.hxx>
 #include <extinput.hxx>
+#include <crsskip.hxx>
 #include <scriptinfo.hxx>
 #include <unocrsrhelper.hxx>
 #include <section.hxx>
@@ -61,24 +61,24 @@
 #include <numrule.hxx>
 #include <SwNodeNum.hxx>
 #include <unocrsr.hxx>
-#include <calbck.hxx>
+#include <switerator.hxx>
 
 using namespace com::sun::star;
 
-void SwEditShell::Insert( sal_Unicode c, bool bOnlyCurrCursor )
+void SwEditShell::Insert( sal_Unicode c, bool bOnlyCurrCrsr )
 {
     StartAllAction();
-    for(SwPaM& rPaM : GetCursor()->GetRingContainer())
-    {
-        const bool bSuccess = GetDoc()->getIDocumentContentOperations().InsertString(rPaM, OUString(c));
+    FOREACHPAM_START(GetCrsr())
+
+        const bool bSuccess = GetDoc()->getIDocumentContentOperations().InsertString(*PCURCRSR, OUString(c));
         OSL_ENSURE( bSuccess, "Doc->Insert() failed." );
         (void) bSuccess;
 
-        SaveTableBoxContent( rPaM.GetPoint() );
-        if( bOnlyCurrCursor )
+        SaveTblBoxCntnt( PCURCRSR->GetPoint() );
+        if( bOnlyCurrCrsr )
             break;
 
-    }
+    FOREACHPAM_END()
 
     EndAllAction();
 }
@@ -87,72 +87,75 @@ void SwEditShell::Insert2(const OUString &rStr, const bool bForceExpandHints )
 {
     StartAllAction();
     {
-        const SwInsertFlags nInsertFlags =
+        const enum IDocumentContentOperations::InsertFlags nInsertFlags =
             (bForceExpandHints)
-            ? (SwInsertFlags::FORCEHINTEXPAND | SwInsertFlags::EMPTYEXPAND)
-            : SwInsertFlags::EMPTYEXPAND;
+            ? static_cast<IDocumentContentOperations::InsertFlags>(
+                    IDocumentContentOperations::INS_FORCEHINTEXPAND |
+                    IDocumentContentOperations::INS_EMPTYEXPAND)
+            : IDocumentContentOperations::INS_EMPTYEXPAND;
 
-        for(SwPaM& rCurrentCursor : getShellCursor( true )->GetRingContainer())
-        {
+        SwPaM *_pStartCrsr = getShellCrsr( true ), *__pStartCrsr = _pStartCrsr;
+        do {
             //OPT: GetSystemCharSet
             const bool bSuccess =
-                GetDoc()->getIDocumentContentOperations().InsertString(rCurrentCursor, rStr, nInsertFlags);
+                GetDoc()->getIDocumentContentOperations().InsertString(*_pStartCrsr, rStr, nInsertFlags);
             OSL_ENSURE( bSuccess, "Doc->Insert() failed." );
 
             if (bSuccess)
             {
-                GetDoc()->UpdateRsid( rCurrentCursor, rStr.getLength() );
+                GetDoc()->UpdateRsid( *_pStartCrsr, rStr.getLength() );
 
                 // Set paragraph rsid if beginning of paragraph
-                SwTextNode *const pTextNode =
-                    rCurrentCursor.GetPoint()->nNode.GetNode().GetTextNode();
-                if( pTextNode && pTextNode->Len() == 1)
-                    GetDoc()->UpdateParRsid( pTextNode );
+                SwTxtNode *const pTxtNode =
+                    _pStartCrsr->GetPoint()->nNode.GetNode().GetTxtNode();
+                if( pTxtNode && pTxtNode->Len() == 1)
+                    GetDoc()->UpdateParRsid( pTxtNode );
             }
 
-            SaveTableBoxContent( rCurrentCursor.GetPoint() );
+            SaveTblBoxCntnt( _pStartCrsr->GetPoint() );
 
-        }
+        } while( (_pStartCrsr = static_cast<SwPaM *>(_pStartCrsr->GetNext() )) != __pStartCrsr );
     }
 
     // calculate cursor bidi level
-    SwCursor* pTmpCursor = GetCursor_();
-    const bool bDoNotSetBidiLevel = ! pTmpCursor ||
-                                ( dynamic_cast<SwUnoCursor*>(pTmpCursor) !=  nullptr );
+    SwCursor* pTmpCrsr = _GetCrsr();
+    const bool bDoNotSetBidiLevel = ! pTmpCrsr ||
+                                ( 0 != dynamic_cast<SwUnoCrsr*>(pTmpCrsr) );
 
     if ( ! bDoNotSetBidiLevel )
     {
-        SwNode& rNode = pTmpCursor->GetPoint()->nNode.GetNode();
-        if ( rNode.IsTextNode() )
+        SwNode& rNode = pTmpCrsr->GetPoint()->nNode.GetNode();
+        if ( rNode.IsTxtNode() )
         {
-            SwIndex& rIdx = pTmpCursor->GetPoint()->nContent;
-            sal_Int32 nPrevPos = rIdx.GetIndex();
+            SwIndex& rIdx = pTmpCrsr->GetPoint()->nContent;
+            sal_Int32 nPos = rIdx.GetIndex();
+            sal_Int32 nPrevPos = nPos;
             if ( nPrevPos )
                 --nPrevPos;
 
-            SwScriptInfo* pSI = SwScriptInfo::GetScriptInfo( static_cast<SwTextNode&>(rNode), true );
+            SwScriptInfo* pSI = SwScriptInfo::GetScriptInfo( static_cast<SwTxtNode&>(rNode), true );
 
             sal_uInt8 nLevel = 0;
             if ( ! pSI )
             {
                 // seems to be an empty paragraph.
                 Point aPt;
-                SwContentFrame* pFrame =
-                        static_cast<SwTextNode&>(rNode).getLayoutFrame( GetLayout(), &aPt, pTmpCursor->GetPoint(),
+                SwCntntFrm* pFrm =
+                        static_cast<SwTxtNode&>(rNode).getLayoutFrm( GetLayout(), &aPt, pTmpCrsr->GetPoint(),
                                                     false );
 
                 SwScriptInfo aScriptInfo;
-                aScriptInfo.InitScriptInfo( static_cast<SwTextNode&>(rNode), pFrame->IsRightToLeft() );
+                aScriptInfo.InitScriptInfo( static_cast<SwTxtNode&>(rNode), pFrm->IsRightToLeft() );
                 nLevel = aScriptInfo.DirType( nPrevPos );
             }
             else
             {
                 if ( COMPLETE_STRING != pSI->GetInvalidityA() )
-                    pSI->InitScriptInfo( static_cast<SwTextNode&>(rNode) );
+                    pSI->InitScriptInfo( static_cast<SwTxtNode&>(rNode) );
                 nLevel = pSI->DirType( nPrevPos );
             }
 
-            pTmpCursor->SetCursorBidiLevel( nLevel );
+            pTmpCrsr->SetCrsrBidiLevel( nLevel );
         }
     }
 
@@ -164,117 +167,115 @@ void SwEditShell::Insert2(const OUString &rStr, const bool bForceExpandHints )
 void SwEditShell::Overwrite(const OUString &rStr)
 {
     StartAllAction();
-    for(SwPaM& rPaM : GetCursor()->GetRingContainer())
-    {
-        if( !GetDoc()->getIDocumentContentOperations().Overwrite(rPaM, rStr ) )
+    FOREACHPAM_START(GetCrsr())
+        if( !GetDoc()->getIDocumentContentOperations().Overwrite(*PCURCRSR, rStr ) )
         {
             OSL_FAIL( "Doc->getIDocumentContentOperations().Overwrite(Str) failed." );
         }
-        SaveTableBoxContent( rPaM.GetPoint() );
-    }
+        SaveTblBoxCntnt( PCURCRSR->GetPoint() );
+    FOREACHPAM_END()
     EndAllAction();
 }
 
 long SwEditShell::SplitNode( bool bAutoFormat, bool bCheckTableStart )
 {
     StartAllAction();
-    GetDoc()->GetIDocumentUndoRedo().StartUndo(SwUndoId::EMPTY, nullptr);
+    GetDoc()->GetIDocumentUndoRedo().StartUndo(UNDO_EMPTY, NULL);
 
-    for(SwPaM& rPaM : GetCursor()->GetRingContainer())
-    {
+    FOREACHPAM_START(GetCrsr())
         // Here, a table cell becomes a normal text cell.
-        GetDoc()->ClearBoxNumAttrs( rPaM.GetPoint()->nNode );
-        GetDoc()->getIDocumentContentOperations().SplitNode( *rPaM.GetPoint(), bCheckTableStart );
-    }
+        GetDoc()->ClearBoxNumAttrs( PCURCRSR->GetPoint()->nNode );
+        GetDoc()->getIDocumentContentOperations().SplitNode( *PCURCRSR->GetPoint(), bCheckTableStart );
+    FOREACHPAM_END()
 
-    GetDoc()->GetIDocumentUndoRedo().EndUndo(SwUndoId::EMPTY, nullptr);
+    GetDoc()->GetIDocumentUndoRedo().EndUndo(UNDO_EMPTY, NULL);
 
     if( bAutoFormat )
-        AutoFormatBySplitNode();
+        AutoFmtBySplitNode();
 
-    ClearTableBoxContent();
+    ClearTblBoxCntnt();
 
     EndAllAction();
-    return 1L;
+    return(1L);
 }
 
-bool SwEditShell::AppendTextNode()
+bool SwEditShell::AppendTxtNode()
 {
     bool bRet = false;
     StartAllAction();
-    GetDoc()->GetIDocumentUndoRedo().StartUndo(SwUndoId::EMPTY, nullptr);
+    GetDoc()->GetIDocumentUndoRedo().StartUndo(UNDO_EMPTY, NULL);
 
-    for(SwPaM& rPaM : GetCursor()->GetRingContainer())
-    {
-        GetDoc()->ClearBoxNumAttrs( rPaM.GetPoint()->nNode );
-        bRet = GetDoc()->getIDocumentContentOperations().AppendTextNode( *rPaM.GetPoint()) || bRet;
-    }
+    FOREACHPAM_START(GetCrsr())
+        GetDoc()->ClearBoxNumAttrs( PCURCRSR->GetPoint()->nNode );
+        bRet = GetDoc()->getIDocumentContentOperations().AppendTxtNode( *PCURCRSR->GetPoint()) || bRet;
+    FOREACHPAM_END()
 
-    GetDoc()->GetIDocumentUndoRedo().EndUndo(SwUndoId::EMPTY, nullptr);
+    GetDoc()->GetIDocumentUndoRedo().EndUndo(UNDO_EMPTY, NULL);
 
-    ClearTableBoxContent();
+    ClearTblBoxCntnt();
 
     EndAllAction();
     return bRet;
 }
 
 // the returned SwGrfNode pointer is used in GetGraphic() and GetGraphicSize()
-SwGrfNode * SwEditShell::GetGrfNode_() const
+SwGrfNode * SwEditShell::_GetGrfNode() const
 {
-    SwGrfNode *pGrfNode = nullptr;
-    SwPaM* pCursor = GetCursor();
-    if( !pCursor->HasMark() ||
-        pCursor->GetPoint()->nNode == pCursor->GetMark()->nNode )
-        pGrfNode = pCursor->GetPoint()->nNode.GetNode().GetGrfNode();
+    SwGrfNode *pGrfNode = 0;
+    SwPaM* pCrsr = GetCrsr();
+    if( !pCrsr->HasMark() ||
+        pCrsr->GetPoint()->nNode == pCrsr->GetMark()->nNode )
+        pGrfNode = pCrsr->GetPoint()->nNode.GetNode().GetGrfNode();
 
     return pGrfNode;
 }
 
-// returns a Graphic pointer if CurrentCursor->GetPoint() points to a SwGrfNode and
+// returns a Graphic pointer if CurCrsr->GetPoint() points to a SwGrfNode and
 // GetMark is not set or points to the same Graphic
 const Graphic* SwEditShell::GetGraphic( bool bWait ) const
 {
-    SwGrfNode* pGrfNode = GetGrfNode_();
-    const Graphic* pGrf( nullptr );
+    SwGrfNode* pGrfNode = _GetGrfNode();
+    const Graphic* pGrf( 0L );
     if ( pGrfNode )
     {
-        pGrf = &(pGrfNode->GetGrf(bWait && GraphicType::Default == pGrfNode->GetGrf().GetType()));
+        pGrf = &(pGrfNode->GetGrf(bWait && GRAPHIC_DEFAULT == pGrfNode->GetGrf().GetType()));
     }
     return pGrf;
 }
 
-bool SwEditShell::IsLinkedGrfSwapOut() const
+bool SwEditShell::IsGrfSwapOut( bool bOnlyLinked ) const
 {
-    SwGrfNode *pGrfNode = GetGrfNode_();
+    SwGrfNode *pGrfNode = _GetGrfNode();
     return pGrfNode &&
-        ( pGrfNode->IsLinkedFile() &&
-          ( GraphicType::Default == pGrfNode->GetGrfObj().GetType() ||
-            pGrfNode->GetGrfObj().IsSwappedOut()));
+        (bOnlyLinked ? ( pGrfNode->IsLinkedFile() &&
+                        ( GRAPHIC_DEFAULT == pGrfNode->GetGrfObj().GetType()||
+                          pGrfNode->GetGrfObj().IsSwappedOut()))
+                     : pGrfNode->GetGrfObj().IsSwappedOut());
 }
 
 const GraphicObject* SwEditShell::GetGraphicObj() const
 {
-    SwGrfNode* pGrfNode = GetGrfNode_();
-    return pGrfNode ? &(pGrfNode->GetGrfObj()) : nullptr;
+    SwGrfNode* pGrfNode = _GetGrfNode();
+    return pGrfNode ? &(pGrfNode->GetGrfObj()) : 0L;
 }
 
-GraphicType SwEditShell::GetGraphicType() const
+sal_uInt16 SwEditShell::GetGraphicType() const
 {
-    SwGrfNode *pGrfNode = GetGrfNode_();
-    return pGrfNode ? pGrfNode->GetGrfObj().GetType() : GraphicType::NONE;
+    SwGrfNode *pGrfNode = _GetGrfNode();
+    return static_cast<sal_uInt16>(pGrfNode ? pGrfNode->GetGrfObj().GetType() : GRAPHIC_NONE);
 }
 
-// returns the size of a graphic in <rSz> if CurrentCursor->GetPoint() points to a SwGrfNode and
+// returns the size of a graphic in <rSz> if CurCrsr->GetPoint() points to a SwGrfNode and
 // GetMark is not set or points to the same graphic
 bool SwEditShell::GetGrfSize(Size& rSz) const
 {
-    SwNoTextNode* pNoTextNd;
-    SwPaM* pCurrentCursor = GetCursor();
-    if( ( !pCurrentCursor->HasMark()
-         || pCurrentCursor->GetPoint()->nNode == pCurrentCursor->GetMark()->nNode )
-         && nullptr != ( pNoTextNd = pCurrentCursor->GetNode().GetNoTextNode() ) )
+    SwNoTxtNode* pNoTxtNd;
+    SwPaM* pCurrentCrsr = GetCrsr();
+    if( ( !pCurrentCrsr->HasMark()
+         || pCurrentCrsr->GetPoint()->nNode == pCurrentCrsr->GetMark()->nNode )
+         && 0 != ( pNoTxtNd = pCurrentCrsr->GetNode().GetNoTxtNode() ) )
     {
-        rSz = pNoTextNd->GetTwipSize();
+        rSz = pNoTxtNd->GetTwipSize();
         return true;
     }
     return false;
@@ -283,13 +284,13 @@ bool SwEditShell::GetGrfSize(Size& rSz) const
 
 /// Read again if graphic is not OK and replace old one
 void SwEditShell::ReRead( const OUString& rGrfName, const OUString& rFltName,
-                    const Graphic* pGraphic )
+                    const Graphic* pGraphic, const GraphicObject* pGrfObj )
 {
     StartAllAction();
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    mpDoc->getIDocumentContentOperations().ReRead( *GetCursor(), rGrfName, rFltName, pGraphic, nullptr );
+    mpDoc->getIDocumentContentOperations().ReRead( *GetCrsr(), rGrfName, rFltName, pGraphic, pGrfObj );
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
-    mxDoc->getIDocumentContentOperations().ReRead( *GetCursor(), rGrfName, rFltName, pGraphic, nullptr );
+    mxDoc->getIDocumentContentOperations().ReRead( *GetCrsr(), rGrfName, rFltName, pGraphic, pGrfObj );
 #endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     EndAllAction();
 }
@@ -297,14 +298,14 @@ void SwEditShell::ReRead( const OUString& rGrfName, const OUString& rFltName,
 /// Returns the name and the filter name of a graphic if the pointer is on a graphic.
 /// If a String-pointer is != 0 then return corresponding name.
 void SwEditShell::GetGrfNms( OUString* pGrfName, OUString* pFltName,
-                            const SwFlyFrameFormat* pFormat ) const
+                            const SwFlyFrmFmt* pFmt ) const
 {
     OSL_ENSURE( pGrfName || pFltName, "No parameters" );
-    if( pFormat )
-        SwDoc::GetGrfNms( *pFormat, pGrfName, pFltName );
+    if( pFmt )
+        GetDoc()->GetGrfNms( *pFmt, pGrfName, pFltName );
     else
     {
-        SwGrfNode *pGrfNode = GetGrfNode_();
+        SwGrfNode *pGrfNode = _GetGrfNode();
         if( pGrfNode && pGrfNode->IsLinkedFile() )
             pGrfNode->GetFileFilterNms( pGrfName, pFltName );
     }
@@ -312,33 +313,33 @@ void SwEditShell::GetGrfNms( OUString* pGrfName, OUString* pFltName,
 
 const tools::PolyPolygon *SwEditShell::GetGraphicPolygon() const
 {
-    SwNoTextNode *pNd = GetCursor()->GetNode().GetNoTextNode();
+    SwNoTxtNode *pNd = GetCrsr()->GetNode().GetNoTxtNode();
     return pNd->HasContour();
 }
 
 void SwEditShell::SetGraphicPolygon( const tools::PolyPolygon *pPoly )
 {
-    SwNoTextNode *pNd = GetCursor()->GetNode().GetNoTextNode();
+    SwNoTxtNode *pNd = GetCrsr()->GetNode().GetNoTxtNode();
     StartAllAction();
     pNd->SetContour( pPoly );
-    SwFlyFrame *pFly = static_cast<SwFlyFrame*>(pNd->getLayoutFrame(GetLayout())->GetUpper());
-    const SwFormatSurround &rSur = pFly->GetFormat()->GetSurround();
-    pFly->GetFormat()->NotifyClients( &rSur, &rSur );
+    SwFlyFrm *pFly = static_cast<SwFlyFrm*>(pNd->getLayoutFrm(GetLayout())->GetUpper());
+    const SwFmtSurround &rSur = pFly->GetFmt()->GetSurround();
+    pFly->GetFmt()->NotifyClients( (SwFmtSurround*)&rSur, (SwFmtSurround*)&rSur );
     GetDoc()->getIDocumentState().SetModified();
     EndAllAction();
 }
 
 void SwEditShell::ClearAutomaticContour()
 {
-    SwNoTextNode *pNd = GetCursor()->GetNode().GetNoTextNode();
-    OSL_ENSURE( pNd, "is no NoTextNode!" );
+    SwNoTxtNode *pNd = GetCrsr()->GetNode().GetNoTxtNode();
+    OSL_ENSURE( pNd, "is no NoTxtNode!" );
     if( pNd->HasAutomaticContour() )
     {
         StartAllAction();
-        pNd->SetContour( nullptr );
-        SwFlyFrame *pFly = static_cast<SwFlyFrame*>(pNd->getLayoutFrame(GetLayout())->GetUpper());
-        const SwFormatSurround &rSur = pFly->GetFormat()->GetSurround();
-        pFly->GetFormat()->NotifyClients( &rSur, &rSur );
+        pNd->SetContour( NULL, false );
+        SwFlyFrm *pFly = static_cast<SwFlyFrm*>(pNd->getLayoutFrm(GetLayout())->GetUpper());
+        const SwFmtSurround &rSur = pFly->GetFmt()->GetSurround();
+        pFly->GetFmt()->NotifyClients( (SwFmtSurround*)&rSur, (SwFmtSurround*)&rSur );
         GetDoc()->getIDocumentState().SetModified();
         EndAllAction();
     }
@@ -346,19 +347,19 @@ void SwEditShell::ClearAutomaticContour()
 
 /** Get OLE object at pointer.
  *
- * Returns a pointer to a SvInPlaceObjectRef if CurrentCursor->GetPoint() points to a SwOLENode and
+ * Returns a pointer to a SvInPlaceObjectRef if CurCrsr->GetPoint() points to a SwOLENode and
  * GetMark is not set or points to the same object reference. Gets this pointer from the Doc
  * if the object should be searched by name.
  */
 svt::EmbeddedObjectRef& SwEditShell::GetOLEObject() const
 {
     OSL_ENSURE(  CNT_OLE == GetCntType(), "GetOLEObj: no OLENode." );
-    OSL_ENSURE( !GetCursor()->HasMark() ||
-            (GetCursor()->HasMark() &&
-                GetCursor()->GetPoint()->nNode == GetCursor()->GetMark()->nNode),
+    OSL_ENSURE( !GetCrsr()->HasMark() ||
+            (GetCrsr()->HasMark() &&
+                GetCrsr()->GetPoint()->nNode == GetCrsr()->GetMark()->nNode),
             "GetOLEObj: no OLENode." );
 
-    SwOLENode *pOLENode = GetCursor()->GetNode().GetOLENode();
+    SwOLENode *pOLENode = GetCrsr()->GetNode().GetOLENode();
     OSL_ENSURE( pOLENode, "GetOLEObj: no OLENode." );
     SwOLEObj& rOObj = pOLENode->GetOLEObj();
     return rOObj.GetObject();
@@ -368,13 +369,13 @@ bool SwEditShell::HasOLEObj( const OUString &rName ) const
 {
     SwStartNode *pStNd;
     SwNodeIndex aIdx( *GetNodes().GetEndOfAutotext().StartOfSectionNode(), 1 );
-    while ( nullptr != (pStNd = aIdx.GetNode().GetStartNode()) )
+    while ( 0 != (pStNd = aIdx.GetNode().GetStartNode()) )
     {
         ++aIdx;
         SwNode& rNd = aIdx.GetNode();
         if( rNd.IsOLENode() &&
-            rName == static_cast<SwOLENode&>(rNd).GetChartTableName() &&
-            static_cast<SwOLENode&>(rNd).getLayoutFrame( GetLayout() ) )
+            rName == static_cast<SwOLENode&>(rNd).GetChartTblName() &&
+            static_cast<SwOLENode&>(rNd).getLayoutFrm( GetLayout() ) )
             return true;
 
         aIdx.Assign( *pStNd->EndOfSectionNode(), + 1 );
@@ -384,9 +385,9 @@ bool SwEditShell::HasOLEObj( const OUString &rName ) const
 
 void SwEditShell::SetChartName( const OUString &rName )
 {
-    SwOLENode *pONd = GetCursor()->GetNode().GetOLENode();
+    SwOLENode *pONd = GetCrsr()->GetNode().GetOLENode();
     OSL_ENSURE( pONd, "ChartNode not found" );
-    pONd->SetChartTableName( rName );
+    pONd->SetChartTblName( rName );
 }
 
 void SwEditShell::UpdateCharts( const OUString &rName )
@@ -395,16 +396,16 @@ void SwEditShell::UpdateCharts( const OUString &rName )
 }
 
 /// change table name
-void SwEditShell::SetTableName( SwFrameFormat& rTableFormat, const OUString &rNewName )
+void SwEditShell::SetTableName( SwFrmFmt& rTblFmt, const OUString &rNewName )
 {
-    GetDoc()->SetTableName( rTableFormat, rNewName );
+    GetDoc()->SetTableName( rTblFmt, rNewName );
 }
 
 /// request current word
 OUString SwEditShell::GetCurWord()
 {
-    const SwPaM& rPaM = *GetCursor();
-    const SwTextNode* pNd = rPaM.GetNode().GetTextNode();
+    const SwPaM& rPaM = *GetCrsr();
+    const SwTxtNode* pNd = rPaM.GetNode().GetTxtNode();
     OUString aString = pNd ?
                      pNd->GetCurWord(rPaM.GetPoint()->nContent.GetIndex()) :
                      OUString();
@@ -426,8 +427,10 @@ const SwDocStat& SwEditShell::GetUpdatedDocStat()
     return rRet;
 }
 
+// OPT: eddocinl.cxx
+
 /// get the reference of a given name in the Doc
-const SwFormatRefMark* SwEditShell::GetRefMark( const OUString& rName ) const
+const SwFmtRefMark* SwEditShell::GetRefMark( const OUString& rName ) const
 {
     return GetDoc()->GetRefMark( rName );
 }
@@ -438,7 +441,7 @@ sal_uInt16 SwEditShell::GetRefMarks( std::vector<OUString>* pStrings ) const
     return GetDoc()->GetRefMarks( pStrings );
 }
 
-OUString SwEditShell::GetDropText( const sal_Int32 nChars ) const
+OUString SwEditShell::GetDropTxt( const sal_uInt16 nChars ) const
 {
     /*
      * pb: made changes for #i74939#
@@ -446,16 +449,16 @@ OUString SwEditShell::GetDropText( const sal_Int32 nChars ) const
      * always return a string even though there is a selection
      */
 
-    OUString aText;
-    SwPaM* pCursor = GetCursor();
+    OUString aTxt;
+    SwPaM* pCrsr = GetCrsr();
     if ( IsMultiSelection() )
     {
         // if a multi selection exists, search for the first line
         // -> it is the cursor with the lowest index
-        sal_uLong nIndex = pCursor->GetMark()->nNode.GetIndex();
+        sal_uLong nIndex = pCrsr->GetMark()->nNode.GetIndex();
         bool bPrev = true;
-        SwPaM* pLast = pCursor;
-        SwPaM* pTemp = pCursor;
+        SwPaM* pLast = pCrsr;
+        SwPaM* pTemp = pCrsr;
         while ( bPrev )
         {
             SwPaM* pPrev2 = dynamic_cast< SwPaM* >( pTemp->GetPrev() );
@@ -467,32 +470,32 @@ OUString SwEditShell::GetDropText( const sal_Int32 nChars ) const
                 if ( nTemp < nIndex )
                 {
                     nIndex = nTemp;
-                    pCursor = pPrev2;
+                    pCrsr = pPrev2;
                 }
             }
         }
     }
 
-    SwTextNode* pTextNd = pCursor->GetNode( !pCursor->HasMark() ).GetTextNode();
-    if( pTextNd )
+    SwTxtNode* pTxtNd = pCrsr->GetNode( !pCrsr->HasMark() ).GetTxtNode();
+    if( pTxtNd )
     {
-        sal_Int32 nDropLen = pTextNd->GetDropLen( nChars );
+        sal_Int32 nDropLen = pTxtNd->GetDropLen( nChars );
         if( nDropLen )
-            aText = pTextNd->GetText().copy(0, nDropLen);
+            aTxt = pTxtNd->GetTxt().copy(0, nDropLen);
     }
 
-    return aText;
+    return aTxt;
 }
 
-void SwEditShell::ReplaceDropText( const OUString &rStr, SwPaM* pPaM )
+void SwEditShell::ReplaceDropTxt( const OUString &rStr, SwPaM* pPaM )
 {
-    SwPaM* pCursor = pPaM ? pPaM : GetCursor();
-    if( pCursor->GetPoint()->nNode == pCursor->GetMark()->nNode &&
-        pCursor->GetNode().GetTextNode()->IsTextNode() )
+    SwPaM* pCrsr = pPaM ? pPaM : GetCrsr();
+    if( pCrsr->GetPoint()->nNode == pCrsr->GetMark()->nNode &&
+        pCrsr->GetNode().GetTxtNode()->IsTxtNode() )
     {
         StartAllAction();
 
-        const SwNodeIndex& rNd = pCursor->GetPoint()->nNode;
+        const SwNodeIndex& rNd = pCrsr->GetPoint()->nNode;
         SwPaM aPam( rNd, rStr.getLength(), rNd, 0 );
         if( !GetDoc()->getIDocumentContentOperations().Overwrite( aPam, rStr ) )
         {
@@ -506,23 +509,24 @@ void SwEditShell::ReplaceDropText( const OUString &rStr, SwPaM* pPaM )
 OUString SwEditShell::Calculate()
 {
     OUString  aFormel;                    // the final formula
+    SwPaM     *pPaMLast = static_cast<SwPaM*>(GetCrsr()->GetNext()),
+              *pPaM = pPaMLast;           // cursor pointers
     SwCalc    aCalc( *GetDoc() );
     const CharClass& rCC = GetAppCharClass();
 
-    for(SwPaM& rCurrentPaM : GetCursor()->GetNext()->GetRingContainer())
-    {
-        SwTextNode* pTextNd = rCurrentPaM.GetNode().GetTextNode();
-        if(pTextNd)
+    do {
+        SwTxtNode* pTxtNd = pPaM->GetNode().GetTxtNode();
+        if(pTxtNd)
         {
-            const SwPosition *pStart = rCurrentPaM.Start(), *pEnd = rCurrentPaM.End();
+            const SwPosition *pStart = pPaM->Start(), *pEnd = pPaM->End();
             const sal_Int32 nStt = pStart->nContent.GetIndex();
-            OUString aStr = pTextNd->GetExpandText( nStt, pEnd->nContent.
+            OUString aStr = pTxtNd->GetExpandTxt( nStt, pEnd->nContent.
                                                 GetIndex() - nStt );
 
             aStr = rCC.lowercase( aStr );
 
             sal_Unicode ch;
-            bool bValidFields = false;
+            bool bValidFlds = false;
             sal_Int32 nPos = 0;
 
             while( nPos < aStr.getLength() )
@@ -545,12 +549,12 @@ OUString SwEditShell::Calculate()
                         (::Find( sVar, aCalc.GetVarTable(),TBLSZ) ||
                          aCalc.VarLook( sVar )) )
                     {
-                        if( !bValidFields )
+                        if( !bValidFlds )
                         {
-                            GetDoc()->getIDocumentFieldsAccess().FieldsToCalc( aCalc,
+                            GetDoc()->getIDocumentFieldsAccess().FldsToCalc( aCalc,
                                                   pStart->nNode.GetIndex(),
                                                   pStart->nContent.GetIndex() );
-                            bValidFields = true;
+                            bValidFlds = true;
                         }
                         aFormel += "(" + aCalc.GetStrResult( aCalc.VarLook( sVar )->nValue ) + ")";
                     }
@@ -558,10 +562,10 @@ OUString SwEditShell::Calculate()
                         aFormel += sVar;
                 }
                 else
-                    aFormel += OUStringLiteral1(ch);
+                    aFormel += OUString(ch);
             }
         }
-    }
+    } while( pPaMLast != (pPaM = static_cast<SwPaM*>(pPaM->GetNext())) );
 
     return aCalc.GetStrResult( aCalc.Calculate(aFormel) );
 }
@@ -578,23 +582,23 @@ sfx2::LinkManager& SwEditShell::GetLinkManager()
 void *SwEditShell::GetIMapInventor() const
 {
     // The node on which the cursor points should be sufficient as a unique identifier
-    return static_cast<void*>(&(GetCursor()->GetNode()));
+    return (void*)&(GetCrsr()->GetNode());
 }
 
 // #i73788#
 Graphic SwEditShell::GetIMapGraphic() const
 {
     // returns always a graphic if the cursor is in a Fly
-    SET_CURR_SHELL( const_cast<SwEditShell*>(this) );
+    SET_CURR_SHELL( (SwViewShell*)this );
     Graphic aRet;
-    SwPaM* pCursor = GetCursor();
-    if ( !pCursor->HasMark() )
+    SwPaM* pCrsr = GetCrsr();
+    if ( !pCrsr->HasMark() )
     {
-        SwNode& rNd =pCursor->GetNode();
+        SwNode& rNd =pCrsr->GetNode();
         if( rNd.IsGrfNode() )
         {
             SwGrfNode & rGrfNode(static_cast<SwGrfNode&>(rNd));
-            aRet = rGrfNode.GetGrf(GraphicType::Default == rGrfNode.GetGrf().GetType());
+            aRet = rGrfNode.GetGrf(GRAPHIC_DEFAULT == rGrfNode.GetGrf().GetType());
         }
         else if ( rNd.IsOLENode() )
         {
@@ -602,47 +606,47 @@ Graphic SwEditShell::GetIMapGraphic() const
         }
         else
         {
-            SwFlyFrame* pFlyFrame = rNd.GetContentNode()->getLayoutFrame( GetLayout() )->FindFlyFrame();
-            if(pFlyFrame)
-                aRet = pFlyFrame->GetFormat()->MakeGraphic();
+            SwFlyFrm* pFlyFrm = rNd.GetCntntNode()->getLayoutFrm( GetLayout() )->FindFlyFrm();
+            if(pFlyFrm)
+                aRet = pFlyFrm->GetFmt()->MakeGraphic();
         }
     }
     return aRet;
 }
 
-bool SwEditShell::InsertURL( const SwFormatINetFormat& rFormat, const OUString& rStr, bool bKeepSelection )
+bool SwEditShell::InsertURL( const SwFmtINetFmt& rFmt, const OUString& rStr, bool bKeepSelection )
 {
     // URL and hint text (directly or via selection) necessary
-    if( rFormat.GetValue().isEmpty() || ( rStr.isEmpty() && !HasSelection() ) )
+    if( rFmt.GetValue().isEmpty() || ( rStr.isEmpty() && !HasSelection() ) )
         return false;
     StartAllAction();
-    GetDoc()->GetIDocumentUndoRedo().StartUndo( SwUndoId::UI_INSERT_URLTXT, nullptr);
-    bool bInsText = true;
+    GetDoc()->GetIDocumentUndoRedo().StartUndo( UNDO_UI_INSERT_URLTXT, NULL);
+    bool bInsTxt = true;
 
     if( !rStr.isEmpty() )
     {
-        SwPaM* pCursor = GetCursor();
-        if( pCursor->HasMark() && *pCursor->GetPoint() != *pCursor->GetMark() )
+        SwPaM* pCrsr = GetCrsr();
+        if( pCrsr->HasMark() && *pCrsr->GetPoint() != *pCrsr->GetMark() )
         {
             // Selection existent, multi selection?
-            bool bDelText = true;
-            if( !pCursor->IsMultiSelection() )
+            bool bDelTxt = true;
+            if( pCrsr->GetNext() == pCrsr )
             {
                 // einfach Selection -> Text ueberpruefen
-                const OUString sText(comphelper::string::stripEnd(GetSelText(), ' '));
-                if( sText == rStr )
-                    bDelText = bInsText = false;
+                const OUString sTxt(comphelper::string::stripEnd(GetSelTxt(), ' '));
+                if( sTxt == rStr )
+                    bDelTxt = bInsTxt = false;
             }
-            else if( rFormat.GetValue() == rStr ) // Are Name and URL equal?
-                bDelText = bInsText = false;
+            else if( rFmt.GetValue() == rStr ) // Are Name and URL equal?
+                bDelTxt = bInsTxt = false;
 
-            if( bDelText )
+            if( bDelTxt )
                 Delete();
         }
-        else if( pCursor->IsMultiSelection() && rFormat.GetValue() == rStr )
-            bInsText = false;
+        else if( pCrsr->GetNext() != pCrsr && rFmt.GetValue() == rStr )
+            bInsTxt = false;
 
-        if( bInsText )
+        if( bInsTxt )
         {
             Insert2( rStr );
             SetMark();
@@ -650,65 +654,67 @@ bool SwEditShell::InsertURL( const SwFormatINetFormat& rFormat, const OUString& 
         }
     }
     else
-        bInsText = false;
+        bInsTxt = false;
 
-    SetAttrItem( rFormat );
-    if (bInsText && !IsCursorPtAtEnd())
+    SetAttrItem( rFmt );
+    if (bInsTxt && !IsCrsrPtAtEnd())
         SwapPam();
     if(!bKeepSelection)
         ClearMark();
-    if( bInsText )
-        DontExpandFormat();
-    GetDoc()->GetIDocumentUndoRedo().EndUndo( SwUndoId::UI_INSERT_URLTXT, nullptr );
+    if( bInsTxt )
+        DontExpandFmt();
+    GetDoc()->GetIDocumentUndoRedo().EndUndo( UNDO_UI_INSERT_URLTXT, NULL );
     EndAllAction();
     return true;
 }
 
-void SwEditShell::GetINetAttrs( SwGetINetAttrs& rArr )
+sal_uInt16 SwEditShell::GetINetAttrs( SwGetINetAttrs& rArr )
 {
     rArr.clear();
 
-    const SwTextNode* pTextNd;
-    const SwCharFormats* pFormats = GetDoc()->GetCharFormats();
-    for( auto n = pFormats->size(); 1 < n; )
+    const SwTxtNode* pTxtNd;
+    const SwCharFmts* pFmts = GetDoc()->GetCharFmts();
+    for( sal_uInt16 n = pFmts->size(); 1 < n; )
     {
-        SwIterator<SwTextINetFormat,SwCharFormat> aIter(*(*pFormats)[--n]);
-        for( SwTextINetFormat* pFnd = aIter.First(); pFnd; pFnd = aIter.Next() )
+        SwIterator<SwTxtINetFmt,SwCharFmt> aIter(*(*pFmts)[--n]);
+        for( SwTxtINetFmt* pFnd = aIter.First(); pFnd; pFnd = aIter.Next() )
         {
-            if( nullptr != ( pTextNd = pFnd->GetpTextNode()) &&
-                pTextNd->GetNodes().IsDocNodes() )
+            if( 0 != ( pTxtNd = pFnd->GetpTxtNode()) &&
+                pTxtNd->GetNodes().IsDocNodes() )
             {
-                SwTextINetFormat& rAttr = *pFnd;
-                OUString sText( pTextNd->GetExpandText( rAttr.GetStart(),
+                SwTxtINetFmt& rAttr = *pFnd;
+                OUString sTxt( pTxtNd->GetExpandTxt( rAttr.GetStart(),
                                     *rAttr.GetEnd() - rAttr.GetStart() ) );
 
-                sText = sText.replaceAll(OUStringLiteral1(0x0a), "");
-                sText = comphelper::string::strip(sText, ' ');
+                sTxt = comphelper::string::remove(sTxt, 0x0a);
+                sTxt = comphelper::string::strip(sTxt, ' ');
 
-                if( !sText.isEmpty() )
+                if( !sTxt.isEmpty() )
                 {
-                    rArr.push_back(SwGetINetAttr(sText, rAttr));
+                    SwGetINetAttr* pNew = new SwGetINetAttr( sTxt, rAttr );
+                    rArr.push_back( pNew );
                 }
             }
         }
     }
+    return rArr.size();
 }
 
 /// If the cursor is in a INetAttribute then it will be deleted completely (incl. hint text, the
 /// latter is needed for drag & drop)
 bool SwEditShell::DelINetAttrWithText()
 {
-    bool bRet = SelectTextAttr( RES_TXTATR_INETFMT, false );
+    bool bRet = SelectTxtAttr( RES_TXTATR_INETFMT, false );
     if( bRet )
-        DeleteSel( *GetCursor() );
+        DeleteSel( *GetCrsr() );
     return bRet;
 }
 
 /// Set the DontExpand flag at the text character attributes
-bool SwEditShell::DontExpandFormat()
+bool SwEditShell::DontExpandFmt()
 {
     bool bRet = false;
-    if( !IsTableMode() && GetDoc()->DontExpandFormat( *GetCursor()->GetPoint() ))
+    if( !IsTableMode() && GetDoc()->DontExpandFmt( *GetCrsr()->GetPoint() ))
     {
         bRet = true;
         CallChgLnk();
@@ -734,19 +740,19 @@ void SwEditShell::SetNumberingRestart()
     StartAllAction();
     Push();
     // iterate over all text contents - body, frames, header, footer, footnote text
-    SwPaM* pCursor = GetCursor();
-    for(int i = 0; i < 2; i++)
+    SwPaM* pCrsr = GetCrsr();
+    for(sal_uInt16 i = 0; i < 2; i++)
     {
         if(!i)
-            MakeFindRange(SwDocPositions::Start, SwDocPositions::End, pCursor); // body content
+            MakeFindRange(DOCPOS_START, DOCPOS_END, pCrsr); // body content
         else
-            MakeFindRange(SwDocPositions::OtherStart, SwDocPositions::OtherEnd, pCursor); // extra content
-        SwPosition* pSttPos = pCursor->Start(), *pEndPos = pCursor->End();
+            MakeFindRange(DOCPOS_OTHERSTART, DOCPOS_OTHEREND, pCrsr); // extra content
+        SwPosition* pSttPos = pCrsr->Start(), *pEndPos = pCrsr->End();
         sal_uLong nCurrNd = pSttPos->nNode.GetIndex();
         sal_uLong nEndNd = pEndPos->nNode.GetIndex();
         if( nCurrNd <= nEndNd )
         {
-            SwContentFrame* pContentFrame;
+            SwCntntFrm* pCntFrm;
             bool bGoOn = true;
             // iterate over all paragraphs
             while( bGoOn )
@@ -754,28 +760,28 @@ void SwEditShell::SetNumberingRestart()
                 SwNode* pNd = GetDoc()->GetNodes()[ nCurrNd ];
                 switch( pNd->GetNodeType() )
                 {
-                case SwNodeType::Text:
-                    if( nullptr != ( pContentFrame = static_cast<SwTextNode*>(pNd)->getLayoutFrame( GetLayout() )) )
+                case ND_TEXTNODE:
+                    if( 0 != ( pCntFrm = static_cast<SwTxtNode*>(pNd)->getLayoutFrm( GetLayout() )) )
                     {
                         // skip hidden frames - ignore protection!
-                        if( !static_cast<SwTextFrame*>(pContentFrame)->IsHiddenNow() )
+                        if( !static_cast<SwTxtFrm*>(pCntFrm)->IsHiddenNow() )
                         {
                             // if the node is numbered and the starting value of the numbering equals the
                             // start value of the numbering rule then set this value as hard starting value
 
                             // get the node num
                             // OD 2005-11-09
-                            SwTextNode* pTextNd( pNd->GetTextNode() );
-                            SwNumRule* pNumRule( pTextNd->GetNumRule() );
+                            SwTxtNode* pTxtNd( pNd->GetTxtNode() );
+                            SwNumRule* pNumRule( pTxtNd->GetNumRule() );
 
                             bool bIsNodeNum =
-                               ( pNumRule && pTextNd->GetNum() &&
-                                 ( pTextNd->HasNumber() || pTextNd->HasBullet() ) &&
-                                 pTextNd->IsCountedInList() &&
-                                 !pTextNd->IsListRestart() );
+                               ( pNumRule && pTxtNd->GetNum() &&
+                                 ( pTxtNd->HasNumber() || pTxtNd->HasBullet() ) &&
+                                 pTxtNd->IsCountedInList() &&
+                                 !pTxtNd->IsListRestart() );
                             if (bIsNodeNum)
                             {
-                                int nListLevel = pTextNd->GetActualListLevel();
+                                int nListLevel = pTxtNd->GetActualListLevel();
 
                                 if (nListLevel < 0)
                                     nListLevel = 0;
@@ -783,24 +789,27 @@ void SwEditShell::SetNumberingRestart()
                                 if (nListLevel >= MAXLEVEL)
                                     nListLevel = MAXLEVEL - 1;
 
-                                 bIsNodeNum = pTextNd->GetNum()->GetNumber() ==
+                                 bIsNodeNum = pTxtNd->GetNum()->GetNumber() ==
                                     pNumRule->Get( static_cast<sal_uInt16>(nListLevel) ).GetStart();
                             }
                             if (bIsNodeNum)
                             {
                                 // now set a the start value as attribute
                                 SwPosition aCurrentNode(*pNd);
-                                GetDoc()->SetNumRuleStart( aCurrentNode );
+                                GetDoc()->SetNumRuleStart( aCurrentNode, true );
                             }
                         }
                     }
                     break;
-                case SwNodeType::Section:
+                case ND_SECTIONNODE:
                     // skip hidden sections  - ignore protection!
                     if(static_cast<SwSectionNode*>(pNd)->GetSection().IsHidden() )
                         nCurrNd = pNd->EndOfSectionIndex();
                     break;
-                default: break;
+                case ND_ENDNODE:
+                    {
+                        break;
+                    }
                 }
 
                 bGoOn = nCurrNd < nEndNd;
@@ -809,28 +818,62 @@ void SwEditShell::SetNumberingRestart()
         }
     }
 
-    Pop(PopMode::DeleteCurrent);
+    Pop(false);
     EndAllAction();
 }
 
-sal_uInt16 SwEditShell::GetLineCount()
+sal_uInt16 SwEditShell::GetLineCount( bool bActPos )
 {
     sal_uInt16 nRet = 0;
     CalcLayout();
-    SwPaM* pPam = GetCursor();
+    SwPaM* pPam = GetCrsr();
     SwNodeIndex& rPtIdx = pPam->GetPoint()->nNode;
     SwNodeIndex aStart( rPtIdx );
-    SwContentNode* pCNd;
-    SwContentFrame *pContentFrame = nullptr;
+    SwCntntNode* pCNd;
+    SwCntntFrm *pCntFrm = 0;
+    sal_uLong nTmpPos;
 
-    aStart = 0;
-
-    while( nullptr != ( pCNd = GetDoc()->GetNodes().GoNextSection(
-                &aStart, true, false )) )
+    if( !bActPos )
+        aStart = 0;
+    else if( rPtIdx > ( nTmpPos = GetDoc()->GetNodes().GetEndOfExtras().GetIndex()) )
+        // BodyArea => Start is EndOfIcons + 1
+        aStart = nTmpPos + 1;
+    else
     {
-        if( nullptr != ( pContentFrame = pCNd->getLayoutFrame( GetLayout() ) ) && pContentFrame->IsTextFrame() )
+        if( 0 != ( pCNd = pPam->GetCntntNode() ) &&
+            0 != ( pCntFrm = pCNd->getLayoutFrm( GetLayout() ) ) )
         {
-            nRet = nRet + static_cast<SwTextFrame*>(pContentFrame)->GetLineCount( COMPLETE_STRING );
+            const SwStartNode *pTmp;
+            if( pCntFrm->IsInFly() )                        // Fly
+                pTmp = pCNd->FindFlyStartNode();
+            else if( pCntFrm->IsInFtn() )                   // Footnote
+                pTmp = pCNd->FindFootnoteStartNode();
+            else
+            {                                               // Footer/Header
+                const sal_uInt16 nTyp = FRM_HEADER | FRM_FOOTER;
+                SwFrm* pFrm = pCntFrm;
+                while( pFrm && !(pFrm->GetType() & nTyp) )
+                    pFrm = pFrm->GetUpper();
+                OSL_ENSURE( pFrm, "Wo bin ich?" );
+                if( pFrm && ( pFrm->GetType() & FRM_FOOTER ) )
+                    pTmp = pCNd->FindFooterStartNode();
+                else
+                    pTmp = pCNd->FindHeaderStartNode();
+            }
+            OSL_ENSURE( pTmp, "Missing StartNode" );
+            aStart  = *pTmp;
+        }
+        OSL_ENSURE( pCNd && pCntFrm, "Missing Layout-Information" );
+    }
+
+    while( 0 != ( pCNd = GetDoc()->GetNodes().GoNextSection(
+                &aStart, true, false )) && ( !bActPos || aStart <= rPtIdx ) )
+    {
+        if( 0 != ( pCntFrm = pCNd->getLayoutFrm( GetLayout() ) ) && pCntFrm->IsTxtFrm() )
+        {
+            sal_Int32 nActPos = bActPos && aStart == rPtIdx ?
+                pPam->GetPoint()->nContent.GetIndex() : USHRT_MAX;
+            nRet = nRet + static_cast<SwTxtFrm*>(pCntFrm)->GetLineCount( nActPos );
         }
     }
     return nRet;
@@ -852,16 +895,16 @@ long SwEditShell::MergeDoc( const SwDoc& rDoc )
     return nRet;
 }
 
-const SwFootnoteInfo& SwEditShell::GetFootnoteInfo() const
+const SwFtnInfo& SwEditShell::GetFtnInfo() const
 {
-    return GetDoc()->GetFootnoteInfo();
+    return GetDoc()->GetFtnInfo();
 }
 
-void SwEditShell::SetFootnoteInfo(const SwFootnoteInfo& rInfo)
+void SwEditShell::SetFtnInfo(const SwFtnInfo& rInfo)
 {
     StartAllAction();
     SET_CURR_SHELL( this );
-    GetDoc()->SetFootnoteInfo(rInfo);
+    GetDoc()->SetFtnInfo(rInfo);
     CallChgLnk();
     EndAllAction();
 }
@@ -889,39 +932,43 @@ void SwEditShell::SetLineNumberInfo(const SwLineNumberInfo& rInfo)
     StartAllAction();
     SET_CURR_SHELL( this );
     GetDoc()->SetLineNumberInfo(rInfo);
-    AddPaintRect( GetLayout()->Frame() );
+    AddPaintRect( GetLayout()->Frm() );
     EndAllAction();
 }
 
-sal_uInt16 SwEditShell::GetLinkUpdMode() const
+sal_uInt16 SwEditShell::GetLinkUpdMode(bool bDocSettings) const
 {
-    return getIDocumentSettingAccess().getLinkUpdateMode( false );
+    return getIDocumentSettingAccess()->getLinkUpdateMode( !bDocSettings );
 }
 
 void SwEditShell::SetLinkUpdMode( sal_uInt16 nMode )
 {
-    getIDocumentSettingAccess().setLinkUpdateMode( nMode );
+    getIDocumentSettingAccess()->setLinkUpdateMode( nMode );
 }
 
 // Interface for TextInputData - (for text input of japanese/chinese characters)
-void SwEditShell::CreateExtTextInput(LanguageType eInputLanguage)
+SwExtTextInput* SwEditShell::CreateExtTextInput(LanguageType eInputLanguage)
 {
-    SwExtTextInput* pRet = GetDoc()->CreateExtTextInput( *GetCursor() );
+    SwExtTextInput* pRet = GetDoc()->CreateExtTextInput( *GetCrsr() );
     pRet->SetLanguage(eInputLanguage);
-    pRet->SetOverwriteCursor( SwCursorShell::IsOverwriteCursor() );
+    pRet->SetOverwriteCursor( SwCrsrShell::IsOverwriteCrsr() );
+    return pRet;
 }
 
-OUString SwEditShell::DeleteExtTextInput( bool bInsText )
+OUString SwEditShell::DeleteExtTextInput( SwExtTextInput* pDel, bool bInsText )
 {
-    const SwPosition& rPos = *GetCursor()->GetPoint();
-    SwExtTextInput* pDel = GetDoc()->GetExtTextInput( rPos.nNode.GetNode(),
-                                      rPos.nContent.GetIndex() );
     if( !pDel )
     {
-        //JP 25.10.2001: under UNIX the cursor is moved before the Input-
-        //              Engine event comes in. So take any - normally there
-        //              exist only one at the time. -- Task 92016
-        pDel = GetDoc()->GetExtTextInput();
+        const SwPosition& rPos = *GetCrsr()->GetPoint();
+        pDel = GetDoc()->GetExtTextInput( rPos.nNode.GetNode(),
+                                          rPos.nContent.GetIndex() );
+        if( !pDel )
+        {
+            //JP 25.10.2001: under UNIX the cursor is moved before the Input-
+            //              Engine event comes in. So take any - normally there
+            //              exist only one at the time. -- Task 92016
+            pDel = GetDoc()->GetExtTextInput();
+        }
     }
     OUString sRet;
     if( pDel )
@@ -932,14 +979,14 @@ OUString SwEditShell::DeleteExtTextInput( bool bInsText )
         SET_CURR_SHELL( this );
         StartAllAction();
         pDel->SetInsText( bInsText );
-        SetOverwriteCursor( pDel->IsOverwriteCursor() );
+        SetOverwriteCrsr( pDel->IsOverwriteCursor() );
         const SwPosition aPos( *pDel->GetPoint() );
         GetDoc()->DeleteExtTextInput( pDel );
 
         // In this case, the "replace" function did not set the cursor
         // to the original position. Therefore we have to do this manually.
-        if ( ! bInsText && IsOverwriteCursor() )
-            *GetCursor()->GetPoint() = aPos;
+        if ( ! bInsText && IsOverwriteCrsr() )
+            *GetCrsr()->GetPoint() = aPos;
 
         EndAllAction();
     }
@@ -948,7 +995,7 @@ OUString SwEditShell::DeleteExtTextInput( bool bInsText )
 
 void SwEditShell::SetExtTextInputData( const CommandExtTextInputData& rData )
 {
-    const SwPosition& rPos = *GetCursor()->GetPoint();
+    const SwPosition& rPos = *GetCrsr()->GetPoint();
     SwExtTextInput* pInput = GetDoc()->GetExtTextInput( rPos.nNode.GetNode() );
     if( pInput )
     {
@@ -959,61 +1006,62 @@ void SwEditShell::SetExtTextInputData( const CommandExtTextInputData& rData )
             pInput->SetInputData( rData );
         // position cursor
         const SwPosition& rStt = *pInput->Start();
-        const sal_Int32 nNewCursorPos = rStt.nContent.GetIndex() + rData.GetCursorPos();
+        const sal_Int32 nNewCrsrPos = rStt.nContent.GetIndex() + rData.GetCursorPos();
 
         // ugly but works
-        ShowCursor();
-        const sal_Int32 nDiff = nNewCursorPos - rPos.nContent.GetIndex();
+        ShowCrsr();
+        const sal_Int32 nDiff = nNewCrsrPos - rPos.nContent.GetIndex();
         if( 0 > nDiff )
-            Left( -nDiff, CRSR_SKIP_CHARS );
+            Left( (sal_Int32)-nDiff, CRSR_SKIP_CHARS );
         else if( 0 < nDiff )
-            Right( nDiff, CRSR_SKIP_CHARS );
+            Right( (sal_Int32)nDiff, CRSR_SKIP_CHARS );
 
-        SetOverwriteCursor( rData.IsCursorOverwrite() );
+        SetOverwriteCrsr( rData.IsCursorOverwrite() );
 
         EndAllAction();
 
         if( !rData.IsCursorVisible() )  // must be called after the EndAction
-            HideCursor();
+            HideCrsr();
     }
 }
 
-void SwEditShell::TransliterateText( TransliterationFlags nType )
+void SwEditShell::TransliterateText( sal_uInt32 nType )
 {
     utl::TransliterationWrapper aTrans( ::comphelper::getProcessComponentContext(), nType );
     StartAllAction();
     SET_CURR_SHELL( this );
 
-    SwPaM* pCursor = GetCursor();
-    if( pCursor->GetNext() != pCursor )
+    SwPaM* pCrsr = GetCrsr();
+    if( pCrsr->GetNext() != pCrsr )
     {
-        GetDoc()->GetIDocumentUndoRedo().StartUndo(SwUndoId::EMPTY, nullptr);
-        for(SwPaM& rPaM : GetCursor()->GetRingContainer())
-        {
-            if( rPaM.HasMark() )
-                GetDoc()->getIDocumentContentOperations().TransliterateText( rPaM, aTrans );
-        }
-        GetDoc()->GetIDocumentUndoRedo().EndUndo(SwUndoId::EMPTY, nullptr);
+        GetDoc()->GetIDocumentUndoRedo().StartUndo(UNDO_EMPTY, NULL);
+        FOREACHPAM_START(GetCrsr())
+
+        if( PCURCRSR->HasMark() )
+            GetDoc()->getIDocumentContentOperations().TransliterateText( *PCURCRSR, aTrans );
+
+        FOREACHPAM_END()
+        GetDoc()->GetIDocumentUndoRedo().EndUndo(UNDO_EMPTY, NULL);
     }
     else
-        GetDoc()->getIDocumentContentOperations().TransliterateText( *pCursor, aTrans );
+        GetDoc()->getIDocumentContentOperations().TransliterateText( *pCrsr, aTrans );
 
     EndAllAction();
 }
 
 void SwEditShell::CountWords( SwDocStat& rStat ) const
 {
-    for(SwPaM& rPaM : GetCursor()->GetRingContainer())
-    {
-        if( rPaM.HasMark() )
-            SwDoc::CountWords( rPaM, rStat );
+    FOREACHPAM_START(GetCrsr())
 
-    }
+        if( PCURCRSR->HasMark() )
+            GetDoc()->CountWords( *PCURCRSR, rStat );
+
+    FOREACHPAM_END()
 }
 
 void SwEditShell::ApplyViewOptions( const SwViewOption &rOpt )
 {
-    SwCursorShell::StartAction();
+    SwCrsrShell::StartAction();
     SwViewShell::ApplyViewOptions( rOpt );
     SwEditShell::EndAction();
 }

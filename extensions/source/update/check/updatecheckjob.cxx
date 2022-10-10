@@ -31,8 +31,8 @@
 #include "updatehdl.hxx"
 #include "updateprotocol.hxx"
 
-#include <memory>
-#include <cppuhelper/implbase.hxx>
+#include <boost/scoped_ptr.hpp>
+#include <cppuhelper/implbase3.hxx>
 #include <cppuhelper/implementationentry.hxx>
 #include <cppuhelper/supportsservice.hxx>
 
@@ -56,7 +56,7 @@ public:
                               const uno::Sequence< beans::NamedValue > &xParameters,
                               bool bShowDialog );
 
-    virtual void SAL_CALL run() override;
+    virtual void SAL_CALL run() SAL_OVERRIDE;
 
     void    setTerminating();
 
@@ -69,9 +69,9 @@ private:
 };
 
 class UpdateCheckJob :
-    public ::cppu::WeakImplHelper< task::XJob, lang::XServiceInfo, frame::XTerminateListener >
+    public ::cppu::WeakImplHelper3< task::XJob, lang::XServiceInfo, frame::XTerminateListener >
 {
-    virtual ~UpdateCheckJob() override;
+    virtual ~UpdateCheckJob();
 
 public:
 
@@ -85,28 +85,37 @@ public:
     static OUString getImplName();
 
     // XJob
-    virtual uno::Any SAL_CALL execute(const uno::Sequence<beans::NamedValue>&) override;
+    virtual uno::Any SAL_CALL execute(const uno::Sequence<beans::NamedValue>&)
+        throw (lang::IllegalArgumentException, uno::Exception, std::exception) SAL_OVERRIDE;
 
     // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName() override;
-    virtual sal_Bool SAL_CALL supportsService(OUString const & serviceName) override;
-    virtual uno::Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+    virtual OUString SAL_CALL getImplementationName()
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService(OUString const & serviceName)
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual uno::Sequence< OUString > SAL_CALL getSupportedServiceNames()
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XEventListener
-    virtual void SAL_CALL disposing( css::lang::EventObject const & evt ) override;
+    virtual void SAL_CALL disposing( ::com::sun::star::lang::EventObject const & evt )
+        throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XTerminateListener
-    virtual void SAL_CALL queryTermination( lang::EventObject const & evt ) override;
-    virtual void SAL_CALL notifyTermination( lang::EventObject const & evt ) override;
+    virtual void SAL_CALL queryTermination( lang::EventObject const & evt )
+        throw ( frame::TerminationVetoException, uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL notifyTermination( lang::EventObject const & evt )
+        throw ( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 private:
     uno::Reference<uno::XComponentContext>  m_xContext;
     uno::Reference< frame::XDesktop2 >      m_xDesktop;
-    std::unique_ptr< InitUpdateCheckJobThread > m_pInitThread;
+    boost::scoped_ptr< InitUpdateCheckJobThread > m_pInitThread;
 
     void handleExtensionUpdates( const uno::Sequence< beans::NamedValue > &rListProp );
-    void terminateAndJoinThread();
 };
+
+
+
 
 InitUpdateCheckJobThread::InitUpdateCheckJobThread(
             const uno::Reference< uno::XComponentContext > &xContext,
@@ -140,7 +149,8 @@ void SAL_CALL InitUpdateCheckJobThread::run()
             aController->showDialog( true );
     } catch (const uno::Exception &e) {
         // fdo#64962 - don't bring the app down on some unexpected exception.
-        SAL_WARN("extensions.update", "Caught init update exception, thread terminated. " << e.Message );
+        OSL_TRACE( "Caught init update exception: %s\n thread terminated.\n",
+            OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr() );
     }
 }
 
@@ -153,12 +163,16 @@ UpdateCheckJob::~UpdateCheckJob()
 {
 }
 
+
+
 uno::Sequence< OUString >
 UpdateCheckJob::getServiceNames()
 {
-    uno::Sequence< OUString > aServiceList { "com.sun.star.setup.UpdateCheck" };
+    uno::Sequence< OUString > aServiceList(1);
+    aServiceList[0] = "com.sun.star.setup.UpdateCheck";
     return aServiceList;
 };
+
 
 
 OUString
@@ -168,8 +182,11 @@ UpdateCheckJob::getImplName()
 }
 
 
+
+
 uno::Any
 UpdateCheckJob::execute(const uno::Sequence<beans::NamedValue>& namedValues)
+    throw (lang::IllegalArgumentException, uno::Exception, std::exception)
 {
     for ( sal_Int32 n=namedValues.getLength(); n-- > 0; )
     {
@@ -243,26 +260,29 @@ void UpdateCheckJob::handleExtensionUpdates( const uno::Sequence< beans::NamedVa
     }
     catch( const uno::Exception& e )
     {
-         SAL_WARN("extensions.update", "Caught exception, thread terminated. " << e.Message);
+         OSL_TRACE( "Caught exception: %s\n thread terminated.\n",
+            OUStringToOString(e.Message, RTL_TEXTENCODING_UTF8).getStr());
     }
 }
 
 
+
 OUString SAL_CALL
-UpdateCheckJob::getImplementationName()
+UpdateCheckJob::getImplementationName() throw (uno::RuntimeException, std::exception)
 {
     return getImplName();
 }
 
 
+
 uno::Sequence< OUString > SAL_CALL
-UpdateCheckJob::getSupportedServiceNames()
+UpdateCheckJob::getSupportedServiceNames() throw (uno::RuntimeException, std::exception)
 {
     return getServiceNames();
 }
 
 sal_Bool SAL_CALL
-UpdateCheckJob::supportsService( OUString const & serviceName )
+UpdateCheckJob::supportsService( OUString const & serviceName ) throw (uno::RuntimeException, std::exception)
 {
     return cppu::supportsService(this, serviceName);
 }
@@ -270,12 +290,12 @@ UpdateCheckJob::supportsService( OUString const & serviceName )
 
 // XEventListener
 void SAL_CALL UpdateCheckJob::disposing( lang::EventObject const & rEvt )
+    throw ( uno::RuntimeException, std::exception )
 {
     bool shutDown = ( rEvt.Source == m_xDesktop );
 
     if ( shutDown && m_xDesktop.is() )
     {
-        terminateAndJoinThread();
         m_xDesktop->removeTerminateListener( this );
         m_xDesktop.clear();
     }
@@ -284,16 +304,18 @@ void SAL_CALL UpdateCheckJob::disposing( lang::EventObject const & rEvt )
 
 // XTerminateListener
 void SAL_CALL UpdateCheckJob::queryTermination( lang::EventObject const & )
+    throw ( frame::TerminationVetoException, uno::RuntimeException, std::exception )
 {
 }
 
-void UpdateCheckJob::terminateAndJoinThread()
+
+void SAL_CALL UpdateCheckJob::notifyTermination( lang::EventObject const & )
+    throw ( uno::RuntimeException, std::exception )
 {
-    if ( m_pInitThread.get() != nullptr )
+    if ( m_pInitThread.get() != 0 )
     {
         m_pInitThread->setTerminating();
         m_pInitThread->join();
-        m_pInitThread.reset();
     }
 
 #ifdef USE_JAVA
@@ -302,12 +324,9 @@ void UpdateCheckJob::terminateAndJoinThread()
 #endif	// USE_JAVA
 }
 
-void SAL_CALL UpdateCheckJob::notifyTermination( lang::EventObject const & )
-{
-    terminateAndJoinThread();
-}
-
 } // anonymous namespace
+
+
 
 static uno::Reference<uno::XInterface> SAL_CALL
 createJobInstance(const uno::Reference<uno::XComponentContext>& xContext)
@@ -320,11 +339,13 @@ createJobInstance(const uno::Reference<uno::XComponentContext>& xContext)
 }
 
 
+
 static uno::Reference<uno::XInterface> SAL_CALL
 createConfigInstance(const uno::Reference<uno::XComponentContext>& xContext)
 {
     return *UpdateCheckConfig::get(xContext, *UpdateCheck::get());
 }
+
 
 
 static const cppu::ImplementationEntry kImplementations_entries[] =
@@ -334,7 +355,7 @@ static const cppu::ImplementationEntry kImplementations_entries[] =
         UpdateCheckJob::getImplName,
         UpdateCheckJob::getServiceNames,
         cppu::createSingleComponentFactory,
-        nullptr,
+        NULL,
         0
     },
     {
@@ -342,11 +363,12 @@ static const cppu::ImplementationEntry kImplementations_entries[] =
         UpdateCheckConfig::getImplName,
         UpdateCheckConfig::getServiceNames,
         cppu::createSingleComponentFactory,
-        nullptr,
+        NULL,
         0
     },
-    { nullptr, nullptr, nullptr, nullptr, nullptr, 0 }
+    { NULL, NULL, NULL, NULL, NULL, 0 }
 } ;
+
 
 
 extern "C" SAL_DLLPUBLIC_EXPORT void * SAL_CALL updchk_component_getFactory(const sal_Char *pszImplementationName, void *pServiceManager, void *pRegistryKey)

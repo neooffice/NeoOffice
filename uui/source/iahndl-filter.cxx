@@ -45,6 +45,7 @@
 #include "fltdlg.hxx"
 
 #include "iahndl.hxx"
+#include <boost/scoped_ptr.hpp>
 
 using namespace com::sun::star;
 
@@ -68,7 +69,8 @@ executeFilterDialog(
     {
         SolarMutexGuard aGuard;
 
-        ScopedVclPtrInstance< uui::FilterDialog > xDialog(pParent);
+        boost::scoped_ptr< uui::FilterDialog > xDialog(
+            new uui::FilterDialog(pParent));
 
         xDialog->SetURL(rURL);
         xDialog->ChangeFilters(&rFilters);
@@ -112,7 +114,7 @@ handleNoSuchFilterRequest_(
     try
     {
         xFilterContainer.set( xContext->getServiceManager()->createInstanceWithContext(
-                                  "com.sun.star.document.FilterFactory", xContext ),
+                                  OUString( "com.sun.star.document.FilterFactory"), xContext ),
                               uno::UNO_QUERY );
     }
     catch ( uno::Exception const & )
@@ -142,7 +144,7 @@ handleNoSuchFilterRequest_(
     //            out by using DocumentService property later!
     uno::Reference< container::XEnumeration > xFilters
         = xFilterContainer->createSubSetEnumerationByQuery(
-            "_query_all:sort_prop=uiname:iflags=1:eflags=143360");
+            OUString( "_query_all:sort_prop=uiname:iflags=1:eflags=143360"));
     while (xFilters->hasMoreElements())
     {
         try
@@ -151,9 +153,9 @@ handleNoSuchFilterRequest_(
             uui::FilterNamePair             aPair;
 
             aPair.sInternal = lProps.getUnpackedValueOrDefault(
-                "Name", OUString());
+                OUString("Name"), OUString());
             aPair.sUI       = lProps.getUnpackedValueOrDefault(
-                 "UIName", OUString());
+                 OUString("UIName"), OUString());
             if ( aPair.sInternal.isEmpty() || aPair.sUI.isEmpty() )
             {
                continue;
@@ -213,7 +215,7 @@ handleFilterOptionsRequest_(
     try
     {
         xFilterCFG.set( xContext->getServiceManager()->createInstanceWithContext(
-                            "com.sun.star.document.FilterFactory", xContext ),
+                            OUString( "com.sun.star.document.FilterFactory" ), xContext ),
                         uno::UNO_QUERY );
     }
     catch ( uno::Exception const & )
@@ -228,7 +230,8 @@ handleFilterOptionsRequest_(
             sal_Int32 nPropCount = rRequest.rProperties.getLength();
             for( sal_Int32 ind = 0; ind < nPropCount; ++ind )
             {
-                if( rRequest.rProperties[ind].Name == "FilterName" )
+                if( rRequest.rProperties[ind].Name.equals(
+                        OUString("FilterName")) )
                 {
                     rRequest.rProperties[ind].Value >>= aFilterName;
                     break;
@@ -242,7 +245,8 @@ handleFilterOptionsRequest_(
                 for( sal_Int32 nProperty=0;
                      nProperty < nPropertyCount;
                      ++nProperty )
-                    if( aProps[nProperty].Name == "UIComponent" )
+                    if( aProps[nProperty].Name.equals(
+                            OUString("UIComponent")) )
                     {
                         OUString aServiceName;
                         aProps[nProperty].Value >>= aServiceName;

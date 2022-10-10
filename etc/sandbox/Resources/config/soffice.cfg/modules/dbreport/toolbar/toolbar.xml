@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE toolbar:toolbar PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "toolbar.dtd">
 <!--
  * This file is part of the LibreOffice project.
@@ -25,26 +25,26 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  -->
 <toolbar:toolbar xmlns:toolbar="http://openoffice.org/2001/toolbar" xmlns:xlink="http://www.w3.org/1999/xlink">
-  <toolbar:toolbaritem xlink:href=".uno:Save"/>
-  <toolbar:toolbarseparator/>
-  <toolbar:toolbaritem xlink:href=".uno:EditDoc"/>
-  <toolbar:toolbarseparator/>
-  <toolbar:toolbaritem xlink:href=".uno:Cut"/>
-  <toolbar:toolbaritem xlink:href=".uno:Copy"/>
-  <toolbar:toolbaritem xlink:href=".uno:Paste"/>
-  <toolbar:toolbarseparator/>
-  <toolbar:toolbaritem xlink:href=".uno:Undo"/>
-  <toolbar:toolbaritem xlink:href=".uno:Redo"/>
-  <toolbar:toolbarseparator/>
-  <toolbar:toolbaritem xlink:href=".uno:AddField"/>
-  <!-- Disable Java-based reports
-  <toolbar:toolbaritem xlink:href=".uno:ReportNavigator"/>
-  -->
-  <toolbar:toolbaritem xlink:href=".uno:DbSortingAndGrouping"/>
-  <!-- Disable Java-based reports
-  <toolbar:toolbaritem xlink:href=".uno:ExecuteReport"/>
-  -->
-  <toolbar:toolbarseparator/>
-  <toolbar:toolbaritem xlink:href=".uno:HelpIndex"/>
-  <toolbar:toolbaritem xlink:href=".uno:ExtendedHelp" toolbar:visible="false"/>
+ <toolbar:toolbaritem xlink:href=".uno:Save"/>
+ <toolbar:toolbarseparator/>
+ <toolbar:toolbaritem xlink:href=".uno:EditDoc"/>
+ <toolbar:toolbarseparator/>
+ <toolbar:toolbaritem xlink:href=".uno:Cut"/>
+ <toolbar:toolbaritem xlink:href=".uno:Copy"/>
+ <toolbar:toolbaritem xlink:href=".uno:Paste" toolbar:text="" toolbar:style="dropdown"/>
+ <toolbar:toolbarseparator/>
+ <toolbar:toolbaritem xlink:href=".uno:Undo"/>
+ <toolbar:toolbaritem xlink:href=".uno:Redo"/>
+ <toolbar:toolbarseparator/>
+ <toolbar:toolbaritem xlink:href=".uno:AddField" toolbar:style="radio auto"/>
+ <!-- Disable Java-based reports
+ <toolbar:toolbaritem xlink:href=".uno:ReportNavigator" toolbar:style="radio auto"/>
+ -->
+ <toolbar:toolbaritem xlink:href=".uno:DbSortingAndGrouping"/>
+ <!-- Disable Java-based reports
+ <toolbar:toolbaritem xlink:href=".uno:ExecuteReport"/>
+ -->
+ <toolbar:toolbarseparator/>
+ <toolbar:toolbaritem xlink:href=".uno:HelpIndex"/>
+ <toolbar:toolbaritem xlink:href=".uno:ExtendedHelp" toolbar:visible="false"/>
 </toolbar:toolbar>

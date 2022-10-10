@@ -38,7 +38,7 @@
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/util/XChangesListener.hpp>
 #include <com/sun/star/util/XChangesNotifier.hpp>
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase1.hxx>
 #include "ucbhelper/proxydecider.hxx"
 
 #if defined USE_JAVA && defined MACOSX
@@ -77,7 +77,7 @@ private:
     OString m_aWildString;
 
 public:
-    explicit WildCard( const OUString& rWildCard )
+    WildCard( const OUString& rWildCard )
     : m_aWildString(
         OUStringToOString(
             rWildCard, RTL_TEXTENCODING_UTF8 ).toAsciiLowerCase() ) {}
@@ -89,6 +89,7 @@ public:
 typedef std::pair< WildCard, WildCard > NoProxyListEntry;
 
 
+
 class HostnameCache
 {
     typedef std::pair< OUString, OUString > HostListEntry;
@@ -97,8 +98,8 @@ class HostnameCache
     sal_uInt32                     m_nCapacity;
 
 public:
-    explicit HostnameCache()
-        : m_nCapacity( 256 ) {}
+    explicit HostnameCache( sal_uInt32 nCapacity )
+        : m_nCapacity( nCapacity ) {}
 
     bool get( const OUString & rKey, OUString & rValue ) const
     {
@@ -130,7 +131,7 @@ public:
 
 
 class InternetProxyDecider_Impl :
-    public cppu::WeakImplHelper< util::XChangesListener >
+    public cppu::WeakImplHelper1< util::XChangesListener >
 {
     mutable osl::Mutex                       m_aMutex;
     InternetProxyServer                      m_aHttpProxy;
@@ -152,8 +153,9 @@ private:
                          sal_Int32 nPort,
                          bool bUseFullyQualified ) const;
 public:
-    explicit InternetProxyDecider_Impl(
+    InternetProxyDecider_Impl(
         const uno::Reference< uno::XComponentContext >& rxContext );
+    virtual ~InternetProxyDecider_Impl();
 
     void dispose();
 
@@ -162,17 +164,23 @@ public:
                                           sal_Int32 nPort ) const;
 
     // XChangesListener
-    virtual void SAL_CALL changesOccurred( const util::ChangesEvent& Event ) override;
+    virtual void SAL_CALL changesOccurred( const util::ChangesEvent& Event )
+        throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
     // XEventListener ( base of XChangesLisetenr )
-    virtual void SAL_CALL disposing( const lang::EventObject& Source ) override;
+    virtual void SAL_CALL disposing( const lang::EventObject& Source )
+        throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 private:
     void setNoProxyList( const OUString & rNoProxyList );
 };
 
 
+
+
 // WildCard Implementation.
+
+
 
 
 bool WildCard::Matches( const OUString& rString ) const
@@ -207,7 +215,7 @@ bool WildCard::Matches( const OUString& rString ) const
                 else
                     break;
 
-                SAL_FALLTHROUGH;
+                // Note: fall-through are intended!
 
             case '*':
                 while ( *pWild == '*' )
@@ -299,13 +307,17 @@ bool getConfigInt32Value(
 }
 
 
+
+
 // InternetProxyDecider_Impl Implementation.
+
+
 
 
 InternetProxyDecider_Impl::InternetProxyDecider_Impl(
     const uno::Reference< uno::XComponentContext >& rxContext )
     : m_nProxyType( 0 ),
-      m_aHostnames()
+      m_aHostnames( 256 ) // cache size
 {
     try
     {
@@ -321,8 +333,9 @@ InternetProxyDecider_Impl::InternetProxyDecider_Impl(
 
         uno::Reference< uno::XInterface > xInterface(
                     xConfigProv->createInstanceWithArguments(
-                        "com.sun.star.configuration.ConfigurationAccess",
-                        aArguments ) );
+                        OUString(
+                            "com.sun.star.configuration.ConfigurationAccess" ),
+                    aArguments ) );
 
         OSL_ENSURE( xInterface.is(),
                     "InternetProxyDecider - No config access!" );
@@ -377,7 +390,8 @@ InternetProxyDecider_Impl::InternetProxyDecider_Impl(
 
             // Register as listener for config changes.
 
-            m_xNotifier.set( xInterface, uno::UNO_QUERY );
+            m_xNotifier = uno::Reference< util::XChangesNotifier >(
+                                                xInterface, uno::UNO_QUERY );
 
             OSL_ENSURE( m_xNotifier.is(),
                         "InternetProxyDecider - No notifier!" );
@@ -392,6 +406,13 @@ InternetProxyDecider_Impl::InternetProxyDecider_Impl(
         OSL_FAIL( "InternetProxyDecider - Exception!" );
     }
 }
+
+
+// virtual
+InternetProxyDecider_Impl::~InternetProxyDecider_Impl()
+{
+}
+
 
 void InternetProxyDecider_Impl::dispose()
 {
@@ -424,9 +445,9 @@ bool InternetProxyDecider_Impl::shouldUseProxy( const OUString & rHost,
          ( rHost[ 0 ] != '[' ) )
     {
         // host is given as numeric IPv6 address
-        aBuffer.append( "[" );
+        aBuffer.appendAscii( "[" );
         aBuffer.append( rHost );
-        aBuffer.append( "]" );
+        aBuffer.appendAscii( "]" );
     }
     else
     {
@@ -473,24 +494,24 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
     // Use system proxy even if no proxies are set
     if ( m_nProxyType == 0 || m_nProxyType == 1 )
     {
-        CFDictionaryRef aDict = SCDynamicStoreCopyProxies( nullptr );
+        CFDictionaryRef aDict = SCDynamicStoreCopyProxies( NULL );
         if ( aDict )
         {
-            CFArrayRef aExcList = static_cast< CFArrayRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesExceptionsList ) );
+            CFArrayRef aExcList = (CFArrayRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesExceptionsList );
             if ( rHost.getLength() && aExcList )
             {
                 CFIndex nCount = CFArrayGetCount( aExcList );
                 OUString aFullyQualifiedHost;
                 for ( CFIndex i = 0; i < nCount; i++ )
                 {
-                    CFStringRef aHostString = static_cast< CFStringRef >( CFArrayGetValueAtIndex( aExcList, i ) );
+                    CFStringRef aHostString = (CFStringRef)CFArrayGetValueAtIndex( aExcList, i );
                     if ( !aHostString )
                         continue;
 
                     CFIndex nHostLen = CFStringGetLength( aHostString );
                     CFRange aHostRange = CFRangeMake( 0, nHostLen );
                     sal_Unicode pHostBuffer[ nHostLen + 1 ];
-                    CFStringGetCharacters( aHostString, aHostRange, reinterpret_cast< UniChar* >( pHostBuffer ) );
+                    CFStringGetCharacters( aHostString, aHostRange, pHostBuffer );
                     pHostBuffer[ nHostLen ] = 0;
                     OUString aHostName( pHostBuffer );
                     if ( !aHostName.getLength() )
@@ -530,23 +551,23 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             if ( rProtocol.toAsciiLowerCase() == "ftp" )
             {
                 int nNumber;
-                CFNumberRef aNumber = static_cast< CFNumberRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPEnable ) );
+                CFNumberRef aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPEnable );
                 if ( aNumber && CFNumberGetValue( aNumber, kCFNumberIntType, &nNumber) && nNumber == 1 )
                 {
-                    CFStringRef aProxyString = static_cast< CFStringRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPProxy ) );
+                    CFStringRef aProxyString = (CFStringRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPProxy );
                     if ( aProxyString )
                     {
                         CFIndex nProxyLen = CFStringGetLength( aProxyString );
                         CFRange aProxyRange = CFRangeMake( 0, nProxyLen );
                         sal_Unicode pProxyBuffer[ nProxyLen + 1 ];
-                        CFStringGetCharacters( aProxyString, aProxyRange, reinterpret_cast< UniChar* >( pProxyBuffer ) );
+                        CFStringGetCharacters( aProxyString, aProxyRange, pProxyBuffer );
                         pProxyBuffer[ nProxyLen ] = 0;
                         OUString aProxyName( pProxyBuffer );
                         if ( aProxyName.getLength() )
                         {
                             m_aFtpSystemProxy.aName = aProxyName;
                             m_aFtpSystemProxy.nPort = 21;
-                            aNumber = static_cast< CFNumberRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPPort ) );
+                            aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesFTPPort );
                             if ( aNumber && CFNumberGetValue( aNumber, kCFNumberIntType, &nNumber) && nNumber >= 0 )
                                 m_aFtpSystemProxy.nPort = nNumber;
                             return m_aFtpSystemProxy;
@@ -557,23 +578,23 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             else if ( rProtocol.toAsciiLowerCase() == "https" )
             {
                 int nNumber;
-                CFNumberRef aNumber = static_cast< CFNumberRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSEnable ) );
+                CFNumberRef aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSEnable );
                 if ( aNumber && CFNumberGetValue( aNumber, kCFNumberIntType, &nNumber) && nNumber == 1 )
                 {
-                    CFStringRef aProxyString = static_cast< CFStringRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSProxy ) );
+                    CFStringRef aProxyString = (CFStringRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSProxy );
                     if ( aProxyString )
                     {
                         CFIndex nProxyLen = CFStringGetLength( aProxyString );
                         CFRange aProxyRange = CFRangeMake( 0, nProxyLen );
                         sal_Unicode pProxyBuffer[ nProxyLen + 1 ];
-                        CFStringGetCharacters( aProxyString, aProxyRange, reinterpret_cast< UniChar* >( pProxyBuffer ) );
+                        CFStringGetCharacters( aProxyString, aProxyRange, pProxyBuffer );
                         pProxyBuffer[ nProxyLen ] = 0;
                         OUString aProxyName( pProxyBuffer );
                         if ( aProxyName.getLength() )
                         {
                             m_aHttpsSystemProxy.aName = aProxyName;
                             m_aHttpsSystemProxy.nPort = 443;
-                            aNumber = static_cast< CFNumberRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSPort ) );
+                            aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPSPort );
                             if ( aNumber && CFNumberGetValue( aNumber, kCFNumberIntType, &nNumber) && nNumber >= 0 )
                                 m_aHttpsSystemProxy.nPort = nNumber;
                             return m_aHttpsSystemProxy;
@@ -585,23 +606,23 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
             {
                 // All other protocols use the HTTP proxy.
                 int nNumber;
-                CFNumberRef aNumber = static_cast< CFNumberRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPEnable ) );
+                CFNumberRef aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPEnable );
                 if ( aNumber && CFNumberGetValue( aNumber, kCFNumberIntType, &nNumber) && nNumber == 1 )
                 {
-                    CFStringRef aProxyString = static_cast< CFStringRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPProxy ) );
+                    CFStringRef aProxyString = (CFStringRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPProxy );
                     if ( aProxyString )
                     {
                         CFIndex nProxyLen = CFStringGetLength( aProxyString );
                         CFRange aProxyRange = CFRangeMake( 0, nProxyLen );
                         sal_Unicode pProxyBuffer[ nProxyLen + 1 ];
-                        CFStringGetCharacters( aProxyString, aProxyRange, reinterpret_cast< UniChar* >( pProxyBuffer ) );
+                        CFStringGetCharacters( aProxyString, aProxyRange, pProxyBuffer );
                         pProxyBuffer[ nProxyLen ] = 0;
                         OUString aProxyName( pProxyBuffer );
                         if ( aProxyName.getLength() )
                         {
                             m_aHttpSystemProxy.aName = aProxyName;
                             m_aHttpSystemProxy.nPort = 80;
-                            aNumber = static_cast< CFNumberRef >( CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPPort ) );
+                            aNumber = (CFNumberRef)CFDictionaryGetValue( aDict, kSCPropNetProxiesHTTPPort );
                             if ( aNumber && CFNumberGetValue( aNumber, kCFNumberIntType, &nNumber) && nNumber >= 0 )
                                 m_aHttpSystemProxy.nPort = nNumber;
                             return m_aHttpSystemProxy;
@@ -678,6 +699,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
         // in:   staroffice-doc.germany.sun.com -> full: xyz.germany.sun.com
 
 
+
         if ( !shouldUseProxy( aFullyQualifiedHost, nPort, true ) )
             return m_aEmptyProxy;
     }
@@ -704,6 +726,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
 // virtual
 void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
                                         const util::ChangesEvent& Event )
+    throw( uno::RuntimeException, std::exception )
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
 
@@ -799,6 +822,7 @@ void SAL_CALL InternetProxyDecider_Impl::changesOccurred(
 
 // virtual
 void SAL_CALL InternetProxyDecider_Impl::disposing(const lang::EventObject&)
+    throw( uno::RuntimeException, std::exception )
 {
     if ( m_xNotifier.is() )
     {
@@ -820,7 +844,7 @@ void InternetProxyDecider_Impl::setNoProxyList(
     if ( !rNoProxyList.isEmpty() )
     {
         // List of connection endpoints hostname[:port],
-        // separated by semicolon. Wildcards allowed.
+        // separated by semicolon. Wilcards allowed.
 
         sal_Int32 nPos = 0;
         sal_Int32 nEnd = rNoProxyList.indexOf( ';' );
@@ -890,15 +914,15 @@ void InternetProxyDecider_Impl::setNoProxyList(
                     {
                         if ( bIPv6Address )
                         {
-                            aFullyQualifiedHost.append( "[" );
+                            aFullyQualifiedHost.appendAscii( "[" );
                             aFullyQualifiedHost.append( aTmp );
-                            aFullyQualifiedHost.append( "]" );
+                            aFullyQualifiedHost.appendAscii( "]" );
                         }
                         else
                         {
                             aFullyQualifiedHost.append( aTmp );
                         }
-                        aFullyQualifiedHost.append( ":" );
+                        aFullyQualifiedHost.appendAscii( ":" );
                         aFullyQualifiedHost.append( aPort );
                     }
                 }
@@ -923,20 +947,28 @@ void InternetProxyDecider_Impl::setNoProxyList(
 } // namespace proxydecider_impl
 
 
+
+
 // InternetProxyDecider Implementation.
+
+
 
 
 InternetProxyDecider::InternetProxyDecider(
     const uno::Reference< uno::XComponentContext>& rxContext )
-: m_xImpl( new proxydecider_impl::InternetProxyDecider_Impl( rxContext ) )
+: m_pImpl( new proxydecider_impl::InternetProxyDecider_Impl( rxContext ) )
 {
+    m_pImpl->acquire();
 }
 
 
 InternetProxyDecider::~InternetProxyDecider()
 {
     // Break circular reference between config listener and notifier.
-    m_xImpl->dispose();
+    m_pImpl->dispose();
+
+    // Let him go...
+    m_pImpl->release();
 }
 
 
@@ -944,7 +976,7 @@ bool InternetProxyDecider::shouldUseProxy( const OUString & rProtocol,
                                            const OUString & rHost,
                                            sal_Int32 nPort ) const
 {
-    const InternetProxyServer & rData = m_xImpl->getProxy( rProtocol,
+    const InternetProxyServer & rData = m_pImpl->getProxy( rProtocol,
                                                            rHost,
                                                            nPort );
     return !rData.aName.isEmpty();
@@ -956,7 +988,7 @@ const InternetProxyServer & InternetProxyDecider::getProxy(
                                             const OUString & rHost,
                                             sal_Int32 nPort ) const
 {
-    return m_xImpl->getProxy( rProtocol, rHost, nPort );
+    return m_pImpl->getProxy( rProtocol, rHost, nPort );
 }
 
 } // namespace ucbhelper

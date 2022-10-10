@@ -38,18 +38,22 @@
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/processor2d/processor2dtools.hxx>
 #include <basegfx/polygon/b2dpolygontools.hxx>
-#include <memory>
-#include <o3tl/make_unique.hxx>
+#include <boost/scoped_ptr.hpp>
 
 using namespace com::sun::star;
 
 XLineEndList::XLineEndList( const OUString& rPath, const OUString& rReferer )
-    : XPropertyList( XPropertyListType::LineEnd, rPath, rReferer )
+    : XPropertyList( XLINE_END_LIST, rPath, rReferer )
 {
 }
 
 XLineEndList::~XLineEndList()
 {
+}
+
+XLineEndEntry* XLineEndList::Remove(long nIndex)
+{
+    return static_cast<XLineEndEntry*>( XPropertyList::Remove(nIndex) );
 }
 
 XLineEndEntry* XLineEndList::GetLineEnd(long nIndex) const
@@ -70,7 +74,7 @@ bool XLineEndList::Create()
     aTriangle.append(basegfx::B2DPoint(0.0, 30.0));
     aTriangle.append(basegfx::B2DPoint(20.0, 30.0));
     aTriangle.setClosed(true);
-    Insert( o3tl::make_unique<XLineEndEntry>( basegfx::B2DPolyPolygon(aTriangle), SvxResId( RID_SVXSTR_ARROW ) ) );
+    Insert( new XLineEndEntry( basegfx::B2DPolyPolygon(aTriangle), SVX_RESSTR( RID_SVXSTR_ARROW ) ) );
 
     basegfx::B2DPolygon aSquare;
     aSquare.append(basegfx::B2DPoint(0.0, 0.0));
@@ -78,10 +82,10 @@ bool XLineEndList::Create()
     aSquare.append(basegfx::B2DPoint(10.0, 10.0));
     aSquare.append(basegfx::B2DPoint(0.0, 10.0));
     aSquare.setClosed(true);
-    Insert( o3tl::make_unique<XLineEndEntry>( basegfx::B2DPolyPolygon(aSquare), SvxResId( RID_SVXSTR_SQUARE ) ) );
+    Insert( new XLineEndEntry( basegfx::B2DPolyPolygon(aSquare), SVX_RESSTR( RID_SVXSTR_SQUARE ) ) );
 
     basegfx::B2DPolygon aCircle(basegfx::tools::createPolygonFromCircle(basegfx::B2DPoint(0.0, 0.0), 100.0));
-    Insert( o3tl::make_unique<XLineEndEntry>( basegfx::B2DPolyPolygon(aCircle), SvxResId( RID_SVXSTR_CIRCLE ) ) );
+    Insert( new XLineEndEntry( basegfx::B2DPolyPolygon(aCircle), SVX_RESSTR( RID_SVXSTR_CIRCLE ) ) );
 
     return true;
 }
@@ -134,13 +138,13 @@ Bitmap XLineEndList::CreateBitmapForUI( long nIndex )
                 aLineStartEndAttribute));
 
         // prepare VirtualDevice
-        ScopedVclPtrInstance< VirtualDevice > pVirtualDevice;
+        VirtualDevice aVirtualDevice;
         const drawinglayer::geometry::ViewInformation2D aNewViewInformation2D;
 
-        pVirtualDevice->SetOutputSizePixel(aSize);
-        pVirtualDevice->SetDrawMode(rStyleSettings.GetHighContrastMode()
-            ? DrawModeFlags::SettingsLine | DrawModeFlags::SettingsFill | DrawModeFlags::SettingsText | DrawModeFlags::SettingsGradient
-            : DrawModeFlags::Default);
+        aVirtualDevice.SetOutputSizePixel(aSize);
+        aVirtualDevice.SetDrawMode(rStyleSettings.GetHighContrastMode()
+            ? DRAWMODE_SETTINGSLINE | DRAWMODE_SETTINGSFILL | DRAWMODE_SETTINGSTEXT | DRAWMODE_SETTINGSGRADIENT
+            : DRAWMODE_DEFAULT);
 
         if(rStyleSettings.GetPreviewUsesCheckeredBackground())
         {
@@ -148,29 +152,29 @@ Bitmap XLineEndList::CreateBitmapForUI( long nIndex )
             static const sal_uInt32 nLen(8);
             static const Color aW(COL_WHITE);
             static const Color aG(0xef, 0xef, 0xef);
-            pVirtualDevice->DrawCheckered(aNull, aSize, nLen, aW, aG);
+            aVirtualDevice.DrawCheckered(aNull, aSize, nLen, aW, aG);
         }
         else
         {
-            pVirtualDevice->SetBackground(rStyleSettings.GetFieldColor());
-            pVirtualDevice->Erase();
+            aVirtualDevice.SetBackground(rStyleSettings.GetFieldColor());
+            aVirtualDevice.Erase();
         }
 
         // create processor and draw primitives
-        std::unique_ptr<drawinglayer::processor2d::BaseProcessor2D> pProcessor2D(drawinglayer::processor2d::createPixelProcessor2DFromOutputDevice(
-            *pVirtualDevice.get(),
+        boost::scoped_ptr<drawinglayer::processor2d::BaseProcessor2D> pProcessor2D(drawinglayer::processor2d::createPixelProcessor2DFromOutputDevice(
+            aVirtualDevice,
             aNewViewInformation2D));
 
         if(pProcessor2D)
         {
-            const drawinglayer::primitive2d::Primitive2DContainer aSequence { aLineStartEndPrimitive };
+            const drawinglayer::primitive2d::Primitive2DSequence aSequence(&aLineStartEndPrimitive, 1);
 
             pProcessor2D->process(aSequence);
             pProcessor2D.reset();
         }
 
         // get result bitmap and scale
-        aRetval = pVirtualDevice->GetBitmap(Point(0, 0), pVirtualDevice->GetOutputSizePixel());
+        aRetval = aVirtualDevice.GetBitmap(Point(0, 0), aVirtualDevice.GetOutputSizePixel());
     }
 
     return aRetval;

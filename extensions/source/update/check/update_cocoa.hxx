@@ -34,6 +34,9 @@
 #ifndef _UPDATE_COCOA_HXX
 #define _UPDATE_COCOA_HXX
 
+// Uncomment the following line to enable the native web view code
+// #define USE_NATIVE_WEB_VIEW
+
 #ifdef __OBJC__
 
 #include <rtl/ustring.hxx>

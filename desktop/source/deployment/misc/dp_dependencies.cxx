@@ -101,7 +101,7 @@ OUString produceErrorText(
 {
     return reason.replaceFirst("%VERSION",
         (version.isEmpty()
-         ?  dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_UNKNOWN)
+         ?  dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_UNKNOWN).toString()
          : version));
 }
 
@@ -172,27 +172,27 @@ OUString getErrorText(
     if ( dependency->getNamespaceURI() == namespaceOpenOfficeOrg && dependency->getTagName() == minimalVersionOpenOfficeOrg )
     {
         return produceErrorText(
-                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_OOO_MIN),
+                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_OOO_MIN).toString(),
             dependency->getAttribute("value"));
     } else if (dependency->getNamespaceURI() == namespaceOpenOfficeOrg && dependency->getTagName() == maximalVersionOpenOfficeOrg )
     {
         return produceErrorText(
-                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_OOO_MAX),
+                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_OOO_MAX).toString(),
             dependency->getAttribute("value"));
     } else if (dependency->getNamespaceURI() == namespaceLibreOffice && dependency->getTagName() == minimalVersionLibreOffice )
     {
         return produceErrorText(
-                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_LO_MIN),
+                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_LO_MIN).toString(),
             dependency->getAttribute("value"));
     } else if (dependency->hasAttributeNS(namespaceOpenOfficeOrg,
                    minimalVersionOpenOfficeOrg))
     {
         return produceErrorText(
-                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_OOO_MIN),
+                dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_OOO_MIN).toString(),
             dependency->getAttributeNS(namespaceOpenOfficeOrg,
                 minimalVersionOpenOfficeOrg));
     } else {
-        return dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_UNKNOWN);
+        return dp_misc::getResId(RID_DEPLOYMENT_DEPENDENCIES_UNKNOWN).toString();
     }
 }
 

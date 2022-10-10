@@ -72,21 +72,9 @@
 #include <svx/strarray.hxx>
 
 #include <vcl/settings.hxx>
-#include <vcl/builderfactory.hxx>
 #include <vcl/svapp.hxx>
 
 using namespace ::com::sun::star;
-
-namespace {
-
-void drawRect(vcl::RenderContext& rRenderContext, const tools::Rectangle &rRect, const Color &rFillColor, const Color &rLineColor)
-{
-    rRenderContext.SetFillColor(rFillColor);
-    rRenderContext.SetLineColor(rLineColor);
-    rRenderContext.DrawRect(rRect);
-}
-
-}
 
 // Tools->Options->Writer->View
 // Tools->Options->Writer/Web->View
@@ -97,6 +85,10 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
 {
     get (m_pCrossCB, "helplines");
 
+    get (m_pHScrollBox, "hscrollbar");
+    get (m_pVScrollBox, "vscrollbar");
+    get (m_pAnyRulerCB, "ruler");
+    get (m_pHRulerCBox, "hruler");
     get (m_pHMetric, "hrulercombobox");
     get (m_pVRulerCBox, "vruler");
     get (m_pVRulerRightCBox, "vrulerright");
@@ -104,9 +96,9 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
     get (m_pSmoothCBox, "smoothscroll");
 
     get (m_pGrfCB, "graphics");
-    get (m_pTableCB, "tables");
+    get (m_pTblCB, "tables");
     get (m_pDrwCB, "drawings");
-    get (m_pFieldNameCB, "fieldcodes");
+    get (m_pFldNameCB, "fieldcodes");
     get (m_pPostItCB, "comments");
 
     get (m_pSettingsFrame, "settingsframe");
@@ -117,7 +109,7 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
     /* This part is visible only with Writer/Web->View dialogue. */
     const SfxPoolItem* pItem;
     if (! (SfxItemState::SET == rCoreSet.GetItemState(SID_HTML_MODE, false, &pItem )
-           && static_cast<const SfxUInt16Item*>(pItem)->GetValue() & HTMLMODE_ON))
+           && ((SfxUInt16Item*)pItem)->GetValue() & HTMLMODE_ON))
     {
         m_pSettingsFrame->Hide();
         m_pSettingsLabel->Hide();
@@ -129,8 +121,9 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
     if(!aCJKOptions.IsVerticalTextEnabled() )
         m_pVRulerRightCBox->Hide();
     m_pVRulerCBox->SetClickHdl(LINK(this, SwContentOptPage, VertRulerHdl ));
+    m_pAnyRulerCB->SetClickHdl(LINK(this, SwContentOptPage, AnyRulerHdl));
 
-    SvxStringArray aMetricArr(ResId(STR_ARR_METRIC, *pSwResMgr));
+    SvxStringArray aMetricArr( SW_RES( STR_ARR_METRIC ) );
     for ( size_t i = 0; i < aMetricArr.Count(); ++i )
     {
         const OUString sMetric = aMetricArr.GetStringByPos( i );
@@ -152,17 +145,16 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
                 if ( eFUnit != FUNIT_LINE )
                 {
                    sal_Int32 nPos = m_pMetricLB->InsertEntry( sMetric );
-                   m_pMetricLB->SetEntryData( nPos, reinterpret_cast<void*>((sal_IntPtr)eFUnit) );
+                   m_pMetricLB->SetEntryData( nPos, (void*)(sal_IntPtr)eFUnit );
                    m_pHMetric->InsertEntry( sMetric );
-                   m_pHMetric->SetEntryData( nPos, reinterpret_cast<void*>((sal_IntPtr)eFUnit) );
+                   m_pHMetric->SetEntryData( nPos, (void*)(sal_IntPtr)eFUnit );
                 }
                 // a vertical ruler has not the 'character' unit
                 if ( eFUnit != FUNIT_CHAR )
                 {
                    sal_Int32 nPos = m_pVMetric->InsertEntry( sMetric );
-                   m_pVMetric->SetEntryData( nPos, reinterpret_cast<void*>((sal_IntPtr)eFUnit) );
+                   m_pVMetric->SetEntryData( nPos, (void*)(sal_IntPtr)eFUnit );
                 }
-                break;
             }
             default:;//prevent warning
         }
@@ -171,34 +163,12 @@ SwContentOptPage::SwContentOptPage( vcl::Window* pParent,
 
 SwContentOptPage::~SwContentOptPage()
 {
-    disposeOnce();
 }
 
-void SwContentOptPage::dispose()
+SfxTabPage* SwContentOptPage::Create( vcl::Window* pParent,
+                                const SfxItemSet* rAttrSet)
 {
-    m_pCrossCB.clear();
-    m_pHMetric.clear();
-    m_pVRulerCBox.clear();
-    m_pVRulerRightCBox.clear();
-    m_pVMetric.clear();
-    m_pSmoothCBox.clear();
-    m_pGrfCB.clear();
-    m_pTableCB.clear();
-    m_pDrwCB.clear();
-    m_pFieldNameCB.clear();
-    m_pPostItCB.clear();
-    m_pSettingsFrame.clear();
-    m_pSettingsLabel.clear();
-    m_pMetricLabel.clear();
-    m_pMetricLB.clear();
-    SfxTabPage::dispose();
-}
-
-
-VclPtr<SfxTabPage> SwContentOptPage::Create( vcl::Window* pParent,
-                                             const SfxItemSet* rAttrSet)
-{
-    return VclPtr<SwContentOptPage>::Create(pParent, *rAttrSet);
+    return new SwContentOptPage(pParent, *rAttrSet);
 }
 
 static void lcl_SelectMetricLB(ListBox* rMetric, sal_uInt16 nSID, const SfxItemSet& rSet)
@@ -206,10 +176,10 @@ static void lcl_SelectMetricLB(ListBox* rMetric, sal_uInt16 nSID, const SfxItemS
     const SfxPoolItem* pItem;
     if( rSet.GetItemState( nSID, false, &pItem ) >= SfxItemState::DEFAULT )
     {
-        FieldUnit eFieldUnit = (FieldUnit)static_cast<const SfxUInt16Item*>(pItem)->GetValue();
+        FieldUnit eFieldUnit = (FieldUnit)((SfxUInt16Item*)pItem)->GetValue();
         for ( sal_Int32 i = 0; i < rMetric->GetEntryCount(); ++i )
         {
-            if ( (int)reinterpret_cast<sal_IntPtr>(rMetric->GetEntryData( i )) == (int)eFieldUnit )
+            if ( (int)(sal_IntPtr)rMetric->GetEntryData( i ) == (int)eFieldUnit )
             {
                 rMetric->SelectEntryPos( i );
                 break;
@@ -221,18 +191,22 @@ static void lcl_SelectMetricLB(ListBox* rMetric, sal_uInt16 nSID, const SfxItemS
 
 void SwContentOptPage::Reset(const SfxItemSet* rSet)
 {
-    const SwElemItem* pElemAttr = nullptr;
+    const SwElemItem* pElemAttr = 0;
 
     rSet->GetItemState( FN_PARAM_ELEM , false,
-                                    reinterpret_cast<const SfxPoolItem**>(&pElemAttr) );
+                                    (const SfxPoolItem**)&pElemAttr );
     if(pElemAttr)
     {
-        m_pTableCB->Check (pElemAttr->bTable);
+        m_pTblCB->Check (pElemAttr->bTable);
         m_pGrfCB->Check (pElemAttr->bGraphic);
         m_pDrwCB->Check (pElemAttr->bDrawing);
-        m_pFieldNameCB->Check (pElemAttr->bFieldName);
+        m_pFldNameCB->Check (pElemAttr->bFieldName);
         m_pPostItCB->Check (pElemAttr->bNotes);
         m_pCrossCB->Check (pElemAttr->bCrosshair);
+        m_pHScrollBox->Check (pElemAttr->bHorzScrollbar);
+        m_pVScrollBox->Check (pElemAttr->bVertScrollbar);
+        m_pAnyRulerCB->Check (pElemAttr->bAnyRuler);
+        m_pHRulerCBox->Check (pElemAttr->bHorzRuler);
         m_pVRulerCBox->Check (pElemAttr->bVertRuler);
         m_pVRulerRightCBox->Check (pElemAttr->bVertRulerRight);
         m_pSmoothCBox->Check (pElemAttr->bSmoothScroll);
@@ -241,36 +215,41 @@ void SwContentOptPage::Reset(const SfxItemSet* rSet)
     lcl_SelectMetricLB(m_pMetricLB, SID_ATTR_METRIC, *rSet);
     lcl_SelectMetricLB(m_pHMetric, FN_HSCROLL_METRIC, *rSet);
     lcl_SelectMetricLB(m_pVMetric, FN_VSCROLL_METRIC, *rSet);
+    AnyRulerHdl(m_pAnyRulerCB);
 }
 
 bool SwContentOptPage::FillItemSet(SfxItemSet* rSet)
 {
-    const SwElemItem*   pOldAttr = static_cast<const SwElemItem*>(
-                        GetOldItem(GetItemSet(), FN_PARAM_ELEM));
+    const SwElemItem*   pOldAttr = (const SwElemItem*)
+                        GetOldItem(GetItemSet(), FN_PARAM_ELEM);
 
     SwElemItem aElem;
     if(pOldAttr)
         aElem = *pOldAttr;
-    aElem.bTable                = m_pTableCB->IsChecked();
+    aElem.bTable                = m_pTblCB->IsChecked();
     aElem.bGraphic              = m_pGrfCB->IsChecked();
     aElem.bDrawing              = m_pDrwCB->IsChecked();
-    aElem.bFieldName            = m_pFieldNameCB->IsChecked();
+    aElem.bFieldName            = m_pFldNameCB->IsChecked();
     aElem.bNotes                = m_pPostItCB->IsChecked();
     aElem.bCrosshair            = m_pCrossCB->IsChecked();
+    aElem.bHorzScrollbar        = m_pHScrollBox->IsChecked();
+    aElem.bVertScrollbar        = m_pVScrollBox->IsChecked();
+    aElem.bAnyRuler             = m_pAnyRulerCB->IsChecked();
+    aElem.bHorzRuler            = m_pHRulerCBox->IsChecked();
     aElem.bVertRuler            = m_pVRulerCBox->IsChecked();
     aElem.bVertRulerRight       = m_pVRulerRightCBox->IsChecked();
     aElem.bSmoothScroll         = m_pSmoothCBox->IsChecked();
 
     bool bRet = !pOldAttr || aElem != *pOldAttr;
     if(bRet)
-        bRet = nullptr != rSet->Put(aElem);
+        bRet = 0 != rSet->Put(aElem);
 
     sal_Int32 nMPos = m_pMetricLB->GetSelectEntryPos();
     sal_Int32 nGlobalMetricPos = nMPos;
     if ( m_pMetricLB->IsValueChangedFromSaved() )
     {
         // Double-Cast for VA3.0
-        const sal_uInt16 nFieldUnit = (sal_uInt16)reinterpret_cast<sal_IntPtr>(m_pMetricLB->GetEntryData( nMPos ));
+        const sal_uInt16 nFieldUnit = (sal_uInt16)(sal_IntPtr)m_pMetricLB->GetEntryData( nMPos );
         rSet->Put( SfxUInt16Item( SID_ATTR_METRIC, nFieldUnit ) );
         bRet = true;
     }
@@ -279,7 +258,7 @@ bool SwContentOptPage::FillItemSet(SfxItemSet* rSet)
     if ( m_pHMetric->IsValueChangedFromSaved() || nMPos != nGlobalMetricPos )
     {
         // Double-Cast for VA3.0
-        const sal_uInt16 nFieldUnit = (sal_uInt16)reinterpret_cast<sal_IntPtr>(m_pHMetric->GetEntryData( nMPos ));
+        const sal_uInt16 nFieldUnit = (sal_uInt16)(sal_IntPtr)m_pHMetric->GetEntryData( nMPos );
         rSet->Put( SfxUInt16Item( FN_HSCROLL_METRIC, nFieldUnit ) );
         bRet = true;
     }
@@ -287,16 +266,28 @@ bool SwContentOptPage::FillItemSet(SfxItemSet* rSet)
     if ( m_pVMetric->IsValueChangedFromSaved() || nMPos != nGlobalMetricPos )
     {
         // Double-Cast for VA3.0
-        const sal_uInt16 nFieldUnit = (sal_uInt16)reinterpret_cast<sal_IntPtr>(m_pVMetric->GetEntryData( nMPos ));
+        const sal_uInt16 nFieldUnit = (sal_uInt16)(sal_IntPtr)m_pVMetric->GetEntryData( nMPos );
         rSet->Put( SfxUInt16Item( FN_VSCROLL_METRIC, nFieldUnit ) );
         bRet = true;
     }
     return bRet;
 }
 
-IMPL_LINK(SwContentOptPage, VertRulerHdl, Button*, pBox, void)
+IMPL_LINK(SwContentOptPage, VertRulerHdl, CheckBox*, pBox)
 {
-    m_pVRulerRightCBox->Enable(pBox->IsEnabled() && static_cast<CheckBox*>(pBox)->IsChecked());
+    m_pVRulerRightCBox->Enable(pBox->IsEnabled() && pBox->IsChecked());
+    return 0;
+}
+
+IMPL_LINK( SwContentOptPage, AnyRulerHdl, CheckBox*, pBox)
+{
+    bool bChecked = pBox->IsChecked();
+    m_pHRulerCBox->Enable(bChecked);
+    m_pHMetric->Enable(bChecked);
+    m_pVRulerCBox->Enable(bChecked);
+    m_pVMetric->Enable(bChecked);
+    VertRulerHdl(m_pVRulerCBox);
+    return 0;
 }
 
 // TabPage Printer additional settings
@@ -313,12 +304,12 @@ SwAddPrinterTabPage::SwAddPrinterTabPage(vcl::Window* pParent,
 #else	// USE_JAVA
         "modules/swriter/ui/printoptionspage.ui", &rCoreSet)
 #endif	// USE_JAVA
-    , sNone(SwResId(SW_STR_NONE))
+    , sNone(SW_RESSTR(SW_STR_NONE))
     , bAttrModified(false)
     , bPreview(false)
 {
     get(m_pGrfCB, "graphics");
-    get(m_pCtrlFieldCB, "formcontrols");
+    get(m_pCtrlFldCB, "formcontrols");
     get(m_pBackgroundCB, "background");
     get(m_pBlackFontCB, "inblack");
     get(m_pPrintHiddenTextCB, "hiddentext");
@@ -340,11 +331,13 @@ SwAddPrinterTabPage::SwAddPrinterTabPage(vcl::Window* pParent,
     get(m_pPaperFromSetupCB, "papertray");
     get(m_pFaxLB, "fax");
 
-    Link<Button*,void> aLk = LINK( this, SwAddPrinterTabPage, AutoClickHdl);
+    Init();
+
+    Link aLk = LINK( this, SwAddPrinterTabPage, AutoClickHdl);
     m_pGrfCB->SetClickHdl( aLk );
     m_pRightPageCB->SetClickHdl( aLk );
     m_pLeftPageCB->SetClickHdl( aLk );
-    m_pCtrlFieldCB->SetClickHdl( aLk );
+    m_pCtrlFldCB->SetClickHdl( aLk );
     m_pBackgroundCB->SetClickHdl( aLk );
     m_pBlackFontCB->SetClickHdl( aLk );
     m_pPrintHiddenTextCB->SetClickHdl( aLk );
@@ -362,7 +355,7 @@ SwAddPrinterTabPage::SwAddPrinterTabPage(vcl::Window* pParent,
 
     const SfxPoolItem* pItem;
     if(SfxItemState::SET == rCoreSet.GetItemState(SID_HTML_MODE, false, &pItem )
-        && static_cast<const SfxUInt16Item*>(pItem)->GetValue() & HTMLMODE_ON)
+        && ((SfxUInt16Item*)pItem)->GetValue() & HTMLMODE_ON)
     {
         m_pLeftPageCB->Hide();
         m_pRightPageCB->Hide();
@@ -377,40 +370,16 @@ SwAddPrinterTabPage::SwAddPrinterTabPage(vcl::Window* pParent,
     m_pProspectCB_RTL->Show(aCTLOptions.IsCTLFontEnabled());
 }
 
+#ifdef USE_JAVA
+
 SwAddPrinterTabPage::~SwAddPrinterTabPage()
 {
-    disposeOnce();
-}
-
-void SwAddPrinterTabPage::dispose()
-{
-    m_pGrfCB.clear();
-    m_pCtrlFieldCB.clear();
-    m_pBackgroundCB.clear();
-    m_pBlackFontCB.clear();
-    m_pPrintHiddenTextCB.clear();
-    m_pPrintTextPlaceholderCB.clear();
-    m_pPagesFrame.clear();
-    m_pLeftPageCB.clear();
-    m_pRightPageCB.clear();
-    m_pProspectCB.clear();
-    m_pProspectCB_RTL.clear();
-    m_pCommentsFrame.clear();
-    m_pNoRB.clear();
-    m_pOnlyRB.clear();
-    m_pEndRB.clear();
-    m_pEndPageRB.clear();
-    m_pInMarginsRB.clear();
-    m_pPrintEmptyPagesCB.clear();
-    m_pPaperFromSetupCB.clear();
-    m_pFaxLB.clear();
-#ifdef USE_JAVA
     // Delete item set that was cloned in the constructor
     const SfxItemSet& rSet = GetItemSet();
     delete &rSet;
-#endif	// USE_JAVA
-    SfxTabPage::dispose();
 }
+
+#endif	// USE_JAVA
 
 void SwAddPrinterTabPage::SetPreview(bool bPrev)
 {
@@ -419,48 +388,48 @@ void SwAddPrinterTabPage::SetPreview(bool bPrev)
     m_pPagesFrame->Enable(!bPreview);
 }
 
-VclPtr<SfxTabPage> SwAddPrinterTabPage::Create( vcl::Window* pParent,
-                                                const SfxItemSet* rAttrSet )
+SfxTabPage* SwAddPrinterTabPage::Create( vcl::Window* pParent,
+                                       const SfxItemSet* rAttrSet )
 {
-    return VclPtr<SwAddPrinterTabPage>::Create( pParent, *rAttrSet );
+    return ( new SwAddPrinterTabPage( pParent, *rAttrSet ) );
 }
 
 bool    SwAddPrinterTabPage::FillItemSet( SfxItemSet* rCoreSet )
 {
     if ( bAttrModified )
     {
-        SwAddPrinterItem aAddPrinterAttr;
-        aAddPrinterAttr.m_bPrintGraphic   = m_pGrfCB->IsChecked();
-        aAddPrinterAttr.m_bPrintTable     = true; // always enabled since CWS printerpullgpages /*aTabCB.IsChecked();*/
-        aAddPrinterAttr.m_bPrintDraw      = m_pGrfCB->IsChecked(); // UI merged with m_pGrfCB in CWS printerpullgpages
-        aAddPrinterAttr.m_bPrintControl   = m_pCtrlFieldCB->IsChecked();
-        aAddPrinterAttr.m_bPrintPageBackground = m_pBackgroundCB->IsChecked();
-        aAddPrinterAttr.m_bPrintBlackFont = m_pBlackFontCB->IsChecked();
-        aAddPrinterAttr.m_bPrintHiddenText = m_pPrintHiddenTextCB->IsChecked();
-        aAddPrinterAttr.m_bPrintTextPlaceholder = m_pPrintTextPlaceholderCB->IsChecked();
+        SwAddPrinterItem aAddPrinterAttr (FN_PARAM_ADDPRINTER);
+        aAddPrinterAttr.bPrintGraphic   = m_pGrfCB->IsChecked();
+        aAddPrinterAttr.bPrintTable     = true; // always enabled since CWS printerpullgpages /*aTabCB.IsChecked();*/
+        aAddPrinterAttr.bPrintDraw      = m_pGrfCB->IsChecked(); // UI merged with m_pGrfCB in CWS printerpullgpages
+        aAddPrinterAttr.bPrintControl   = m_pCtrlFldCB->IsChecked();
+        aAddPrinterAttr.bPrintPageBackground = m_pBackgroundCB->IsChecked();
+        aAddPrinterAttr.bPrintBlackFont = m_pBlackFontCB->IsChecked();
+        aAddPrinterAttr.bPrintHiddenText = m_pPrintHiddenTextCB->IsChecked();
+        aAddPrinterAttr.bPrintTextPlaceholder = m_pPrintTextPlaceholderCB->IsChecked();
 
-        aAddPrinterAttr.m_bPrintLeftPages     = m_pLeftPageCB->IsChecked();
-        aAddPrinterAttr.m_bPrintRightPages    = m_pRightPageCB->IsChecked();
-        aAddPrinterAttr.m_bPrintReverse       = false; // handled by vcl itself since CWS printerpullpages /*aReverseCB.IsChecked()*/;
-        aAddPrinterAttr.m_bPrintProspect      = m_pProspectCB->IsChecked();
-        aAddPrinterAttr.m_bPrintProspectRTL   = m_pProspectCB_RTL->IsChecked();
-        aAddPrinterAttr.m_bPaperFromSetup     = m_pPaperFromSetupCB->IsChecked();
-        aAddPrinterAttr.m_bPrintEmptyPages    = m_pPrintEmptyPagesCB->IsChecked();
-        aAddPrinterAttr.m_bPrintSingleJobs    = true; // handled by vcl in new print dialog since CWS printerpullpages /*aSingleJobsCB.IsChecked()*/;
+        aAddPrinterAttr.bPrintLeftPages     = m_pLeftPageCB->IsChecked();
+        aAddPrinterAttr.bPrintRightPages    = m_pRightPageCB->IsChecked();
+        aAddPrinterAttr.bPrintReverse       = false; // handled by vcl itself since CWS printerpullpages /*aReverseCB.IsChecked()*/;
+        aAddPrinterAttr.bPrintProspect      = m_pProspectCB->IsChecked();
+        aAddPrinterAttr.bPrintProspectRTL   = m_pProspectCB_RTL->IsChecked();
+        aAddPrinterAttr.bPaperFromSetup     = m_pPaperFromSetupCB->IsChecked();
+        aAddPrinterAttr.bPrintEmptyPages    = m_pPrintEmptyPagesCB->IsChecked();
+        aAddPrinterAttr.bPrintSingleJobs    = true; // handled by vcl in new print dialog since CWS printerpullpages /*aSingleJobsCB.IsChecked()*/;
 
-        if (m_pNoRB->IsChecked())  aAddPrinterAttr.m_nPrintPostIts =
-                                                        SwPostItMode::NONE;
-        if (m_pOnlyRB->IsChecked()) aAddPrinterAttr.m_nPrintPostIts =
-                                                        SwPostItMode::Only;
-        if (m_pEndRB->IsChecked()) aAddPrinterAttr.m_nPrintPostIts =
-                                                        SwPostItMode::EndDoc;
-        if (m_pEndPageRB->IsChecked()) aAddPrinterAttr.m_nPrintPostIts =
-                                                        SwPostItMode::EndPage;
-        if (m_pInMarginsRB->IsChecked()) aAddPrinterAttr.m_nPrintPostIts =
-                                                        SwPostItMode::InMargins;
+        if (m_pNoRB->IsChecked())  aAddPrinterAttr.nPrintPostIts =
+                                                        POSTITS_NONE;
+        if (m_pOnlyRB->IsChecked()) aAddPrinterAttr.nPrintPostIts =
+                                                        POSTITS_ONLY;
+        if (m_pEndRB->IsChecked()) aAddPrinterAttr.nPrintPostIts =
+                                                        POSTITS_ENDDOC;
+        if (m_pEndPageRB->IsChecked()) aAddPrinterAttr.nPrintPostIts =
+                                                        POSTITS_ENDPAGE;
+        if (m_pInMarginsRB->IsChecked()) aAddPrinterAttr.nPrintPostIts =
+                                                        POSTITS_INMARGINS;
 
         const OUString sFax = m_pFaxLB->GetSelectEntry();
-        aAddPrinterAttr.m_sFaxName = sNone == sFax ? aEmptyOUStr : sFax;
+        aAddPrinterAttr.sFaxName = sNone == sFax ? aEmptyOUStr : sFax;
         rCoreSet->Put(aAddPrinterAttr);
     }
     return bAttrModified;
@@ -469,34 +438,34 @@ bool    SwAddPrinterTabPage::FillItemSet( SfxItemSet* rCoreSet )
 void    SwAddPrinterTabPage::Reset( const SfxItemSet*  )
 {
     const   SfxItemSet&         rSet = GetItemSet();
-    const   SwAddPrinterItem*   pAddPrinterAttr = nullptr;
+    const   SwAddPrinterItem*   pAddPrinterAttr = 0;
 
     if( SfxItemState::SET == rSet.GetItemState( FN_PARAM_ADDPRINTER , false,
-                                    reinterpret_cast<const SfxPoolItem**>(&pAddPrinterAttr) ))
+                                    (const SfxPoolItem**)&pAddPrinterAttr ))
     {
-        m_pGrfCB->Check(pAddPrinterAttr->m_bPrintGraphic || pAddPrinterAttr->m_bPrintDraw);
-        m_pCtrlFieldCB->Check(       pAddPrinterAttr->m_bPrintControl);
-        m_pBackgroundCB->Check(    pAddPrinterAttr->m_bPrintPageBackground);
-        m_pBlackFontCB->Check(     pAddPrinterAttr->m_bPrintBlackFont);
-        m_pPrintHiddenTextCB->Check( pAddPrinterAttr->m_bPrintHiddenText);
-        m_pPrintTextPlaceholderCB->Check(pAddPrinterAttr->m_bPrintTextPlaceholder);
-        m_pLeftPageCB->Check(      pAddPrinterAttr->m_bPrintLeftPages);
-        m_pRightPageCB->Check(     pAddPrinterAttr->m_bPrintRightPages);
-        m_pPaperFromSetupCB->Check(pAddPrinterAttr->m_bPaperFromSetup);
-        m_pPrintEmptyPagesCB->Check(pAddPrinterAttr->m_bPrintEmptyPages);
-        m_pProspectCB->Check(      pAddPrinterAttr->m_bPrintProspect);
-        m_pProspectCB_RTL->Check(      pAddPrinterAttr->m_bPrintProspectRTL);
+        m_pGrfCB->Check(pAddPrinterAttr->bPrintGraphic || pAddPrinterAttr->bPrintDraw);
+        m_pCtrlFldCB->Check(       pAddPrinterAttr->bPrintControl);
+        m_pBackgroundCB->Check(    pAddPrinterAttr->bPrintPageBackground);
+        m_pBlackFontCB->Check(     pAddPrinterAttr->bPrintBlackFont);
+        m_pPrintHiddenTextCB->Check( pAddPrinterAttr->bPrintHiddenText);
+        m_pPrintTextPlaceholderCB->Check(pAddPrinterAttr->bPrintTextPlaceholder);
+        m_pLeftPageCB->Check(      pAddPrinterAttr->bPrintLeftPages);
+        m_pRightPageCB->Check(     pAddPrinterAttr->bPrintRightPages);
+        m_pPaperFromSetupCB->Check(pAddPrinterAttr->bPaperFromSetup);
+        m_pPrintEmptyPagesCB->Check(pAddPrinterAttr->bPrintEmptyPages);
+        m_pProspectCB->Check(      pAddPrinterAttr->bPrintProspect);
+        m_pProspectCB_RTL->Check(      pAddPrinterAttr->bPrintProspectRTL);
 
-        m_pNoRB->Check (pAddPrinterAttr->m_nPrintPostIts== SwPostItMode::NONE ) ;
-        m_pOnlyRB->Check (pAddPrinterAttr->m_nPrintPostIts== SwPostItMode::Only ) ;
-        m_pEndRB->Check (pAddPrinterAttr->m_nPrintPostIts== SwPostItMode::EndDoc ) ;
-        m_pEndPageRB->Check (pAddPrinterAttr->m_nPrintPostIts== SwPostItMode::EndPage ) ;
-        m_pInMarginsRB->Check (pAddPrinterAttr->m_nPrintPostIts== SwPostItMode::InMargins ) ;
-        m_pFaxLB->SelectEntry( pAddPrinterAttr->m_sFaxName );
+        m_pNoRB->Check (pAddPrinterAttr->nPrintPostIts== POSTITS_NONE ) ;
+        m_pOnlyRB->Check (pAddPrinterAttr->nPrintPostIts== POSTITS_ONLY ) ;
+        m_pEndRB->Check (pAddPrinterAttr->nPrintPostIts== POSTITS_ENDDOC ) ;
+        m_pEndPageRB->Check (pAddPrinterAttr->nPrintPostIts== POSTITS_ENDPAGE ) ;
+        m_pInMarginsRB->Check (pAddPrinterAttr->nPrintPostIts== POSTITS_INMARGINS ) ;
+        m_pFaxLB->SelectEntry( pAddPrinterAttr->sFaxName );
     }
     if (m_pProspectCB->IsChecked())
     {
-        m_pProspectCB_RTL->Enable();
+        m_pProspectCB_RTL->Enable(true);
         m_pNoRB->Enable( false );
         m_pOnlyRB->Enable( false );
         m_pEndRB->Enable( false );
@@ -506,7 +475,12 @@ void    SwAddPrinterTabPage::Reset( const SfxItemSet*  )
         m_pProspectCB_RTL->Enable( false );
 }
 
-IMPL_LINK_NOARG(SwAddPrinterTabPage, AutoClickHdl, Button*, void)
+void    SwAddPrinterTabPage::Init()
+{
+
+}
+
+IMPL_LINK_NOARG_INLINE_START(SwAddPrinterTabPage, AutoClickHdl)
 {
     bAttrModified = true;
     bool bIsProspect = m_pProspectCB->IsChecked();
@@ -518,27 +492,31 @@ IMPL_LINK_NOARG(SwAddPrinterTabPage, AutoClickHdl, Button*, void)
     m_pEndRB->Enable( !bIsProspect );
     m_pEndPageRB->Enable( !bIsProspect );
     m_pInMarginsRB->Enable( !bIsProspect );
+    return 0;
 }
+IMPL_LINK_NOARG_INLINE_END(SwAddPrinterTabPage, AutoClickHdl)
 
 void  SwAddPrinterTabPage::SetFax( const std::vector<OUString>& rFaxLst )
 {
     m_pFaxLB->InsertEntry(sNone);
-    for(const auto & i : rFaxLst)
+    for(size_t i = 0; i < rFaxLst.size(); ++i)
     {
-        m_pFaxLB->InsertEntry(i);
+        m_pFaxLB->InsertEntry(rFaxLst[i]);
     }
     m_pFaxLB->SelectEntryPos(0);
 }
 
-IMPL_LINK_NOARG(SwAddPrinterTabPage, SelectHdl, ListBox&, void)
+IMPL_LINK_NOARG_INLINE_START(SwAddPrinterTabPage, SelectHdl)
 {
     bAttrModified=true;
+    return 0;
 }
+IMPL_LINK_NOARG_INLINE_END(SwAddPrinterTabPage, SelectHdl)
 
 void SwAddPrinterTabPage::PageCreated( const SfxAllItemSet& aSet)
 {
-    const SfxBoolItem* pListItem = aSet.GetItem<SfxBoolItem>(SID_FAX_LIST, false);
-    const SfxBoolItem* pPreviewItem = aSet.GetItem<SfxBoolItem>(SID_PREVIEWFLAG_TYPE, false);
+    SFX_ITEMSET_ARG (&aSet,pListItem,SfxBoolItem,SID_FAX_LIST,false);
+    SFX_ITEMSET_ARG (&aSet,pPreviewItem,SfxBoolItem,SID_PREVIEWFLAG_TYPE,false);
     if (pPreviewItem)
     {
         SetPreview(pPreviewItem->GetValue());
@@ -548,8 +526,8 @@ void SwAddPrinterTabPage::PageCreated( const SfxAllItemSet& aSet)
     {
         std::vector<OUString> aFaxList;
         const std::vector<OUString>& rPrinters = Printer::GetPrinterQueues();
-        for (const auto & rPrinter : rPrinters)
-            aFaxList.insert(aFaxList.begin(), rPrinter);
+        for (unsigned int i = 0; i < rPrinters.size(); ++i)
+            aFaxList.insert(aFaxList.begin(), rPrinters[i]);
         SetFax( aFaxList );
     }
 }
@@ -558,99 +536,88 @@ void SwAddPrinterTabPage::PageCreated( const SfxAllItemSet& aSet)
 SwStdFontTabPage::SwStdFontTabPage( vcl::Window* pParent,
                                        const SfxItemSet& rSet ) :
     SfxTabPage( pParent, "OptFontTabPage" , "modules/swriter/ui/optfonttabpage.ui" , &rSet),
-    m_pPrt(nullptr),
-    m_pFontList(nullptr),
-    m_pFontConfig(nullptr),
-    m_pWrtShell(nullptr),
-    m_eLanguage( GetAppLanguage() ),
+    pPrt(0),
+    pFontList(0),
+    pFontConfig(0),
+    pWrtShell(0),
+    eLanguage( GetAppLanguage() ),
 
-    m_bListDefault(false),
-    m_bSetListDefault(true),
-    m_bLabelDefault(false),
-    m_bSetLabelDefault(true),
-    m_bIdxDefault(false),
-    m_bSetIdxDefault(true),
+    bListDefault(false),
+    bSetListDefault(true),
+    bLabelDefault(false),
+    bSetLabelDefault(true),
+    bIdxDefault(false),
+    bSetIdxDefault(true),
+    bDeletePrinter(false),
 
-    m_bListHeightDefault    (false),
-    m_bSetListHeightDefault (false),
-    m_bLabelHeightDefault   (false),
-    m_bSetLabelHeightDefault(false),
-    m_bIndexHeightDefault     (false),
-    m_bSetIndexHeightDefault  (false),
+    bListHeightDefault    (false),
+    bSetListHeightDefault (false),
+    bLabelHeightDefault   (false),
+    bSetLabelHeightDefault(false),
+    bIndexHeightDefault     (false),
+    bSetIndexHeightDefault  (false),
 
-    m_nFontGroup(FONT_GROUP_DEFAULT),
+    nFontGroup(FONT_GROUP_DEFAULT),
 
-    m_sScriptWestern(SwResId(ST_SCRIPT_WESTERN)),
-    m_sScriptAsian(SwResId(ST_SCRIPT_ASIAN)),
-    m_sScriptComplex(SwResId(ST_SCRIPT_CTL))
+    sScriptWestern(SW_RES(ST_SCRIPT_WESTERN)),
+    sScriptAsian(SW_RES(ST_SCRIPT_ASIAN)),
+    sScriptComplex(SW_RES(ST_SCRIPT_CTL))
 {
-    get(m_pLabelFT,"label1");
-    get(m_pStandardBox,"standardbox");
-    m_pStandardBox->SetStyle(m_pStandardBox->GetStyle() |  WB_SORT);
-    get(m_pStandardHeightLB,"standardheight");
-    get(m_pTitleBox,"titlebox");
-    m_pTitleBox->SetStyle(m_pTitleBox->GetStyle() |  WB_SORT);
-    get(m_pTitleHeightLB,"titleheight");
-    get(m_pListBox,"listbox");
-    m_pListBox->SetStyle(m_pListBox->GetStyle() |  WB_SORT);
-    get(m_pListHeightLB,"listheight");
-    get(m_pLabelBox,"labelbox");
-    m_pLabelBox->SetStyle(m_pLabelBox->GetStyle() |  WB_SORT);
-    get(m_pLabelHeightLB,"labelheight");
-    get(m_pIdxBox,"idxbox");
-    m_pIdxBox->SetStyle(m_pIdxBox->GetStyle() |  WB_SORT);
-    get(m_pIndexHeightLB,"indexheight");
+    get(pLabelFT,"label1");
+    get(pStandardBox,"standardbox");
+    pStandardBox->SetStyle(pStandardBox->GetStyle() |  WB_SORT);
+    get(pStandardHeightLB,"standardheight");
+    get(pTitleBox,"titlebox");
+    pTitleBox->SetStyle(pTitleBox->GetStyle() |  WB_SORT);
+    get(pTitleHeightLB,"titleheight");
+    get(pListBox,"listbox");
+    pListBox->SetStyle(pListBox->GetStyle() |  WB_SORT);
+    get(pListHeightLB,"listheight");
+    get(pLabelBox,"labelbox");
+    pLabelBox->SetStyle(pLabelBox->GetStyle() |  WB_SORT);
+    get(pLabelHeightLB,"labelheight");
+    get(pIdxBox,"idxbox");
+    pIdxBox->SetStyle(pIdxBox->GetStyle() |  WB_SORT);
+    get(pIndexHeightLB,"indexheight");
 
-    get(m_pStandardPB,"standard");
+    get(pDocOnlyCB,"doconly");
+    get(pStandardPB,"standard");
 
-    m_pStandardPB->SetClickHdl(LINK(this, SwStdFontTabPage, StandardHdl));
-    m_pStandardBox->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
-    m_pListBox    ->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
-    m_pLabelBox   ->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
-    m_pIdxBox     ->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
-    Link<Control&,void> aFocusLink = LINK( this, SwStdFontTabPage, LoseFocusHdl);
-    m_pStandardBox->SetLoseFocusHdl( aFocusLink );
-    m_pTitleBox   ->SetLoseFocusHdl( aFocusLink );
-    m_pListBox    ->SetLoseFocusHdl( aFocusLink );
-    m_pLabelBox   ->SetLoseFocusHdl( aFocusLink );
-    m_pIdxBox     ->SetLoseFocusHdl( aFocusLink );
+    pStandardPB->SetClickHdl(LINK(this, SwStdFontTabPage, StandardHdl));
+    pStandardBox->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
+    pListBox    ->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
+    pLabelBox   ->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
+    pIdxBox     ->SetModifyHdl( LINK(this, SwStdFontTabPage, ModifyHdl));
+    Link aFocusLink = LINK( this, SwStdFontTabPage, LoseFocusHdl);
+    pStandardBox->SetLoseFocusHdl( aFocusLink );
+    pTitleBox   ->SetLoseFocusHdl( aFocusLink );
+    pListBox    ->SetLoseFocusHdl( aFocusLink );
+    pLabelBox   ->SetLoseFocusHdl( aFocusLink );
+    pIdxBox     ->SetLoseFocusHdl( aFocusLink );
 
-    Link<Edit&,void> aModifyHeightLink( LINK( this, SwStdFontTabPage, ModifyHeightHdl));
-    m_pStandardHeightLB->SetModifyHdl( aModifyHeightLink );
-    m_pTitleHeightLB->   SetModifyHdl( aModifyHeightLink );
-    m_pListHeightLB->    SetModifyHdl( aModifyHeightLink );
-    m_pLabelHeightLB->   SetModifyHdl( aModifyHeightLink );
-    m_pIndexHeightLB->   SetModifyHdl( aModifyHeightLink );
+    Link aModifyHeightLink( LINK( this, SwStdFontTabPage, ModifyHeightHdl));
+    pStandardHeightLB->SetModifyHdl( aModifyHeightLink );
+    pTitleHeightLB->   SetModifyHdl( aModifyHeightLink );
+    pListHeightLB->    SetModifyHdl( aModifyHeightLink );
+    pLabelHeightLB->   SetModifyHdl( aModifyHeightLink );
+    pIndexHeightLB->   SetModifyHdl( aModifyHeightLink );
+
+    pDocOnlyCB->Check(SW_MOD()->GetModuleConfig()->IsDefaultFontInCurrDocOnly());
 }
 
 SwStdFontTabPage::~SwStdFontTabPage()
 {
-    disposeOnce();
+    delete pFontList;
+    if (bDeletePrinter)
+    {
+        delete pPrt;
+    }
 }
 
-void SwStdFontTabPage::dispose()
+SfxTabPage* SwStdFontTabPage::Create( vcl::Window* pParent,
+                                const SfxItemSet* rAttrSet )
 {
-    delete m_pFontList;
-    m_pLabelFT.clear();
-    m_pStandardBox.clear();
-    m_pStandardHeightLB.clear();
-    m_pTitleBox.clear();
-    m_pTitleHeightLB.clear();
-    m_pListBox.clear();
-    m_pListHeightLB.clear();
-    m_pLabelBox.clear();
-    m_pLabelHeightLB.clear();
-    m_pIdxBox.clear();
-    m_pIndexHeightLB.clear();
-    m_pStandardPB.clear();
-    m_pPrt.clear();
-    SfxTabPage::dispose();
-}
-
-VclPtr<SfxTabPage> SwStdFontTabPage::Create( vcl::Window* pParent,
-                                             const SfxItemSet* rAttrSet )
-{
-    return VclPtr<SwStdFontTabPage>::Create(pParent, *rAttrSet);
+    return new SwStdFontTabPage(pParent, *rAttrSet);
 }
 
 static void lcl_SetColl(SwWrtShell* pWrtShell, sal_uInt16 nType,
@@ -660,8 +627,8 @@ static void lcl_SetColl(SwWrtShell* pWrtShell, sal_uInt16 nType,
     vcl::Font aFont( rStyle, Size( 0, 10 ) );
     if( pPrt )
         aFont = pPrt->GetFontMetric( aFont );
-    SwTextFormatColl *pColl = pWrtShell->GetTextCollFromPool(nType);
-    pColl->SetFormatAttr(SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
+    SwTxtFmtColl *pColl = pWrtShell->GetTxtCollFromPool(nType);
+    pColl->SetFmtAttr(SvxFontItem(aFont.GetFamily(), aFont.GetName(),
                 aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
 }
 
@@ -669,136 +636,138 @@ static void lcl_SetColl(SwWrtShell* pWrtShell, sal_uInt16 nType,
                     sal_Int32 nHeight, sal_uInt16 nFontHeightWhich)
 {
     float fSize = (float)nHeight / 10;
-    nHeight = CalcToUnit( fSize, MapUnit::MapTwip );
-    SwTextFormatColl *pColl = pWrtShell->GetTextCollFromPool(nType);
-    pColl->SetFormatAttr(SvxFontHeightItem(nHeight, 100, nFontHeightWhich));
+    nHeight = CalcToUnit( fSize, SFX_MAPUNIT_TWIP );
+    SwTxtFmtColl *pColl = pWrtShell->GetTxtCollFromPool(nType);
+    pColl->SetFmtAttr(SvxFontHeightItem(nHeight, 100, nFontHeightWhich));
 }
 
 bool SwStdFontTabPage::FillItemSet( SfxItemSet* )
 {
-    SW_MOD()->GetModuleConfig()->SetDefaultFontInCurrDocOnly(false);
+    bool bNotDocOnly = !pDocOnlyCB->IsChecked();
+    SW_MOD()->GetModuleConfig()->SetDefaultFontInCurrDocOnly(!bNotDocOnly);
 
-    const OUString sStandard    = m_pStandardBox->GetText();
-    const OUString sTitle       = m_pTitleBox->GetText();
-    const OUString sList        = m_pListBox->GetText();
-    const OUString sLabel       = m_pLabelBox->GetText();
-    const OUString sIdx         = m_pIdxBox->GetText();
+    const OUString sStandard    = pStandardBox->GetText();
+    const OUString sTitle       = pTitleBox->GetText();
+    const OUString sList        = pListBox->GetText();
+    const OUString sLabel       = pLabelBox->GetText();
+    const OUString sIdx         = pIdxBox->GetText();
 
-    bool bStandardHeightChanged = m_pStandardHeightLB->IsValueChangedFromSaved();
-    bool bTitleHeightChanged = m_pTitleHeightLB->IsValueChangedFromSaved();
-    bool bListHeightChanged = m_pListHeightLB->IsValueChangedFromSaved() && (!m_bListHeightDefault || !m_bSetListHeightDefault );
-    bool bLabelHeightChanged = m_pLabelHeightLB->IsValueChangedFromSaved() && (!m_bLabelHeightDefault || !m_bSetLabelHeightDefault );
-    bool bIndexHeightChanged = m_pIndexHeightLB->IsValueChangedFromSaved() && (!m_bIndexHeightDefault || !m_bSetIndexHeightDefault );
-
-    m_pFontConfig->SetFontStandard(sStandard, m_nFontGroup);
-    m_pFontConfig->SetFontOutline(sTitle, m_nFontGroup);
-    m_pFontConfig->SetFontList(sList, m_nFontGroup);
-    m_pFontConfig->SetFontCaption(sLabel, m_nFontGroup);
-    m_pFontConfig->SetFontIndex(sIdx, m_nFontGroup);
-    if(bStandardHeightChanged)
+    bool bStandardHeightChanged = pStandardHeightLB->IsValueChangedFromSaved();
+    bool bTitleHeightChanged = pTitleHeightLB->IsValueChangedFromSaved();
+    bool bListHeightChanged = pListHeightLB->IsValueChangedFromSaved() && (!bListHeightDefault || !bSetListHeightDefault );
+    bool bLabelHeightChanged = pLabelHeightLB->IsValueChangedFromSaved() && (!bLabelHeightDefault || !bSetLabelHeightDefault );
+    bool bIndexHeightChanged = pIndexHeightLB->IsValueChangedFromSaved() && (!bIndexHeightDefault || !bSetIndexHeightDefault );
+    if(bNotDocOnly)
     {
-        float fSize = (float)m_pStandardHeightLB->GetValue() / 10;
-        m_pFontConfig->SetFontHeight( CalcToUnit( fSize, MapUnit::MapTwip ), FONT_STANDARD, m_nFontGroup );
+        pFontConfig->SetFontStandard(sStandard, nFontGroup);
+        pFontConfig->SetFontOutline(sTitle, nFontGroup);
+        pFontConfig->SetFontList(sList, nFontGroup);
+        pFontConfig->SetFontCaption(sLabel, nFontGroup);
+        pFontConfig->SetFontIndex(sIdx, nFontGroup);
+        if(bStandardHeightChanged)
+        {
+            float fSize = (float)pStandardHeightLB->GetValue() / 10;
+            pFontConfig->SetFontHeight( CalcToUnit( fSize, SFX_MAPUNIT_TWIP ), FONT_STANDARD, nFontGroup );
+        }
+        if(bTitleHeightChanged)
+        {
+            float fSize = (float)pTitleHeightLB->GetValue() / 10;
+            pFontConfig->SetFontHeight( CalcToUnit( fSize, SFX_MAPUNIT_TWIP ), FONT_OUTLINE, nFontGroup );
+        }
+        if(bListHeightChanged)
+        {
+            float fSize = (float)pListHeightLB->GetValue() / 10;
+            pFontConfig->SetFontHeight( CalcToUnit( fSize, SFX_MAPUNIT_TWIP ), FONT_LIST, nFontGroup );
+        }
+        if(bLabelHeightChanged)
+        {
+            float fSize = (float)pLabelHeightLB->GetValue() / 10;
+            pFontConfig->SetFontHeight( CalcToUnit( fSize, SFX_MAPUNIT_TWIP ), FONT_CAPTION, nFontGroup );
+        }
+        if(bIndexHeightChanged)
+        {
+            float fSize = (float)pIndexHeightLB->GetValue() / 10;
+            pFontConfig->SetFontHeight( CalcToUnit( fSize, SFX_MAPUNIT_TWIP ), FONT_INDEX, nFontGroup );
+        }
     }
-    if(bTitleHeightChanged)
+    if(pWrtShell)
     {
-        float fSize = (float)m_pTitleHeightLB->GetValue() / 10;
-        m_pFontConfig->SetFontHeight( CalcToUnit( fSize, MapUnit::MapTwip ), FONT_OUTLINE, m_nFontGroup );
-    }
-    if(bListHeightChanged)
-    {
-        float fSize = (float)m_pListHeightLB->GetValue() / 10;
-        m_pFontConfig->SetFontHeight( CalcToUnit( fSize, MapUnit::MapTwip ), FONT_LIST, m_nFontGroup );
-    }
-    if(bLabelHeightChanged)
-    {
-        float fSize = (float)m_pLabelHeightLB->GetValue() / 10;
-        m_pFontConfig->SetFontHeight( CalcToUnit( fSize, MapUnit::MapTwip ), FONT_CAPTION, m_nFontGroup );
-    }
-    if(bIndexHeightChanged)
-    {
-        float fSize = (float)m_pIndexHeightLB->GetValue() / 10;
-        m_pFontConfig->SetFontHeight( CalcToUnit( fSize, MapUnit::MapTwip ), FONT_INDEX, m_nFontGroup );
-    }
-
-    if(m_pWrtShell)
-    {
-        m_pWrtShell->StartAllAction();
-        SfxPrinter* pPrinter = m_pWrtShell->getIDocumentDeviceAccess().getPrinter( false );
+        pWrtShell->StartAllAction();
+        SfxPrinter* pPrinter = pWrtShell->getIDocumentDeviceAccess()->getPrinter( false );
         bool bMod = false;
         const sal_uInt16 nFontWhich = sal::static_int_cast< sal_uInt16, RES_CHRATR >(
-            m_nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONT :
-            FONT_GROUP_CJK == m_nFontGroup ? RES_CHRATR_CJK_FONT : RES_CHRATR_CTL_FONT);
+            nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONT :
+            FONT_GROUP_CJK == nFontGroup ? RES_CHRATR_CJK_FONT : RES_CHRATR_CTL_FONT);
         const sal_uInt16 nFontHeightWhich = sal::static_int_cast< sal_uInt16, RES_CHRATR >(
-            m_nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONTSIZE :
-            FONT_GROUP_CJK == m_nFontGroup ? RES_CHRATR_CJK_FONTSIZE : RES_CHRATR_CTL_FONTSIZE);
-        if(sStandard != m_sShellStd)
+            nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONTSIZE :
+            FONT_GROUP_CJK == nFontGroup ? RES_CHRATR_CJK_FONTSIZE : RES_CHRATR_CTL_FONTSIZE);
+        if(sStandard != sShellStd)
         {
             vcl::Font aFont( sStandard, Size( 0, 10 ) );
             if( pPrinter )
                 aFont = pPrinter->GetFontMetric( aFont );
-            m_pWrtShell->SetDefault(SvxFontItem(aFont.GetFamilyType(), aFont.GetFamilyName(),
+            pWrtShell->SetDefault(SvxFontItem(aFont.GetFamily(), aFont.GetName(),
                                   aEmptyOUStr, aFont.GetPitch(), aFont.GetCharSet(), nFontWhich));
-            SwTextFormatColl *pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_STANDARD);
-            pColl->ResetFormatAttr(nFontWhich);
+            SwTxtFmtColl *pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
+            pColl->ResetFmtAttr(nFontWhich);
             bMod = true;
         }
         if(bStandardHeightChanged)
         {
-            float fSize = (float)m_pStandardHeightLB->GetValue() / 10;
-            m_pWrtShell->SetDefault(SvxFontHeightItem( CalcToUnit( fSize, MapUnit::MapTwip ), 100, nFontHeightWhich ) );
-            SwTextFormatColl *pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_STANDARD);
-            pColl->ResetFormatAttr(nFontHeightWhich);
+            float fSize = (float)pStandardHeightLB->GetValue() / 10;
+            pWrtShell->SetDefault(SvxFontHeightItem( CalcToUnit( fSize, SFX_MAPUNIT_TWIP ), 100, nFontHeightWhich ) );
+            SwTxtFmtColl *pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
+            pColl->ResetFmtAttr(nFontHeightWhich);
             bMod = true;
         }
 
-        if(sTitle != m_sShellTitle )
+        if(sTitle != sShellTitle )
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_HEADLINE_BASE, pPrinter, sTitle, nFontWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_HEADLINE_BASE, pPrinter, sTitle, nFontWhich);
             bMod = true;
         }
         if(bTitleHeightChanged)
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_HEADLINE_BASE,
-                sal::static_int_cast< sal_uInt16, sal_Int64 >(m_pTitleHeightLB->GetValue()), nFontHeightWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_HEADLINE_BASE,
+                sal::static_int_cast< sal_uInt16, sal_Int64 >(pTitleHeightLB->GetValue()), nFontHeightWhich);
             bMod = true;
         }
-        if(sList != m_sShellList && (!m_bListDefault || !m_bSetListDefault ))
+        if(sList != sShellList && (!bListDefault || !bSetListDefault ))
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_NUMBUL_BASE, pPrinter, sList, nFontWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_NUMBUL_BASE, pPrinter, sList, nFontWhich);
             bMod = true;
         }
         if(bListHeightChanged)
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_NUMBUL_BASE,
-                sal::static_int_cast< sal_uInt16, sal_Int64 >(m_pListHeightLB->GetValue()), nFontHeightWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_NUMBUL_BASE,
+                sal::static_int_cast< sal_uInt16, sal_Int64 >(pListHeightLB->GetValue()), nFontHeightWhich);
             bMod = true;
         }
-        if(sLabel != m_sShellLabel && (!m_bLabelDefault || !m_bSetLabelDefault))
+        if(sLabel != sShellLabel && (!bLabelDefault || !bSetLabelDefault))
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_LABEL, pPrinter, sLabel, nFontWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_LABEL, pPrinter, sLabel, nFontWhich);
             bMod = true;
         }
         if(bLabelHeightChanged)
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_LABEL,
-                sal::static_int_cast< sal_uInt16, sal_Int64 >(m_pLabelHeightLB->GetValue()), nFontHeightWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_LABEL,
+                sal::static_int_cast< sal_uInt16, sal_Int64 >(pLabelHeightLB->GetValue()), nFontHeightWhich);
             bMod = true;
         }
-        if(sIdx != m_sShellIndex && (!m_bIdxDefault || !m_bSetIdxDefault))
+        if(sIdx != sShellIndex && (!bIdxDefault || !bSetIdxDefault))
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_REGISTER_BASE, pPrinter, sIdx, nFontWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_REGISTER_BASE, pPrinter, sIdx, nFontWhich);
             bMod = true;
         }
         if(bIndexHeightChanged)
         {
-            lcl_SetColl(m_pWrtShell, RES_POOLCOLL_REGISTER_BASE,
-                sal::static_int_cast< sal_uInt16, sal_Int64 >(m_pIndexHeightLB->GetValue()), nFontHeightWhich);
+            lcl_SetColl(pWrtShell, RES_POOLCOLL_REGISTER_BASE,
+                sal::static_int_cast< sal_uInt16, sal_Int64 >(pIndexHeightLB->GetValue()), nFontHeightWhich);
             bMod = true;
         }
         if ( bMod )
-            m_pWrtShell->SetModified();
-        m_pWrtShell->EndAllAction();
+            pWrtShell->SetModified();
+        pWrtShell->EndAllAction();
     }
     return false;
 }
@@ -806,24 +775,29 @@ bool SwStdFontTabPage::FillItemSet( SfxItemSet* )
 void SwStdFontTabPage::Reset( const SfxItemSet* rSet)
 {
     const SfxPoolItem* pLang;
-    const sal_uInt16 nLangSlot = m_nFontGroup == FONT_GROUP_DEFAULT  ? SID_ATTR_LANGUAGE :
-        FONT_GROUP_CJK == m_nFontGroup ? SID_ATTR_CHAR_CJK_LANGUAGE : SID_ATTR_CHAR_CTL_LANGUAGE;
+    const sal_uInt16 nLangSlot = nFontGroup == FONT_GROUP_DEFAULT  ? SID_ATTR_LANGUAGE :
+        FONT_GROUP_CJK == nFontGroup ? SID_ATTR_CHAR_CJK_LANGUAGE : SID_ATTR_CHAR_CTL_LANGUAGE;
 
     if( SfxItemState::SET == rSet->GetItemState(nLangSlot, false, &pLang))
-        m_eLanguage = static_cast<const SvxLanguageItem*>(pLang)->GetValue();
+        eLanguage = ((const SvxLanguageItem*)pLang)->GetValue();
 
-    OUString sToReplace = m_sScriptWestern;
-    if(FONT_GROUP_CJK == m_nFontGroup )
-        sToReplace = m_sScriptAsian;
-    else if(FONT_GROUP_CTL == m_nFontGroup )
-        sToReplace = m_sScriptComplex;
-    m_pLabelFT->SetText(m_pLabelFT->GetText().replaceFirst("%1", sToReplace));
+    OUString sToReplace = sScriptWestern;
+    if(FONT_GROUP_CJK == nFontGroup )
+        sToReplace = sScriptAsian;
+    else if(FONT_GROUP_CTL == nFontGroup )
+        sToReplace = sScriptComplex;
+    pLabelFT->SetText(pLabelFT->GetText().replaceFirst("%1", sToReplace));
 
     const SfxPoolItem* pItem;
 
+    if (bDeletePrinter)
+    {
+        delete pPrt;
+    }
+
     if(SfxItemState::SET == rSet->GetItemState(FN_PARAM_PRINTER, false, &pItem))
     {
-        m_pPrt = static_cast<SfxPrinter*>(static_cast<const SwPtrItem*>(pItem)->GetValue());
+        pPrt = (SfxPrinter*)((const SwPtrItem*)pItem)->GetValue();
     }
     else
     {
@@ -831,41 +805,41 @@ void SwStdFontTabPage::Reset( const SfxItemSet* rSet)
                     SID_PRINTER_NOTFOUND_WARN, SID_PRINTER_NOTFOUND_WARN,
                     SID_PRINTER_CHANGESTODOC, SID_PRINTER_CHANGESTODOC,
                     0 );
-        m_pPrt = VclPtr<SfxPrinter>::Create(pPrinterSet);
+        pPrt = new SfxPrinter(pPrinterSet);
     }
-    delete m_pFontList;
-    m_pFontList = new FontList( m_pPrt );
+    delete pFontList;
+    pFontList = new FontList( pPrt );
     // #i94536# prevent duplication of font entries when 'reset' button is pressed
-    if( !m_pStandardBox->GetEntryCount() )
+    if( !pStandardBox->GetEntryCount() )
     {
         // get the set of disctinct available family names
         std::set< OUString > aFontNames;
-        int nFontNames = m_pPrt->GetDevFontCount();
+        int nFontNames = pPrt->GetDevFontCount();
         for( int i = 0; i < nFontNames; i++ )
         {
-            FontMetric aFontMetric( m_pPrt->GetDevFont( i ) );
-            aFontNames.insert( aFontMetric.GetFamilyName() );
+            vcl::FontInfo aInf( pPrt->GetDevFont( i ) );
+            aFontNames.insert( aInf.GetName() );
         }
 
         // insert to listboxes
         for( std::set< OUString >::const_iterator it = aFontNames.begin();
              it != aFontNames.end(); ++it )
         {
-            m_pStandardBox->InsertEntry( *it );
-            m_pTitleBox->InsertEntry( *it );
-            m_pListBox->InsertEntry( *it );
-            m_pLabelBox->InsertEntry( *it );
-            m_pIdxBox->InsertEntry( *it );
+            pStandardBox->InsertEntry( *it );
+            pTitleBox->InsertEntry( *it );
+            pListBox->InsertEntry( *it );
+            pLabelBox->InsertEntry( *it );
+            pIdxBox->InsertEntry( *it );
         }
     }
     if(SfxItemState::SET == rSet->GetItemState(FN_PARAM_STDFONTS, false, &pItem))
     {
-         m_pFontConfig = static_cast<SwStdFontConfig*>(static_cast<const SwPtrItem*>(pItem)->GetValue());
+         pFontConfig = (SwStdFontConfig*)((const SwPtrItem*)pItem)->GetValue();
     }
 
     if(SfxItemState::SET == rSet->GetItemState(FN_PARAM_WRTSHELL, false, &pItem))
     {
-        m_pWrtShell = static_cast<SwWrtShell*>(static_cast<const SwPtrItem*>(pItem)->GetValue());
+        pWrtShell = (SwWrtShell*)((const SwPtrItem*)pItem)->GetValue();
     }
     OUString sStdBackup;
     OUString sOutBackup;
@@ -878,291 +852,276 @@ void SwStdFontTabPage::Reset( const SfxItemSet* rSet)
     sal_Int32 nLabelHeight = -1;
     sal_Int32 nIndexHeight = -1;
 
-    if(!m_pWrtShell)
+    if(!pWrtShell)
     {
-        sStdBackup = m_pFontConfig->GetFontStandard(m_nFontGroup);
-        sOutBackup = m_pFontConfig->GetFontOutline(m_nFontGroup);
-        sListBackup= m_pFontConfig->GetFontList(m_nFontGroup);
-        sCapBackup = m_pFontConfig->GetFontCaption(m_nFontGroup);
-        sIdxBackup = m_pFontConfig->GetFontIndex(m_nFontGroup);
-        nStandardHeight = m_pFontConfig->GetFontHeight( FONT_STANDARD, m_nFontGroup, m_eLanguage );
-        nTitleHeight =    m_pFontConfig->GetFontHeight( FONT_OUTLINE , m_nFontGroup, m_eLanguage );
-        nListHeight =     m_pFontConfig->GetFontHeight( FONT_LIST    , m_nFontGroup, m_eLanguage );
-        nLabelHeight =    m_pFontConfig->GetFontHeight( FONT_CAPTION , m_nFontGroup, m_eLanguage );
-        nIndexHeight =    m_pFontConfig->GetFontHeight( FONT_INDEX   , m_nFontGroup, m_eLanguage );
+        sStdBackup = pFontConfig->GetFontStandard(nFontGroup);
+        sOutBackup = pFontConfig->GetFontOutline(nFontGroup);
+        sListBackup= pFontConfig->GetFontList(nFontGroup);
+        sCapBackup = pFontConfig->GetFontCaption(nFontGroup);
+        sIdxBackup = pFontConfig->GetFontIndex(nFontGroup);
+        nStandardHeight = pFontConfig->GetFontHeight( FONT_STANDARD, nFontGroup, eLanguage );
+        nTitleHeight =    pFontConfig->GetFontHeight( FONT_OUTLINE , nFontGroup, eLanguage );
+        nListHeight =     pFontConfig->GetFontHeight( FONT_LIST    , nFontGroup, eLanguage );
+        nLabelHeight =    pFontConfig->GetFontHeight( FONT_CAPTION , nFontGroup, eLanguage );
+        nIndexHeight =    pFontConfig->GetFontHeight( FONT_INDEX   , nFontGroup, eLanguage );
         if( nStandardHeight <= 0)
-            nStandardHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_STANDARD + m_nFontGroup * FONT_PER_GROUP, m_eLanguage);
+            nStandardHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_STANDARD + nFontGroup * FONT_PER_GROUP, eLanguage);
         if( nTitleHeight <= 0)
-            nTitleHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_OUTLINE + m_nFontGroup * FONT_PER_GROUP, m_eLanguage);
+            nTitleHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_OUTLINE + nFontGroup * FONT_PER_GROUP, eLanguage);
         if( nListHeight <= 0)
-            nListHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_LIST + m_nFontGroup * FONT_PER_GROUP, m_eLanguage);
+            nListHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_LIST + nFontGroup * FONT_PER_GROUP, eLanguage);
         if( nLabelHeight <= 0)
-            nLabelHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_CAPTION + m_nFontGroup * FONT_PER_GROUP, m_eLanguage);
+            nLabelHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_CAPTION + nFontGroup * FONT_PER_GROUP, eLanguage);
         if( nIndexHeight <= 0)
-            nIndexHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_INDEX + m_nFontGroup * FONT_PER_GROUP, m_eLanguage);
+            nIndexHeight = SwStdFontConfig::GetDefaultHeightFor( FONT_INDEX + nFontGroup * FONT_PER_GROUP, eLanguage);
+
+       pDocOnlyCB->Enable(false);
     }
     else
     {
-        SwTextFormatColl *pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_STANDARD);
-        const SvxFontItem& rFont = !m_nFontGroup ? pColl->GetFont() :
-                FONT_GROUP_CJK == m_nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
-        m_sShellStd = sStdBackup =  rFont.GetFamilyName();
+        SwTxtFmtColl *pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_STANDARD);
+        const SvxFontItem& rFont = !nFontGroup ? pColl->GetFont() :
+                FONT_GROUP_CJK == nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
+        sShellStd = sStdBackup =  rFont.GetFamilyName();
 
         const sal_uInt16 nFontHeightWhich = sal::static_int_cast< sal_uInt16, RES_CHRATR >(
-            m_nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONTSIZE :
-            FONT_GROUP_CJK == m_nFontGroup ? RES_CHRATR_CJK_FONTSIZE : RES_CHRATR_CTL_FONTSIZE );
-        const SvxFontHeightItem& rFontHeightStandard = static_cast<const SvxFontHeightItem& >(pColl->GetFormatAttr(nFontHeightWhich));
+            nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONTSIZE :
+            FONT_GROUP_CJK == nFontGroup ? RES_CHRATR_CJK_FONTSIZE : RES_CHRATR_CTL_FONTSIZE );
+        const SvxFontHeightItem& rFontHeightStandard = (const SvxFontHeightItem& )pColl->GetFmtAttr(nFontHeightWhich);
         nStandardHeight = (sal_Int32)rFontHeightStandard.GetHeight();
 
-        pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_HEADLINE_BASE);
-        const SvxFontItem& rFontHL = !m_nFontGroup ? pColl->GetFont() :
-                FONT_GROUP_CJK == m_nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
-        m_sShellTitle = sOutBackup = rFontHL.GetFamilyName();
+        pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_HEADLINE_BASE);
+        const SvxFontItem& rFontHL = !nFontGroup ? pColl->GetFont() :
+                FONT_GROUP_CJK == nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
+        sShellTitle = sOutBackup = rFontHL.GetFamilyName();
 
-        const SvxFontHeightItem& rFontHeightTitle = static_cast<const SvxFontHeightItem&>(pColl->GetFormatAttr( nFontHeightWhich ));
+        const SvxFontHeightItem& rFontHeightTitle = (const SvxFontHeightItem&)pColl->GetFmtAttr( nFontHeightWhich, true );
         nTitleHeight = (sal_Int32)rFontHeightTitle.GetHeight();
 
         const sal_uInt16 nFontWhich = sal::static_int_cast< sal_uInt16, RES_CHRATR >(
-            m_nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONT :
-            FONT_GROUP_CJK == m_nFontGroup ? RES_CHRATR_CJK_FONT : RES_CHRATR_CTL_FONT);
-        pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_NUMBUL_BASE);
-        const SvxFontItem& rFontLS = !m_nFontGroup ? pColl->GetFont() :
-                FONT_GROUP_CJK == m_nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
-        m_bListDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
-        m_sShellList = sListBackup = rFontLS.GetFamilyName();
+            nFontGroup == FONT_GROUP_DEFAULT  ? RES_CHRATR_FONT :
+            FONT_GROUP_CJK == nFontGroup ? RES_CHRATR_CJK_FONT : RES_CHRATR_CTL_FONT);
+        pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_NUMBUL_BASE);
+        const SvxFontItem& rFontLS = !nFontGroup ? pColl->GetFont() :
+                FONT_GROUP_CJK == nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
+        bListDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
+        sShellList = sListBackup = rFontLS.GetFamilyName();
 
-        const SvxFontHeightItem& rFontHeightList = static_cast<const SvxFontHeightItem&>(pColl->GetFormatAttr(nFontHeightWhich));
+        const SvxFontHeightItem& rFontHeightList = (const SvxFontHeightItem&)pColl->GetFmtAttr(nFontHeightWhich, true);
         nListHeight = (sal_Int32)rFontHeightList.GetHeight();
-        m_bListHeightDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
+        bListHeightDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
 
-        pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_LABEL);
-        m_bLabelDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
-        const SvxFontItem& rFontCP = !m_nFontGroup ? pColl->GetFont() :
-                FONT_GROUP_CJK == m_nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
-        m_sShellLabel = sCapBackup = rFontCP.GetFamilyName();
-        const SvxFontHeightItem& rFontHeightLabel = static_cast<const SvxFontHeightItem&>(pColl->GetFormatAttr(nFontHeightWhich));
+        pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_LABEL);
+        bLabelDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
+        const SvxFontItem& rFontCP = !nFontGroup ? pColl->GetFont() :
+                FONT_GROUP_CJK == nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
+        sShellLabel = sCapBackup = rFontCP.GetFamilyName();
+        const SvxFontHeightItem& rFontHeightLabel = (const SvxFontHeightItem&)pColl->GetFmtAttr(nFontHeightWhich, true);
         nLabelHeight = (sal_Int32)rFontHeightLabel.GetHeight();
-        m_bLabelHeightDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
+        bLabelHeightDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
 
-        pColl = m_pWrtShell->GetTextCollFromPool(RES_POOLCOLL_REGISTER_BASE);
-        m_bIdxDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
-        const SvxFontItem& rFontIDX = !m_nFontGroup ? pColl->GetFont() :
-                FONT_GROUP_CJK == m_nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
-        m_sShellIndex = sIdxBackup = rFontIDX.GetFamilyName();
-        const SvxFontHeightItem& rFontHeightIndex = static_cast<const SvxFontHeightItem&>(pColl->GetFormatAttr(nFontHeightWhich));
+        pColl = pWrtShell->GetTxtCollFromPool(RES_POOLCOLL_REGISTER_BASE);
+        bIdxDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
+        const SvxFontItem& rFontIDX = !nFontGroup ? pColl->GetFont() :
+                FONT_GROUP_CJK == nFontGroup ? pColl->GetCJKFont() : pColl->GetCTLFont();
+        sShellIndex = sIdxBackup = rFontIDX.GetFamilyName();
+        const SvxFontHeightItem& rFontHeightIndex = (const SvxFontHeightItem&)pColl->GetFmtAttr(nFontHeightWhich, true);
         nIndexHeight = (sal_Int32)rFontHeightIndex.GetHeight();
-        m_bIndexHeightDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
+        bIndexHeightDefault = SfxItemState::DEFAULT == pColl->GetAttrSet().GetItemState(nFontWhich, false);
     }
-    m_pStandardBox->SetText(sStdBackup );
-    m_pTitleBox->SetText(sOutBackup );
-    m_pListBox->SetText(sListBackup);
-    m_pLabelBox->SetText(sCapBackup );
-    m_pIdxBox->SetText(sIdxBackup );
+    pStandardBox->SetText(sStdBackup );
+    pTitleBox->SetText(sOutBackup );
+    pListBox->SetText(sListBackup);
+    pLabelBox->SetText(sCapBackup );
+    pIdxBox->SetText(sIdxBackup );
 
-    FontMetric aFontMetric( m_pFontList->Get(sStdBackup, sStdBackup) );
-    m_pStandardHeightLB->Fill( &aFontMetric, m_pFontList );
-    aFontMetric = m_pFontList->Get(sOutBackup, sOutBackup );
-    m_pTitleHeightLB->Fill( &aFontMetric, m_pFontList );
-    aFontMetric = m_pFontList->Get(sListBackup,sListBackup);
-    m_pListHeightLB->Fill( &aFontMetric, m_pFontList );
-    aFontMetric = m_pFontList->Get(sCapBackup, sCapBackup );
-    m_pLabelHeightLB->Fill( &aFontMetric, m_pFontList );
-    aFontMetric = m_pFontList->Get(sIdxBackup, sIdxBackup );
-    m_pIndexHeightLB->Fill( &aFontMetric, m_pFontList );
+    vcl::FontInfo aFontInfo( pFontList->Get(sStdBackup, sStdBackup) );
+    pStandardHeightLB->Fill( &aFontInfo, pFontList );
+    aFontInfo = pFontList->Get(sOutBackup, sOutBackup );
+    pTitleHeightLB->Fill( &aFontInfo, pFontList );
+    aFontInfo = pFontList->Get(sListBackup,sListBackup);
+    pListHeightLB->Fill( &aFontInfo, pFontList );
+    aFontInfo = pFontList->Get(sCapBackup, sCapBackup );
+    pLabelHeightLB->Fill( &aFontInfo, pFontList );
+    aFontInfo = pFontList->Get(sIdxBackup, sIdxBackup );
+    pIndexHeightLB->Fill( &aFontInfo, pFontList );
 
-    m_pStandardHeightLB->SetValue( CalcToPoint( nStandardHeight, MapUnit::MapTwip, 10 ) );
-    m_pTitleHeightLB->   SetValue( CalcToPoint( nTitleHeight   , MapUnit::MapTwip, 10 ) );
-    m_pListHeightLB->    SetValue( CalcToPoint( nListHeight    , MapUnit::MapTwip, 10 ) );
-    m_pLabelHeightLB->   SetValue( CalcToPoint( nLabelHeight   , MapUnit::MapTwip, 10 ));
-    m_pIndexHeightLB->   SetValue( CalcToPoint( nIndexHeight   , MapUnit::MapTwip, 10 ));
+    pStandardHeightLB->SetValue( CalcToPoint( nStandardHeight, SFX_MAPUNIT_TWIP, 10 ) );
+    pTitleHeightLB->   SetValue( CalcToPoint( nTitleHeight   , SFX_MAPUNIT_TWIP, 10 ) );
+    pListHeightLB->    SetValue( CalcToPoint( nListHeight    , SFX_MAPUNIT_TWIP, 10 ) );
+    pLabelHeightLB->   SetValue( CalcToPoint( nLabelHeight   , SFX_MAPUNIT_TWIP, 10 ));
+    pIndexHeightLB->   SetValue( CalcToPoint( nIndexHeight   , SFX_MAPUNIT_TWIP, 10 ));
 
-    m_pStandardBox->SaveValue();
-    m_pTitleBox->SaveValue();
-    m_pListBox->SaveValue();
-    m_pLabelBox->SaveValue();
-    m_pIdxBox->SaveValue();
+    pStandardBox->SaveValue();
+    pTitleBox->SaveValue();
+    pListBox->SaveValue();
+    pLabelBox->SaveValue();
+    pIdxBox->SaveValue();
 
-    m_pStandardHeightLB->SaveValue();
-    m_pTitleHeightLB->SaveValue();
-    m_pListHeightLB->SaveValue();
-    m_pLabelHeightLB->SaveValue();
-    m_pIndexHeightLB->SaveValue();
+    pStandardHeightLB->SaveValue();
+    pTitleHeightLB->SaveValue();
+    pListHeightLB->SaveValue();
+    pLabelHeightLB->SaveValue();
+    pIndexHeightLB->SaveValue();
 }
 
-IMPL_LINK_NOARG(SwStdFontTabPage, StandardHdl, Button*, void)
+IMPL_LINK_NOARG(SwStdFontTabPage, StandardHdl)
 {
-    sal_uInt8 nFontOffset = m_nFontGroup * FONT_PER_GROUP;
-    m_pStandardBox->SetText(SwStdFontConfig::GetDefaultFor(FONT_STANDARD + nFontOffset, m_eLanguage));
-    m_pTitleBox   ->SetText(SwStdFontConfig::GetDefaultFor(FONT_OUTLINE  + nFontOffset, m_eLanguage));
-    m_pListBox    ->SetText(SwStdFontConfig::GetDefaultFor(FONT_LIST     + nFontOffset, m_eLanguage));
-    m_pLabelBox   ->SetText(SwStdFontConfig::GetDefaultFor(FONT_CAPTION  + nFontOffset, m_eLanguage));
-    m_pIdxBox     ->SetText(SwStdFontConfig::GetDefaultFor(FONT_INDEX    + nFontOffset, m_eLanguage));
+    sal_uInt8 nFontOffset = nFontGroup * FONT_PER_GROUP;
+    pStandardBox->SetText(SwStdFontConfig::GetDefaultFor(FONT_STANDARD + nFontOffset, eLanguage));
+    pTitleBox   ->SetText(SwStdFontConfig::GetDefaultFor(FONT_OUTLINE  + nFontOffset, eLanguage));
+    pListBox    ->SetText(SwStdFontConfig::GetDefaultFor(FONT_LIST     + nFontOffset, eLanguage));
+    pLabelBox   ->SetText(SwStdFontConfig::GetDefaultFor(FONT_CAPTION  + nFontOffset, eLanguage));
+    pIdxBox     ->SetText(SwStdFontConfig::GetDefaultFor(FONT_INDEX    + nFontOffset, eLanguage));
 
-    m_pStandardBox->SaveValue();
-    m_pTitleBox->SaveValue();
-    m_pListBox->SaveValue();
-    m_pLabelBox->SaveValue();
-    m_pIdxBox->SaveValue();
+    pStandardBox->SaveValue();
+    pTitleBox->SaveValue();
+    pListBox->SaveValue();
+    pLabelBox->SaveValue();
+    pIdxBox->SaveValue();
 
-    m_pStandardHeightLB->SetValue( CalcToPoint(
-        SwStdFontConfig::GetDefaultHeightFor(FONT_STANDARD + nFontOffset, m_eLanguage),
-            MapUnit::MapTwip, 10 ) );
-    m_pTitleHeightLB   ->SetValue(CalcToPoint(
+    pStandardHeightLB->SetValue( CalcToPoint(
+        SwStdFontConfig::GetDefaultHeightFor(FONT_STANDARD + nFontOffset, eLanguage),
+            SFX_MAPUNIT_TWIP, 10 ) );
+    pTitleHeightLB   ->SetValue(CalcToPoint(
         SwStdFontConfig::GetDefaultHeightFor(FONT_OUTLINE  +
-            nFontOffset, m_eLanguage), MapUnit::MapTwip, 10 ));
-    m_pListHeightLB    ->SetValue(CalcToPoint(
-        SwStdFontConfig::GetDefaultHeightFor(FONT_LIST + nFontOffset, m_eLanguage),
-            MapUnit::MapTwip, 10 ));
-    m_pLabelHeightLB   ->SetValue(CalcToPoint(
-        SwStdFontConfig::GetDefaultHeightFor(FONT_CAPTION  + nFontOffset, m_eLanguage),
-            MapUnit::MapTwip, 10 ));
-    m_pIndexHeightLB   ->SetValue(CalcToPoint(
-        SwStdFontConfig::GetDefaultHeightFor(FONT_INDEX    + nFontOffset, m_eLanguage),
-            MapUnit::MapTwip, 10 ));
+            nFontOffset, eLanguage), SFX_MAPUNIT_TWIP, 10 ));
+    pListHeightLB    ->SetValue(CalcToPoint(
+        SwStdFontConfig::GetDefaultHeightFor(FONT_LIST + nFontOffset, eLanguage),
+            SFX_MAPUNIT_TWIP, 10 ));
+    pLabelHeightLB   ->SetValue(CalcToPoint(
+        SwStdFontConfig::GetDefaultHeightFor(FONT_CAPTION  + nFontOffset, eLanguage),
+            SFX_MAPUNIT_TWIP, 10 ));
+    pIndexHeightLB   ->SetValue(CalcToPoint(
+        SwStdFontConfig::GetDefaultHeightFor(FONT_INDEX    + nFontOffset, eLanguage),
+            SFX_MAPUNIT_TWIP, 10 ));
+    return 0;
 }
 
-IMPL_LINK( SwStdFontTabPage, ModifyHdl, Edit&, rBox, void )
+IMPL_LINK( SwStdFontTabPage, ModifyHdl, ComboBox*, pBox )
 {
-    if(&rBox == m_pStandardBox)
+    if(pBox == pStandardBox)
     {
-        const OUString sEntry = rBox.GetText();
-        if(m_bSetListDefault && m_bListDefault)
-            m_pListBox->SetText(sEntry);
-        if(m_bSetLabelDefault && m_bLabelDefault)
-            m_pLabelBox->SetText(sEntry);
-        if(m_bSetIdxDefault && m_bIdxDefault)
-            m_pIdxBox->SetText(sEntry);
+        const OUString sEntry = pBox->GetText();
+        if(bSetListDefault && bListDefault)
+            pListBox->SetText(sEntry);
+        if(bSetLabelDefault && bLabelDefault)
+            pLabelBox->SetText(sEntry);
+        if(bSetIdxDefault && bIdxDefault)
+            pIdxBox->SetText(sEntry);
     }
-    else if(&rBox == m_pListBox)
+    else if(pBox == pListBox)
     {
-        m_bSetListDefault = false;
+        bSetListDefault = false;
     }
-    else if(&rBox == m_pLabelBox)
+    else if(pBox == pLabelBox)
     {
-        m_bSetLabelDefault = false;
+        bSetLabelDefault = false;
     }
-    else if(&rBox == m_pIdxBox)
+    else if(pBox == pIdxBox)
     {
-        m_bSetIdxDefault = false;
+        bSetIdxDefault = false;
     }
+    return 0;
 }
 
-IMPL_LINK( SwStdFontTabPage, ModifyHeightHdl, Edit&, rBox, void )
+IMPL_LINK( SwStdFontTabPage, ModifyHeightHdl, FontSizeBox*, pBox )
 {
-    if(&rBox == m_pStandardHeightLB)
+    if(pBox == pStandardHeightLB)
     {
-        sal_Int64 nValue = static_cast<FontSizeBox&>(rBox).GetValue(FUNIT_TWIP);
-        if(m_bSetListHeightDefault && m_bListHeightDefault)
-            m_pListHeightLB->SetValue(nValue, FUNIT_TWIP);
-        if(m_bSetLabelHeightDefault && m_bLabelHeightDefault)
-            m_pLabelHeightLB->SetValue(nValue, FUNIT_TWIP);
-        if(m_bSetIndexHeightDefault && m_bIndexHeightDefault)
-            m_pIndexHeightLB->SetValue(nValue, FUNIT_TWIP);
+        sal_Int64 nValue = pBox->GetValue(FUNIT_TWIP);
+        if(bSetListHeightDefault && bListHeightDefault)
+            pListHeightLB->SetValue(nValue, FUNIT_TWIP);
+        if(bSetLabelHeightDefault && bLabelHeightDefault)
+            pLabelHeightLB->SetValue(nValue, FUNIT_TWIP);
+        if(bSetIndexHeightDefault && bIndexHeightDefault)
+            pIndexHeightLB->SetValue(nValue, FUNIT_TWIP);
     }
-    else if(&rBox == m_pListHeightLB)
+    else if(pBox == pListHeightLB)
     {
-        m_bSetListHeightDefault = false;
+        bSetListHeightDefault = false;
     }
-    else if(&rBox == m_pLabelHeightLB)
+    else if(pBox == pLabelHeightLB)
     {
-        m_bSetLabelHeightDefault = false;
+        bSetLabelHeightDefault = false;
     }
-    else if(&rBox == m_pIndexHeightLB)
+    else if(pBox == pIndexHeightLB)
     {
-        m_bSetIndexHeightDefault = false;
+        bSetIndexHeightDefault = false;
     }
+    return 0;
 }
 
-IMPL_LINK( SwStdFontTabPage, LoseFocusHdl, Control&, rControl, void )
+IMPL_LINK( SwStdFontTabPage, LoseFocusHdl, ComboBox*, pBox )
 {
-    ComboBox* pBox = static_cast<ComboBox*>(&rControl);
-    FontSizeBox* pHeightLB = nullptr;
+    FontSizeBox* pHeightLB = 0;
     const OUString sEntry = pBox->GetText();
-    if(pBox == m_pStandardBox)
+    if(pBox == pStandardBox)
     {
-        pHeightLB = m_pStandardHeightLB;
+        pHeightLB = pStandardHeightLB;
     }
-    else if(pBox == m_pTitleBox)
+    else if(pBox == pTitleBox)
     {
-        pHeightLB = m_pTitleHeightLB;
+        pHeightLB = pTitleHeightLB;
     }
-    else if(pBox == m_pListBox)
+    else if(pBox == pListBox)
     {
-        pHeightLB = m_pListHeightLB;
+        pHeightLB = pListHeightLB;
     }
-    else if(pBox == m_pLabelBox)
+    else if(pBox == pLabelBox)
     {
-        pHeightLB = m_pLabelHeightLB;
+        pHeightLB = pLabelHeightLB;
     }
     else /*if(pBox == pIdxBox)*/
     {
-        pHeightLB = m_pIndexHeightLB;
+        pHeightLB = pIndexHeightLB;
     }
-    FontMetric aFontMetric( m_pFontList->Get(sEntry, sEntry) );
-    pHeightLB->Fill( &aFontMetric, m_pFontList );
+    vcl::FontInfo aFontInfo( pFontList->Get(sEntry, sEntry) );
+    pHeightLB->Fill( &aFontInfo, pFontList );
+    return 0;
 }
 
 void SwStdFontTabPage::PageCreated( const SfxAllItemSet& aSet)
 {
-    const SfxUInt16Item* pFlagItem = aSet.GetItem<SfxUInt16Item>(SID_FONTMODE_TYPE, false);
+    SFX_ITEMSET_ARG (&aSet,pFlagItem,SfxUInt16Item, SID_FONTMODE_TYPE, false);
     if (pFlagItem)
-        m_nFontGroup = sal::static_int_cast< sal_uInt8, sal_uInt16>( pFlagItem->GetValue() );
+        SetFontMode(sal::static_int_cast< sal_uInt8, sal_uInt16>( pFlagItem->GetValue()));
 }
 
 SwTableOptionsTabPage::SwTableOptionsTabPage( vcl::Window* pParent, const SfxItemSet& rSet ) :
     SfxTabPage(pParent, "OptTablePage", "modules/swriter/ui/opttablepage.ui", &rSet),
-    m_pWrtShell(nullptr),
-    m_bHTMLMode(false)
+    pWrtShell(0),
+    bHTMLMode(false)
 {
-    get(m_pHeaderCB,"header");
-    get(m_pRepeatHeaderCB,"repeatheader");
-    get(m_pDontSplitCB,"dontsplit");
-    get(m_pBorderCB,"border");
-    get(m_pNumFormattingCB,"numformatting");
-    get(m_pNumFormatFormattingCB,"numfmtformatting");
-    get(m_pNumAlignmentCB,"numalignment");
-    get(m_pRowMoveMF,"rowmove");
-    get(m_pColMoveMF,"colmove");
-    get(m_pRowInsertMF,"rowinsert");
-    get(m_pColInsertMF,"colinsert");
-    get(m_pFixRB,"fix");
-    get(m_pFixPropRB,"fixprop");
-    get(m_pVarRB,"var");
+    get(pHeaderCB,"header");
+    get(pRepeatHeaderCB,"repeatheader");
+    get(pDontSplitCB,"dontsplit");
+    get(pBorderCB,"border");
+    get(pNumFormattingCB,"numformatting");
+    get(pNumFmtFormattingCB,"numfmtformatting");
+    get(pNumAlignmentCB,"numalignment");
+    get(pRowMoveMF,"rowmove");
+    get(pColMoveMF,"colmove");
+    get(pRowInsertMF,"rowinsert");
+    get(pColInsertMF,"colinsert");
+    get(pFixRB,"fix");
+    get(pFixPropRB,"fixprop");
+    get(pVarRB,"var");
 
-    Link<Button*,void> aLnk(LINK(this, SwTableOptionsTabPage, CheckBoxHdl));
-    m_pNumFormattingCB->SetClickHdl(aLnk);
-    m_pNumFormatFormattingCB->SetClickHdl(aLnk);
-    m_pHeaderCB->SetClickHdl(aLnk);
+    Link aLnk(LINK(this, SwTableOptionsTabPage, CheckBoxHdl));
+    pNumFormattingCB->SetClickHdl(aLnk);
+    pNumFmtFormattingCB->SetClickHdl(aLnk);
+    pHeaderCB->SetClickHdl(aLnk);
 }
 
 SwTableOptionsTabPage::~SwTableOptionsTabPage()
 {
-    disposeOnce();
 }
 
-void SwTableOptionsTabPage::dispose()
+SfxTabPage* SwTableOptionsTabPage::Create( vcl::Window* pParent,
+                                const SfxItemSet* rAttrSet )
 {
-    m_pHeaderCB.clear();
-    m_pRepeatHeaderCB.clear();
-    m_pDontSplitCB.clear();
-    m_pBorderCB.clear();
-    m_pNumFormattingCB.clear();
-    m_pNumFormatFormattingCB.clear();
-    m_pNumAlignmentCB.clear();
-    m_pRowMoveMF.clear();
-    m_pColMoveMF.clear();
-    m_pRowInsertMF.clear();
-    m_pColInsertMF.clear();
-    m_pFixRB.clear();
-    m_pFixPropRB.clear();
-    m_pVarRB.clear();
-    SfxTabPage::dispose();
-}
-
-VclPtr<SfxTabPage> SwTableOptionsTabPage::Create( vcl::Window* pParent,
-                                                  const SfxItemSet* rAttrSet )
-{
-    return VclPtr<SwTableOptionsTabPage>::Create(pParent, *rAttrSet);
+    return new SwTableOptionsTabPage(pParent, *rAttrSet );
 }
 
 bool SwTableOptionsTabPage::FillItemSet( SfxItemSet* )
@@ -1170,40 +1129,40 @@ bool SwTableOptionsTabPage::FillItemSet( SfxItemSet* )
     bool bRet = false;
     SwModuleOptions* pModOpt = SW_MOD()->GetModuleConfig();
 
-    if(m_pRowMoveMF->IsModified())
-        pModOpt->SetTableHMove( (sal_uInt16)m_pRowMoveMF->Denormalize( m_pRowMoveMF->GetValue(FUNIT_TWIP)));
+    if(pRowMoveMF->IsModified())
+        pModOpt->SetTblHMove( (sal_uInt16)pRowMoveMF->Denormalize( pRowMoveMF->GetValue(FUNIT_TWIP)));
 
-    if(m_pColMoveMF->IsModified())
-        pModOpt->SetTableVMove( (sal_uInt16)m_pColMoveMF->Denormalize( m_pColMoveMF->GetValue(FUNIT_TWIP)));
+    if(pColMoveMF->IsModified())
+        pModOpt->SetTblVMove( (sal_uInt16)pColMoveMF->Denormalize( pColMoveMF->GetValue(FUNIT_TWIP)));
 
-    if(m_pRowInsertMF->IsModified())
-        pModOpt->SetTableHInsert((sal_uInt16)m_pRowInsertMF->Denormalize( m_pRowInsertMF->GetValue(FUNIT_TWIP)));
+    if(pRowInsertMF->IsModified())
+        pModOpt->SetTblHInsert((sal_uInt16)pRowInsertMF->Denormalize( pRowInsertMF->GetValue(FUNIT_TWIP)));
 
-    if(m_pColInsertMF->IsModified())
-        pModOpt->SetTableVInsert((sal_uInt16)m_pColInsertMF->Denormalize( m_pColInsertMF->GetValue(FUNIT_TWIP)));
+    if(pColInsertMF->IsModified())
+        pModOpt->SetTblVInsert((sal_uInt16)pColInsertMF->Denormalize( pColInsertMF->GetValue(FUNIT_TWIP)));
 
-    TableChgMode eMode;
-    if(m_pFixRB->IsChecked())
-        eMode = TableChgMode::FixedWidthChangeAbs;
-    else if(m_pFixPropRB->IsChecked())
-        eMode = TableChgMode::FixedWidthChangeProp;
+    TblChgMode eMode;
+    if(pFixRB->IsChecked())
+        eMode = TBLFIX_CHGABS;
+    else if(pFixPropRB->IsChecked())
+        eMode = TBLFIX_CHGPROP;
     else
-        eMode = TableChgMode::VarWidthChangeAbs;
-    if(eMode != pModOpt->GetTableMode())
+        eMode = TBLVAR_CHGABS;
+    if(eMode != pModOpt->GetTblMode())
     {
-        pModOpt->SetTableMode(eMode);
+        pModOpt->SetTblMode(eMode);
         // the table-keyboard-mode has changed, now the current
         // table should know about that too.
-        if(m_pWrtShell && SelectionType::Table & m_pWrtShell->GetSelectionType())
+        if(pWrtShell && nsSelectionType::SEL_TBL & pWrtShell->GetSelectionType())
         {
-            m_pWrtShell->SetTableChgMode(eMode);
+            pWrtShell->SetTblChgMode(eMode);
             static sal_uInt16 aInva[] =
                                 {   FN_TABLE_MODE_FIX,
                                     FN_TABLE_MODE_FIX_PROP,
                                     FN_TABLE_MODE_VARIABLE,
                                     0
                                 };
-            m_pWrtShell->GetView().GetViewFrame()->GetBindings().Invalidate( aInva );
+            pWrtShell->GetView().GetViewFrame()->GetBindings().Invalidate( aInva );
         }
 
         bRet = true;
@@ -1211,41 +1170,41 @@ bool SwTableOptionsTabPage::FillItemSet( SfxItemSet* )
 
     SwInsertTableOptions aInsOpts( 0, 0 );
 
-    if (m_pHeaderCB->IsChecked())
+    if (pHeaderCB->IsChecked())
         aInsOpts.mnInsMode |= tabopts::HEADLINE;
 
-    if (m_pRepeatHeaderCB->IsEnabled() )
-        aInsOpts.mnRowsToRepeat = m_pRepeatHeaderCB->IsChecked()? 1 : 0;
+    if (pRepeatHeaderCB->IsEnabled() )
+        aInsOpts.mnRowsToRepeat = pRepeatHeaderCB->IsChecked()? 1 : 0;
 
-    if (!m_pDontSplitCB->IsChecked())
+    if (!pDontSplitCB->IsChecked())
         aInsOpts.mnInsMode |= tabopts::SPLIT_LAYOUT;
 
-    if (m_pBorderCB->IsChecked())
+    if (pBorderCB->IsChecked())
         aInsOpts.mnInsMode |= tabopts::DEFAULT_BORDER;
 
-    if (m_pHeaderCB->IsValueChangedFromSaved() ||
-        m_pRepeatHeaderCB->IsValueChangedFromSaved() ||
-        m_pDontSplitCB->IsValueChangedFromSaved() ||
-        m_pBorderCB->IsValueChangedFromSaved())
+    if (pHeaderCB->IsValueChangedFromSaved() ||
+        pRepeatHeaderCB->IsValueChangedFromSaved() ||
+        pDontSplitCB->IsValueChangedFromSaved() ||
+        pBorderCB->IsValueChangedFromSaved())
     {
-        pModOpt->SetInsTableFlags(m_bHTMLMode, aInsOpts);
+        pModOpt->SetInsTblFlags(bHTMLMode, aInsOpts);
     }
 
-    if (m_pNumFormattingCB->IsValueChangedFromSaved())
+    if (pNumFormattingCB->IsValueChangedFromSaved())
     {
-        pModOpt->SetInsTableFormatNum(m_bHTMLMode, m_pNumFormattingCB->IsChecked());
+        pModOpt->SetInsTblFormatNum(bHTMLMode, pNumFormattingCB->IsChecked());
         bRet = true;
     }
 
-    if (m_pNumFormatFormattingCB->IsValueChangedFromSaved())
+    if (pNumFmtFormattingCB->IsValueChangedFromSaved())
     {
-        pModOpt->SetInsTableChangeNumFormat(m_bHTMLMode, m_pNumFormatFormattingCB->IsChecked());
+        pModOpt->SetInsTblChangeNumFormat(bHTMLMode, pNumFmtFormattingCB->IsChecked());
         bRet = true;
     }
 
-    if (m_pNumAlignmentCB->IsValueChangedFromSaved())
+    if (pNumAlignmentCB->IsValueChangedFromSaved())
     {
-        pModOpt->SetInsTableAlignNum(m_bHTMLMode, m_pNumAlignmentCB->IsChecked());
+        pModOpt->SetInsTblAlignNum(bHTMLMode, pNumAlignmentCB->IsChecked());
         bRet = true;
     }
 
@@ -1257,80 +1216,81 @@ void SwTableOptionsTabPage::Reset( const SfxItemSet* rSet)
     const SwModuleOptions* pModOpt = SW_MOD()->GetModuleConfig();
     if ( rSet->GetItemState( SID_ATTR_METRIC ) >= SfxItemState::DEFAULT )
     {
-        const SfxUInt16Item& rItem = static_cast<const SfxUInt16Item&>(rSet->Get( SID_ATTR_METRIC ));
+        const SfxUInt16Item& rItem = (SfxUInt16Item&)rSet->Get( SID_ATTR_METRIC );
         FieldUnit eFieldUnit = (FieldUnit)rItem.GetValue();
-        ::SetFieldUnit( *m_pRowMoveMF, eFieldUnit );
-        ::SetFieldUnit( *m_pColMoveMF, eFieldUnit );
-        ::SetFieldUnit( *m_pRowInsertMF, eFieldUnit );
-        ::SetFieldUnit( *m_pColInsertMF, eFieldUnit );
+        ::SetFieldUnit( *pRowMoveMF, eFieldUnit );
+        ::SetFieldUnit( *pColMoveMF, eFieldUnit );
+        ::SetFieldUnit( *pRowInsertMF, eFieldUnit );
+        ::SetFieldUnit( *pColInsertMF, eFieldUnit );
     }
 
-    m_pRowMoveMF->SetValue(m_pRowMoveMF->Normalize(pModOpt->GetTableHMove()), FUNIT_TWIP);
-    m_pColMoveMF->SetValue(m_pColMoveMF->Normalize(pModOpt->GetTableVMove()), FUNIT_TWIP);
-    m_pRowInsertMF->SetValue(m_pRowInsertMF->Normalize(pModOpt->GetTableHInsert()), FUNIT_TWIP);
-    m_pColInsertMF->SetValue(m_pColInsertMF->Normalize(pModOpt->GetTableVInsert()), FUNIT_TWIP);
+    pRowMoveMF->SetValue(pRowMoveMF->Normalize(pModOpt->GetTblHMove()), FUNIT_TWIP);
+    pColMoveMF->SetValue(pColMoveMF->Normalize(pModOpt->GetTblVMove()), FUNIT_TWIP);
+    pRowInsertMF->SetValue(pRowInsertMF->Normalize(pModOpt->GetTblHInsert()), FUNIT_TWIP);
+    pColInsertMF->SetValue(pColInsertMF->Normalize(pModOpt->GetTblVInsert()), FUNIT_TWIP);
 
-    switch(pModOpt->GetTableMode())
+    switch(pModOpt->GetTblMode())
     {
-        case TableChgMode::FixedWidthChangeAbs:     m_pFixRB->Check();     break;
-        case TableChgMode::FixedWidthChangeProp:    m_pFixPropRB->Check(); break;
-        case TableChgMode::VarWidthChangeAbs:     m_pVarRB->Check(); break;
+        case TBLFIX_CHGABS:     pFixRB->Check();     break;
+        case TBLFIX_CHGPROP:    pFixPropRB->Check(); break;
+        case TBLVAR_CHGABS:     pVarRB->Check(); break;
     }
     const SfxPoolItem* pItem;
     if(SfxItemState::SET == rSet->GetItemState(SID_HTML_MODE, false, &pItem))
     {
-        m_bHTMLMode = 0 != (static_cast<const SfxUInt16Item*>(pItem)->GetValue() & HTMLMODE_ON);
+        bHTMLMode = 0 != (((const SfxUInt16Item*)pItem)->GetValue() & HTMLMODE_ON);
     }
 
     // hide certain controls for html
-    if(m_bHTMLMode)
+    if(bHTMLMode)
     {
-        m_pRepeatHeaderCB->Hide();
-        m_pDontSplitCB->Hide();
+        pRepeatHeaderCB->Hide();
+        pDontSplitCB->Hide();
     }
 
-    SwInsertTableOptions aInsOpts = pModOpt->GetInsTableFlags(m_bHTMLMode);
-    const sal_uInt16 nInsTableFlags = aInsOpts.mnInsMode;
+    SwInsertTableOptions aInsOpts = pModOpt->GetInsTblFlags(bHTMLMode);
+    const sal_uInt16 nInsTblFlags = aInsOpts.mnInsMode;
 
-    m_pHeaderCB->Check(0 != (nInsTableFlags & tabopts::HEADLINE));
-    m_pRepeatHeaderCB->Check((!m_bHTMLMode) && (aInsOpts.mnRowsToRepeat > 0));
-    m_pDontSplitCB->Check(!(nInsTableFlags & tabopts::SPLIT_LAYOUT));
-    m_pBorderCB->Check(0 != (nInsTableFlags & tabopts::DEFAULT_BORDER));
+    pHeaderCB->Check(0 != (nInsTblFlags & tabopts::HEADLINE));
+    pRepeatHeaderCB->Check((!bHTMLMode) && (aInsOpts.mnRowsToRepeat > 0));
+    pDontSplitCB->Check(!(nInsTblFlags & tabopts::SPLIT_LAYOUT));
+    pBorderCB->Check(0 != (nInsTblFlags & tabopts::DEFAULT_BORDER));
 
-    m_pNumFormattingCB->Check(pModOpt->IsInsTableFormatNum(m_bHTMLMode));
-    m_pNumFormatFormattingCB->Check(pModOpt->IsInsTableChangeNumFormat(m_bHTMLMode));
-    m_pNumAlignmentCB->Check(pModOpt->IsInsTableAlignNum(m_bHTMLMode));
+    pNumFormattingCB->Check(pModOpt->IsInsTblFormatNum(bHTMLMode));
+    pNumFmtFormattingCB->Check(pModOpt->IsInsTblChangeNumFormat(bHTMLMode));
+    pNumAlignmentCB->Check(pModOpt->IsInsTblAlignNum(bHTMLMode));
 
-    m_pHeaderCB->SaveValue();
-    m_pRepeatHeaderCB->SaveValue();
-    m_pDontSplitCB->SaveValue();
-    m_pBorderCB->SaveValue();
-    m_pNumFormattingCB->SaveValue();
-    m_pNumFormatFormattingCB->SaveValue();
-    m_pNumAlignmentCB->SaveValue();
+    pHeaderCB->SaveValue();
+    pRepeatHeaderCB->SaveValue();
+    pDontSplitCB->SaveValue();
+    pBorderCB->SaveValue();
+    pNumFormattingCB->SaveValue();
+    pNumFmtFormattingCB->SaveValue();
+    pNumAlignmentCB->SaveValue();
 
-    CheckBoxHdl(nullptr);
+    CheckBoxHdl(0);
 }
 
-IMPL_LINK_NOARG(SwTableOptionsTabPage, CheckBoxHdl, Button*, void)
+IMPL_LINK_NOARG(SwTableOptionsTabPage, CheckBoxHdl)
 {
-    m_pNumFormatFormattingCB->Enable(m_pNumFormattingCB->IsChecked());
-    m_pNumAlignmentCB->Enable(m_pNumFormattingCB->IsChecked());
-    m_pRepeatHeaderCB->Enable(m_pHeaderCB->IsChecked());
+    pNumFmtFormattingCB->Enable(pNumFormattingCB->IsChecked());
+    pNumAlignmentCB->Enable(pNumFormattingCB->IsChecked());
+    pRepeatHeaderCB->Enable(pHeaderCB->IsChecked());
+    return 0;
 }
 
 void SwTableOptionsTabPage::PageCreated( const SfxAllItemSet& aSet)
 {
-    const SwWrtShellItem* pWrtSh = aSet.GetItem<SwWrtShellItem>(SID_WRT_SHELL, false);
+    SFX_ITEMSET_ARG (&aSet,pWrtSh,SwWrtShellItem,SID_WRT_SHELL,false);
     if (pWrtSh)
-        m_pWrtShell = pWrtSh->GetValue();
+        SetWrtShell(pWrtSh->GetValue());
 }
 
-SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage( vcl::Window* pParent,
+SwShdwCrsrOptionsTabPage::SwShdwCrsrOptionsTabPage( vcl::Window* pParent,
                                                     const SfxItemSet& rSet )
    : SfxTabPage(pParent, "OptFormatAidsPage",
                 "modules/swriter/ui/optformataidspage.ui", &rSet),
-    m_pWrtShell( nullptr )
+    m_pWrtShell( NULL )
 {
     get(m_pParaCB, "paragraph");
     get(m_pSHyphCB, "hyphens");
@@ -1339,8 +1299,8 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage( vcl::Window* pParent,
     get(m_pTabCB, "tabs");
     get(m_pBreakCB, "break");
     get(m_pCharHiddenCB, "hiddentext");
-    get(m_pFieldHiddenCB, "hiddentextfield");
-    get(m_pFieldHiddenParaCB, "hiddenparafield");
+    get(m_pFldHiddenCB, "hiddentextfield");
+    get(m_pFldHiddenParaCB, "hiddenparafield");
 
     get(m_pDirectCursorFrame, "directcrsrframe");
     get(m_pOnOffCB, "cursoronoff");
@@ -1351,15 +1311,15 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage( vcl::Window* pParent,
     get(m_pFillSpaceRB, "fillspace");
 
     get(m_pCursorProtFrame, "crsrprotframe");
-    get(m_pCursorInProtCB, "cursorinprot");
+    get(m_pCrsrInProtCB, "cursorinprot");
 
     get(m_pMathBaselineAlignmentCB, "mathbaseline");
 
-    const SfxPoolItem* pItem = nullptr;
+    const SfxPoolItem* pItem = 0;
 
     SwShadowCursorItem aOpt;
     if( SfxItemState::SET == rSet.GetItemState( FN_PARAM_SHADOWCURSOR, false, &pItem ))
-        aOpt = *static_cast<const SwShadowCursorItem*>(pItem);
+        aOpt = *(SwShadowCursorItem*)pItem;
     m_pOnOffCB->Check( aOpt.IsOn() );
 
     sal_uInt8 eMode = aOpt.GetMode();
@@ -1369,12 +1329,12 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage( vcl::Window* pParent,
     m_pFillSpaceRB->Check( FILL_SPACE == eMode );
 
     if(SfxItemState::SET == rSet.GetItemState(SID_HTML_MODE, false, &pItem )
-        && static_cast<const SfxUInt16Item*>(pItem)->GetValue() & HTMLMODE_ON)
+        && ((SfxUInt16Item*)pItem)->GetValue() & HTMLMODE_ON)
     {
         m_pTabCB->Hide();
         m_pCharHiddenCB->Hide();
-        m_pFieldHiddenCB->Hide();
-        m_pFieldHiddenParaCB->Hide();
+        m_pFldHiddenCB->Hide();
+        m_pFldHiddenParaCB->Hide();
 
         m_pDirectCursorFrame->Hide();
         m_pOnOffCB->Hide();
@@ -1384,51 +1344,27 @@ SwShdwCursorOptionsTabPage::SwShdwCursorOptionsTabPage( vcl::Window* pParent,
         m_pFillSpaceRB->Hide();
 
         m_pCursorProtFrame->Hide();
-        m_pCursorInProtCB->Hide();
+        m_pCrsrInProtCB->Hide();
     }
 }
 
-SwShdwCursorOptionsTabPage::~SwShdwCursorOptionsTabPage()
+SwShdwCrsrOptionsTabPage::~SwShdwCrsrOptionsTabPage()
 {
-    disposeOnce();
 }
 
-void SwShdwCursorOptionsTabPage::dispose()
+SfxTabPage* SwShdwCrsrOptionsTabPage::Create( vcl::Window* pParent, const SfxItemSet* rSet )
 {
-    m_pParaCB.clear();
-    m_pSHyphCB.clear();
-    m_pSpacesCB.clear();
-    m_pHSpacesCB.clear();
-    m_pTabCB.clear();
-    m_pBreakCB.clear();
-    m_pCharHiddenCB.clear();
-    m_pFieldHiddenCB.clear();
-    m_pFieldHiddenParaCB.clear();
-    m_pDirectCursorFrame.clear();
-    m_pOnOffCB.clear();
-    m_pFillMarginRB.clear();
-    m_pFillIndentRB.clear();
-    m_pFillTabRB.clear();
-    m_pFillSpaceRB.clear();
-    m_pCursorProtFrame.clear();
-    m_pCursorInProtCB.clear();
-    m_pMathBaselineAlignmentCB.clear();
-    SfxTabPage::dispose();
+    return new SwShdwCrsrOptionsTabPage( pParent, *rSet );
 }
 
-VclPtr<SfxTabPage> SwShdwCursorOptionsTabPage::Create( vcl::Window* pParent, const SfxItemSet* rSet )
+void SwShdwCrsrOptionsTabPage::PageCreated( const SfxAllItemSet& aSet )
 {
-    return VclPtr<SwShdwCursorOptionsTabPage>::Create( pParent, *rSet );
-}
-
-void SwShdwCursorOptionsTabPage::PageCreated( const SfxAllItemSet& aSet )
-{
-    const SwWrtShellItem* pWrtSh = aSet.GetItem<SwWrtShellItem>(SID_WRT_SHELL, false);
+    SFX_ITEMSET_ARG (&aSet,pWrtSh,SwWrtShellItem,SID_WRT_SHELL,false);
     if (pWrtSh)
-        m_pWrtShell = pWrtSh->GetValue();
+        SetWrtShell(pWrtSh->GetValue());
 }
 
-bool SwShdwCursorOptionsTabPage::FillItemSet( SfxItemSet* rSet )
+bool SwShdwCrsrOptionsTabPage::FillItemSet( SfxItemSet* rSet )
 {
     SwShadowCursorItem aOpt;
     aOpt.SetOn( m_pOnOffCB->IsChecked() );
@@ -1445,28 +1381,28 @@ bool SwShdwCursorOptionsTabPage::FillItemSet( SfxItemSet* rSet )
     aOpt.SetMode( eMode );
 
     bool bRet = false;
-    const SfxPoolItem* pItem = nullptr;
+    const SfxPoolItem* pItem = 0;
     if( SfxItemState::SET != rSet->GetItemState( FN_PARAM_SHADOWCURSOR, false, &pItem )
-        ||  static_cast<const SwShadowCursorItem&>(*pItem) != aOpt )
+        ||  ((SwShadowCursorItem&)*pItem) != aOpt )
     {
         rSet->Put( aOpt );
         bRet = true;
     }
 
     if (m_pWrtShell) {
-        m_pWrtShell->GetDoc()->getIDocumentSettingAccess().set( DocumentSettingId::MATH_BASELINE_ALIGNMENT,
+        m_pWrtShell->GetDoc()->getIDocumentSettingAccess().set( IDocumentSettingAccess::MATH_BASELINE_ALIGNMENT,
                                     m_pMathBaselineAlignmentCB->IsChecked() );
         bRet |= m_pMathBaselineAlignmentCB->IsValueChangedFromSaved();
     }
 
-    if( m_pCursorInProtCB->IsValueChangedFromSaved())
+    if( m_pCrsrInProtCB->IsValueChangedFromSaved())
     {
-        rSet->Put(SfxBoolItem(FN_PARAM_CRSR_IN_PROTECTED, m_pCursorInProtCB->IsChecked()));
+        rSet->Put(SfxBoolItem(FN_PARAM_CRSR_IN_PROTECTED, m_pCrsrInProtCB->IsChecked()));
         bRet = true;
     }
 
-    const SwDocDisplayItem* pOldAttr = static_cast<const SwDocDisplayItem*>(
-                        GetOldItem(GetItemSet(), FN_PARAM_DOCDISP));
+    const SwDocDisplayItem* pOldAttr = (const SwDocDisplayItem*)
+                        GetOldItem(GetItemSet(), FN_PARAM_DOCDISP);
 
     SwDocDisplayItem aDisp;
     if(pOldAttr)
@@ -1477,25 +1413,25 @@ bool SwShdwCursorOptionsTabPage::FillItemSet( SfxItemSet* rSet )
     aDisp.bSpace                = m_pSpacesCB->IsChecked();
     aDisp.bNonbreakingSpace     = m_pHSpacesCB->IsChecked();
     aDisp.bSoftHyphen           = m_pSHyphCB->IsChecked();
-    aDisp.bFieldHiddenText        = m_pFieldHiddenCB->IsChecked();
+    aDisp.bFldHiddenText        = m_pFldHiddenCB->IsChecked();
     aDisp.bCharHiddenText       = m_pCharHiddenCB->IsChecked();
-    aDisp.bShowHiddenPara       = m_pFieldHiddenParaCB->IsChecked();
+    aDisp.bShowHiddenPara       = m_pFldHiddenParaCB->IsChecked();
     aDisp.bManualBreak          = m_pBreakCB->IsChecked();
 
     bRet |= (!pOldAttr || aDisp != *pOldAttr);
     if(bRet)
-        bRet = nullptr != rSet->Put(aDisp);
+        bRet = 0 != rSet->Put(aDisp);
 
     return bRet;
 }
 
-void SwShdwCursorOptionsTabPage::Reset( const SfxItemSet* rSet )
+void SwShdwCrsrOptionsTabPage::Reset( const SfxItemSet* rSet )
 {
-    const SfxPoolItem* pItem = nullptr;
+    const SfxPoolItem* pItem = 0;
 
     SwShadowCursorItem aOpt;
     if( SfxItemState::SET == rSet->GetItemState( FN_PARAM_SHADOWCURSOR, false, &pItem ))
-        aOpt = *static_cast<const SwShadowCursorItem*>(pItem);
+        aOpt = *(SwShadowCursorItem*)pItem;
     m_pOnOffCB->Check( aOpt.IsOn() );
 
     sal_uInt8 eMode = aOpt.GetMode();
@@ -1505,20 +1441,20 @@ void SwShdwCursorOptionsTabPage::Reset( const SfxItemSet* rSet )
     m_pFillSpaceRB->Check( FILL_SPACE == eMode );
 
     if (m_pWrtShell) {
-       m_pMathBaselineAlignmentCB->Check( m_pWrtShell->GetDoc()->getIDocumentSettingAccess().get( DocumentSettingId::MATH_BASELINE_ALIGNMENT ) );
+       m_pMathBaselineAlignmentCB->Check( m_pWrtShell->GetDoc()->getIDocumentSettingAccess().get( IDocumentSettingAccess::MATH_BASELINE_ALIGNMENT ) );
        m_pMathBaselineAlignmentCB->SaveValue();
     } else {
         m_pMathBaselineAlignmentCB->Hide();
     }
 
     if( SfxItemState::SET == rSet->GetItemState( FN_PARAM_CRSR_IN_PROTECTED, false, &pItem ))
-        m_pCursorInProtCB->Check(static_cast<const SfxBoolItem*>(pItem)->GetValue());
-    m_pCursorInProtCB->SaveValue();
+        m_pCrsrInProtCB->Check(((const SfxBoolItem*)pItem)->GetValue());
+    m_pCrsrInProtCB->SaveValue();
 
-    const SwDocDisplayItem* pDocDisplayAttr = nullptr;
+    const SwDocDisplayItem* pDocDisplayAttr = 0;
 
     rSet->GetItemState( FN_PARAM_DOCDISP, false,
-                                    reinterpret_cast<const SfxPoolItem**>(&pDocDisplayAttr) );
+                                    (const SfxPoolItem**)&pDocDisplayAttr );
     if(pDocDisplayAttr)
     {
         m_pParaCB->Check  ( pDocDisplayAttr->bParagraphEnd );
@@ -1527,8 +1463,8 @@ void SwShdwCursorOptionsTabPage::Reset( const SfxItemSet* rSet )
         m_pHSpacesCB->Check  ( pDocDisplayAttr->bNonbreakingSpace );
         m_pSHyphCB->Check  ( pDocDisplayAttr->bSoftHyphen );
         m_pCharHiddenCB->Check ( pDocDisplayAttr->bCharHiddenText );
-        m_pFieldHiddenCB->Check  ( pDocDisplayAttr->bFieldHiddenText );
-        m_pFieldHiddenParaCB->Check ( pDocDisplayAttr->bShowHiddenPara );
+        m_pFldHiddenCB->Check  ( pDocDisplayAttr->bFldHiddenText );
+        m_pFldHiddenParaCB->Check ( pDocDisplayAttr->bShowHiddenPara );
         m_pBreakCB->Check  ( pDocDisplayAttr->bManualBreak );
     }
 }
@@ -1543,16 +1479,16 @@ struct CharAttr
 // Edit corresponds to Paste-attributes
 static CharAttr aRedlineAttr[] =
 {
-    { SID_ATTR_CHAR_CASEMAP,        (sal_uInt16)SvxCaseMap::NotMapped },
+    { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_NOT_MAPPED },
     { SID_ATTR_CHAR_WEIGHT,         WEIGHT_BOLD },
     { SID_ATTR_CHAR_POSTURE,        ITALIC_NORMAL },
-    { SID_ATTR_CHAR_UNDERLINE,      LINESTYLE_SINGLE },
-    { SID_ATTR_CHAR_UNDERLINE,      LINESTYLE_DOUBLE },
+    { SID_ATTR_CHAR_UNDERLINE,      UNDERLINE_SINGLE },
+    { SID_ATTR_CHAR_UNDERLINE,      UNDERLINE_DOUBLE },
     { SID_ATTR_CHAR_STRIKEOUT,      STRIKEOUT_SINGLE },
-    { SID_ATTR_CHAR_CASEMAP,        (sal_uInt16)SvxCaseMap::Uppercase },
-    { SID_ATTR_CHAR_CASEMAP,        (sal_uInt16)SvxCaseMap::Lowercase },
-    { SID_ATTR_CHAR_CASEMAP,        (sal_uInt16)SvxCaseMap::SmallCaps },
-    { SID_ATTR_CHAR_CASEMAP,        (sal_uInt16)SvxCaseMap::Capitalize },
+    { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_VERSALIEN },
+    { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_GEMEINE },
+    { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_KAPITAELCHEN },
+    { SID_ATTR_CHAR_CASEMAP,        SVX_CASEMAP_TITEL },
     { SID_ATTR_BRUSH,               0 }
 };
 // Items from aRedlineAttr relevant for InsertAttr: strikethrough is
@@ -1578,16 +1514,19 @@ SwMarkPreview::SwMarkPreview( vcl::Window *pParent, WinBits nWinBits ) :
 {
     m_aInitialSize = getPreviewOptionsSize(this);
     InitColors();
-    SetMapMode(MapUnit::MapPixel);
+    SetMapMode(MAP_PIXEL);
 }
 
-VCL_BUILDER_FACTORY_ARGS(SwMarkPreview, 0)
+extern "C" SAL_DLLPUBLIC_EXPORT vcl::Window* SAL_CALL makeSwMarkPreview(vcl::Window *pParent, VclBuilder::stringmap &)
+{
+    return new SwMarkPreview(pParent, 0);
+}
 
 SwMarkPreview::~SwMarkPreview()
 {
 }
 
-void SwMarkPreview::InitColors()
+void SwMarkPreview::InitColors( void )
 {
     // m_aTransCol and m_aMarkCol are _not_ changed because they are set from outside!
 
@@ -1597,19 +1536,19 @@ void SwMarkPreview::InitColors()
     bool bHC = rSettings.GetHighContrastMode();
     m_aLineCol = bHC? SwViewOption::GetFontColor() : Color( COL_BLACK );
     m_aShadowCol = bHC? m_aBgCol : rSettings.GetShadowColor();
-    m_aTextCol = bHC? SwViewOption::GetFontColor() : Color( COL_GRAY );
-    m_aPrintAreaCol = m_aTextCol;
+    m_aTxtCol = bHC? SwViewOption::GetFontColor() : Color( COL_GRAY );
+    m_aPrintAreaCol = m_aTxtCol;
 }
 
 void SwMarkPreview::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Window::DataChanged( rDCEvt );
 
-    if( rDCEvt.GetType() == DataChangedEventType::SETTINGS && ( rDCEvt.GetFlags() & AllSettingsFlags::STYLE ) )
+    if( rDCEvt.GetType() == DATACHANGED_SETTINGS && ( rDCEvt.GetFlags() & SETTINGS_STYLE ) )
         InitColors();
 }
 
-void SwMarkPreview::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle &/*rRect*/)
+void SwMarkPreview::Paint(const Rectangle &/*rRect*/)
 {
     const Size aSz(GetOutputSizePixel());
 
@@ -1625,7 +1564,7 @@ void SwMarkPreview::Paint(vcl::RenderContext& rRenderContext, const tools::Recta
     const long nTBorder = 4;
     const long nBBorder = 4;
 
-    aLeftPagePrtArea = tools::Rectangle(Point(nLBorder, nTBorder), Point((nOutWPix - 1) - nRBorder, (nOutHPix - 1) - nBBorder));
+    aLeftPagePrtArea = Rectangle(Point(nLBorder, nTBorder), Point((nOutWPix - 1) - nRBorder, (nOutHPix - 1) - nBBorder));
     const long nWidth = aLeftPagePrtArea.GetWidth();
     const long nKorr = (nWidth & 1) != 0 ? 0 : 1;
     aLeftPagePrtArea.SetSize(Size(nWidth / 2 - (nLBorder + nRBorder) / 2 + nKorr, aLeftPagePrtArea.GetHeight()));
@@ -1634,24 +1573,24 @@ void SwMarkPreview::Paint(vcl::RenderContext& rRenderContext, const tools::Recta
     aRightPagePrtArea.Move(aLeftPagePrtArea.GetWidth() + nLBorder + nRBorder + 1, 0);
 
     // draw shadow
-    tools::Rectangle aShadow(aPage);
+    Rectangle aShadow(aPage);
     aShadow += Point(3, 3);
-    drawRect(rRenderContext, aShadow, m_aShadowCol, m_aTransCol);
+    DrawRect( aShadow, m_aShadowCol, m_aTransCol );
 
     // draw page
-    drawRect(rRenderContext, aPage, m_aBgCol, m_aLineCol);
+    DrawRect( aPage, m_aBgCol, m_aLineCol );
 
     // draw separator
-    tools::Rectangle aPageSeparator(aPage);
+    Rectangle aPageSeparator(aPage);
     aPageSeparator.SetSize(Size(2, aPageSeparator.GetHeight()));
     aPageSeparator.Move(aPage.GetWidth() / 2 - 1, 0);
-    drawRect(rRenderContext, aPageSeparator, m_aLineCol, m_aTransCol);
+    DrawRect( aPageSeparator, m_aLineCol, m_aTransCol );
 
-    PaintPage(rRenderContext, aLeftPagePrtArea);
-    PaintPage(rRenderContext, aRightPagePrtArea);
+    PaintPage(aLeftPagePrtArea);
+    PaintPage(aRightPagePrtArea);
 
-    tools::Rectangle aLeftMark(Point(aPage.Left() + 2, aLeftPagePrtArea.Top() + 4), Size(aLeftPagePrtArea.Left() - 4, 2));
-    tools::Rectangle aRightMark(Point(aRightPagePrtArea.Right() + 2, aRightPagePrtArea.Bottom() - 6), Size(aLeftPagePrtArea.Left() - 4, 2));
+    Rectangle aLeftMark(Point(aPage.Left() + 2, aLeftPagePrtArea.Top() + 4), Size(aLeftPagePrtArea.Left() - 4, 2));
+    Rectangle aRightMark(Point(aRightPagePrtArea.Right() + 2, aRightPagePrtArea.Bottom() - 6), Size(aLeftPagePrtArea.Left() - 4, 2));
 
     switch (nMarkPos)
     {
@@ -1675,25 +1614,25 @@ void SwMarkPreview::Paint(vcl::RenderContext& rRenderContext, const tools::Recta
         default:
             return;
     }
-    drawRect(rRenderContext, aLeftMark, m_aMarkCol, m_aTransCol);
-    drawRect(rRenderContext, aRightMark, m_aMarkCol, m_aTransCol);
+    DrawRect( aLeftMark, m_aMarkCol, m_aTransCol );
+    DrawRect( aRightMark, m_aMarkCol, m_aTransCol );
 }
 
-void SwMarkPreview::PaintPage(vcl::RenderContext& rRenderContext, const tools::Rectangle &rRect)
+void SwMarkPreview::PaintPage(const Rectangle &rRect)
 {
     // draw PrintArea
-    drawRect(rRenderContext, rRect, m_aTransCol, m_aPrintAreaCol);
+    DrawRect(rRect, m_aTransCol, m_aPrintAreaCol );
 
     // draw Testparagraph
-    sal_uLong nLTextBorder = 4;
-    sal_uLong nRTextBorder = 4;
-    sal_uLong nTTextBorder = 4;
+    sal_uLong nLTxtBorder = 4;
+    sal_uLong nRTxtBorder = 4;
+    sal_uLong nTTxtBorder = 4;
 
-    tools::Rectangle aTextLine = rRect;
+    Rectangle aTextLine = rRect;
     aTextLine.SetSize(Size(aTextLine.GetWidth(), 2));
-    aTextLine.Left()    += nLTextBorder;
-    aTextLine.Right()   -= nRTextBorder;
-    aTextLine.Move(0, nTTextBorder);
+    aTextLine.Left()    += nLTxtBorder;
+    aTextLine.Right()   -= nRTxtBorder;
+    aTextLine.Move(0, nTTxtBorder);
 
     const long nStep = aTextLine.GetHeight() + 2;
     const long nLines = rRect.GetHeight() / (aTextLine.GetHeight() + 2) - 1;
@@ -1705,11 +1644,18 @@ void SwMarkPreview::PaintPage(vcl::RenderContext& rRenderContext, const tools::R
             aTextLine.SetSize(Size(aTextLine.GetWidth() / 2, aTextLine.GetHeight()));
 
         if (aPage.IsInside(aTextLine))
-            drawRect(rRenderContext, aTextLine, m_aTextCol, m_aTransCol);
+            DrawRect(aTextLine, m_aTxtCol, m_aTransCol );
 
         aTextLine.Move(0, nStep);
     }
     aTextLine.Move(0, -nStep);
+}
+
+void SwMarkPreview::DrawRect(const Rectangle &rRect, const Color &rFillColor, const Color &rLineColor)
+{
+    SetFillColor(rFillColor);
+    SetLineColor(rLineColor);
+    Window::DrawRect(rRect);
 }
 
 Size SwMarkPreview::GetOptimalSize() const
@@ -1735,94 +1681,83 @@ namespace
 }
 
 SwRedlineOptionsTabPage::SwRedlineOptionsTabPage( vcl::Window* pParent,
-                                                  const SfxItemSet& rSet )
+                                                    const SfxItemSet& rSet )
     : SfxTabPage(pParent, "OptRedLinePage",
         "modules/swriter/ui/optredlinepage.ui" , &rSet)
+    , sNone(SW_RESSTR(SW_STR_NONE))
 {
     Size aPreviewSize(getPreviewOptionsSize(this));
 
-    get(m_pInsertLB,"insert");
-    get(m_pInsertColorLB,"insertcolor");
-    m_pInsertColorLB->SetSlotId(SID_AUTHOR_COLOR, true);
-    get(m_pInsertedPreviewWN,"insertedpreview");
+    get(pInsertLB,"insert");
+    get(pInsertColorLB,"insertcolor");
+    get(pInsertedPreviewWN,"insertedpreview");
 
-    get(m_pDeletedLB,"deleted");
-    get(m_pDeletedColorLB,"deletedcolor");
-    m_pDeletedColorLB->SetSlotId(SID_AUTHOR_COLOR, true);
-    get(m_pDeletedPreviewWN,"deletedpreview");
+    get(pDeletedLB,"deleted");
+    get(pDeletedColorLB,"deletedcolor");
+    get(pDeletedPreviewWN,"deletedpreview");
 
-    get(m_pChangedLB,"changed");
-    get(m_pChangedColorLB,"changedcolor");
-    m_pChangedColorLB->SetSlotId(SID_AUTHOR_COLOR, true);
-    get(m_pChangedPreviewWN,"changedpreview");
+    get(pChangedLB,"changed");
+    get(pChangedColorLB,"changedcolor");
+    get(pChangedPreviewWN,"changedpreview");
 
-    get(m_pMarkPosLB,"markpos");
-    get(m_pMarkColorLB,"markcolor");
-    get(m_pMarkPreviewWN,"markpreview");
+    get(pMarkPosLB,"markpos");
+    get(pMarkColorLB,"markcolor");
+    get(pMarkPreviewWN,"markpreview");
 
-    m_pInsertedPreviewWN->set_height_request(aPreviewSize.Height());
-    m_pDeletedPreviewWN->set_height_request(aPreviewSize.Height());
-    m_pChangedPreviewWN->set_height_request(aPreviewSize.Height());
-    m_pMarkPreviewWN->set_height_request(aPreviewSize.Height());
+    pInsertedPreviewWN->set_height_request(aPreviewSize.Height());
+    pDeletedPreviewWN->set_height_request(aPreviewSize.Height());
+    pChangedPreviewWN->set_height_request(aPreviewSize.Height());
+    pMarkPreviewWN->set_height_request(aPreviewSize.Height());
 
-    m_pInsertedPreviewWN->set_width_request(aPreviewSize.Width());
-    m_pDeletedPreviewWN->set_width_request(aPreviewSize.Width());
-    m_pChangedPreviewWN->set_width_request(aPreviewSize.Width());
-    m_pMarkPreviewWN->set_width_request(aPreviewSize.Width());
+    pInsertedPreviewWN->set_width_request(aPreviewSize.Width());
+    pDeletedPreviewWN->set_width_request(aPreviewSize.Width());
+    pChangedPreviewWN->set_width_request(aPreviewSize.Width());
+    pMarkPreviewWN->set_width_request(aPreviewSize.Width());
 
-    for (sal_Int32 i = 0; i < m_pInsertLB->GetEntryCount(); ++i)
+    sAuthor = get<vcl::Window>("byauthor")->GetText();
+
+    for (sal_Int32 i = 0; i < pInsertLB->GetEntryCount(); ++i)
     {
-        const OUString sEntry(m_pInsertLB->GetEntry(i));
-        m_pDeletedLB->InsertEntry(sEntry);
-        m_pChangedLB->InsertEntry(sEntry);
+        const OUString sEntry(pInsertLB->GetEntry(i));
+        pDeletedLB->InsertEntry(sEntry);
+        pChangedLB->InsertEntry(sEntry);
     };
 
     // remove strikethrough from insert and change and underline + double
     // underline from delete
-    m_pInsertLB->RemoveEntry(5);
-    m_pChangedLB->RemoveEntry(5);
-    m_pDeletedLB->RemoveEntry(4);
-    m_pDeletedLB->RemoveEntry(3);
+    pInsertLB->RemoveEntry(5);
+    pChangedLB->RemoveEntry(5);
+    pDeletedLB->RemoveEntry(4);
+    pDeletedLB->RemoveEntry(3);
 
-    Link<ListBox&,void> aLk = LINK(this, SwRedlineOptionsTabPage, AttribHdl);
-    m_pInsertLB->SetSelectHdl( aLk );
-    m_pDeletedLB->SetSelectHdl( aLk );
-    m_pChangedLB->SetSelectHdl( aLk );
+    Link aLk = LINK(this, SwRedlineOptionsTabPage, AttribHdl);
+    pInsertLB->SetSelectHdl( aLk );
+    pDeletedLB->SetSelectHdl( aLk );
+    pChangedLB->SetSelectHdl( aLk );
 
-    Link<SvxColorListBox&,void> aLk2 = LINK(this, SwRedlineOptionsTabPage, ColorHdl);
-    m_pInsertColorLB->SetSelectHdl( aLk2 );
-    m_pDeletedColorLB->SetSelectHdl( aLk2 );
-    m_pChangedColorLB->SetSelectHdl( aLk2 );
+    aLk = LINK(this, SwRedlineOptionsTabPage, ColorHdl);
+    pInsertColorLB->SetSelectHdl( aLk );
+    pDeletedColorLB->SetSelectHdl( aLk );
+    pChangedColorLB->SetSelectHdl( aLk );
 
-    m_pMarkPosLB->SetSelectHdl(LINK(this, SwRedlineOptionsTabPage, ChangedMaskPrevHdl));
-    m_pMarkColorLB->SetSelectHdl(LINK(this, SwRedlineOptionsTabPage, ChangedMaskColorPrevHdl));
+    aLk = LINK(this, SwRedlineOptionsTabPage, ChangedMaskPrevHdl);
+    pMarkPosLB->SetSelectHdl( aLk );
+    pMarkColorLB->SetSelectHdl( aLk );
+/*
+    //solution: set different accessible name of four color box
+    pInsertColorLB->SetAccessibleName(OUString( aInsertFT.GetDisplayText()) + OUString(aInsertColorFT.GetDisplayText()));
+    pDeletedColorLB->SetAccessibleName(OUString( aDeletedFT.GetDisplayText()) + OUString( aDeletedColorFT.GetDisplayText()));
+    pChangedColorLB->SetAccessibleName(OUString( aChangedFT.GetDisplayText()) + OUString( aChangedColorFT.GetDisplayText()));
+    pMarkColorLB->SetAccessibleName(OUString( aMarkPosFT.GetDisplayText()) + OUString( aMarkColorFT.GetDisplayText()));*/
 }
 
 SwRedlineOptionsTabPage::~SwRedlineOptionsTabPage()
 {
-    disposeOnce();
 }
 
-void SwRedlineOptionsTabPage::dispose()
+SfxTabPage* SwRedlineOptionsTabPage::Create( vcl::Window* pParent, const SfxItemSet* rSet)
 {
-    m_pInsertLB.clear();
-    m_pInsertColorLB.clear();
-    m_pInsertedPreviewWN.clear();
-    m_pDeletedLB.clear();
-    m_pDeletedColorLB.clear();
-    m_pDeletedPreviewWN.clear();
-    m_pChangedLB.clear();
-    m_pChangedColorLB.clear();
-    m_pChangedPreviewWN.clear();
-    m_pMarkPosLB.clear();
-    m_pMarkColorLB.clear();
-    m_pMarkPreviewWN.clear();
-    SfxTabPage::dispose();
-}
-
-VclPtr<SfxTabPage> SwRedlineOptionsTabPage::Create( vcl::Window* pParent, const SfxItemSet* rSet)
-{
-    return VclPtr<SwRedlineOptionsTabPage>::Create( pParent, *rSet );
+    return new SwRedlineOptionsTabPage( pParent, *rSet );
 }
 
 bool SwRedlineOptionsTabPage::FillItemSet( SfxItemSet* )
@@ -1841,38 +1776,86 @@ bool SwRedlineOptionsTabPage::FillItemSet( SfxItemSet* )
     ColorData nOldMarkColor = pOpt->GetMarkAlignColor().GetColor();
     sal_uInt16 nOldMarkMode = pOpt->GetMarkAlignMode();
 
-    sal_Int32 nPos = m_pInsertLB->GetSelectEntryPos();
+    sal_Int32 nPos = pInsertLB->GetSelectEntryPos();
     if (nPos != LISTBOX_ENTRY_NOTFOUND)
     {
-        pAttr = static_cast<CharAttr *>(m_pInsertLB->GetEntryData(nPos));
+        pAttr = (CharAttr *)pInsertLB->GetEntryData(nPos);
         aInsertedAttr.nItemId = pAttr->nItemId;
         aInsertedAttr.nAttr = pAttr->nAttr;
-        aInsertedAttr.nColor = m_pInsertColorLB->GetSelectEntryColor().GetColor();
+
+        nPos = pInsertColorLB->GetSelectEntryPos();
+
+        switch (nPos)
+        {
+            case 0:
+                aInsertedAttr.nColor = COL_NONE_COLOR;
+                break;
+            case 1:
+            case LISTBOX_ENTRY_NOTFOUND:
+                aInsertedAttr.nColor = COL_TRANSPARENT;
+                break;
+            default:
+                aInsertedAttr.nColor = pInsertColorLB->GetEntryColor(nPos).GetColor();
+                break;
+        }
+
         pOpt->SetInsertAuthorAttr(aInsertedAttr);
     }
 
-    nPos = m_pDeletedLB->GetSelectEntryPos();
+    nPos = pDeletedLB->GetSelectEntryPos();
     if (nPos != LISTBOX_ENTRY_NOTFOUND)
     {
-        pAttr = static_cast<CharAttr *>(m_pDeletedLB->GetEntryData(nPos));
+        pAttr = (CharAttr *)pDeletedLB->GetEntryData(nPos);
         aDeletedAttr.nItemId = pAttr->nItemId;
         aDeletedAttr.nAttr = pAttr->nAttr;
-        aDeletedAttr.nColor = m_pDeletedColorLB->GetSelectEntryColor().GetColor();
+
+        nPos = pDeletedColorLB->GetSelectEntryPos();
+
+        switch (nPos)
+        {
+            case 0:
+                aDeletedAttr.nColor = COL_NONE_COLOR;
+                break;
+            case 1:
+            case LISTBOX_ENTRY_NOTFOUND:
+                aDeletedAttr.nColor = COL_TRANSPARENT;
+                break;
+            default:
+                aDeletedAttr.nColor = pDeletedColorLB->GetEntryColor(nPos).GetColor();
+                break;
+        }
+
         pOpt->SetDeletedAuthorAttr(aDeletedAttr);
     }
 
-    nPos = m_pChangedLB->GetSelectEntryPos();
+    nPos = pChangedLB->GetSelectEntryPos();
     if (nPos != LISTBOX_ENTRY_NOTFOUND)
     {
-        pAttr = static_cast<CharAttr *>(m_pChangedLB->GetEntryData(nPos));
+        pAttr = (CharAttr *)pChangedLB->GetEntryData(nPos);
         aChangedAttr.nItemId = pAttr->nItemId;
         aChangedAttr.nAttr = pAttr->nAttr;
-        aChangedAttr.nColor = m_pChangedColorLB->GetSelectEntryColor().GetColor();
+
+        nPos = pChangedColorLB->GetSelectEntryPos();
+
+        switch (nPos)
+        {
+            case 0:
+                aChangedAttr.nColor = COL_NONE_COLOR;
+                break;
+            case 1:
+            case LISTBOX_ENTRY_NOTFOUND:
+                aChangedAttr.nColor = COL_TRANSPARENT;
+                break;
+            default:
+                aChangedAttr.nColor = pChangedColorLB->GetEntryColor(nPos).GetColor();
+                break;
+        }
+
         pOpt->SetFormatAuthorAttr(aChangedAttr);
     }
 
     nPos = 0;
-    switch (m_pMarkPosLB->GetSelectEntryPos())
+    switch (pMarkPosLB->GetSelectEntryPos())
     {
         case 0: nPos = text::HoriOrientation::NONE;       break;
         case 1: nPos = text::HoriOrientation::LEFT;       break;
@@ -1882,7 +1865,7 @@ bool SwRedlineOptionsTabPage::FillItemSet( SfxItemSet* )
     }
     pOpt->SetMarkAlignMode(nPos);
 
-    pOpt->SetMarkAlignColor(m_pMarkColorLB->GetSelectEntryColor());
+    pOpt->SetMarkAlignColor(pMarkColorLB->GetSelectEntryColor());
 
     if (!(aInsertedAttr == aOldInsertAttr) ||
         !(aDeletedAttr == aOldDeletedAttr) ||
@@ -1891,12 +1874,13 @@ bool SwRedlineOptionsTabPage::FillItemSet( SfxItemSet* )
        nOldMarkMode != pOpt->GetMarkAlignMode())
     {
         // update all documents
-        SwDocShell* pDocShell = static_cast<SwDocShell*>(SfxObjectShell::GetFirst(checkSfxObjectShell<SwDocShell>));
+        TypeId aType(TYPE(SwDocShell));
+        SwDocShell* pDocShell = (SwDocShell*)SfxObjectShell::GetFirst(&aType);
 
         while( pDocShell )
         {
             pDocShell->GetWrtShell()->UpdateRedlineAttr();
-            pDocShell = static_cast<SwDocShell*>(SfxObjectShell::GetNext(*pDocShell, checkSfxObjectShell<SwDocShell>));
+            pDocShell = (SwDocShell*)SfxObjectShell::GetNext(*pDocShell, &aType);
         }
     }
 
@@ -1912,28 +1896,91 @@ void SwRedlineOptionsTabPage::Reset( const SfxItemSet*  )
     const AuthorCharAttr &rChangedAttr = pOpt->GetFormatAuthorAttr();
 
     // initialise preview
-    InitFontStyle(*m_pInsertedPreviewWN);
-    InitFontStyle(*m_pDeletedPreviewWN);
-    InitFontStyle(*m_pChangedPreviewWN);
+    InitFontStyle(*pInsertedPreviewWN);
+    InitFontStyle(*pDeletedPreviewWN);
+    InitFontStyle(*pChangedPreviewWN);
+
+    // initialise colour list box
+    pInsertColorLB->SetUpdateMode(false);
+    pDeletedColorLB->SetUpdateMode(false);
+    pChangedColorLB->SetUpdateMode(false);
+    pMarkColorLB->SetUpdateMode(false);
+    pInsertColorLB->InsertEntry(sNone);
+    pDeletedColorLB->InsertEntry(sNone);
+    pChangedColorLB->InsertEntry(sNone);
+
+    pInsertColorLB->InsertEntry(sAuthor);
+    pDeletedColorLB->InsertEntry(sAuthor);
+    pChangedColorLB->InsertEntry(sAuthor);
+
+    XColorListRef pColorLst = XColorList::GetStdColorList();
+    for( sal_Int32 i = 0; i < pColorLst->Count(); ++i )
+    {
+        XColorEntry* pEntry = pColorLst->GetColor( i );
+        Color aColor = pEntry->GetColor();
+        const OUString sName = pEntry->GetName();
+
+        pInsertColorLB->InsertEntry( aColor, sName );
+        pDeletedColorLB->InsertEntry( aColor, sName );
+        pChangedColorLB->InsertEntry( aColor, sName );
+        pMarkColorLB->InsertEntry( aColor, sName );
+    }
+    pInsertColorLB->SetUpdateMode( true );
+    pDeletedColorLB->SetUpdateMode( true );
+    pChangedColorLB->SetUpdateMode( true );
+    pMarkColorLB->SetUpdateMode( true );
 
     ColorData nColor = rInsertAttr.nColor;
-    m_pInsertColorLB->SelectEntry(Color(nColor));
+
+    switch (nColor)
+    {
+        case COL_TRANSPARENT:
+            pInsertColorLB->SelectEntryPos(1);
+            break;
+        case COL_NONE_COLOR:
+            pInsertColorLB->SelectEntryPos(0);
+            break;
+        default:
+            pInsertColorLB->SelectEntry(Color(nColor));
+    }
 
     nColor = rDeletedAttr.nColor;
-    m_pDeletedColorLB->SelectEntry(Color(nColor));
+
+    switch (nColor)
+    {
+        case COL_TRANSPARENT:
+            pDeletedColorLB->SelectEntryPos(1);
+            break;
+        case COL_NONE_COLOR:
+            pDeletedColorLB->SelectEntryPos(0);
+            break;
+        default:
+            pDeletedColorLB->SelectEntry(Color(nColor));
+    }
 
     nColor = rChangedAttr.nColor;
-    m_pChangedColorLB->SelectEntry(Color(nColor));
 
-    m_pMarkColorLB->SelectEntry(pOpt->GetMarkAlignColor());
+    switch (nColor)
+    {
+        case COL_TRANSPARENT:
+            pChangedColorLB->SelectEntryPos(1);
+            break;
+        case COL_NONE_COLOR:
+            pChangedColorLB->SelectEntryPos(0);
+            break;
+        default:
+            pChangedColorLB->SelectEntry(Color(nColor));
+    }
 
-    m_pInsertLB->SelectEntryPos(0);
-    m_pDeletedLB->SelectEntryPos(0);
-    m_pChangedLB->SelectEntryPos(0);
+    pMarkColorLB->SelectEntry(pOpt->GetMarkAlignColor());
 
-    lcl_FillRedlineAttrListBox(*m_pInsertLB, rInsertAttr, aInsertAttrMap, SAL_N_ELEMENTS(aInsertAttrMap));
-    lcl_FillRedlineAttrListBox(*m_pDeletedLB, rDeletedAttr, aDeletedAttrMap, SAL_N_ELEMENTS(aDeletedAttrMap));
-    lcl_FillRedlineAttrListBox(*m_pChangedLB, rChangedAttr, aChangedAttrMap, SAL_N_ELEMENTS(aChangedAttrMap));
+    pInsertLB->SelectEntryPos(0);
+    pDeletedLB->SelectEntryPos(0);
+    pChangedLB->SelectEntryPos(0);
+
+    lcl_FillRedlineAttrListBox(*pInsertLB, rInsertAttr, aInsertAttrMap, SAL_N_ELEMENTS(aInsertAttrMap));
+    lcl_FillRedlineAttrListBox(*pDeletedLB, rDeletedAttr, aDeletedAttrMap, SAL_N_ELEMENTS(aDeletedAttrMap));
+    lcl_FillRedlineAttrListBox(*pChangedLB, rChangedAttr, aChangedAttrMap, SAL_N_ELEMENTS(aChangedAttrMap));
 
     sal_Int32 nPos = 0;
     switch (pOpt->GetMarkAlignMode())
@@ -1944,38 +1991,38 @@ void SwRedlineOptionsTabPage::Reset( const SfxItemSet*  )
         case text::HoriOrientation::OUTSIDE:  nPos = 3;   break;
         case text::HoriOrientation::INSIDE:   nPos = 4;   break;
     }
-    m_pMarkPosLB->SelectEntryPos(nPos);
+    pMarkPosLB->SelectEntryPos(nPos);
 
     // show settings in preview
-    AttribHdl(*m_pInsertLB);
-    ColorHdl(*m_pInsertColorLB);
-    AttribHdl(*m_pDeletedLB);
-    ColorHdl(*m_pInsertColorLB);
-    AttribHdl(*m_pChangedLB);
-    ColorHdl(*m_pChangedColorLB);
+    AttribHdl(pInsertLB);
+    ColorHdl(pInsertColorLB);
+    AttribHdl(pDeletedLB);
+    ColorHdl(pInsertColorLB);
+    AttribHdl(pChangedLB);
+    ColorHdl(pChangedColorLB);
 
-    ChangedMaskPrev();
+    ChangedMaskPrevHdl();
 }
 
-IMPL_LINK( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
+IMPL_LINK( SwRedlineOptionsTabPage, AttribHdl, ListBox *, pLB )
 {
-    SvxFontPrevWindow *pPrev = nullptr;
-    SvxColorListBox *pColorLB;
+    SvxFontPrevWindow *pPrev = 0;
+    ColorListBox *pColorLB;
 
-    if (&rLB == m_pInsertLB)
+    if (pLB == pInsertLB)
     {
-        pColorLB = m_pInsertColorLB;
-        pPrev = m_pInsertedPreviewWN;
+        pColorLB = pInsertColorLB;
+        pPrev = pInsertedPreviewWN;
     }
-    else if (&rLB == m_pDeletedLB)
+    else if (pLB == pDeletedLB)
     {
-        pColorLB = m_pDeletedColorLB;
-        pPrev = m_pDeletedPreviewWN;
+        pColorLB = pDeletedColorLB;
+        pPrev = pDeletedPreviewWN;
     }
     else
     {
-        pColorLB = m_pChangedColorLB;
-        pPrev = m_pChangedPreviewWN;
+        pColorLB = pChangedColorLB;
+        pPrev = pChangedPreviewWN;
     }
 
     SvxFont&    rFont = pPrev->GetFont();
@@ -1985,36 +2032,37 @@ IMPL_LINK( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
     rCJKFont.SetWeight(WEIGHT_NORMAL);
     rFont.SetItalic(ITALIC_NONE);
     rCJKFont.SetItalic(ITALIC_NONE);
-    rFont.SetUnderline(LINESTYLE_NONE);
-    rCJKFont.SetUnderline(LINESTYLE_NONE);
+    rFont.SetUnderline(UNDERLINE_NONE);
+    rCJKFont.SetUnderline(UNDERLINE_NONE);
     rFont.SetStrikeout(STRIKEOUT_NONE);
     rCJKFont.SetStrikeout(STRIKEOUT_NONE);
-    rFont.SetCaseMap(SvxCaseMap::NotMapped);
-    rCJKFont.SetCaseMap(SvxCaseMap::NotMapped);
+    rFont.SetCaseMap(SVX_CASEMAP_NOT_MAPPED);
+    rCJKFont.SetCaseMap(SVX_CASEMAP_NOT_MAPPED);
 
-    Color aColor = pColorLB->GetSelectEntryColor();
+    sal_Int32      nPos = pColorLB->GetSelectEntryPos();
 
-    if (aColor == COL_NONE_COLOR)
+    switch( nPos )
     {
-        rFont.SetColor( Color( COL_BLACK ) );
-        rCJKFont.SetColor( Color( COL_BLACK ) );
-    }
-    else if (aColor == COL_TRANSPARENT)
-    {
-        rFont.SetColor( Color( COL_RED ) );
-        rCJKFont.SetColor( Color( COL_RED ) );
-    }
-    else
-    {
-        rFont.SetColor(aColor);
-        rCJKFont.SetColor(aColor);
+        case 0:
+            rFont.SetColor( Color( COL_BLACK ) );
+            rCJKFont.SetColor( Color( COL_BLACK ) );
+            break;
+        case 1:
+        case LISTBOX_ENTRY_NOTFOUND:
+            rFont.SetColor( Color( COL_RED ) );
+            rCJKFont.SetColor( Color( COL_RED ) );
+            break;
+        default:
+            rFont.SetColor( pColorLB->GetEntryColor( nPos ) );
+            rCJKFont.SetColor( pColorLB->GetEntryColor( nPos ) );
+            break;
     }
 
-    sal_Int32 nPos = rLB.GetSelectEntryPos();
+    nPos = pLB->GetSelectEntryPos();
     if( nPos == LISTBOX_ENTRY_NOTFOUND )
         nPos = 0;
 
-    CharAttr*   pAttr = static_cast<CharAttr*>(rLB.GetEntryData( nPos ));
+    CharAttr*   pAttr = ( CharAttr* ) pLB->GetEntryData( nPos );
     //switch off preview background color
     pPrev->ResetColor();
     switch (pAttr->nItemId)
@@ -2030,8 +2078,8 @@ IMPL_LINK( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
             break;
 
         case SID_ATTR_CHAR_UNDERLINE:
-            rFont.SetUnderline( ( FontLineStyle ) pAttr->nAttr );
-            rCJKFont.SetUnderline( ( FontLineStyle ) pAttr->nAttr );
+            rFont.SetUnderline( ( FontUnderline ) pAttr->nAttr );
+            rCJKFont.SetUnderline( ( FontUnderline ) pAttr->nAttr );
             break;
 
         case SID_ATTR_CHAR_STRIKEOUT:
@@ -2046,11 +2094,12 @@ IMPL_LINK( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
 
         case SID_ATTR_BRUSH:
         {
-            Color aBgColor = pColorLB->GetSelectEntryColor();
-            if (aBgColor != COL_NONE_COLOR)
-                pPrev->SetColor(aBgColor);
+            nPos = pColorLB->GetSelectEntryPos();
+            if( nPos )
+                pPrev->SetColor( pColorLB->GetSelectEntryColor() );
             else
-                pPrev->SetColor(Color(COL_LIGHTGRAY));
+                pPrev->SetColor( Color( COL_LIGHTGRAY ) );
+
             rFont.SetColor( Color( COL_BLACK ) );
             rCJKFont.SetColor( Color( COL_BLACK ) );
         }
@@ -2058,28 +2107,29 @@ IMPL_LINK( SwRedlineOptionsTabPage, AttribHdl, ListBox&, rLB, void )
     }
 
     pPrev->Invalidate();
+
+    return 0;
 }
 
-IMPL_LINK( SwRedlineOptionsTabPage, ColorHdl, SvxColorListBox&, rListBox, void )
+IMPL_LINK( SwRedlineOptionsTabPage, ColorHdl, ColorListBox *, pColorLB )
 {
-    SvxColorListBox* pColorLB = &rListBox;
-    SvxFontPrevWindow *pPrev = nullptr;
+    SvxFontPrevWindow *pPrev = 0;
     ListBox* pLB;
 
-    if (pColorLB == m_pInsertColorLB)
+    if (pColorLB == pInsertColorLB)
     {
-        pLB = m_pInsertLB;
-        pPrev = m_pInsertedPreviewWN;
+        pLB = pInsertLB;
+        pPrev = pInsertedPreviewWN;
     }
-    else if (pColorLB == m_pDeletedColorLB)
+    else if (pColorLB == pDeletedColorLB)
     {
-        pLB = m_pDeletedLB;
-        pPrev = m_pDeletedPreviewWN;
+        pLB = pDeletedLB;
+        pPrev = pDeletedPreviewWN;
     }
     else
     {
-        pLB = m_pChangedLB;
-        pPrev = m_pChangedPreviewWN;
+        pLB = pChangedLB;
+        pPrev = pChangedPreviewWN;
     }
 
     SvxFont&    rFont = pPrev->GetFont();
@@ -2088,59 +2138,53 @@ IMPL_LINK( SwRedlineOptionsTabPage, ColorHdl, SvxColorListBox&, rListBox, void )
     if( nPos == LISTBOX_ENTRY_NOTFOUND )
         nPos = 0;
 
-    CharAttr*   pAttr = static_cast<CharAttr*>(pLB->GetEntryData( nPos ));
+    CharAttr*   pAttr = ( CharAttr* ) pLB->GetEntryData( nPos );
 
     if( pAttr->nItemId == SID_ATTR_BRUSH )
     {
         rFont.SetColor( Color( COL_BLACK ) );
         rCJKFont.SetColor( Color( COL_BLACK ) );
-
-        Color aBgColor = pColorLB->GetSelectEntryColor();
-        if (aBgColor != COL_NONE_COLOR)
-            pPrev->SetColor(aBgColor);
+        nPos = pColorLB->GetSelectEntryPos();
+        if( nPos && nPos != LISTBOX_ENTRY_NOTFOUND )
+            pPrev->SetColor( pColorLB->GetSelectEntryColor() );
         else
-            pPrev->SetColor(Color(COL_LIGHTGRAY));
+            pPrev->SetColor( Color( COL_LIGHTGRAY ) );
     }
     else
     {
-        Color aColor = pColorLB->GetSelectEntryColor();
+        nPos = pColorLB->GetSelectEntryPos();
 
-        if (aColor == COL_NONE_COLOR)
+        switch( nPos )
         {
-            rFont.SetColor( Color( COL_BLACK ) );
-            rCJKFont.SetColor( Color( COL_BLACK ) );
-        }
-        else if (aColor == COL_TRANSPARENT)
-        {
-            rFont.SetColor( Color( COL_RED ) );
-            rCJKFont.SetColor( Color( COL_RED ) );
-        }
-        else
-        {
-            rFont.SetColor(aColor);
-            rCJKFont.SetColor(aColor);
+            case 0:
+                rFont.SetColor( Color( COL_BLACK ) );
+                rCJKFont.SetColor( Color( COL_BLACK ) );
+                break;
+            case 1:
+            case LISTBOX_ENTRY_NOTFOUND:
+                rFont.SetColor( Color( COL_RED ) );
+                rCJKFont.SetColor( Color( COL_RED ) );
+                break;
+            default:
+                rFont.SetColor( pColorLB->GetEntryColor( nPos ) );
+                rCJKFont.SetColor( pColorLB->GetEntryColor( nPos ) );
+                break;
         }
     }
 
     pPrev->Invalidate();
+
+    return 0;
 }
 
-void SwRedlineOptionsTabPage::ChangedMaskPrev()
+IMPL_LINK_NOARG(SwRedlineOptionsTabPage, ChangedMaskPrevHdl)
 {
-    m_pMarkPreviewWN->SetMarkPos(m_pMarkPosLB->GetSelectEntryPos());
-    m_pMarkPreviewWN->SetColor(m_pMarkColorLB->GetSelectEntryColor().GetColor());
+    pMarkPreviewWN->SetMarkPos(pMarkPosLB->GetSelectEntryPos());
+    pMarkPreviewWN->SetColor(pMarkColorLB->GetSelectEntryColor().GetColor());
 
-    m_pMarkPreviewWN->Invalidate();
-}
+    pMarkPreviewWN->Invalidate();
 
-IMPL_LINK_NOARG(SwRedlineOptionsTabPage, ChangedMaskPrevHdl, ListBox&, void)
-{
-    ChangedMaskPrev();
-}
-
-IMPL_LINK_NOARG(SwRedlineOptionsTabPage, ChangedMaskColorPrevHdl, SvxColorListBox&, void)
-{
-    ChangedMaskPrev();
+    return 0;
 }
 
 void SwRedlineOptionsTabPage::InitFontStyle(SvxFontPrevWindow& rExampleWin)
@@ -2152,16 +2196,16 @@ void SwRedlineOptionsTabPage::InitFontStyle(SvxFontPrevWindow& rExampleWin)
     SvxFont&            rCJKFont = rExampleWin.GetCJKFont();
     SvxFont&            rCTLFont = rExampleWin.GetCTLFont();
 
-    vcl::Font           aFont( OutputDevice::GetDefaultFont( DefaultFontType::SERIF, eLangType,
-                                                        GetDefaultFontFlags::OnlyOne, &rExampleWin ) );
-    vcl::Font           aCJKFont( OutputDevice::GetDefaultFont( DefaultFontType::CJK_TEXT, eLangType,
-                                                        GetDefaultFontFlags::OnlyOne, &rExampleWin ) );
-    vcl::Font           aCTLFont( OutputDevice::GetDefaultFont( DefaultFontType::CTL_TEXT, eLangType,
-                                                        GetDefaultFontFlags::OnlyOne, &rExampleWin ) );
+    vcl::Font           aFont( OutputDevice::GetDefaultFont( DEFAULTFONT_SERIF, eLangType,
+                                                        DEFAULTFONT_FLAGS_ONLYONE, &rExampleWin ) );
+    vcl::Font           aCJKFont( OutputDevice::GetDefaultFont( DEFAULTFONT_CJK_TEXT, eLangType,
+                                                        DEFAULTFONT_FLAGS_ONLYONE, &rExampleWin ) );
+    vcl::Font           aCTLFont( OutputDevice::GetDefaultFont( DEFAULTFONT_CTL_TEXT, eLangType,
+                                                        DEFAULTFONT_FLAGS_ONLYONE, &rExampleWin ) );
     const Size          aDefSize( 0, 12 );
-    aFont.SetFontSize( aDefSize );
-    aCJKFont.SetFontSize( aDefSize );
-    aCTLFont.SetFontSize( aDefSize );
+    aFont.SetSize( aDefSize );
+    aCJKFont.SetSize( aDefSize );
+    aCTLFont.SetSize( aDefSize );
 
     aFont.SetFillColor( aBackCol );
     aCJKFont.SetFillColor( aBackCol );
@@ -2176,8 +2220,8 @@ void SwRedlineOptionsTabPage::InitFontStyle(SvxFontPrevWindow& rExampleWin)
     rCTLFont = aCTLFont;
 
     const Size          aNewSize( 0, rExampleWin.GetOutputSize().Height() * 2 / 3 );
-    rFont.SetFontSize( aNewSize );
-    rCJKFont.SetFontSize( aNewSize );
+    rFont.SetSize( aNewSize );
+    rCJKFont.SetSize( aNewSize );
 
     rExampleWin.SetFont( rFont, rCJKFont,rCTLFont );
 
@@ -2198,9 +2242,8 @@ SwCompareOptionsTabPage::SwCompareOptionsTabPage(  vcl::Window* pParent, const S
     get(m_pRsidCB, "useRSID");
     get(m_pIgnoreCB, "ignore");
     get(m_pLenNF, "ignorelen");
-    get(m_pStoreRsidCB, "storeRSID");
 
-    Link<Button*,void> aLnk( LINK( this, SwCompareOptionsTabPage, ComparisonHdl ) );
+    Link aLnk( LINK( this, SwCompareOptionsTabPage, ComparisonHdl ) );
     m_pAutoRB->SetClickHdl( aLnk );
     m_pWordRB->SetClickHdl( aLnk );
     m_pCharRB->SetClickHdl( aLnk );
@@ -2210,24 +2253,11 @@ SwCompareOptionsTabPage::SwCompareOptionsTabPage(  vcl::Window* pParent, const S
 
 SwCompareOptionsTabPage::~SwCompareOptionsTabPage()
 {
-    disposeOnce();
 }
 
-void SwCompareOptionsTabPage::dispose()
+SfxTabPage* SwCompareOptionsTabPage::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
 {
-    m_pAutoRB.clear();
-    m_pWordRB.clear();
-    m_pCharRB.clear();
-    m_pRsidCB.clear();
-    m_pIgnoreCB.clear();
-    m_pLenNF.clear();
-    m_pStoreRsidCB.clear();
-    SfxTabPage::dispose();
-}
-
-VclPtr<SfxTabPage> SwCompareOptionsTabPage::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
-{
-    return VclPtr<SwCompareOptionsTabPage>::Create( pParent, *rAttrSet );
+    return new SwCompareOptionsTabPage( pParent, *rAttrSet );
 }
 
 bool SwCompareOptionsTabPage::FillItemSet( SfxItemSet* )
@@ -2239,11 +2269,11 @@ bool SwCompareOptionsTabPage::FillItemSet( SfxItemSet* )
         m_pWordRB->IsValueChangedFromSaved() ||
         m_pCharRB->IsValueChangedFromSaved() )
     {
-        SwCompareMode eCmpMode = SwCompareMode::Auto;
+        SvxCompareMode eCmpMode = SVX_CMP_AUTO;
 
-        if ( m_pAutoRB->IsChecked() ) eCmpMode = SwCompareMode::Auto;
-        if ( m_pWordRB->IsChecked() ) eCmpMode = SwCompareMode::ByWord;
-        if ( m_pCharRB->IsChecked() ) eCmpMode = SwCompareMode::ByChar;
+        if ( m_pAutoRB->IsChecked() ) eCmpMode = SVX_CMP_AUTO;
+        if ( m_pWordRB->IsChecked() ) eCmpMode = SVX_CMP_BY_WORD;
+        if ( m_pCharRB->IsChecked() ) eCmpMode = SVX_CMP_BY_CHAR;
 
         pOpt->SetCompareMode( eCmpMode );
         bRet = true;
@@ -2267,12 +2297,6 @@ bool SwCompareOptionsTabPage::FillItemSet( SfxItemSet* )
         bRet = true;
     }
 
-    if (m_pStoreRsidCB->IsValueChangedFromSaved())
-    {
-        pOpt->SetStoreRsid(m_pStoreRsidCB->IsChecked());
-        bRet = true;
-    }
-
     return bRet;
 }
 
@@ -2280,22 +2304,22 @@ void SwCompareOptionsTabPage::Reset( const SfxItemSet* )
 {
     SwModuleOptions *pOpt = SW_MOD()->GetModuleConfig();
 
-    SwCompareMode eCmpMode = pOpt->GetCompareMode();
-    if( eCmpMode == SwCompareMode::Auto )
+    SvxCompareMode eCmpMode = pOpt->GetCompareMode();
+    if( eCmpMode == SVX_CMP_AUTO )
     {
         m_pAutoRB->Check();
         m_pRsidCB->Disable();
         m_pIgnoreCB->Disable();
         m_pLenNF->Disable();
     }
-    else if( eCmpMode == SwCompareMode::ByWord )
+    else if( eCmpMode == SVX_CMP_BY_WORD )
     {
         m_pWordRB->Check();
         m_pRsidCB->Enable();
         m_pIgnoreCB->Enable();
         m_pLenNF->Enable();
     }
-    else if( eCmpMode == SwCompareMode::ByChar)
+    else if( eCmpMode == SVX_CMP_BY_CHAR)
     {
         m_pCharRB->Check();
         m_pRsidCB->Enable();
@@ -2312,26 +2336,26 @@ void SwCompareOptionsTabPage::Reset( const SfxItemSet* )
     m_pIgnoreCB->Check( pOpt->IsIgnorePieces() );
     m_pIgnoreCB->SaveValue();
 
-    m_pLenNF->Enable( m_pIgnoreCB->IsChecked() && eCmpMode != SwCompareMode::Auto );
+    m_pLenNF->Enable( m_pIgnoreCB->IsChecked() && eCmpMode );
 
     m_pLenNF->SetValue( pOpt->GetPieceLen() );
     m_pLenNF->SaveValue();
-
-    m_pStoreRsidCB->Check(pOpt->IsStoreRsid());
-    m_pStoreRsidCB->SaveValue();
 }
 
-IMPL_LINK_NOARG(SwCompareOptionsTabPage, ComparisonHdl, Button*, void)
+IMPL_LINK_NOARG(SwCompareOptionsTabPage, ComparisonHdl)
 {
     bool bChecked = !m_pAutoRB->IsChecked();
     m_pRsidCB->Enable( bChecked );
     m_pIgnoreCB->Enable( bChecked );
     m_pLenNF->Enable( bChecked && m_pIgnoreCB->IsChecked() );
+
+    return 0;
 }
 
-IMPL_LINK_NOARG(SwCompareOptionsTabPage, IgnoreHdl, Button*, void)
+IMPL_LINK_NOARG(SwCompareOptionsTabPage, IgnoreHdl)
 {
     m_pLenNF->Enable( m_pIgnoreCB->IsChecked() );
+    return 0;
 }
 
 #ifdef DBG_UTIL
@@ -2355,30 +2379,10 @@ SwTestTabPage::SwTestTabPage(vcl::Window* pParent, const SfxItemSet& rCoreSet)
 
 }
 
-SwTestTabPage::~SwTestTabPage()
+SfxTabPage* SwTestTabPage::Create( vcl::Window* pParent,
+                                       const SfxItemSet* rAttrSet )
 {
-    disposeOnce();
-}
-
-void SwTestTabPage::dispose()
-{
-    m_pTest1CBox.clear();
-    m_pTest2CBox.clear();
-    m_pTest3CBox.clear();
-    m_pTest4CBox.clear();
-    m_pTest5CBox.clear();
-    m_pTest6CBox.clear();
-    m_pTest7CBox.clear();
-    m_pTest8CBox.clear();
-    m_pTest9CBox.clear();
-    m_pTest10CBox.clear();
-    SfxTabPage::dispose();
-}
-
-VclPtr<SfxTabPage> SwTestTabPage::Create( vcl::Window* pParent,
-                                          const SfxItemSet* rAttrSet )
-{
-    return VclPtr<SwTestTabPage>::Create(pParent, *rAttrSet);
+    return new SwTestTabPage(pParent, *rAttrSet);
 }
 
 bool    SwTestTabPage::FillItemSet( SfxItemSet* rCoreSet )
@@ -2386,7 +2390,7 @@ bool    SwTestTabPage::FillItemSet( SfxItemSet* rCoreSet )
 
     if ( bAttrModified )
     {
-        SwTestItem aTestItem;
+        SwTestItem aTestItem(FN_PARAM_SWTEST);
         aTestItem.bTest1=m_pTest1CBox->IsChecked();
         aTestItem.bTest2=m_pTest2CBox->IsChecked();
         aTestItem.bTest3=m_pTest3CBox->IsChecked();
@@ -2405,10 +2409,10 @@ bool    SwTestTabPage::FillItemSet( SfxItemSet* rCoreSet )
 void SwTestTabPage::Reset( const SfxItemSet* )
 {
     const SfxItemSet& rSet = GetItemSet();
-    const SwTestItem* pTestAttr = nullptr;
+    const SwTestItem* pTestAttr = 0;
 
     if( SfxItemState::SET == rSet.GetItemState( FN_PARAM_SWTEST , false,
-                                    reinterpret_cast<const SfxPoolItem**>(&pTestAttr) ))
+                                    (const SfxPoolItem**)&pTestAttr ))
     {
         m_pTest1CBox->Check(pTestAttr->bTest1);
         m_pTest2CBox->Check(pTestAttr->bTest2);
@@ -2426,7 +2430,7 @@ void SwTestTabPage::Reset( const SfxItemSet* )
 void SwTestTabPage::Init()
 {
     // handler
-    Link<Button*,void> aLk = LINK( this, SwTestTabPage, AutoClickHdl );
+    Link aLk = LINK( this, SwTestTabPage, AutoClickHdl );
     m_pTest1CBox->SetClickHdl( aLk );
     m_pTest2CBox->SetClickHdl( aLk );
     m_pTest3CBox->SetClickHdl( aLk );
@@ -2439,10 +2443,12 @@ void SwTestTabPage::Init()
     m_pTest10CBox->SetClickHdl( aLk );
 }
 
-IMPL_LINK_NOARG(SwTestTabPage, AutoClickHdl, Button*, void)
+IMPL_LINK_NOARG_INLINE_START(SwTestTabPage, AutoClickHdl)
 {
     bAttrModified = true;
+    return 0;
 }
+IMPL_LINK_NOARG_INLINE_END(SwTestTabPage, AutoClickHdl)
 
 #endif
 

@@ -37,9 +37,10 @@
 #include "quicktimecommon.hxx"
 #include "quicktimeframegrabber.hxx"
 
+#include <osl/objcutils.h>
 #include <tools/gen.hxx>
 #include <vcl/bitmap.hxx>
-#include <vcl/bitmapaccess.hxx>
+#include <vcl/bmpacc.hxx>
 #include <vcl/graph.hxx>
 #include <vcl/salbtype.hxx>
 
@@ -57,7 +58,7 @@ namespace quicktime
 
 FrameGrabber::FrameGrabber( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mxMgr( rxMgr ),
-	mpMoviePlayer( nullptr )
+	mpMoviePlayer( NULL )
 {
 }
 
@@ -69,8 +70,8 @@ FrameGrabber::~FrameGrabber()
 
 	if ( mpMoviePlayer )
 	{
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
-		mpMoviePlayer = nullptr;
+		[(AvmediaMoviePlayer *)mpMoviePlayer release];
+		mpMoviePlayer = NULL;
 	}
 
 	[pPool release];
@@ -78,7 +79,7 @@ FrameGrabber::~FrameGrabber()
 
 // ----------------------------------------------------------------------------
 
-Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
+Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime ) throw( RuntimeException )
 {
 	Reference< XGraphic > xRet;
 
@@ -87,9 +88,8 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fMediaTime]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(frameImageAtTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSBitmapImageRep *pImageRep = static_cast< NSBitmapImageRep* >( [pArgs result] );
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(frameImageAtTime:), pArgs, YES );
+		NSBitmapImageRep *pImageRep = (NSBitmapImageRep *)[pArgs result];
 		if ( pImageRep )
 		{
 			// Fix the color shifting reported in the following NeoOffice forum
@@ -152,21 +152,21 @@ Reference< XGraphic > SAL_CALL FrameGrabber::grabFrame( double fMediaTime )
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL FrameGrabber::getImplementationName()
+OUString SAL_CALL FrameGrabber::getImplementationName() throw( RuntimeException )
 {
 	return OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL FrameGrabber::supportsService( const OUString& ServiceName )
+sal_Bool SAL_CALL FrameGrabber::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL FrameGrabber::getSupportedServiceNames()
+Sequence< OUString > SAL_CALL FrameGrabber::getSupportedServiceNames() throw( RuntimeException )
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_FRAMEGRABBER_SERVICENAME );
@@ -184,14 +184,14 @@ bool FrameGrabber::create( void *pMoviePlayer )
 
 	if ( mpMoviePlayer )
 	{
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
-		mpMoviePlayer = nullptr;
+		[(AvmediaMoviePlayer *)mpMoviePlayer release];
+		mpMoviePlayer = NULL;
 	}
 
 	if ( pMoviePlayer )
 	{
 		mpMoviePlayer = pMoviePlayer;
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) retain];
+		[(AvmediaMoviePlayer *)mpMoviePlayer retain];
 
 		bRet = true;
 	}

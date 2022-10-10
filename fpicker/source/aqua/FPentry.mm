@@ -43,6 +43,7 @@ using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::cppu;
+using ::com::sun::star::ui::dialogs::XFilePicker;
 
 
 static Reference< XInterface > SAL_CALL createFileInstance( const Reference< XMultiServiceFactory >&  )
@@ -71,7 +72,7 @@ extern "C"
 SAL_DLLPUBLIC_EXPORT void* SAL_CALL fps_aqua_component_getFactory(
     const sal_Char* pImplName, void* pSrvManager, void* /*pRegistryKey*/ )
 {
-    void* pRet = nullptr;
+    void* pRet = 0;
 
     if( pSrvManager )
     {
@@ -79,20 +80,22 @@ SAL_DLLPUBLIC_EXPORT void* SAL_CALL fps_aqua_component_getFactory(
 
             if (0 == rtl_str_compare(pImplName, FILE_PICKER_IMPL_NAME))
             {
-                Sequence<OUString> aSNS { FILE_PICKER_SERVICE_NAME };
+                Sequence< OUString > aSNS( 1 );
+                aSNS.getArray( )[0] = FILE_PICKER_SERVICE_NAME;
 
                 xFactory = createSingleFactory(
-                    static_cast< XMultiServiceFactory* > ( pSrvManager ),
+                    reinterpret_cast< XMultiServiceFactory* > ( pSrvManager ),
                     OUString::createFromAscii( pImplName ),
                     createFileInstance,
                     aSNS );
             }
             else if (0 == rtl_str_compare(pImplName, FOLDER_PICKER_IMPL_NAME))
             {
-                Sequence<OUString> aSNS { FOLDER_PICKER_SERVICE_NAME };
+                Sequence< OUString > aSNS( 1 );
+                aSNS.getArray( )[0] = FOLDER_PICKER_SERVICE_NAME;
 
                 xFactory = createSingleFactory(
-                    static_cast< XMultiServiceFactory* > ( pSrvManager ),
+                    reinterpret_cast< XMultiServiceFactory* > ( pSrvManager ),
                     OUString::createFromAscii( pImplName ),
                     createFolderInstance,
                     aSNS );

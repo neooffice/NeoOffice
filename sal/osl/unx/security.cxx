@@ -38,13 +38,14 @@
 #include "system.hxx"
 
 #include <osl/security.h>
+#include <osl/diagnose.h>
 #include <rtl/bootstrap.h>
 #include <sal/log.hxx>
 
 #include "osl/thread.h"
 #include "osl/file.h"
 
-#if defined LINUX || defined __sun
+#if defined LINUX || defined SOLARIS
 #include <crypt.h>
 #endif
 
@@ -71,11 +72,12 @@ static bool sysconf_SC_GETPW_R_SIZE_MAX(std::size_t * value) {
            FreeBSD versions support sysconf(_SC_GETPW_R_SIZE_MAX) in a broken
            way and always set EINVAL, so be resilient here: */
         return false;
-    }
-    SAL_WARN_IF( m < 0 || (unsigned long) m >= std::numeric_limits<std::size_t>::max(), "sal.osl",
+    } else {
+        SAL_WARN_IF( m < 0 || (unsigned long) m >= std::numeric_limits<std::size_t>::max(), "sal.osl", 
                 "m < 0 || (unsigned long) m >= std::numeric_limits<std::size_t>::max()");
-    *value = (std::size_t) m;
-    return true;
+        *value = (std::size_t) m;
+        return true;
+    }
 #else
     /* some platforms like Mac OS X 1.3 do not define _SC_GETPW_R_SIZE_MAX: */
     return false;
@@ -86,8 +88,8 @@ static oslSecurityImpl * growSecurityImpl(
     oslSecurityImpl * impl, std::size_t * bufSize)
 {
     std::size_t n = 0;
-    oslSecurityImpl * p = nullptr;
-    if (impl == nullptr) {
+    oslSecurityImpl * p = NULL;
+    if (impl == NULL) {
         if (!sysconf_SC_GETPW_R_SIZE_MAX(&n)) {
             /* choose something sensible (the callers of growSecurityImpl will
                detect it if the allocated buffer is too small: */
@@ -110,7 +112,7 @@ static oslSecurityImpl * growSecurityImpl(
         p = static_cast<oslSecurityImpl *>(realloc(impl, n));
         memset (p, 0, n);
     }
-    if (p == nullptr) {
+    if (p == NULL) {
         free(impl);
     }
     return p;
@@ -123,24 +125,24 @@ static void deleteSecurityImpl(oslSecurityImpl * impl) {
 oslSecurity SAL_CALL osl_getCurrentSecurity()
 {
     std::size_t n = 0;
-    oslSecurityImpl * p = nullptr;
+    oslSecurityImpl * p = NULL;
     for (;;) {
         struct passwd * found;
         p = growSecurityImpl(p, &n);
-        if (p == nullptr) {
-            return nullptr;
+        if (p == NULL) {
+            return NULL;
         }
         switch (getpwuid_r(getuid(), &p->m_pPasswd, p->m_buffer, n, &found)) {
         case ERANGE:
             break;
         case 0:
-            if (found != nullptr) {
+            if (found != NULL) {
                 return p;
             }
-            SAL_FALLTHROUGH;
+            /* fall through */
         default:
             deleteSecurityImpl(p);
-            return nullptr;
+            return NULL;
         }
     }
 }
@@ -152,12 +154,12 @@ oslSecurityError SAL_CALL osl_loginUser(
     )
 {
     oslSecurityError Error;
-    rtl_String* strUserName=nullptr;
-    rtl_String* strPassword=nullptr;
-    sal_Char* pszUserName=nullptr;
-    sal_Char* pszPassword=nullptr;
+    rtl_String* strUserName=0;
+    rtl_String* strPassword=0;
+    sal_Char* pszUserName=0;
+    sal_Char* pszPassword=0;
 
-    if ( ustrUserName != nullptr )
+    if ( ustrUserName != 0 )
     {
         rtl_uString2String( &strUserName,
                             rtl_uString_getStr(ustrUserName),
@@ -167,7 +169,7 @@ oslSecurityError SAL_CALL osl_loginUser(
         pszUserName = rtl_string_getStr(strUserName);
     }
 
-    if ( ustrPassword != nullptr )
+    if ( ustrPassword != 0 )
     {
         rtl_uString2String( &strPassword,
                             rtl_uString_getStr(ustrPassword),
@@ -179,7 +181,7 @@ oslSecurityError SAL_CALL osl_loginUser(
 
     Error=osl_psz_loginUser(pszUserName,pszPassword,pSecurity);
 
-    if ( strUserName != nullptr )
+    if ( strUserName != 0 )
     {
         rtl_string_release(strUserName);
     }
@@ -227,7 +229,7 @@ sal_Bool SAL_CALL osl_getUserIdent(oslSecurity Security, rtl_uString **ustrIdent
     bRet = osl_psz_getUserIdent(Security,pszIdent,sizeof(pszIdent));
 
     rtl_string2UString( ustrIdent, pszIdent, rtl_str_getLength( pszIdent ), osl_getThreadTextEncoding(), OUSTRING_TO_OSTRING_CVTFLAGS );
-    SAL_WARN_IF(*ustrIdent == nullptr, "sal.osl", "*ustrIdent == NULL");
+    SAL_WARN_IF(*ustrIdent == NULL, "sal.osl", "*ustrIdent == NULL");
 
     return bRet;
 }
@@ -237,9 +239,9 @@ bool SAL_CALL osl_psz_getUserIdent(oslSecurity Security, sal_Char *pszIdent, sal
     sal_Char  buffer[32];
     sal_Int32 nChr;
 
-    oslSecurityImpl *pSecImpl = static_cast<oslSecurityImpl *>(Security);
+    oslSecurityImpl *pSecImpl = (oslSecurityImpl *)Security;
 
-    if (pSecImpl == nullptr)
+    if (pSecImpl == NULL)
         return false;
 
     nChr = snprintf(buffer, sizeof(buffer), "%u", pSecImpl->m_pPasswd.pw_uid);
@@ -261,21 +263,16 @@ sal_Bool SAL_CALL osl_getUserName(oslSecurity Security, rtl_uString **ustrName)
     bRet = osl_psz_getUserName(Security,pszName,sizeof(pszName));
 
     rtl_string2UString( ustrName, pszName, rtl_str_getLength( pszName ), osl_getThreadTextEncoding(), OUSTRING_TO_OSTRING_CVTFLAGS );
-    SAL_WARN_IF(*ustrName == nullptr, "sal.osl", "ustrName == NULL");
+    SAL_WARN_IF(*ustrName == NULL, "sal.osl", "ustrName == NULL");
 
     return bRet;
 }
 
-sal_Bool SAL_CALL osl_getShortUserName(oslSecurity Security, rtl_uString **ustrName)
-{
-    return osl_getUserName(Security, ustrName); // No domain name on unix
-}
-
 static bool SAL_CALL osl_psz_getUserName(oslSecurity Security, sal_Char* pszName, sal_uInt32  nMax)
 {
-    oslSecurityImpl *pSecImpl = static_cast<oslSecurityImpl *>(Security);
+    oslSecurityImpl *pSecImpl = (oslSecurityImpl *)Security;
 
-    if (pSecImpl == nullptr || pSecImpl->m_pPasswd.pw_name == nullptr)
+    if (pSecImpl == NULL || pSecImpl->m_pPasswd.pw_name == NULL)
         return false;
 
     strncpy(pszName, pSecImpl->m_pPasswd.pw_name, nMax);
@@ -295,7 +292,7 @@ sal_Bool SAL_CALL osl_getHomeDir(oslSecurity Security, rtl_uString **pustrDirect
     if ( bRet )
     {
         rtl_string2UString( pustrDirectory, pszDirectory, rtl_str_getLength( pszDirectory ), osl_getThreadTextEncoding(), OUSTRING_TO_OSTRING_CVTFLAGS );
-        SAL_WARN_IF(*pustrDirectory == nullptr, "sal.osl", "*pustrDirectory == NULL");
+        SAL_WARN_IF(*pustrDirectory == NULL, "sal.osl", "*pustrDirectory == NULL");
         osl_getFileURLFromSystemPath( *pustrDirectory, pustrDirectory );
     }
 
@@ -304,9 +301,9 @@ sal_Bool SAL_CALL osl_getHomeDir(oslSecurity Security, rtl_uString **pustrDirect
 
 static bool SAL_CALL osl_psz_getHomeDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax)
 {
-    oslSecurityImpl *pSecImpl = static_cast<oslSecurityImpl *>(Security);
+    oslSecurityImpl *pSecImpl = (oslSecurityImpl *)Security;
 
-    if (pSecImpl == nullptr)
+    if (pSecImpl == NULL)
         return false;
 
 #ifdef ANDROID
@@ -356,8 +353,8 @@ static bool SAL_CALL osl_psz_getHomeDir(oslSecurity Security, sal_Char* pszDirec
     /* if current user, check also environment for HOME */
     if (getuid() == pSecImpl->m_pPasswd.pw_uid)
     {
-        sal_Char *pStr = nullptr;
-#ifdef __sun
+        sal_Char *pStr = NULL;
+#ifdef SOLARIS
         char    buffer[8192];
 
         struct passwd pwd;
@@ -382,14 +379,14 @@ static bool SAL_CALL osl_psz_getHomeDir(oslSecurity Security, sal_Char* pszDirec
         if (!macxp_getNSHomeDirectory(name, sizeof(name)))
             pStr = name;
 #endif	// USE_JAVA
-        if (pStr != nullptr && strlen(pStr) > 0 && access(pStr, 0) == 0)
+        if (pStr != NULL && strlen(pStr) > 0 && access(pStr, 0) == 0)
             strncpy(pszDirectory, pStr, nMax);
-        else if (pSecImpl->m_pPasswd.pw_dir != nullptr)
+        else if (pSecImpl->m_pPasswd.pw_dir != NULL)
             strncpy(pszDirectory, pSecImpl->m_pPasswd.pw_dir, nMax);
         else
             return false;
     }
-    else if (pSecImpl->m_pPasswd.pw_dir != nullptr)
+    else if (pSecImpl->m_pPasswd.pw_dir != NULL)
         strncpy(pszDirectory, pSecImpl->m_pPasswd.pw_dir, nMax);
     else
         return false;
@@ -409,7 +406,7 @@ sal_Bool SAL_CALL osl_getConfigDir(oslSecurity Security, rtl_uString **pustrDire
     if ( bRet )
     {
         rtl_string2UString( pustrDirectory, pszDirectory, rtl_str_getLength( pszDirectory ), osl_getThreadTextEncoding(), OUSTRING_TO_OSTRING_CVTFLAGS );
-        SAL_WARN_IF(*pustrDirectory == nullptr, "sal.osl", "*pustrDirectory == NULL");
+        SAL_WARN_IF(*pustrDirectory == NULL, "sal.osl", "*pustrDirectory == NULL");
         osl_getFileURLFromSystemPath( *pustrDirectory, pustrDirectory );
     }
 
@@ -424,7 +421,7 @@ static bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDir
 {
     sal_Char *pStr = getenv("XDG_CONFIG_HOME");
 
-    if (pStr == nullptr || strlen(pStr) == 0 || access(pStr, 0) != 0)
+    if (pStr == NULL || strlen(pStr) == 0 || access(pStr, 0) != 0)
     {
         std::size_t n = 0;
 
@@ -491,7 +488,7 @@ static bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDir
 /*
  * FIXME: rewrite to use more flexible
  * NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES)
- * as soon as we can bump the baseline to Tiger (for NSApplicationSupportDirectory) and have
+ * as soon as we can bumb the baseline to Tiger (for NSApplicationSupportDirectory) and have
  * support for Objective-C in the build environment
  */
 
@@ -515,15 +512,15 @@ static bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDir
 
 sal_Bool SAL_CALL osl_isAdministrator(oslSecurity Security)
 {
-    oslSecurityImpl *pSecImpl = static_cast<oslSecurityImpl *>(Security);
+    oslSecurityImpl *pSecImpl = (oslSecurityImpl *)Security;
 
-    if (pSecImpl == nullptr)
-        return false;
+    if (pSecImpl == NULL)
+        return sal_False;
 
     if (pSecImpl->m_pPasswd.pw_uid != 0)
-        return false;
+        return sal_False;
 
-    return true;
+    return sal_True;
 }
 
 void SAL_CALL osl_freeSecurityHandle(oslSecurity Security)
@@ -534,7 +531,7 @@ void SAL_CALL osl_freeSecurityHandle(oslSecurity Security)
 sal_Bool SAL_CALL osl_loadUserProfile(oslSecurity Security)
 {
     (void) Security; /* unused */
-    return false;
+    return sal_False;
 }
 
 void SAL_CALL osl_unloadUserProfile(oslSecurity Security)

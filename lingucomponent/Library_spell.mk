@@ -35,7 +35,6 @@ endif	# PRODUCT_NAME != ""
 $(eval $(call gb_Library_use_sdk_api,spell))
 
 $(eval $(call gb_Library_use_libraries,spell,\
-	comphelper \
 	cppu \
 	cppuhelper \
 	i18nlangtag \
@@ -43,6 +42,7 @@ $(eval $(call gb_Library_use_libraries,spell,\
 	sal \
 	tl \
 	utl \
+	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_use_static_libraries,spell,\

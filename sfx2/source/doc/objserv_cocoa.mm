@@ -33,15 +33,15 @@
  *
  ************************************************************************/
 
+#include <osl/objcutils.h>
 #include <sfx2/app.hxx>
 #include <sfx2/objsh.hxx>
 #include <sfx2/sfxresid.hxx>
 #include <sfx2/sfxsids.hrc>
 #include <tools/rcid.h>
-#include <tools/resmgr.hxx>
+#include <vcl/layout.hxx>
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 
@@ -56,9 +56,9 @@
 typedef sal_Bool Application_canSave_Type();
 typedef sal_Bool Application_validateReceipt_Type();
 
-static Application_canSave_Type *pApplication_canSave = nullptr;
-static Application_validateReceipt_Type *pApplication_validateReceipt = nullptr;
-static ResMgr *pUpdResMgr = nullptr;
+static Application_canSave_Type *pApplication_canSave = NULL;
+static Application_validateReceipt_Type *pApplication_validateReceipt = NULL;
+static ResMgr *pUpdResMgr = NULL;
 
 static OUString GetUpdResString( int nId )
 {
@@ -144,7 +144,7 @@ static NSAlert *pSaveDisabledAlert = nil;
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 #ifdef PRODUCT_MAC_APP_STORE_URL
-	NSURL *pURL = [NSURL URLWithString:static_cast< NSString* >( CFSTR( PRODUCT_MAC_APP_STORE_URL ) )];
+	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_MAC_APP_STORE_URL )];
 	if ( pURL && ![@"macappstores" isEqualToString:[pURL scheme]] && ![@"http" isEqualToString:[pURL scheme]] && ![@"https" isEqualToString:[pURL scheme]] )
 		pURL = nil;
 #else	// PRODUCT_MAC_APP_STORE_URL
@@ -189,7 +189,12 @@ static NSAlert *pSaveDisabledAlert = nil;
 					// the default browser is not Safari and the browser is not
 					// running
 					if ( ![pWorkspace openURL:pURL] )
-						[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withAppBundleIdentifier:@"com.apple.Safari" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+					{
+						NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.Safari"];
+						NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+						if ( pAppURL && pConfiguration )
+							[pWorkspace openURLs:[NSArray arrayWithObject:pURL] withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+					}
 				}
 			}
 			else
@@ -220,11 +225,11 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 	if ( pObjShell && ( nID == SID_DOCTEMPLATE || nID == SID_SAVEDOC || nID == SID_SAVEASDOC ) )
 	{
 		if ( !pApplication_canSave )
-			pApplication_canSave = reinterpret_cast< Application_canSave_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canSave" ) );
+			pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
 		if ( !pApplication_canSave || !pApplication_canSave() )
 		{
 			if ( !pApplication_validateReceipt )
-				pApplication_validateReceipt = reinterpret_cast< Application_validateReceipt_Type* >( dlsym( RTLD_DEFAULT, "Application_validateReceipt" ) );
+				pApplication_validateReceipt = (Application_validateReceipt_Type *)dlsym( RTLD_DEFAULT, "Application_validateReceipt" );
 			if ( !pApplication_validateReceipt || !pApplication_validateReceipt() )
 			{
 				bRet = sal_False;
@@ -233,23 +238,22 @@ sal_Bool SfxObjectShell_canSave( SfxObjectShell *pObjShell, sal_uInt16 nID )
 
 				OUString aDesc = SfxResId( STR_SAVEDISABLEDCANNOTSAVE );
 				aDesc = aDesc.replaceAll( "~", "" );
-				NSString *pMessageText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				NSString *pMessageText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				aDesc = SfxResId( STR_SAVEDISABLEDDOWNLOADPRODUCTTOSAVE );
 				aDesc = aDesc.replaceAll( "~", "" );
-				NSString *pInformativeText = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				NSString *pInformativeText = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				aDesc = GetUpdResString( RID_UPDATE_BTN_DOWNLOAD );
 				aDesc = aDesc.replaceAll( "~", "" );
-				NSString *pDefaultButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				NSString *pDefaultButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				aDesc = GetUpdResString( RID_UPDATE_BTN_CANCEL );
 				aDesc = aDesc.replaceAll( "~", "" );
-				NSString *pAlternateButton = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aDesc.getStr() ) length:aDesc.getLength()];
+				NSString *pAlternateButton = [NSString stringWithCharacters:aDesc.getStr() length:aDesc.getLength()];
 
 				ShowSaveDisabledDialog *pShowSaveDisabledDialog = [ShowSaveDisabledDialog createWithMessageText:pMessageText defaultButton:pDefaultButton alternateButton:pAlternateButton informativeText:pInformativeText];
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pShowSaveDisabledDialog performSelectorOnMainThread:@selector(showSaveDisabledDialog:) withObject:pShowSaveDisabledDialog waitUntilDone:NO modes:pModes];
+				osl_performSelectorOnMainThread( pShowSaveDisabledDialog, @selector(showSaveDisabledDialog:), pShowSaveDisabledDialog, NO );
 
 				[pPool release];
 			}

@@ -22,43 +22,43 @@
 
 #include "layfrm.hxx"
 
-class SwContentFrame;
-class SwTextFootnote;
+class SwCntntFrm;
+class SwTxtFtn;
 class SwBorderAttrs;
-class SwFootnoteFrame;
+class SwFtnFrm;
 
-void sw_RemoveFootnotes( SwFootnoteBossFrame* pBoss, bool bPageOnly, bool bEndNotes );
+void sw_RemoveFtns( SwFtnBossFrm* pBoss, bool bPageOnly, bool bEndNotes );
 
 // There exists a special section on a page for footnotes. It's called
-// SwFootnoteContFrame. Each footnote is separated by a SwFootnoteFrame which contains
-// the paragraphs of a footnote. SwFootnoteFrame can be splitted and will then
+// SwFtnContFrm. Each footnote is separated by a SwFtnFrm which contains
+// the paragraphs of a footnote. SwFtnFrm can be splitted and will then
 // continue on another page.
-class SwFootnoteContFrame: public SwLayoutFrame
+class SwFtnContFrm: public SwLayoutFrm
 {
 public:
-    SwFootnoteContFrame( SwFrameFormat*, SwFrame* );
+    SwFtnContFrm( SwFrmFmt*, SwFrm* );
 
-    const SwFootnoteFrame* FindFootNote() const;
+    const SwFtnFrm* FindFootNote() const;
 
-    virtual SwTwips ShrinkFrame( SwTwips, bool bTst = false, bool bInfo = false ) override;
-    virtual SwTwips GrowFrame  ( SwTwips, bool bTst = false, bool bInfo = false ) override;
-    virtual void    Format( vcl::RenderContext* pRenderContext, const SwBorderAttrs *pAttrs = nullptr ) override;
-    virtual void    PaintBorder( const SwRect &, const SwPageFrame *pPage,
-                                 const SwBorderAttrs & ) const override;
-    virtual void PaintSubsidiaryLines( const SwPageFrame*, const SwRect& ) const override;
-            void    PaintLine( const SwRect &, const SwPageFrame * ) const;
+    virtual SwTwips ShrinkFrm( SwTwips, bool bTst = false, bool bInfo = false ) SAL_OVERRIDE;
+    virtual SwTwips GrowFrm  ( SwTwips, bool bTst = false, bool bInfo = false ) SAL_OVERRIDE;
+    virtual void    Format( const SwBorderAttrs *pAttrs = 0 ) SAL_OVERRIDE;
+    virtual void    PaintBorder( const SwRect &, const SwPageFrm *pPage,
+                                 const SwBorderAttrs & ) const SAL_OVERRIDE;
+    virtual void PaintSubsidiaryLines( const SwPageFrm*, const SwRect& ) const SAL_OVERRIDE;
+            void    PaintLine( const SwRect &, const SwPageFrm * ) const;
 };
 
-class SwFootnoteFrame: public SwLayoutFrame
+class SwFtnFrm: public SwLayoutFrm
 {
-    // Pointer to FootnoteFrame in which the footnote will be continued:
+    // Pointer to FtnFrm in which the footnote will be continued:
     //  - 0     no following existent
     //  - this  for the last one
-    //  - otherwise the following FootnoteFrame
-    SwFootnoteFrame     *pFollow;
-    SwFootnoteFrame     *pMaster;      // FootnoteFrame from which I am the following
-    SwContentFrame   *pRef;         // in this ContentFrame is the footnote reference
-    SwTextFootnote     *pAttr;        // footnote attribute (for recognition)
+    //  - otherwise the following FtnFrm
+    SwFtnFrm     *pFollow;
+    SwFtnFrm     *pMaster;      // FtnFrm from which I am the following
+    SwCntntFrm   *pRef;         // in this CntntFrm is the footnote reference
+    SwTxtFtn     *pAttr;        // footnote attribute (for recognition)
 
     // if true paragraphs in this footnote are NOT permitted to flow backwards
     bool bBackMoveLocked : 1;
@@ -66,66 +66,66 @@ class SwFootnoteFrame: public SwLayoutFrame
     bool mbUnlockPosOfLowerObjs : 1;
 #ifdef DBG_UTIL
 protected:
-    virtual SwTwips ShrinkFrame( SwTwips, bool bTst = false, bool bInfo = false ) override;
-    virtual SwTwips GrowFrame  ( SwTwips, bool bTst = false, bool bInfo = false ) override;
+    virtual SwTwips ShrinkFrm( SwTwips, bool bTst = false, bool bInfo = false ) SAL_OVERRIDE;
+    virtual SwTwips GrowFrm  ( SwTwips, bool bTst = false, bool bInfo = false ) SAL_OVERRIDE;
 #endif
 
 public:
-    SwFootnoteFrame( SwFrameFormat*, SwFrame*, SwContentFrame*, SwTextFootnote* );
+    SwFtnFrm( SwFrmFmt*, SwFrm*, SwCntntFrm*, SwTxtFtn* );
 
 #ifndef NO_LIBO_BUG_119126_FIX
     virtual bool IsDeleteForbidden() const override;
 #endif	// !NO_LIBO_BUG_119126_FIX
-    virtual void Cut() override;
-    virtual void Paste( SwFrame* pParent, SwFrame* pSibling = nullptr ) override;
+    virtual void Cut() SAL_OVERRIDE;
+    virtual void Paste( SwFrm* pParent, SwFrm* pSibling = 0 ) SAL_OVERRIDE;
 
-    virtual void PaintSubsidiaryLines( const SwPageFrame*, const SwRect& ) const override;
+    virtual void PaintSubsidiaryLines( const SwPageFrm*, const SwRect& ) const SAL_OVERRIDE;
 
-    bool operator<( const SwTextFootnote* pTextFootnote ) const;
+    bool operator<( const SwTxtFtn* pTxtFtn ) const;
 
 #ifdef DBG_UTIL
-    const SwContentFrame *GetRef() const;
-         SwContentFrame  *GetRef();
+    const SwCntntFrm *GetRef() const;
+         SwCntntFrm  *GetRef();
 #else
-    const SwContentFrame *GetRef() const    { return pRef; }
-         SwContentFrame  *GetRef()          { return pRef; }
+    const SwCntntFrm *GetRef() const    { return pRef; }
+         SwCntntFrm  *GetRef()          { return pRef; }
 #endif
-    const SwContentFrame *GetRefFromAttr()  const;
-          SwContentFrame *GetRefFromAttr();
+    const SwCntntFrm *GetRefFromAttr()  const;
+          SwCntntFrm *GetRefFromAttr();
 
-    const SwFootnoteFrame *GetFollow() const   { return pFollow; }
-          SwFootnoteFrame *GetFollow()         { return pFollow; }
+    const SwFtnFrm *GetFollow() const   { return pFollow; }
+          SwFtnFrm *GetFollow()         { return pFollow; }
 
-    const SwFootnoteFrame *GetMaster() const   { return pMaster; }
-          SwFootnoteFrame *GetMaster()         { return pMaster; }
+    const SwFtnFrm *GetMaster() const   { return pMaster; }
+          SwFtnFrm *GetMaster()         { return pMaster; }
 
-    const SwTextFootnote   *GetAttr() const   { return pAttr; }
-          SwTextFootnote   *GetAttr()         { return pAttr; }
+    const SwTxtFtn   *GetAttr() const   { return pAttr; }
+          SwTxtFtn   *GetAttr()         { return pAttr; }
 
-    void SetFollow( SwFootnoteFrame *pNew ) { pFollow = pNew; }
-    void SetMaster( SwFootnoteFrame *pNew ) { pMaster = pNew; }
-    void SetRef   ( SwContentFrame *pNew ) { pRef = pNew; }
+    void SetFollow( SwFtnFrm *pNew ) { pFollow = pNew; }
+    void SetMaster( SwFtnFrm *pNew ) { pMaster = pNew; }
+    void SetRef   ( SwCntntFrm *pNew ) { pRef = pNew; }
 
-    void InvalidateNxtFootnoteCnts( SwPageFrame* pPage );
+    void InvalidateNxtFtnCnts( SwPageFrm* pPage );
 
     void LockBackMove()     { bBackMoveLocked = true; }
     void UnlockBackMove()   { bBackMoveLocked = false;}
     bool IsBackMoveLocked() { return bBackMoveLocked; }
 
-    // prevents that the last content deletes the SwFootnoteFrame as well (Cut())
-    void ColLock()       { mbColLocked = true; }
-    void ColUnlock()     { mbColLocked = false; }
+    // prevents that the last content deletes the SwFtnFrm as well (Cut())
+    inline void ColLock()       { mbColLocked = true; }
+    inline void ColUnlock()     { mbColLocked = false; }
 
     // #i49383#
-    void UnlockPosOfLowerObjs()
+    inline void UnlockPosOfLowerObjs()
     {
         mbUnlockPosOfLowerObjs = true;
     }
-    void KeepLockPosOfLowerObjs()
+    inline void KeepLockPosOfLowerObjs()
     {
         mbUnlockPosOfLowerObjs = false;
     }
-    bool IsUnlockPosOfLowerObjs()
+    inline bool IsUnlockPosOfLowerObjs()
     {
         return mbUnlockPosOfLowerObjs;
     }
@@ -134,10 +134,10 @@ public:
 
         OD 2005-12-02 #i27138#
 
-        @return SwContentFrame*
+        @return SwCntntFrm*
         pointer to found last content frame. NULL, if none is found.
     */
-    SwContentFrame* FindLastContent();
+    SwCntntFrm* FindLastCntnt();
 };
 
 #endif

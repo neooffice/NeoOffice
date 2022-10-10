@@ -24,10 +24,6 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sal/config.h>
-
-#include <officecfg/Office/Common.hxx>
-#include <officecfg/Office/Security.hxx>
 #include <tools/config.hxx>
 #include <vcl/msgbox.hxx>
 #include <svl/intitem.hxx>
@@ -46,10 +42,10 @@
 #include <unotools/bootstrap.hxx>
 #include <vcl/help.hxx>
 #include <vcl/layout.hxx>
-#include <vcl/builderfactory.hxx>
 #include <sfx2/viewfrm.hxx>
 #include <unotools/pathoptions.hxx>
 #include <unotools/securityoptions.hxx>
+#include <unotools/localfilehelper.hxx>
 #include <unotools/extendedsecurityoptions.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
 
@@ -96,10 +92,6 @@
 #include "securityoptions.hxx"
 #include "webconninfo.hxx"
 #include "certpath.hxx"
-#include "tsaurls.hxx"
-
-#include <svtools/restartdialog.hxx>
-#include <comphelper/solarmutex.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -107,7 +99,14 @@ using namespace ::sfx2;
 
 // static ----------------------------------------------------------------
 
-VCL_BUILDER_FACTORY_ARGS(SvxNoSpaceEdit, WB_LEFT|WB_VCENTER|WB_BORDER|WB_3DLOOK)
+#include <sal/config.h>
+
+
+
+extern "C" SAL_DLLPUBLIC_EXPORT vcl::Window* SAL_CALL makeSvxNoSpaceEdit(vcl::Window *pParent, VclBuilder::stringmap &)
+{
+    return new SvxNoSpaceEdit(pParent, WB_LEFT|WB_VCENTER|WB_BORDER|WB_3DLOOK);
+}
 
 void SvxNoSpaceEdit::KeyInput( const KeyEvent& rKEvent )
 {
@@ -121,12 +120,13 @@ void SvxNoSpaceEdit::KeyInput( const KeyEvent& rKEvent )
                  ( KEYGROUP_MISC == nGroup && ( nKey < KEY_ADD || nKey > KEY_EQUAL ) ) );
         if ( !bValid && ( rKeyCode.IsMod1() && (
              KEY_A == nKey || KEY_C == nKey || KEY_V == nKey || KEY_X == nKey || KEY_Z == nKey ) ) )
-            // Erase, Copy, Paste, Select All and Undo should work
+            // Erase, Copy, Paste, Select All und Undo soll funktionieren
             bValid = true;
     }
     if (bValid)
         Edit::KeyInput(rKEvent);
 }
+
 
 
 void SvxNoSpaceEdit::Modify()
@@ -139,11 +139,11 @@ void SvxNoSpaceEdit::Modify()
 
         if ( !comphelper::string::isdigitAsciiString(aValue) || (long)aValue.toInt32() > USHRT_MAX )
             // the maximum value of a port number is USHRT_MAX
-            ScopedVclPtrInstance<MessageDialog>(this, CuiResId( RID_SVXSTR_OPT_PROXYPORTS))->Execute();
+            MessageDialog( this, CUI_RES( RID_SVXSTR_OPT_PROXYPORTS ) ).Execute();
     }
 }
 
-bool SvxNoSpaceEdit::set_property(const OString &rKey, const OUString &rValue)
+bool SvxNoSpaceEdit::set_property(const OString &rKey, const OString &rValue)
 {
     if (rKey == "only-numeric")
         bOnlyNumeric = toBool(rValue);
@@ -153,15 +153,6 @@ bool SvxNoSpaceEdit::set_property(const OString &rKey, const OUString &rValue)
 }
 
 
-static const char g_aProxyModePN[] = "ooInetProxyType";
-static const char g_aHttpProxyPN[] = "ooInetHTTPProxyName";
-static const char g_aHttpPortPN[] = "ooInetHTTPProxyPort";
-static const char g_aHttpsProxyPN[] = "ooInetHTTPSProxyName";
-static const char g_aHttpsPortPN[] = "ooInetHTTPSProxyPort";
-static const char g_aFtpProxyPN[] = "ooInetFTPProxyName";
-static const char g_aFtpPortPN[] = "ooInetFTPProxyPort";
-static const char g_aNoProxyDescPN[] = "ooInetNoProxy";
-
 /********************************************************************/
 /*                                                                  */
 /*  SvxProxyTabPage                                                 */
@@ -170,6 +161,14 @@ static const char g_aNoProxyDescPN[] = "ooInetNoProxy";
 
 SvxProxyTabPage::SvxProxyTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     : SfxTabPage(pParent, "OptProxyPage","cui/ui/optproxypage.ui", &rSet)
+    , aProxyModePN("ooInetProxyType")
+    , aHttpProxyPN("ooInetHTTPProxyName")
+    , aHttpPortPN("ooInetHTTPProxyPort")
+    , aHttpsProxyPN("ooInetHTTPSProxyName")
+    , aHttpsPortPN("ooInetHTTPSProxyPort")
+    , aFtpProxyPN("ooInetFTPProxyName")
+    , aFtpPortPN("ooInetFTPProxyPort")
+    , aNoProxyDescPN("ooInetNoProxy")
 {
     get(m_pProxyModeLB, "proxymode");
 
@@ -192,14 +191,14 @@ SvxProxyTabPage::SvxProxyTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     get(m_pNoProxyForED, "noproxy");
     get(m_pNoProxyDescFT, "noproxydesc");
 
-    Link<Control&,void> aLink = LINK( this, SvxProxyTabPage, LoseFocusHdl_Impl );
+    Link aLink = LINK( this, SvxProxyTabPage, LoseFocusHdl_Impl );
     m_pHttpPortED->SetLoseFocusHdl( aLink );
     m_pHttpsPortED->SetLoseFocusHdl( aLink );
     m_pFtpPortED->SetLoseFocusHdl( aLink );
 
     m_pProxyModeLB->SetSelectHdl(LINK( this, SvxProxyTabPage, ProxyHdl_Impl ));
 
-    Reference< css::lang::XMultiServiceFactory >
+    Reference< com::sun::star::lang::XMultiServiceFactory >
         xConfigurationProvider(
             configuration::theDefaultProvider::get(
                 comphelper::getProcessComponentContext() ) );
@@ -208,45 +207,23 @@ SvxProxyTabPage::SvxProxyTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
 
     beans::NamedValue aProperty;
     aProperty.Name  = "nodepath";
-    aProperty.Value <<= aConfigRoot;
+    aProperty.Value = makeAny( aConfigRoot );
 
     Sequence< Any > aArgumentList( 1 );
-    aArgumentList[0] <<= aProperty;
+    aArgumentList[0] = makeAny( aProperty );
 
     m_xConfigurationUpdateAccess = xConfigurationProvider->createInstanceWithArguments(
-        "com.sun.star.configuration.ConfigurationUpdateAccess",
+        OUString( "com.sun.star.configuration.ConfigurationUpdateAccess" ),
         aArgumentList );
 }
 
 SvxProxyTabPage::~SvxProxyTabPage()
 {
-    disposeOnce();
 }
 
-void SvxProxyTabPage::dispose()
+SfxTabPage* SvxProxyTabPage::Create(vcl::Window* pParent, const SfxItemSet* rAttrSet )
 {
-    m_pProxyModeLB.clear();
-    m_pHttpProxyFT.clear();
-    m_pHttpProxyED.clear();
-    m_pHttpPortFT.clear();
-    m_pHttpPortED.clear();
-    m_pHttpsProxyFT.clear();
-    m_pHttpsProxyED.clear();
-    m_pHttpsPortFT.clear();
-    m_pHttpsPortED.clear();
-    m_pFtpProxyFT.clear();
-    m_pFtpProxyED.clear();
-    m_pFtpPortFT.clear();
-    m_pFtpPortED.clear();
-    m_pNoProxyForFT.clear();
-    m_pNoProxyForED.clear();
-    m_pNoProxyDescFT.clear();
-    SfxTabPage::dispose();
-}
-
-VclPtr<SfxTabPage> SvxProxyTabPage::Create(vcl::Window* pParent, const SfxItemSet* rAttrSet )
-{
-    return VclPtr<SvxProxyTabPage>::Create(pParent, *rAttrSet);
+    return new SvxProxyTabPage(pParent, *rAttrSet);
 }
 
 void SvxProxyTabPage::ReadConfigData_Impl()
@@ -257,55 +234,59 @@ void SvxProxyTabPage::ReadConfigData_Impl()
         sal_Int32 nIntValue = 0;
         OUString  aStringValue;
 
-        if( xNameAccess->getByName(g_aProxyModePN) >>= nIntValue )
+        if( xNameAccess->getByName(aProxyModePN) >>= nIntValue )
         {
             m_pProxyModeLB->SelectEntryPos( nIntValue );
         }
 
-        if( xNameAccess->getByName(g_aHttpProxyPN) >>= aStringValue )
+        if( xNameAccess->getByName(aHttpProxyPN) >>= aStringValue )
         {
             m_pHttpProxyED->SetText( aStringValue );
         }
 
-        if( xNameAccess->getByName(g_aHttpPortPN) >>= nIntValue )
+        if( xNameAccess->getByName(aHttpPortPN) >>= nIntValue )
         {
             m_pHttpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xNameAccess->getByName(g_aHttpsProxyPN) >>= aStringValue )
+        if( xNameAccess->getByName(aHttpsProxyPN) >>= aStringValue )
         {
             m_pHttpsProxyED->SetText( aStringValue );
         }
 
-        if( xNameAccess->getByName(g_aHttpsPortPN) >>= nIntValue )
+        if( xNameAccess->getByName(aHttpsPortPN) >>= nIntValue )
         {
             m_pHttpsPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xNameAccess->getByName(g_aFtpProxyPN) >>= aStringValue )
+        if( xNameAccess->getByName(aFtpProxyPN) >>= aStringValue )
         {
             m_pFtpProxyED->SetText( aStringValue );
         }
 
-        if( xNameAccess->getByName(g_aFtpPortPN) >>= nIntValue )
+        if( xNameAccess->getByName(aFtpPortPN) >>= nIntValue )
         {
             m_pFtpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xNameAccess->getByName(g_aNoProxyDescPN) >>= aStringValue )
+        if( xNameAccess->getByName(aNoProxyDescPN) >>= aStringValue )
         {
             m_pNoProxyForED->SetText( aStringValue );
         }
     }
+
     catch (const container::NoSuchElementException&) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::ReadConfigData_Impl: NoSuchElementException caught" );
+        OSL_TRACE( "SvxProxyTabPage::ReadConfigData_Impl: NoSuchElementException caught" );
     }
-    catch (const css::lang::WrappedTargetException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::ReadConfigData_Impl: WrappedTargetException caught" );
+
+    catch (const com::sun::star::lang::WrappedTargetException &) {
+        OSL_TRACE( "SvxProxyTabPage::ReadConfigData_Impl: WrappedTargetException caught" );
     }
+
     catch (const RuntimeException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::ReadConfigData_Impl: RuntimeException caught" );
+        OSL_TRACE( "SvxProxyTabPage::ReadConfigData_Impl: RuntimeException caught" );
     }
+
 }
 
 void SvxProxyTabPage::ReadConfigDefaults_Impl()
@@ -317,51 +298,53 @@ void SvxProxyTabPage::ReadConfigDefaults_Impl()
         sal_Int32 nIntValue = 0;
         OUString  aStringValue;
 
-        if( xPropertyState->getPropertyDefault(g_aHttpProxyPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(aHttpProxyPN) >>= aStringValue )
         {
             m_pHttpProxyED->SetText( aStringValue );
         }
 
-        if( xPropertyState->getPropertyDefault(g_aHttpPortPN) >>= nIntValue )
+        if( xPropertyState->getPropertyDefault(aHttpPortPN) >>= nIntValue )
         {
             m_pHttpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xPropertyState->getPropertyDefault(g_aHttpsProxyPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(aHttpsProxyPN) >>= aStringValue )
         {
             m_pHttpsProxyED->SetText( aStringValue );
         }
 
-        if( xPropertyState->getPropertyDefault(g_aHttpsPortPN) >>= nIntValue )
+        if( xPropertyState->getPropertyDefault(aHttpsPortPN) >>= nIntValue )
         {
             m_pHttpsPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xPropertyState->getPropertyDefault(g_aFtpProxyPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(aFtpProxyPN) >>= aStringValue )
         {
             m_pFtpProxyED->SetText( aStringValue );
         }
 
-        if( xPropertyState->getPropertyDefault(g_aFtpPortPN) >>= nIntValue )
+        if( xPropertyState->getPropertyDefault(aFtpPortPN) >>= nIntValue )
         {
             m_pFtpPortED->SetText( OUString::number( nIntValue ));
         }
 
-        if( xPropertyState->getPropertyDefault(g_aNoProxyDescPN) >>= aStringValue )
+        if( xPropertyState->getPropertyDefault(aNoProxyDescPN) >>= aStringValue )
         {
             m_pNoProxyForED->SetText( aStringValue );
         }
     }
     catch (const beans::UnknownPropertyException &)
     {
-        SAL_WARN("cui.options", "SvxProxyTabPage::RestoreConfigDefaults_Impl: UnknownPropertyException caught" );
+        OSL_TRACE( "SvxProxyTabPage::RestoreConfigDefaults_Impl: UnknownPropertyException caught" );
     }
-    catch (const css::lang::WrappedTargetException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::RestoreConfigDefaults_Impl: WrappedTargetException caught" );
+
+    catch (const com::sun::star::lang::WrappedTargetException &) {
+        OSL_TRACE( "SvxProxyTabPage::RestoreConfigDefaults_Impl: WrappedTargetException caught" );
     }
+
     catch (const RuntimeException &)
     {
-        SAL_WARN("cui.options", "SvxProxyTabPage::RestoreConfigDefaults_Impl: RuntimeException caught" );
+        OSL_TRACE( "SvxProxyTabPage::RestoreConfigDefaults_Impl: RuntimeException caught" );
     }
 }
 
@@ -371,28 +354,31 @@ void SvxProxyTabPage::RestoreConfigDefaults_Impl()
     {
         Reference< beans::XPropertyState > xPropertyState(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
 
-        xPropertyState->setPropertyToDefault(g_aProxyModePN);
-        xPropertyState->setPropertyToDefault(g_aHttpProxyPN);
-        xPropertyState->setPropertyToDefault(g_aHttpPortPN);
-        xPropertyState->setPropertyToDefault(g_aHttpsProxyPN);
-        xPropertyState->setPropertyToDefault(g_aHttpsPortPN);
-        xPropertyState->setPropertyToDefault(g_aFtpProxyPN);
-        xPropertyState->setPropertyToDefault(g_aFtpPortPN);
-        xPropertyState->setPropertyToDefault(g_aNoProxyDescPN);
+        xPropertyState->setPropertyToDefault(aProxyModePN);
+        xPropertyState->setPropertyToDefault(aHttpProxyPN);
+        xPropertyState->setPropertyToDefault(aHttpPortPN);
+        xPropertyState->setPropertyToDefault(aHttpsProxyPN);
+        xPropertyState->setPropertyToDefault(aHttpsPortPN);
+        xPropertyState->setPropertyToDefault(aFtpProxyPN);
+        xPropertyState->setPropertyToDefault(aFtpPortPN);
+        xPropertyState->setPropertyToDefault(aNoProxyDescPN);
 
         Reference< util::XChangesBatch > xChangesBatch(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
         xChangesBatch->commitChanges();
     }
+
     catch (const beans::UnknownPropertyException &)
     {
-        SAL_WARN("cui.options", "SvxProxyTabPage::RestoreConfigDefaults_Impl: UnknownPropertyException caught" );
+        OSL_TRACE( "SvxProxyTabPage::RestoreConfigDefaults_Impl: UnknownPropertyException caught" );
     }
-    catch (const css::lang::WrappedTargetException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::RestoreConfigDefaults_Impl: WrappedTargetException caught" );
+
+    catch (const com::sun::star::lang::WrappedTargetException &) {
+        OSL_TRACE( "SvxProxyTabPage::RestoreConfigDefaults_Impl: WrappedTargetException caught" );
     }
+
     catch (const RuntimeException &)
     {
-        SAL_WARN("cui.options", "SvxProxyTabPage::RestoreConfigDefaults_Impl: RuntimeException caught" );
+        OSL_TRACE( "SvxProxyTabPage::RestoreConfigDefaults_Impl: RuntimeException caught" );
     }
 }
 
@@ -428,69 +414,75 @@ bool SvxProxyTabPage::FillItemSet(SfxItemSet* )
                 return true;
             }
 
-            xPropertySet->setPropertyValue(g_aProxyModePN, Any(nSelPos));
+            xPropertySet->setPropertyValue(aProxyModePN,
+                makeAny((sal_Int32) nSelPos));
             bModified = true;
         }
 
         if(m_pHttpProxyED->IsValueChangedFromSaved())
         {
-            xPropertySet->setPropertyValue( g_aHttpProxyPN, Any(m_pHttpProxyED->GetText()));
+            xPropertySet->setPropertyValue( aHttpProxyPN, makeAny(m_pHttpProxyED->GetText()));
             bModified = true;
         }
 
         if ( m_pHttpPortED->IsValueChangedFromSaved())
         {
-            xPropertySet->setPropertyValue( g_aHttpPortPN, Any(m_pHttpPortED->GetText().toInt32()));
+            xPropertySet->setPropertyValue( aHttpPortPN, makeAny(m_pHttpPortED->GetText().toInt32()));
             bModified = true;
         }
 
         if( m_pHttpsProxyED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( g_aHttpsProxyPN, Any(m_pHttpsProxyED->GetText()) );
+            xPropertySet->setPropertyValue( aHttpsProxyPN, makeAny(m_pHttpsProxyED->GetText()) );
             bModified = true;
         }
 
         if ( m_pHttpsPortED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( g_aHttpsPortPN, Any(m_pHttpsPortED->GetText().toInt32()) );
+            xPropertySet->setPropertyValue( aHttpsPortPN, makeAny(m_pHttpsPortED->GetText().toInt32()) );
             bModified = true;
         }
 
         if( m_pFtpProxyED->IsValueChangedFromSaved())
         {
-            xPropertySet->setPropertyValue( g_aFtpProxyPN, Any(m_pFtpProxyED->GetText()) );
+            xPropertySet->setPropertyValue( aFtpProxyPN, makeAny(m_pFtpProxyED->GetText()) );
             bModified = true;
         }
 
         if ( m_pFtpPortED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( g_aFtpPortPN, Any(m_pFtpPortED->GetText().toInt32()));
+            xPropertySet->setPropertyValue( aFtpPortPN, makeAny(m_pFtpPortED->GetText().toInt32()));
             bModified = true;
         }
 
         if ( m_pNoProxyForED->IsValueChangedFromSaved() )
         {
-            xPropertySet->setPropertyValue( g_aNoProxyDescPN, Any( m_pNoProxyForED->GetText()));
+            xPropertySet->setPropertyValue( aNoProxyDescPN, makeAny( m_pNoProxyForED->GetText()));
             bModified = true;
         }
 
         Reference< util::XChangesBatch > xChangesBatch(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
         xChangesBatch->commitChanges();
     }
-    catch (const css::lang::IllegalArgumentException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::FillItemSet: IllegalArgumentException caught" );
+
+    catch (const com::sun::star::lang::IllegalArgumentException &) {
+        OSL_TRACE( "SvxProxyTabPage::FillItemSet: IllegalArgumentException caught" );
     }
+
     catch (const beans::UnknownPropertyException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::FillItemSet: UnknownPropertyException caught" );
+        OSL_TRACE( "SvxProxyTabPage::FillItemSet: UnknownPropertyException caught" );
     }
+
     catch (const beans::PropertyVetoException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::FillItemSet: PropertyVetoException caught" );
+        OSL_TRACE( "SvxProxyTabPage::FillItemSet: PropertyVetoException caught" );
     }
-    catch (const css::lang::WrappedTargetException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::FillItemSet: WrappedTargetException caught" );
+
+    catch (const com::sun::star::lang::WrappedTargetException &) {
+        OSL_TRACE( "SvxProxyTabPage::FillItemSet: WrappedTargetException caught" );
     }
+
     catch (const RuntimeException &) {
-        SAL_WARN("cui.options", "SvxProxyTabPage::FillItemSet: RuntimeException caught" );
+        OSL_TRACE( "SvxProxyTabPage::FillItemSet: RuntimeException caught" );
     }
 
     return bModified;
@@ -519,9 +511,10 @@ void SvxProxyTabPage::EnableControls_Impl(bool bEnable)
 }
 
 
-IMPL_LINK( SvxProxyTabPage, ProxyHdl_Impl, ListBox&, rBox, void )
+
+IMPL_LINK( SvxProxyTabPage, ProxyHdl_Impl, ListBox *, pBox )
 {
-    sal_Int32 nPos = rBox.GetSelectEntryPos();
+    sal_Int32 nPos = pBox->GetSelectEntryPos();
 
     // Restore original system values
     if( nPos == 1 )
@@ -530,19 +523,57 @@ IMPL_LINK( SvxProxyTabPage, ProxyHdl_Impl, ListBox&, rBox, void )
     }
 
     EnableControls_Impl(nPos == 2);
+    return 0;
 }
 
 
-IMPL_STATIC_LINK( SvxProxyTabPage, LoseFocusHdl_Impl, Control&, rControl, void )
+
+IMPL_LINK( SvxProxyTabPage, LoseFocusHdl_Impl, Edit *, pEdit )
 {
-    Edit* pEdit = static_cast<Edit*>(&rControl);
     OUString aValue = pEdit->GetText();
 
     if ( !comphelper::string::isdigitAsciiString(aValue) || (long)aValue.toInt32() > USHRT_MAX )
         pEdit->SetText( OUString('0') );
+    return 0;
 }
 
 
+
+//#98647#----------------------------------------------
+void SvxScriptExecListBox::RequestHelp( const HelpEvent& rHEvt )
+{   // try to show tips just like as on toolbars
+    sal_Int32 nPos=LISTBOX_ENTRY_NOTFOUND;
+    sal_Int32 nTop = GetTopEntry();
+    sal_uInt16 nCount = GetDisplayLineCount(); // Attention: Not GetLineCount()
+    Point aPt = ScreenToOutputPixel( rHEvt.GetMousePosPixel() );
+    Rectangle aItemRect;
+    if( nCount > 0 ) // if there're some entries, find it.
+         for( nPos = nTop ; nPos <= nTop+nCount-1 ; nPos++ ) {
+            aItemRect = GetBoundingRectangle(nPos);
+            if( aPt.Y() < aItemRect.Top() || aPt.Y() > aItemRect.Bottom() )
+                continue;
+            else
+                break;
+        }
+     else // if not, nothing happens.
+         return;
+     OUString aHelpText;
+     if( nPos <= nTop+nCount-1 ) // if find the matching entry, get its content.
+         aHelpText = GetEntry(nPos);
+    if( aHelpText.getLength() && GetTextWidth(aHelpText)<GetOutputSizePixel().Width() )
+        aHelpText = ""; // if the entry is quite short, clear the helping tip content.
+    aItemRect = Rectangle(Point(0,0),GetSizePixel());
+    aPt = Point(OutputToScreenPixel( aItemRect.TopLeft() ));
+    aItemRect.Left()   = aPt.X();
+    aItemRect.Top()    = aPt.Y();
+    aPt = OutputToScreenPixel( aItemRect.BottomRight() );
+    aItemRect.Right()  = aPt.X();
+    aItemRect.Bottom() = aPt.Y();
+    if( rHEvt.GetMode() == HelpEventMode::BALLOON )
+        Help::ShowBalloon( this, aItemRect.Center(), aItemRect, aHelpText);
+    else
+        Help::ShowQuickHelp( this, aItemRect, aHelpText );
+}
 
 /********************************************************************/
 /*                                                                  */
@@ -553,8 +584,8 @@ IMPL_STATIC_LINK( SvxProxyTabPage, LoseFocusHdl_Impl, Control&, rControl, void )
 SvxSecurityTabPage::SvxSecurityTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     : SfxTabPage(pParent, "OptSecurityPage", "cui/ui/optsecuritypage.ui", &rSet)
     , mpSecOptions(new SvtSecurityOptions)
-    , mpSecOptDlg(nullptr)
-    , mpCertPathDlg(nullptr)
+    , mpSecOptDlg(NULL)
+    , mpCertPathDlg(NULL)
 {
     get(m_pSecurityOptionsPB, "options");
     get(m_pSavePasswordsCB, "savepassword");
@@ -577,8 +608,6 @@ SvxSecurityTabPage::SvxSecurityTabPage(vcl::Window* pParent, const SfxItemSet& r
     get(m_pMacroSecPB, "macro");
     get(m_pCertFrame, "certificatepath");
     get(m_pCertPathPB, "cert");
-    get(m_pTSAURLsFrame, "tsaurls");
-    get(m_pTSAURLsPB, "tsas");
     m_sPasswordStoringDeactivateStr = get<FixedText>("nopasswordsave")->GetText();
 
     InitControls();
@@ -590,46 +619,27 @@ SvxSecurityTabPage::SvxSecurityTabPage(vcl::Window* pParent, const SfxItemSet& r
     m_pShowConnectionsPB->SetClickHdl( LINK( this, SvxSecurityTabPage, ShowPasswordsHdl ) );
     m_pMacroSecPB->SetClickHdl( LINK( this, SvxSecurityTabPage, MacroSecPBHdl ) );
     m_pCertPathPB->SetClickHdl( LINK( this, SvxSecurityTabPage, CertPathPBHdl ) );
-    m_pTSAURLsPB->SetClickHdl( LINK( this, SvxSecurityTabPage, TSAURLsPBHdl ) );
 
     ActivatePage( rSet );
 }
 
 SvxSecurityTabPage::~SvxSecurityTabPage()
 {
-    disposeOnce();
-}
+    delete mpCertPathDlg;
 
-void SvxSecurityTabPage::dispose()
-{
     delete mpSecOptions;
-    mpSecOptions = nullptr;
-    mpCertPathDlg.disposeAndClear();
-    mpSecOptDlg.clear();
-    m_pSecurityOptionsPB.clear();
-    m_pSavePasswordsCB.clear();
-    m_pShowConnectionsPB.clear();
-    m_pMasterPasswordCB.clear();
-    m_pMasterPasswordFT.clear();
-    m_pMasterPasswordPB.clear();
-    m_pMacroSecFrame.clear();
-    m_pMacroSecPB.clear();
-    m_pCertFrame.clear();
-    m_pCertPathPB.clear();
-    m_pTSAURLsFrame.clear();
-    m_pTSAURLsPB.clear();
-
-    SfxTabPage::dispose();
+    delete mpSecOptDlg;
 }
 
-IMPL_LINK_NOARG(SvxSecurityTabPage, SecurityOptionsHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, SecurityOptionsHdl)
 {
     if ( !mpSecOptDlg )
-        mpSecOptDlg = VclPtr<svx::SecurityOptionsDialog>::Create( this, mpSecOptions );
+        mpSecOptDlg = new svx::SecurityOptionsDialog( this, mpSecOptions );
     mpSecOptDlg->Execute();
+    return 0;
 }
 
-IMPL_LINK_NOARG(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, SavePasswordHdl)
 {
     try
     {
@@ -638,15 +648,15 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
 
         if ( m_pSavePasswordsCB->IsChecked() )
         {
-            bool bOldValue = xMasterPasswd->allowPersistentStoring( true );
+            bool bOldValue = xMasterPasswd->allowPersistentStoring( sal_True );
             xMasterPasswd->removeMasterPassword();
             if ( xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() ) )
             {
-                m_pMasterPasswordPB->Enable();
-                m_pMasterPasswordCB->Check();
-                m_pMasterPasswordCB->Enable();
-                m_pMasterPasswordFT->Enable();
-                m_pShowConnectionsPB->Enable();
+                m_pMasterPasswordPB->Enable( true );
+                m_pMasterPasswordCB->Check( true );
+                m_pMasterPasswordCB->Enable( true );
+                m_pMasterPasswordFT->Enable( true );
+                m_pShowConnectionsPB->Enable( true );
             }
             else
             {
@@ -656,13 +666,13 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
         }
         else
         {
-            ScopedVclPtrInstance< QueryBox > aQuery( this, WB_YES_NO|WB_DEF_NO, m_sPasswordStoringDeactivateStr );
-            sal_uInt16 nRet = aQuery->Execute();
+            QueryBox aQuery( this, WB_YES_NO|WB_DEF_NO, m_sPasswordStoringDeactivateStr );
+            sal_uInt16 nRet = aQuery.Execute();
 
             if( RET_YES == nRet )
             {
-                xMasterPasswd->allowPersistentStoring( false );
-                m_pMasterPasswordCB->Check();
+                xMasterPasswd->allowPersistentStoring( sal_False );
+                m_pMasterPasswordCB->Check( true );
                 m_pMasterPasswordPB->Enable( false );
                 m_pMasterPasswordCB->Enable( false );
                 m_pMasterPasswordFT->Enable( false );
@@ -670,9 +680,9 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
             }
             else
             {
-                m_pSavePasswordsCB->Check();
-                m_pMasterPasswordPB->Enable();
-                m_pShowConnectionsPB->Enable();
+                m_pSavePasswordsCB->Check( true );
+                m_pMasterPasswordPB->Enable( true );
+                m_pShowConnectionsPB->Enable( true );
             }
         }
     }
@@ -680,9 +690,11 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, SavePasswordHdl, Button*, void)
     {
         m_pSavePasswordsCB->Check( !m_pSavePasswordsCB->IsChecked() );
     }
+
+    return 0;
 }
 
-IMPL_STATIC_LINK_NOARG(SvxSecurityTabPage, MasterPasswordHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, MasterPasswordHdl)
 {
     try
     {
@@ -694,9 +706,11 @@ IMPL_STATIC_LINK_NOARG(SvxSecurityTabPage, MasterPasswordHdl, Button*, void)
     }
     catch (const Exception&)
     {}
+
+    return 0;
 }
 
-IMPL_LINK_NOARG(SvxSecurityTabPage, MasterPasswordCBHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, MasterPasswordCBHdl)
 {
     try
     {
@@ -707,14 +721,14 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, MasterPasswordCBHdl, Button*, void)
         {
             if ( xMasterPasswd->isPersistentStoringAllowed() && xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() ) )
             {
-                m_pMasterPasswordPB->Enable();
-                m_pMasterPasswordFT->Enable();
+                m_pMasterPasswordPB->Enable( true );
+                m_pMasterPasswordFT->Enable( true );
             }
             else
             {
                 m_pMasterPasswordCB->Check( false );
-                m_pMasterPasswordPB->Enable();
-                m_pMasterPasswordFT->Enable();
+                m_pMasterPasswordPB->Enable( true );
+                m_pMasterPasswordFT->Enable( true );
             }
         }
         else
@@ -726,9 +740,9 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, MasterPasswordCBHdl, Button*, void)
             }
             else
             {
-                m_pMasterPasswordCB->Check();
-                m_pMasterPasswordPB->Enable();
-                m_pShowConnectionsPB->Enable();
+                m_pMasterPasswordCB->Check( true );
+                m_pMasterPasswordPB->Enable( true );
+                m_pShowConnectionsPB->Enable( true );
             }
         }
     }
@@ -736,9 +750,11 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, MasterPasswordCBHdl, Button*, void)
     {
         m_pSavePasswordsCB->Check( !m_pSavePasswordsCB->IsChecked() );
     }
+
+    return 0;
 }
 
-IMPL_LINK_NOARG(SvxSecurityTabPage, ShowPasswordsHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, ShowPasswordsHdl)
 {
     try
     {
@@ -747,40 +763,33 @@ IMPL_LINK_NOARG(SvxSecurityTabPage, ShowPasswordsHdl, Button*, void)
 
         if ( xMasterPasswd->isPersistentStoringAllowed() && xMasterPasswd->authorizateWithMasterPassword( Reference< task::XInteractionHandler>() ) )
         {
-            ScopedVclPtrInstance< svx::WebConnectionInfoDialog > aDlg(this);
-            aDlg->Execute();
+            svx::WebConnectionInfoDialog aDlg( this );
+            aDlg.Execute();
         }
     }
     catch (const Exception&)
     {}
+    return 0;
 }
 
-IMPL_LINK_NOARG(SvxSecurityTabPage, CertPathPBHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, CertPathPBHdl)
 {
     if (!mpCertPathDlg)
-        mpCertPathDlg = VclPtr<CertPathDialog>::Create(this);
+        mpCertPathDlg = new CertPathDialog(this);
 
     OUString sOrig = mpCertPathDlg->getDirectory();
     short nRet = mpCertPathDlg->Execute();
 
     if (nRet == RET_OK && sOrig != mpCertPathDlg->getDirectory())
     {
-        SolarMutexGuard aGuard;
-        svtools::executeRestartDialog(comphelper::getProcessComponentContext(), nullptr, svtools::RESTART_REASON_ADDING_PATH);
+        MessageDialog aWarnBox(this, CUI_RES(RID_SVXSTR_OPTIONS_RESTART), VCL_MESSAGE_INFO);
+        aWarnBox.Execute();
     }
+
+    return 0;
 }
 
-IMPL_LINK_NOARG(SvxSecurityTabPage, TSAURLsPBHdl, Button*, void)
-{
-    // Unlike the mpCertPathDlg, we *don't* keep the same dialog object around between
-    // invocations. Seems clearer to my little brain that way.
-
-    ScopedVclPtrInstance<TSAURLsDialog> pTSAURLsDlg(this);
-
-    pTSAURLsDlg->Execute();
-}
-
-IMPL_STATIC_LINK_NOARG(SvxSecurityTabPage, MacroSecPBHdl, Button*, void)
+IMPL_LINK_NOARG(SvxSecurityTabPage, MacroSecPBHdl)
 {
     try
     {
@@ -793,6 +802,7 @@ IMPL_STATIC_LINK_NOARG(SvxSecurityTabPage, MacroSecPBHdl, Button*, void)
         OSL_FAIL(OUStringToOString(e.Message, osl_getThreadTextEncoding()).getStr());
         (void)e;
     }
+    return 0;
 }
 
 
@@ -804,9 +814,9 @@ void SvxSecurityTabPage::InitControls()
     // @@@ Better would be to query the dialog whether it is 'useful' or not. Exposing
     //     macro security dialog implementations here, which is bad.
     if (    mpSecOptions->IsMacroDisabled()
-         || (    mpSecOptions->IsReadOnly( SvtSecurityOptions::EOption::MacroSecLevel )
-              && mpSecOptions->IsReadOnly( SvtSecurityOptions::EOption::MacroTrustedAuthors )
-              && mpSecOptions->IsReadOnly( SvtSecurityOptions::EOption::SecureUrls ) ) )
+         || (    mpSecOptions->IsReadOnly( SvtSecurityOptions::E_MACRO_SECLEVEL )
+              && mpSecOptions->IsReadOnly( SvtSecurityOptions::E_MACRO_TRUSTEDAUTHORS )
+              && mpSecOptions->IsReadOnly( SvtSecurityOptions::E_SECUREURLS ) ) )
     {
         //Hide these
         m_pMacroSecFrame->Hide();
@@ -818,7 +828,7 @@ void SvxSecurityTabPage::InitControls()
 
     m_pMasterPasswordPB->Enable( false );
     m_pMasterPasswordCB->Enable( false );
-    m_pMasterPasswordCB->Check();
+    m_pMasterPasswordCB->Check( true );
     m_pMasterPasswordFT->Enable( false );
     m_pShowConnectionsPB->Enable( false );
 
@@ -830,17 +840,17 @@ void SvxSecurityTabPage::InitControls()
 
         if ( xMasterPasswd->isPersistentStoringAllowed() )
         {
-            m_pMasterPasswordCB->Enable();
-            m_pShowConnectionsPB->Enable();
-            m_pSavePasswordsCB->Check();
+            m_pMasterPasswordCB->Enable( true );
+            m_pShowConnectionsPB->Enable( true );
+            m_pSavePasswordsCB->Check( true );
 
             if ( xMasterPasswd->isDefaultMasterPasswordUsed() )
                 m_pMasterPasswordCB->Check( false );
             else
             {
-                m_pMasterPasswordPB->Enable();
-                m_pMasterPasswordCB->Check();
-                m_pMasterPasswordFT->Enable();
+                m_pMasterPasswordPB->Enable( true );
+                m_pMasterPasswordCB->Check( true );
+                m_pMasterPasswordFT->Enable( true );
             }
         }
     }
@@ -850,20 +860,20 @@ void SvxSecurityTabPage::InitControls()
     }
 }
 
-VclPtr<SfxTabPage> SvxSecurityTabPage::Create(vcl::Window* pParent, const SfxItemSet* rAttrSet )
+SfxTabPage* SvxSecurityTabPage::Create(vcl::Window* pParent, const SfxItemSet* rAttrSet )
 {
-    return VclPtr<SvxSecurityTabPage>::Create(pParent, *rAttrSet);
+    return new SvxSecurityTabPage(pParent, *rAttrSet);
 }
 
 void SvxSecurityTabPage::ActivatePage( const SfxItemSet& )
 {
 }
 
-DeactivateRC SvxSecurityTabPage::DeactivatePage( SfxItemSet* _pSet )
+int SvxSecurityTabPage::DeactivatePage( SfxItemSet* _pSet )
 {
     if( _pSet )
         FillItemSet( _pSet );
-    return DeactivateRC::LeavePage;
+    return LEAVE_PAGE;
 }
 
 namespace
@@ -891,14 +901,14 @@ bool SvxSecurityTabPage::FillItemSet( SfxItemSet* )
 
     if ( mpSecOptDlg )
     {
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::DocWarnSaveOrSend, mpSecOptDlg->IsSaveOrSendDocsChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::DocWarnSigning, mpSecOptDlg->IsSignDocsChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::DocWarnPrint, mpSecOptDlg->IsPrintDocsChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::DocWarnCreatePdf, mpSecOptDlg->IsCreatePdfChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::DocWarnRemovePersonalInfo, mpSecOptDlg->IsRemovePersInfoChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::DocWarnRecommendPassword, mpSecOptDlg->IsRecommPasswdChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::CtrlClickHyperlink, mpSecOptDlg->IsCtrlHyperlinkChecked(), bModified );
-        CheckAndSave( *mpSecOptions, SvtSecurityOptions::EOption::BlockUntrustedRefererLinks, mpSecOptDlg->IsBlockUntrustedRefererLinksChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SAVEORSEND, mpSecOptDlg->IsSaveOrSendDocsChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SIGNING, mpSecOptDlg->IsSignDocsChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_PRINT, mpSecOptDlg->IsPrintDocsChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_CREATEPDF, mpSecOptDlg->IsCreatePdfChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO, mpSecOptDlg->IsRemovePersInfoChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_RECOMMENDPASSWORD, mpSecOptDlg->IsRecommPasswdChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_CTRLCLICK_HYPERLINK, mpSecOptDlg->IsCtrlHyperlinkChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_BLOCKUNTRUSTEDREFERERLINKS, mpSecOptDlg->IsBlockUntrustedRefererLinksChecked(), bModified );
     }
 
     return bModified;
@@ -910,35 +920,119 @@ void SvxSecurityTabPage::Reset( const SfxItemSet* )
 {
 }
 
+class MailerProgramCfg_Impl : public utl::ConfigItem
+{
+    friend class SvxEMailTabPage;
+    // variables
+    OUString sProgram;
+    // readonly states
+    bool bROProgram;
+
+    const Sequence<OUString> GetPropertyNames();
+public:
+    MailerProgramCfg_Impl();
+    virtual ~MailerProgramCfg_Impl();
+
+    virtual void    Commit() SAL_OVERRIDE;
+    virtual void Notify( const com::sun::star::uno::Sequence< OUString >& _rPropertyNames) SAL_OVERRIDE;
+};
+
+/* -------------------------------------------------------------------------*/
+
+MailerProgramCfg_Impl::MailerProgramCfg_Impl() :
+    utl::ConfigItem("Office.Common/ExternalMailer"),
+    bROProgram(false)
+{
+    const Sequence< OUString > aNames = GetPropertyNames();
+    const Sequence< Any > aValues = GetProperties(aNames);
+    const Sequence< sal_Bool > aROStates = GetReadOnlyStates(aNames);
+    const Any* pValues = aValues.getConstArray();
+    const sal_Bool* pROStates = aROStates.getConstArray();
+    for(sal_Int32 nProp = 0; nProp < aValues.getLength(); nProp++)
+    {
+        if(pValues[nProp].hasValue())
+        {
+            switch(nProp)
+            {
+                case 0 :
+                {
+                    pValues[nProp] >>= sProgram;
+                    bROProgram = pROStates[nProp];
+                }
+                break;
+            }
+        }
+    }
+}
+
+/* -------------------------------------------------------------------------*/
+
+MailerProgramCfg_Impl::~MailerProgramCfg_Impl()
+{
+}
+
+/* -------------------------------------------------------------------------*/
+
+const Sequence<OUString> MailerProgramCfg_Impl::GetPropertyNames()
+{
+    Sequence<OUString> aRet(1);
+    OUString* pRet = aRet.getArray();
+    pRet[0] = "Program";
+    return aRet;
+}
+
+/* -------------------------------------------------------------------------*/
+
+void MailerProgramCfg_Impl::Commit()
+{
+    const Sequence< OUString > aOrgNames = GetPropertyNames();
+    sal_Int32 nOrgCount = aOrgNames.getLength();
+
+    Sequence< OUString > aNames(nOrgCount);
+    Sequence< Any > aValues(nOrgCount);
+    sal_Int32 nRealCount = 0;
+
+    for(int nProp = 0; nProp < nOrgCount; nProp++)
+    {
+    switch(nProp)
+    {
+            case  0:
+            {
+                if (!bROProgram)
+                {
+                    aNames[nRealCount] = aOrgNames[nProp];
+                    aValues[nRealCount] <<= sProgram;
+                    ++nRealCount;
+                }
+            }
+            break;
+        }
+    }
+
+    aNames.realloc(nRealCount);
+    aValues.realloc(nRealCount);
+    PutProperties(aNames, aValues);
+}
+
+void MailerProgramCfg_Impl::Notify( const com::sun::star::uno::Sequence< OUString >& )
+{
+}
+
+/* -------------------------------------------------------------------------*/
+
 struct SvxEMailTabPage_Impl
 {
-    SvxEMailTabPage_Impl():
-        sProgram(officecfg::Office::Common::ExternalMailer::Program::get()),
-        bROProgram(
-            officecfg::Office::Common::ExternalMailer::Program::isReadOnly()),
-        bHideContent(
-            officecfg::Office::Security::HiddenContent::RemoveHiddenContent::get()),
-        bROHideContent(
-            officecfg::Office::Security::HiddenContent::RemoveHiddenContent::isReadOnly())
-    {}
-
-    OUString sProgram;
-    bool bROProgram;
-    bool bHideContent;
-    bool bROHideContent;
+    MailerProgramCfg_Impl aMailConfig;
 };
 
 SvxEMailTabPage::SvxEMailTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
     : SfxTabPage( pParent, "OptEmailPage", "cui/ui/optemailpage.ui", &rSet)
     , pImpl(new SvxEMailTabPage_Impl)
 {
-    get(m_pMailContainer, "program");
+    get(m_pMailContainer, "OptEmailPage");
     get(m_pMailerURLFI, "lockemail");
     get(m_pMailerURLED, "url");
     get(m_pMailerURLPB, "browse");
-    get(m_pSuppressHiddenContainer, "suppressHiddenCont");
-    get(m_pSuppressHiddenFI, "lockSuppressHidden");
-    get(m_pSuppressHidden, "suppressHidden");
     m_sDefaultFilterName = get<FixedText>("browsetitle")->GetText();
     m_pMailerURLPB->SetClickHdl( LINK( this, SvxEMailTabPage, FileDialogHdl_Impl ) );
 }
@@ -947,49 +1041,29 @@ SvxEMailTabPage::SvxEMailTabPage(vcl::Window* pParent, const SfxItemSet& rSet)
 
 SvxEMailTabPage::~SvxEMailTabPage()
 {
-    disposeOnce();
-}
-
-void SvxEMailTabPage::dispose()
-{
-    pImpl.reset();
-    m_pMailContainer.clear();
-    m_pMailerURLFI.clear();
-    m_pMailerURLED.clear();
-    m_pMailerURLPB.clear();
-    m_pSuppressHiddenContainer.clear();
-    m_pSuppressHiddenFI.clear();
-    m_pSuppressHidden.clear();
-    SfxTabPage::dispose();
+    delete pImpl;
 }
 
 /* -------------------------------------------------------------------------*/
 
-VclPtr<SfxTabPage>  SvxEMailTabPage::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
+SfxTabPage*  SvxEMailTabPage::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
 {
-    return VclPtr<SvxEMailTabPage>::Create(pParent, *rAttrSet);
+    return new SvxEMailTabPage(pParent, *rAttrSet);
 }
 
 /* -------------------------------------------------------------------------*/
 
 bool SvxEMailTabPage::FillItemSet( SfxItemSet* )
 {
-    std::shared_ptr<comphelper::ConfigurationChanges> batch(
-        comphelper::ConfigurationChanges::create());
-    if (!pImpl->bROProgram && m_pMailerURLED->IsValueChangedFromSaved())
+    bool bMailModified = false;
+    if(!pImpl->aMailConfig.bROProgram && m_pMailerURLED->IsValueChangedFromSaved())
     {
-        pImpl->sProgram = m_pMailerURLED->GetText();
-        officecfg::Office::Common::ExternalMailer::Program::set(
-            pImpl->sProgram, batch);
+        pImpl->aMailConfig.sProgram = m_pMailerURLED->GetText();
+        bMailModified = true;
     }
-    if (!pImpl->bROHideContent
-        && pImpl->bHideContent != m_pSuppressHidden->IsChecked())
-    {
-        pImpl->bHideContent = m_pSuppressHidden->IsChecked();
-        officecfg::Office::Security::HiddenContent::RemoveHiddenContent::set(
-            pImpl->bHideContent, batch);
-    }
-    batch->commit();
+    if ( bMailModified )
+        pImpl->aMailConfig.Commit();
+
     return false;
 }
 
@@ -997,32 +1071,27 @@ bool SvxEMailTabPage::FillItemSet( SfxItemSet* )
 
 void SvxEMailTabPage::Reset( const SfxItemSet* )
 {
-    m_pMailerURLED->Enable();
-    m_pMailerURLPB->Enable();
+    m_pMailerURLED->Enable(true );
+    m_pMailerURLPB->Enable(true );
 
-    if (pImpl->bROProgram)
+    if (pImpl->aMailConfig.bROProgram)
         m_pMailerURLFI->Show();
 
-    m_pMailerURLED->SetText(pImpl->sProgram);
+    m_pMailerURLED->SetText(pImpl->aMailConfig.sProgram);
     m_pMailerURLED->SaveValue();
 
-    m_pMailContainer->Enable(!pImpl->bROProgram);
-
-    if (pImpl->bROHideContent)
-        m_pSuppressHiddenFI->Show();
-
-    m_pSuppressHidden->Check(pImpl->bHideContent);
-
-    m_pSuppressHiddenContainer->Enable(!pImpl->bROHideContent);
+    m_pMailContainer->Enable(!pImpl->aMailConfig.bROProgram);
 }
 
 /* -------------------------------------------------------------------------*/
 
-IMPL_LINK(  SvxEMailTabPage, FileDialogHdl_Impl, Button*, pButton, void )
+IMPL_LINK(  SvxEMailTabPage, FileDialogHdl_Impl, PushButton*, pButton )
 {
-    if (m_pMailerURLPB == pButton && !pImpl->bROProgram)
+    if (m_pMailerURLPB == pButton && !pImpl->aMailConfig.bROProgram)
     {
-        FileDialogHelper aHelper( css::ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE );
+        FileDialogHelper aHelper(
+            com::sun::star::ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE,
+            0 );
         OUString sPath = m_pMailerURLED->GetText();
         if ( sPath.isEmpty() )
 #if defined USE_JAVA && defined MACOSX
@@ -1032,22 +1101,20 @@ IMPL_LINK(  SvxEMailTabPage, FileDialogHdl_Impl, Button*, pButton, void )
 #endif	// USE_JAVA && MACOSX
 
         OUString sUrl;
-        osl::FileBase::getFileURLFromSystemPath(sPath, sUrl);
+        ::utl::LocalFileHelper::ConvertPhysicalNameToURL(sPath, sUrl);
         aHelper.SetDisplayDirectory(sUrl);
-        aHelper.AddFilter( m_sDefaultFilterName, "*");
+        aHelper.AddFilter( m_sDefaultFilterName, OUString("*"));
 
         if ( ERRCODE_NONE == aHelper.Execute() )
         {
             sUrl = aHelper.GetPath();
-            if (osl::FileBase::getSystemPathFromFileURL(sUrl, sPath)
-                != osl::FileBase::E_None)
-            {
-                sPath.clear();
-            }
+            ::utl::LocalFileHelper::ConvertURLToPhysicalName(sUrl, sPath);
             m_pMailerURLED->SetText(sPath);
         }
     }
+    return 0;
 }
+
 
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

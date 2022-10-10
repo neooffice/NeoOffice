@@ -24,16 +24,18 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INCLUDED_DBACCESS_SOURCE_CORE_INC_CORE_RESOURCE_HRC
-#define INCLUDED_DBACCESS_SOURCE_CORE_INC_CORE_RESOURCE_HRC
+#ifndef _DBA_CORE_RESOURCE_HRC_
+#define _DBA_CORE_RESOURCE_HRC_
 
 #include <svl/solar.hrc>
 
 #define RID_CORE_STRINGS_START                  RID_DBACCESS_START
 
 //- String-IDs
+#define RID_STR_TRIED_OPEN_TABLE                ( RID_CORE_STRINGS_START +  0 )
 #define RID_STR_CONNECTION_INVALID              ( RID_CORE_STRINGS_START +  1 )
 #define RID_STR_TABLE_IS_FILTERED               ( RID_CORE_STRINGS_START +  2 )
+#define RID_STR_NEED_CONFIG_WRITE_ACCESS        ( RID_CORE_STRINGS_START +  3 )
 #define RID_STR_COULDNOTCONNECT_NODRIVER        ( RID_CORE_STRINGS_START +  4 )
 #define RID_STR_COULDNOTCONNECT_UNSPECIFIED     ( RID_CORE_STRINGS_START +  5 )
 #define RID_STR_COULDNOTLOAD_MANAGER            ( RID_CORE_STRINGS_START +  6 )
@@ -56,9 +58,11 @@
 #define RID_STR_COLUMN_NOT_VALID                ( RID_CORE_STRINGS_START + 23 )
 #define RID_STR_COLUMN_NOT_SEARCHABLE           ( RID_CORE_STRINGS_START + 24 )
 #define RID_STR_NOT_SEQUENCE_INT8               ( RID_CORE_STRINGS_START + 25 )
+#define RID_STR_NOT_SUPPORTED_BY_DRIVER         ( RID_CORE_STRINGS_START + 26 )
 #define RID_STR_NO_TABLE_RENAME                 ( RID_CORE_STRINGS_START + 27 )
 #define RID_STR_COLUMN_ALTER_BY_NAME            ( RID_CORE_STRINGS_START + 28 )
 #define RID_STR_COLUMN_ALTER_BY_INDEX           ( RID_CORE_STRINGS_START + 29 )
+#define RID_STR_NO_ALTER_COLUMN_DEF             ( RID_CORE_STRINGS_START + 30 )
 #define RID_STR_COLUMN_UNKNOWN_PROP             ( RID_CORE_STRINGS_START + 31 )
 #define RID_STR_FORM                            ( RID_CORE_STRINGS_START + 32 )
 #define RID_STR_REPORT                          ( RID_CORE_STRINGS_START + 33 )
@@ -94,6 +98,7 @@
 #define RID_STR_CURSOR_BEFORE_OR_AFTER          ( RID_CORE_STRINGS_START + 61 )
 #define RID_STR_NO_BOOKMARK_BEFORE_OR_AFTER     ( RID_CORE_STRINGS_START + 62 )
 #define RID_STR_NO_BOOKMARK_DELETED             ( RID_CORE_STRINGS_START + 63 )
+#define RID_STR_NO_EMBEDDING                    ( RID_CORE_STRINGS_START + 64 )
 #define RID_STR_CONNECTION_REQUEST              ( RID_CORE_STRINGS_START + 65 )
 #define RID_STR_MISSING_EXTENSION               ( RID_CORE_STRINGS_START + 66 )
 
@@ -102,6 +107,6 @@
 #define RID_STR_COULDNOTCONNECT_NOJAVA          ( RID_CORE_STRINGS_START + 68 )
 #endif	// USE_JAVA
 
-#endif
+#endif // _DBA_CORE_RESOURCE_HRC_
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

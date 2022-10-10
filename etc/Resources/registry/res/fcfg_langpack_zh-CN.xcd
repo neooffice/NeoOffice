@@ -19,12 +19,7 @@
       </node>
       <node oor:name="StarOffice XML (Base) Report Chart">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 报表图表</value>
-        </prop>
-      </node>
-      <node oor:name="HTML (StarWriter)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">HTML 文档(Writer)</value>
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 Report Chart</value>
         </prop>
       </node>
       <node oor:name="MS WinWord 5">
@@ -42,29 +37,14 @@
           <value xml:lang="zh-CN">Microsoft Word 95</value>
         </prop>
       </node>
-      <node oor:name="MS Word 95 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word 95 模板</value>
-        </prop>
-      </node>
       <node oor:name="MS Word 97">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word 97-2003</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 97 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word 97-2003 模板</value>
+          <value xml:lang="zh-CN">Microsoft Word 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="Rich Text Format">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">RTF 文本</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Writer)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 文本文档</value>
         </prop>
       </node>
       <node oor:name="WordPerfect">
@@ -77,19 +57,64 @@
           <value xml:lang="zh-CN">Microsoft Works 文档</value>
         </prop>
       </node>
-      <node oor:name="MS_Write">
+      <node oor:name="Beagle_Works">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Write</value>
-        </prop>
-      </node>
-      <node oor:name="DosWord">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word for DOS</value>
+          <value xml:lang="zh-CN">BeagleWorks/WordPerfect Works v1 文本文档</value>
         </prop>
       </node>
       <node oor:name="ClarisWorks">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">ClarisWorks/AppleWorks 文本文档</value>
+        </prop>
+      </node>
+      <node oor:name="DocMaker">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">DOCMaker (v4) 文档</value>
+        </prop>
+      </node>
+      <node oor:name="eDoc_Document">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">eDOC (v2) 文档</value>
+        </prop>
+      </node>
+      <node oor:name="FullWrite_Professional">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">FullWrite Professional 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">GreatWorks 文本文档</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_J">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">HanMac Word-J 文档</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_K">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">HanMac Word-K 文档</value>
+        </prop>
+      </node>
+      <node oor:name="LightWayText">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">LightWayText for Mac v4.5</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Acta">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Acta Mac Classic 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_More">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">More Mac v2-3 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_RagTime">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">RagTime Mac v2-3 文档</value>
         </prop>
       </node>
       <node oor:name="Mac_Word">
@@ -102,9 +127,19 @@
           <value xml:lang="zh-CN">Microsoft Works for Mac 文本文档 (v1 - v4)</value>
         </prop>
       </node>
+      <node oor:name="MacDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MacDoc v1 文档</value>
+        </prop>
+      </node>
       <node oor:name="MacWrite">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">MacWrite 文档</value>
+        </prop>
+      </node>
+      <node oor:name="MacWritePro">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MacWriteII 或 MacWritePro 文档</value>
         </prop>
       </node>
       <node oor:name="Mariner_Write">
@@ -112,9 +147,39 @@
           <value xml:lang="zh-CN">Mariner Write Mac Classic v1.6 - v3.5</value>
         </prop>
       </node>
+      <node oor:name="MindWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MindWrite 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Nisus_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Nisus Writer Mac Classic v3.4 - 6.5</value>
+        </prop>
+      </node>
+      <node oor:name="TeachText">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">TeachText/SimpleText v1 文档</value>
+        </prop>
+      </node>
+      <node oor:name="TexEdit">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Tex-Edit v2 文档</value>
+        </prop>
+      </node>
       <node oor:name="WriteNow">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">WriteNow 文档</value>
+        </prop>
+      </node>
+      <node oor:name="WriterPlus">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">WriterPlus 文档</value>
+        </prop>
+      </node>
+      <node oor:name="ZWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Z-Write 1.3 文档</value>
         </prop>
       </node>
       <node oor:name="AbiWord">
@@ -132,24 +197,9 @@
           <value xml:lang="zh-CN">Lotus WordPro 文档</value>
         </prop>
       </node>
-      <node oor:name="Text">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">文本</value>
-        </prop>
-      </node>
-      <node oor:name="Text (encoded)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">文本 - 选择编码</value>
-        </prop>
-      </node>
       <node oor:name="writer_MIZI_Hwp_97">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">Hangul WP 97</value>
-        </prop>
-      </node>
-      <node oor:name="writer_StarOffice_XML_Writer_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 文本文档模板</value>
         </prop>
       </node>
       <node oor:name="writer_pdf_Export">
@@ -157,29 +207,14 @@
           <value xml:lang="zh-CN">PDF - Portable Document Format</value>
         </prop>
       </node>
-      <node oor:name="writer8">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 文本文档</value>
-        </prop>
-      </node>
-      <node oor:name="writer8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 文本文档模板</value>
-        </prop>
-      </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word 2007-2019 XML</value>
+          <value xml:lang="zh-CN">Microsoft Word 2007-365 XML</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word 2007-2019 XML 模板</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 2007 XML VBA">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Word 2007-2019 XML VBA</value>
+          <value xml:lang="zh-CN">Microsoft Word 2007-365 XML 模板</value>
         </prop>
       </node>
       <node oor:name="Office Open XML Text">
@@ -202,6 +237,11 @@
           <value xml:lang="zh-CN">BroadBand 电子书</value>
         </prop>
       </node>
+      <node oor:name="eReader eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">eReader 电子书</value>
+        </prop>
+      </node>
       <node oor:name="FictionBook 2">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">FictionBook 2.0</value>
@@ -217,24 +257,84 @@
           <value xml:lang="zh-CN">Plucker 电子书</value>
         </prop>
       </node>
-      <node oor:name="Apple Pages">
+      <node oor:name="TealDoc">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Apple Pages 4</value>
+          <value xml:lang="zh-CN">TealDoc 电子书</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Text_Document">
+      <node oor:name="zTXT">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 Mac 文本文档</value>
+          <value xml:lang="zh-CN">zTXT 电子书</value>
         </prop>
       </node>
-      <node oor:name="Palm_Text_Document">
+      <node oor:name="HTML (StarWriter)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Palm 文本文档</value>
+          <value xml:lang="zh-CN">HTML 文档 (Writer)</value>
         </prop>
       </node>
-      <node oor:name="StarOffice_Writer">
+      <node oor:name="MS Word 95 Vorlage">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 StarOffice 文本文档</value>
+          <value xml:lang="zh-CN">Microsoft Word 95 模板</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Word 97/2000/XP/2003 模板</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 文本文档</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">文本</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">文本 - 选择编码</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 文本文档模板</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ODF 文本文档</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ODF 文本文档模板</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Word 2007-365 XML</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Word 2007-365 XML 模板</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Office Open XML 文本</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Office Open XML 文本模板</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PDF - Portable Document Format</value>
         </prop>
       </node>
       <node oor:name="HTML">
@@ -244,37 +344,22 @@
       </node>
       <node oor:name="Text (StarWriter/Web)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">文本(Writer/网页)</value>
+          <value xml:lang="zh-CN">文本 (Writer/网页)</value>
         </prop>
       </node>
       <node oor:name="Text (encoded) (StarWriter/Web)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">文本 - 选择编码(Writer/Web)</value>
+          <value xml:lang="zh-CN">文本 - 选择编码 (Writer/Web)</value>
         </prop>
       </node>
       <node oor:name="writer_web_StarOffice_XML_Writer">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 文本文档(Writer/Web)</value>
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 文本文档 (Writer/Web)</value>
         </prop>
       </node>
       <node oor:name="writer_web_StarOffice_XML_Writer_Web_Template">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">OpenOffice.org 1.0 HTML 模板</value>
-        </prop>
-      </node>
-      <node oor:name="writer_web_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PDF - Portable Document Format</value>
-        </prop>
-      </node>
-      <node oor:name="writer_web_png_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PNG - 可移植网络图形</value>
-        </prop>
-      </node>
-      <node oor:name="writer_web_jpg_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">JPEG - Joint Photographic Experts Group</value>
         </prop>
       </node>
       <node oor:name="writerweb8_writer_template">
@@ -284,7 +369,17 @@
       </node>
       <node oor:name="writerweb8_writer">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">文本(Writer/网页)</value>
+          <value xml:lang="zh-CN">文本 (Writer/网页)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PDF - Portable Document Format</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">HTML (Writer/Global)</value>
         </prop>
       </node>
       <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
@@ -302,11 +397,6 @@
           <value xml:lang="zh-CN">OpenOffice.org 1.0 主控文档</value>
         </prop>
       </node>
-      <node oor:name="writer_globaldocument_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PDF - Portable Document Format</value>
-        </prop>
-      </node>
       <node oor:name="writerglobal8">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">ODF 主控文档</value>
@@ -322,19 +412,9 @@
           <value xml:lang="zh-CN">ODF 文本文档</value>
         </prop>
       </node>
-      <node oor:name="writerglobal8_HTML">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">HTML(Writer/Global)</value>
-        </prop>
-      </node>
       <node oor:name="DIF">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">数据交换格式</value>
-        </prop>
-      </node>
-      <node oor:name="HTML (StarCalc)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">HTML 文档(Calc)</value>
         </prop>
       </node>
       <node oor:name="Lotus">
@@ -352,19 +432,9 @@
           <value xml:lang="zh-CN">Microsoft Excel 4.0</value>
         </prop>
       </node>
-      <node oor:name="MS Excel 4.0 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 4.0 模板</value>
-        </prop>
-      </node>
       <node oor:name="MS Excel 5.0/95">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">Microsoft Excel 5.0</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 5.0 模板</value>
         </prop>
       </node>
       <node oor:name="MS Excel 95">
@@ -372,29 +442,89 @@
           <value xml:lang="zh-CN">Microsoft Excel 95</value>
         </prop>
       </node>
-      <node oor:name="MS Excel 95 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 95 模板</value>
-        </prop>
-      </node>
       <node oor:name="MS Excel 97">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 97-2003</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 97 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 97-2003 模板</value>
+          <value xml:lang="zh-CN">Microsoft Excel 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="Rich Text Format (StarCalc)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">RTF 格式(Calc)</value>
+          <value xml:lang="zh-CN">RTF文本格式 (Calc)</value>
         </prop>
       </node>
       <node oor:name="SYLK">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">SYLK</value>
+        </prop>
+      </node>
+      <node oor:name="calc_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PDF - Portable Document Format</value>
+        </prop>
+      </node>
+      <node oor:name="dBase">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">dBASE</value>
+        </prop>
+      </node>
+      <node oor:name="MS_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Works 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">BeagleWorks/WordPerfect Works v1 电子表格</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ClarisWorks/AppleWorks 电子表格</value>
+        </prop>
+      </node>
+      <node oor:name="Claris_Resolve_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ClarisResolve 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">GreatWorks 电子表格</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Wingz_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Wingz for Mac 文档</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Works for Mac 电子表格 (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">HTML 文档 (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Excel 4.0 模板</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Excel 5.0 模板</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Excel 95 模板</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Excel 97/2000/XP/2003 模板</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Calc)">
@@ -409,22 +539,12 @@
       </node>
       <node oor:name="calc_HTML_WebQuery">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">网页查询(Calc)</value>
+          <value xml:lang="zh-CN">网页查询 (Calc)</value>
         </prop>
       </node>
       <node oor:name="calc_StarOffice_XML_Calc_Template">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">OpenOffice.org 1.0 电子表格模版</value>
-        </prop>
-      </node>
-      <node oor:name="calc_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PDF - Portable Document Format</value>
-        </prop>
-      </node>
-      <node oor:name="dBase">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">dBASE</value>
         </prop>
       </node>
       <node oor:name="calc8">
@@ -437,24 +557,14 @@
           <value xml:lang="zh-CN">ODF 电子表格模板</value>
         </prop>
       </node>
-      <node oor:name="Gnumeric Spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Gnumeric 电子表格</value>
-        </prop>
-      </node>
       <node oor:name="Calc MS Excel 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 2007-2019 XML</value>
-        </prop>
-      </node>
-      <node oor:name="Calc MS Excel 2007 VBA XML">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 2007-2019 XML (已启用宏)</value>
+          <value xml:lang="zh-CN">Microsoft Excel 2007-365 XML</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Excel 2007-2019 XML 模板</value>
+          <value xml:lang="zh-CN">Microsoft Excel 2007-365 XML 模板</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 Binary">
@@ -472,79 +582,9 @@
           <value xml:lang="zh-CN">Office Open XML 电子表格模板</value>
         </prop>
       </node>
-      <node oor:name="MS_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Works 文档</value>
-        </prop>
-      </node>
-      <node oor:name="WPS_Lotus_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Lotus Document</value>
-        </prop>
-      </node>
-      <node oor:name="WPS_QPro_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">QuattroPro Document</value>
-        </prop>
-      </node>
-      <node oor:name="ClarisWorks_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ClarisWorks/AppleWorks 电子表格</value>
-        </prop>
-      </node>
-      <node oor:name="Claris_Resolve_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ClarisResolve 文档</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft Works for Mac 电子表格 (v1 - v4)</value>
-        </prop>
-      </node>
-      <node oor:name="Apple Numbers">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Apple Numbers 2</value>
-        </prop>
-      </node>
-      <node oor:name="MWAW_Database">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 Mac 数据库</value>
-        </prop>
-      </node>
-      <node oor:name="MWAW_Spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 Mac 电子表格</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice_Spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 StarOffice 电子表格</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Draw)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 绘图</value>
-        </prop>
-      </node>
-      <node oor:name="draw_StarOffice_XML_Draw_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 绘图模板</value>
-        </prop>
-      </node>
       <node oor:name="draw_pdf_Export">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">PDF - Portable Document Format</value>
-        </prop>
-      </node>
-      <node oor:name="draw8">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 绘图</value>
-        </prop>
-      </node>
-      <node oor:name="draw8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 绘图模板</value>
         </prop>
       </node>
       <node oor:name="WordPerfect Graphics">
@@ -569,7 +609,7 @@
       </node>
       <node oor:name="Corel Presentation Exchange">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Corel 演示文稿交换文件</value>
+          <value xml:lang="zh-CN">Corel Presentation Exchange</value>
         </prop>
       </node>
       <node oor:name="Freehand Document">
@@ -577,9 +617,44 @@
           <value xml:lang="zh-CN">Adobe/Macromedia Freehand</value>
         </prop>
       </node>
+      <node oor:name="Beagle_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">BeagleWorks/WordPerfect Works v1 绘图</value>
+        </prop>
+      </node>
       <node oor:name="ClarisWorks_Draw">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">ClarisWorks/AppleWorks 绘图</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">GreatWorks 绘图</value>
+        </prop>
+      </node>
+      <node oor:name="MacDraw_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MacDraw (v0-v1)</value>
+        </prop>
+      </node>
+      <node oor:name="MacDrawPro_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MacDraw II</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft Works for Mac 绘图 (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="MacPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MacPaint (v1)</value>
+        </prop>
+      </node>
+      <node oor:name="SuperPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">SuperPaint (v1)</value>
         </prop>
       </node>
       <node oor:name="PageMaker Document">
@@ -587,24 +662,24 @@
           <value xml:lang="zh-CN">Adobe PageMaker</value>
         </prop>
       </node>
-      <node oor:name="ZMF Document">
+      <node oor:name="StarOffice XML (Draw)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Zoner Callisto/Draw</value>
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 绘图</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Bitmap">
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 Mac 位图</value>
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 绘图模板</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Drawing">
+      <node oor:name="draw8">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 Mac 绘图</value>
+          <value xml:lang="zh-CN">ODF 绘图</value>
         </prop>
       </node>
-      <node oor:name="StarOffice_Drawing">
+      <node oor:name="draw8_template">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 StarOffice Drawing 绘图格式</value>
+          <value xml:lang="zh-CN">ODF 绘图模板</value>
         </prop>
       </node>
       <node oor:name="Apple Keynote">
@@ -614,32 +689,12 @@
       </node>
       <node oor:name="MS PowerPoint 97">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 97-2003</value>
+          <value xml:lang="zh-CN">Microsoft PowerPoint 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="MS PowerPoint 97 AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 97-2003 自动播放</value>
-        </prop>
-      </node>
-      <node oor:name="MS PowerPoint 97 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 97-2003 模板</value>
-        </prop>
-      </node>
-      <node oor:name="impress_StarOffice_XML_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 绘图 (Impress)</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Impress)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 演示文稿</value>
-        </prop>
-      </node>
-      <node oor:name="impress_StarOffice_XML_Impress_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 演示模板</value>
+          <value xml:lang="zh-CN">Microsoft PowerPoint 97/2000/XP/2003 自动播放</value>
         </prop>
       </node>
       <node oor:name="impress_pdf_Export">
@@ -647,34 +702,19 @@
           <value xml:lang="zh-CN">PDF - Portable Document Format</value>
         </prop>
       </node>
-      <node oor:name="impress8">
+      <node oor:name="placeware_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 演示文稿</value>
-        </prop>
-      </node>
-      <node oor:name="impress8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 演示文稿模板</value>
-        </prop>
-      </node>
-      <node oor:name="impress8_draw">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ODF 绘图 (Impress)</value>
-        </prop>
-      </node>
-      <node oor:name="Impress MS PowerPoint 2007 XML">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-2019 XML</value>
+          <value xml:lang="zh-CN">PWP - PlaceWare</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-2019 XML 自动播放</value>
+          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-365 XML 自动播放</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-2019 XML 模板</value>
+          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-365 XML 模板</value>
         </prop>
       </node>
       <node oor:name="Impress Office Open XML">
@@ -697,19 +737,59 @@
           <value xml:lang="zh-CN">ClarisWorks/AppleWorks 演示文稿</value>
         </prop>
       </node>
-      <node oor:name="StarOffice_Presentation">
+      <node oor:name="MS PowerPoint 97 Vorlage">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 StarOffice 演示文稿</value>
+          <value xml:lang="zh-CN">Microsoft PowerPoint 97/2000/XP/2003 模板</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Presentation">
+      <node oor:name="impress_StarOffice_XML_Draw">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">旧式 Mac 演示文稿</value>
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 绘图 (Impress)</value>
         </prop>
       </node>
-      <node oor:name="PowerPoint 3">
+      <node oor:name="StarOffice XML (Impress)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">Microsoft PowerPoint 1-4 以及 95 年代</value>
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 演示文稿</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 演示模板</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ODF 演示文稿</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ODF 演示文稿模板</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">ODF 绘图 (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-365 XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Microsoft PowerPoint 2007-365 XML 模板</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Office Open XML 演示文稿</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">Office Open XML 演示文稿模板</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Chart)">
@@ -724,7 +804,7 @@
       </node>
       <node oor:name="MathML XML (Math)">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">MathML 2.0</value>
+          <value xml:lang="zh-CN">MathML 1.01</value>
         </prop>
       </node>
       <node oor:name="MathType 3.x">
@@ -732,14 +812,14 @@
           <value xml:lang="zh-CN">MathType3.x</value>
         </prop>
       </node>
-      <node oor:name="StarOffice XML (Math)">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">OpenOffice.org 1.0 公式</value>
-        </prop>
-      </node>
       <node oor:name="math_pdf_Export">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">PDF - Portable Document Format</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">OpenOffice.org 1.0 公式</value>
         </prop>
       </node>
       <node oor:name="math8">
@@ -749,7 +829,7 @@
       </node>
       <node oor:name="BMP - MS Windows">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">BMP - Windows 位图</value>
+          <value xml:lang="zh-CN">BMP - Windows Bitmap</value>
         </prop>
       </node>
       <node oor:name="DXF - AutoCAD Interchange">
@@ -764,7 +844,7 @@
       </node>
       <node oor:name="EPS - Encapsulated PostScript">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">EPS - 内嵌的 PostScript</value>
+          <value xml:lang="zh-CN">EPS - 被封装的PostScript</value>
         </prop>
       </node>
       <node oor:name="GIF - Graphics Interchange">
@@ -779,7 +859,7 @@
       </node>
       <node oor:name="MET - OS/2 Metafile">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">MET - OS/2 元文件</value>
+          <value xml:lang="zh-CN">MET - OS/2 Metafile</value>
         </prop>
       </node>
       <node oor:name="MOV - MOV">
@@ -809,7 +889,7 @@
       </node>
       <node oor:name="PNG - Portable Network Graphic">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PNG - 可移植网络图形</value>
+          <value xml:lang="zh-CN">PNG - Portable Network Graphic</value>
         </prop>
       </node>
       <node oor:name="PPM - Portable Pixelmap">
@@ -824,7 +904,7 @@
       </node>
       <node oor:name="RAS - Sun Rasterfile">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">RAS - Sun 光栅图像</value>
+          <value xml:lang="zh-CN">RAS - Sun Raster Image</value>
         </prop>
       </node>
       <node oor:name="SGF - StarOffice Writer SGF">
@@ -839,12 +919,12 @@
       </node>
       <node oor:name="SVG - Scalable Vector Graphics">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">SVG - 可缩放矢量图形</value>
+          <value xml:lang="zh-CN">SVG - 可缩放矢量图</value>
         </prop>
       </node>
       <node oor:name="SVM - StarView Metafile">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">SVM - StarView 元文件</value>
+          <value xml:lang="zh-CN">SVM - StarView Metafile</value>
         </prop>
       </node>
       <node oor:name="TGA - Truevision TARGA">
@@ -854,12 +934,12 @@
       </node>
       <node oor:name="TIF - Tag Image File">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">TIFF - 标记图像文件格式</value>
+          <value xml:lang="zh-CN">TIFF - 标签图像文件格式</value>
         </prop>
       </node>
       <node oor:name="WMF - MS Windows Metafile">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">WMF - Windows 元文件</value>
+          <value xml:lang="zh-CN">WMF - Windows Metafile</value>
         </prop>
       </node>
       <node oor:name="XBM - X-Consortium">
@@ -889,7 +969,7 @@
       </node>
       <node oor:name="draw_bmp_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">BMP - Windows 位图</value>
+          <value xml:lang="zh-CN">BMP - Windows Bitmap</value>
         </prop>
       </node>
       <node oor:name="draw_emf_Export">
@@ -899,7 +979,7 @@
       </node>
       <node oor:name="draw_eps_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">EPS - 内嵌的 PostScript</value>
+          <value xml:lang="zh-CN">EPS - 被封装的PostScript</value>
         </prop>
       </node>
       <node oor:name="draw_flash_Export">
@@ -909,12 +989,7 @@
       </node>
       <node oor:name="draw_gif_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">GIF - 图形交换格式</value>
-        </prop>
-      </node>
-      <node oor:name="draw_html_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">HTML 文档 (Draw)</value>
+          <value xml:lang="zh-CN">GIF - Graphics Interchange Format</value>
         </prop>
       </node>
       <node oor:name="draw_jpg_Export">
@@ -922,9 +997,39 @@
           <value xml:lang="zh-CN">JPEG - Joint Photographic Experts Group</value>
         </prop>
       </node>
+      <node oor:name="draw_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MET - OS/2 Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PBM - Portable Bitmap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PGM - Portable Graymap</value>
+        </prop>
+      </node>
       <node oor:name="draw_png_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PNG - 可移植网络图形</value>
+          <value xml:lang="zh-CN">PNG - Portable Network Graphic</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PPM - Portable Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">RAS - Sun Raster Image</value>
         </prop>
       </node>
       <node oor:name="draw_svg_Export">
@@ -932,14 +1037,29 @@
           <value xml:lang="zh-CN">SVG - 可缩放矢量图形</value>
         </prop>
       </node>
+      <node oor:name="draw_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">SVM - StarView Metafile</value>
+        </prop>
+      </node>
       <node oor:name="draw_tif_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">TIFF - 标记图像文件格式</value>
+          <value xml:lang="zh-CN">TIFF - 标签图像文件格式</value>
         </prop>
       </node>
       <node oor:name="draw_wmf_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">WMF - Windows 元文件</value>
+          <value xml:lang="zh-CN">WMF - Windows Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="draw_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">HTML 文档 (Draw)</value>
         </prop>
       </node>
       <node oor:name="CGM - Computer Graphics Metafile">
@@ -949,7 +1069,7 @@
       </node>
       <node oor:name="impress_bmp_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">BMP - Windows 位图</value>
+          <value xml:lang="zh-CN">BMP - Windows Bitmap</value>
         </prop>
       </node>
       <node oor:name="impress_emf_Export">
@@ -959,7 +1079,7 @@
       </node>
       <node oor:name="impress_eps_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">EPS - 内嵌的 PostScript</value>
+          <value xml:lang="zh-CN">EPS - 被封装的PostScript</value>
         </prop>
       </node>
       <node oor:name="impress_flash_Export">
@@ -969,12 +1089,7 @@
       </node>
       <node oor:name="impress_gif_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">GIF - 图形交换格式</value>
-        </prop>
-      </node>
-      <node oor:name="impress_html_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">HTML 文档 (Impress)</value>
+          <value xml:lang="zh-CN">GIF - Graphics Interchange Format</value>
         </prop>
       </node>
       <node oor:name="impress_jpg_Export">
@@ -982,9 +1097,39 @@
           <value xml:lang="zh-CN">JPEG - Joint Photographic Experts Group</value>
         </prop>
       </node>
+      <node oor:name="impress_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">MET - OS/2 Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PBM - Portable Bitmap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PGM - Portable Graymap</value>
+        </prop>
+      </node>
       <node oor:name="impress_png_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PNG - 可移植网络图形</value>
+          <value xml:lang="zh-CN">PNG - Portable Network Graphic</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">PPM - Portable Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">RAS - Sun Raster Image</value>
         </prop>
       </node>
       <node oor:name="impress_svg_Export">
@@ -992,14 +1137,29 @@
           <value xml:lang="zh-CN">SVG - 可缩放矢量图</value>
         </prop>
       </node>
+      <node oor:name="impress_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">SVM - StarView Metafile</value>
+        </prop>
+      </node>
       <node oor:name="impress_tif_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">TIFF - 标记图像文件格式</value>
+          <value xml:lang="zh-CN">TIFF - 标签图像文档格式</value>
         </prop>
       </node>
       <node oor:name="impress_wmf_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">WMF - Windows 元文件</value>
+          <value xml:lang="zh-CN">WMF - Windows Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="impress_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="zh-CN">HTML 文档 (Impress)</value>
         </prop>
       </node>
       <node oor:name="writer_jpg_Export">
@@ -1009,17 +1169,7 @@
       </node>
       <node oor:name="writer_png_Export">
         <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PNG - 可移植网络图形</value>
-        </prop>
-      </node>
-      <node oor:name="calc_png_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">PNG - 可移植网络图形</value>
-        </prop>
-      </node>
-      <node oor:name="ADO Rowset XML">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">ADO Rowset XML</value>
+          <value xml:lang="zh-CN">PNG - Portable Network Graphic</value>
         </prop>
       </node>
       <node oor:name="MS Excel 2003 XML">
@@ -1030,21 +1180,6 @@
       <node oor:name="MS Word 2003 XML">
         <prop oor:name="UIName">
           <value xml:lang="zh-CN">Microsoft Word 2003 XML</value>
-        </prop>
-      </node>
-      <node oor:name="UOF text">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">标文通文本文档</value>
-        </prop>
-      </node>
-      <node oor:name="UOF spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">标文通电子表格</value>
-        </prop>
-      </node>
-      <node oor:name="UOF presentation">
-        <prop oor:name="UIName">
-          <value xml:lang="zh-CN">标文通演示文稿</value>
         </prop>
       </node>
     </node>

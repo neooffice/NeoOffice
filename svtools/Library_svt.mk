@@ -70,6 +70,7 @@ $(eval $(call gb_Library_use_libraries,svt,\
     ucbhelper \
     utl \
     vcl \
+	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_use_externals,svt,\
@@ -104,9 +105,6 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/contnr/DocumentInfoPreview \
     svtools/source/contnr/contentenumeration \
     svtools/source/contnr/fileview \
-    svtools/source/contnr/foldertree \
-    svtools/source/contnr/iconview \
-    svtools/source/contnr/iconviewimpl \
     svtools/source/contnr/imivctl1 \
     svtools/source/contnr/imivctl2 \
     svtools/source/contnr/ivctrl \
@@ -121,8 +119,6 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/contnr/viewdataentry \
     svtools/source/control/accessibleruler \
     svtools/source/control/asynclink \
-    svtools/source/control/autocmpledit \
-    svtools/source/control/breadcrumb \
     svtools/source/control/calendar \
     svtools/source/control/collatorres \
     svtools/source/control/ctrlbox \
@@ -134,11 +130,12 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/control/hyperlabel \
     svtools/source/control/indexentryres \
     svtools/source/control/inettbc \
-    svtools/source/control/managedmenubutton \
     svtools/source/control/roadmap \
     svtools/source/control/ruler \
     svtools/source/control/scriptedtext \
     svtools/source/control/scrwin \
+    svtools/source/control/stdctrl \
+    svtools/source/control/stdmenu \
     svtools/source/control/tabbar \
     svtools/source/control/toolbarmenu \
     svtools/source/control/toolbarmenuacc \
@@ -150,6 +147,7 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/dialogs/addresstemplate \
     svtools/source/dialogs/colrdlg \
     svtools/source/dialogs/insdlg \
+    svtools/source/dialogs/mcvmath \
     svtools/source/dialogs/PlaceEditDialog \
     svtools/source/dialogs/prnsetup \
     svtools/source/dialogs/restartdialog \
@@ -207,6 +205,7 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/misc/transfer \
     svtools/source/misc/transfer2 \
     svtools/source/misc/unitconv \
+    svtools/source/misc/xwindowitem \
     svtools/source/svhtml/htmlkywd \
     svtools/source/svhtml/htmlout \
     svtools/source/svhtml/htmlsupp \
@@ -224,8 +223,21 @@ $(eval $(call gb_Library_add_exception_objects,svt,\
     svtools/source/table/mousefunction \
     svtools/source/table/cellvalueconversion \
     svtools/source/table/tablegeometry \
-    svtools/source/uitest/uiobject \
+    svtools/source/toolpanel/drawerlayouter \
+    svtools/source/toolpanel/dummypanel \
+    svtools/source/toolpanel/paneldecklisteners \
+    svtools/source/toolpanel/paneltabbar \
+    svtools/source/toolpanel/paneltabbarpeer \
+    svtools/source/toolpanel/tabbargeometry \
+    svtools/source/toolpanel/tablayouter \
+    svtools/source/toolpanel/toolpanel \
+    svtools/source/toolpanel/toolpanelcollection \
+    svtools/source/toolpanel/toolpaneldeck \
+    svtools/source/toolpanel/toolpaneldeckpeer \
+    svtools/source/toolpanel/toolpaneldrawer \
+    svtools/source/toolpanel/toolpaneldrawerpeer \
     svtools/source/uno/addrtempuno \
+    svtools/source/uno/contextmenuhelper \
     svtools/source/uno/fpicker \
     svtools/source/uno/framestatuslistener \
     svtools/source/uno/generictoolboxcontroller \

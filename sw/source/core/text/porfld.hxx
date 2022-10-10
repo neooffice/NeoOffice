@@ -25,17 +25,18 @@
 
 class SwFont;
 class SvxBrushItem;
-class SwFormatVertOrient;
+class SwFmtVertOrient;
+class SwFrm;
 
-class SwFieldPortion : public SwExpandPortion
+class SwFldPortion : public SwExpandPortion
 {
-    friend class SwTextFormatter;
+    friend class SwTxtFormatter;
 protected:
-    OUString  aExpand;          // The expanded field
-    SwFont  *pFnt;              // For multi-line fields
-    sal_Int32 nNextOffset;      // Offset of the follow in the original string
+    OUString  aExpand;              // The expanded field
+    SwFont  *pFnt;                  // For multi-line fields
+    sal_Int32 nNextOffset;         // Offset of the follow in the original string
     sal_Int32 nNextScriptChg;
-    sal_uInt16  nViewWidth;     // Screen width for empty fields
+    sal_uInt16  nViewWidth;             // Screen width for empty fields
     bool bFollow : 1;           // 2nd or later part of a field
     bool bLeft : 1;             // Used by SwNumberPortion
     bool bHide : 1;             // Used by SwNumberPortion
@@ -47,80 +48,82 @@ protected:
     const bool bPlaceHolder : 1;
     bool m_bNoLength : 1;       // HACK for meta suffix (no CH_TXTATR)
 
-    void SetFont( SwFont *pNew ) { pFnt = pNew; }
-    bool IsNoLength() const  { return m_bNoLength; }
-    void SetNoLength()       { m_bNoLength = true; }
+    inline void SetFont( SwFont *pNew ) { pFnt = pNew; }
+    inline bool IsNoLength() const  { return m_bNoLength; }
+    inline void SetNoLength()       { m_bNoLength = true; }
 
 public:
-    SwFieldPortion( const SwFieldPortion& rField );
-    SwFieldPortion( const OUString &rExpand, SwFont *pFnt = nullptr, bool bPlaceHolder = false );
-    virtual ~SwFieldPortion() override;
+    SwFldPortion( const SwFldPortion& rFld );
+    SwFldPortion( const OUString &rExpand, SwFont *pFnt = 0, bool bPlaceHolder = false );
+    virtual ~SwFldPortion();
 
-    sal_uInt16 m_nAttrFieldType;
-    void TakeNextOffset( const SwFieldPortion* pField );
-    void CheckScript( const SwTextSizeInfo &rInf );
-    bool HasFont() const { return nullptr != pFnt; }
+    sal_uInt16 m_nAttrFldType;
+    void TakeNextOffset( const SwFldPortion* pFld );
+    void CheckScript( const SwTxtSizeInfo &rInf );
+    inline bool HasFont() const { return 0 != pFnt; }
     // #i89179# - made public
-    const SwFont *GetFont() const { return pFnt; }
+    inline const SwFont *GetFont() const { return pFnt; }
 
-    const OUString& GetExp() const { return aExpand; }
-    virtual bool GetExpText( const SwTextSizeInfo &rInf, OUString &rText ) const override;
-    virtual bool Format( SwTextFormatInfo &rInf ) override;
-    virtual void Paint( const SwTextPaintInfo &rInf ) const override;
+    inline OUString GetExp() const { return aExpand; }
+    virtual bool GetExpTxt( const SwTxtSizeInfo &rInf, OUString &rTxt ) const SAL_OVERRIDE;
+    virtual bool Format( SwTxtFormatInfo &rInf ) SAL_OVERRIDE;
+    virtual void Paint( const SwTxtPaintInfo &rInf ) const SAL_OVERRIDE;
 
     // Empty fields are also allowed
-    virtual SwLinePortion *Compress() override;
+    virtual SwLinePortion *Compress() SAL_OVERRIDE;
 
-    virtual sal_uInt16 GetViewWidth( const SwTextSizeInfo &rInf ) const override;
+    virtual sal_uInt16 GetViewWidth( const SwTxtSizeInfo &rInf ) const SAL_OVERRIDE;
 
-    bool IsFollow() const { return bFollow; }
-    void SetFollow( bool bNew ) { bFollow = bNew; }
+    inline bool IsFollow() const { return bFollow; }
+    inline void SetFollow( bool bNew ) { bFollow = bNew; }
 
-    bool IsLeft() const { return bLeft; }
-    void SetLeft( bool bNew ) { bLeft = bNew; }
+    inline bool IsLeft() const { return bLeft; }
+    inline void SetLeft( bool bNew ) { bLeft = bNew; }
 
-    bool IsHide() const { return bHide; }
-    void SetHide( bool bNew ) { bHide = bNew; }
+    inline bool IsHide() const { return bHide; }
+    inline void SetHide( bool bNew ) { bHide = bNew; }
 
-    bool IsCenter() const { return bCenter; }
-    void SetCenter( bool bNew ) { bCenter = bNew; }
+    inline bool IsCenter() const { return bCenter; }
+    inline void SetCenter( bool bNew ) { bCenter = bNew; }
 
-    bool HasFollow() const { return bHasFollow; }
-    void SetHasFollow( bool bNew ) { bHasFollow = bNew; }
+    inline bool HasFollow() const { return bHasFollow; }
+    inline void SetHasFollow( bool bNew ) { bHasFollow = bNew; }
 
-    sal_Int32 GetNextOffset() const { return nNextOffset; }
-    void SetNextOffset( sal_Int32 nNew ) { nNextOffset = nNew; }
+    inline sal_Int32 GetNextOffset() const { return nNextOffset; }
+    inline void SetNextOffset( sal_Int32 nNew ) { nNextOffset = nNew; }
+
+    inline sal_Int32 GetNextScriptChg() const { return nNextScriptChg; }
+    inline void SetNextScriptChg( sal_Int32 nNew ) { nNextScriptChg = nNew; }
 
     // Field cloner for SplitGlue
-    virtual SwFieldPortion *Clone( const OUString &rExpand ) const;
+    virtual SwFldPortion *Clone( const OUString &rExpand ) const;
 
-    // Extra GetTextSize because of pFnt
-    virtual SwPosSize GetTextSize( const SwTextSizeInfo &rInfo ) const override;
+    // Extra GetTxtSize because of pFnt
+    virtual SwPosSize GetTxtSize( const SwTxtSizeInfo &rInfo ) const SAL_OVERRIDE;
 
     // Accessibility: pass information about this portion to the PortionHandler
-    virtual void HandlePortion( SwPortionHandler& rPH ) const override;
+    virtual void HandlePortion( SwPortionHandler& rPH ) const SAL_OVERRIDE;
 
     OUTPUT_OPERATOR_OVERRIDE
 };
 
-/**
- * Distinguish only for painting/hide
- */
-class SwHiddenPortion : public SwFieldPortion
+// Distinguish only for painting/hide
+
+class SwHiddenPortion : public SwFldPortion
 {
 public:
-    SwHiddenPortion( const OUString &rExpand, SwFont *pFntL = nullptr )
-         : SwFieldPortion( rExpand, pFntL )
+    inline SwHiddenPortion( const OUString &rExpand, SwFont *pFntL = 0 )
+         : SwFldPortion( rExpand, pFntL )
         { SetLen(1); SetWhichPor( POR_HIDDEN ); }
-    virtual void Paint( const SwTextPaintInfo &rInf ) const override;
-    virtual bool GetExpText( const SwTextSizeInfo &rInf, OUString &rText ) const override;
+    virtual void Paint( const SwTxtPaintInfo &rInf ) const SAL_OVERRIDE;
+    virtual bool GetExpTxt( const SwTxtSizeInfo &rInf, OUString &rTxt ) const SAL_OVERRIDE;
 
     // Field cloner for SplitGlue
-    virtual SwFieldPortion *Clone( const OUString &rExpand ) const override;
+    virtual SwFldPortion *Clone( const OUString &rExpand ) const SAL_OVERRIDE;
     OUTPUT_OPERATOR_OVERRIDE
 };
 
-class SwNumberPortion : public SwFieldPortion
+class SwNumberPortion : public SwFldPortion
 {
 protected:
     sal_uInt16  nFixWidth;      // See Glues
@@ -134,13 +137,13 @@ public:
                      const bool bCenter,
                      const sal_uInt16 nMinDst,
                      const bool bLabelAlignmentPosAndSpaceModeActive );
-    virtual void Paint( const SwTextPaintInfo &rInf ) const override;
-    virtual sal_Int32 GetCursorOfst( const sal_uInt16 nOfst ) const override;
-    virtual bool Format( SwTextFormatInfo &rInf ) override;
+    virtual void Paint( const SwTxtPaintInfo &rInf ) const SAL_OVERRIDE;
+    virtual sal_Int32 GetCrsrOfst( const sal_uInt16 nOfst ) const SAL_OVERRIDE;
+    virtual bool Format( SwTxtFormatInfo &rInf ) SAL_OVERRIDE;
 
     // Field cloner for SplitGlue
-    virtual SwFieldPortion *Clone( const OUString &rExpand ) const override;
-    virtual void FormatEOL( SwTextFormatInfo &rInf ) override;
+    virtual SwFldPortion *Clone( const OUString &rExpand ) const SAL_OVERRIDE;
+    virtual void FormatEOL( SwTxtFormatInfo &rInf ) SAL_OVERRIDE;
 
     OUTPUT_OPERATOR_OVERRIDE
 };
@@ -166,59 +169,61 @@ class SwGrfNumPortion : public SwNumberPortion
     SwTwips         nGrfHeight;
     sal_Int16       eOrient;
 public:
-    SwGrfNumPortion( const OUString& rGraphicFollowedBy,
+    SwGrfNumPortion( SwFrm *pFrm,
+                     const OUString& rGraphicFollowedBy,
                      const SvxBrushItem* pGrfBrush,
 #ifndef NO_LIBO_NUMBERING_REFERER_FIX
                      OUString const & referer,
 #endif	// !NO_LIBO_NUMBERING_REFERER_FIX
-                     const SwFormatVertOrient* pGrfOrient,
+                     const SwFmtVertOrient* pGrfOrient,
                      const Size& rGrfSize,
                      const bool bLeft,
                      const bool bCenter,
                      const sal_uInt16 nMinDst,
                      const bool bLabelAlignmentPosAndSpaceModeActive );
-    virtual ~SwGrfNumPortion() override;
-    virtual void Paint( const SwTextPaintInfo &rInf ) const override;
-    virtual bool Format( SwTextFormatInfo &rInf ) override;
+    virtual ~SwGrfNumPortion();
+    virtual void Paint( const SwTxtPaintInfo &rInf ) const SAL_OVERRIDE;
+    virtual bool Format( SwTxtFormatInfo &rInf ) SAL_OVERRIDE;
 
     void SetBase( long nLnAscent, long nLnDescent,
         long nFlyAscent, long nFlyDescent );
 
     void StopAnimation( OutputDevice* pOut );
 
-    bool IsAnimated() const { return bAnimated; }
-    void SetAnimated( bool bNew ) { bAnimated = bNew; }
-    void SetRelPos( SwTwips nNew ) { nYPos = nNew; }
-    void SetId( long nNew ) const
-        { const_cast<SwGrfNumPortion*>(this)->nId = nNew; }
-    SwTwips GetRelPos() const { return nYPos; }
-    SwTwips GetGrfHeight() const { return nGrfHeight; }
-    sal_Int16 GetOrient() const { return eOrient; }
+    inline bool IsAnimated() const { return bAnimated; }
+    inline void SetAnimated( bool bNew ) { bAnimated = bNew; }
+    inline bool DontPaint() const { return bNoPaint; }
+    inline void SetNoPaint( bool bNew ) { bNoPaint = bNew; }
+    inline void SetRelPos( SwTwips nNew ) { nYPos = nNew; }
+    inline void SetId( long nNew ) const
+        { ((SwGrfNumPortion*)this)->nId = nNew; }
+    inline SwTwips GetRelPos() const { return nYPos; }
+    inline SwTwips GetGrfHeight() const { return nGrfHeight; }
+    inline SwTwips GetId() const { return nId; }
+    inline sal_Int16 GetOrient() const { return eOrient; }
 
     OUTPUT_OPERATOR_OVERRIDE
 };
 
-/**
- * Used in for asian layout specialities to display up to six characters
- * in 2 rows and 2-3 columns.
- * E.g.: <pre>
- *        A..  A..  A.B  A.B   A.B.C   A.B.C
- *        ...  ..B  .C.  C.D   .D.E.   D.E.F
- *        </pre>
- */
-class SwCombinedPortion : public SwFieldPortion
+// Used in for asian layout specialities to display up to six characters
+// in 2 rows and 2-3 columns.
+// e.g.
+//
+//       A..  A..  A.B  A.B   A.B.C   A.B.C
+//       ...  ..B  .C.  C.D   .D.E.   D.E.F
+class SwCombinedPortion : public SwFldPortion
 {
     sal_uInt16 aPos[6];     // up to six X positions
-    o3tl::enumarray<SwFontScript,sal_uInt16> aWidth;   // one width for every scripttype
-    SwFontScript aScrType[6];  // scripttype of every character
+    sal_uInt16 aWidth[3];   // one width for every scripttype
+    sal_uInt8 aScrType[6];  // scripttype of every character
     sal_uInt16 nUpPos;      // the Y position of the upper baseline
     sal_uInt16 nLowPos;     // the Y position of the lower baseline
     sal_uInt8 nProportion;  // relative font height
 public:
-    explicit SwCombinedPortion( const OUString &rExpand );
-    virtual void Paint( const SwTextPaintInfo &rInf ) const override;
-    virtual bool Format( SwTextFormatInfo &rInf ) override;
-    virtual sal_uInt16 GetViewWidth( const SwTextSizeInfo &rInf ) const override;
+    SwCombinedPortion( const OUString &rExpand );
+    virtual void Paint( const SwTxtPaintInfo &rInf ) const SAL_OVERRIDE;
+    virtual bool Format( SwTxtFormatInfo &rInf ) SAL_OVERRIDE;
+    virtual sal_uInt16 GetViewWidth( const SwTxtSizeInfo &rInf ) const SAL_OVERRIDE;
     OUTPUT_OPERATOR_OVERRIDE
 };
 
@@ -226,15 +231,15 @@ namespace sw { namespace mark {
     class IFieldmark;
 } }
 
-class SwFieldFormDropDownPortion : public SwFieldPortion
+class SwFieldFormDropDownPortion : public SwFldPortion
 {
 public:
-    explicit SwFieldFormDropDownPortion(const OUString &rExpand)
-        : SwFieldPortion(rExpand)
+    SwFieldFormDropDownPortion(const OUString &rExpand)
+        : SwFldPortion(rExpand)
     {
     }
     // Field cloner for SplitGlue
-    virtual SwFieldPortion *Clone( const OUString &rExpand ) const override;
+    virtual SwFldPortion *Clone( const OUString &rExpand ) const SAL_OVERRIDE;
 };
 
 #endif

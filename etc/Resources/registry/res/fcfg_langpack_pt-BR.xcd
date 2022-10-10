@@ -22,11 +22,6 @@
           <value xml:lang="pt-BR">Gráfico de relatório do OpenOffice.org 1.0</value>
         </prop>
       </node>
-      <node oor:name="HTML (StarWriter)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento HTML (Writer)</value>
-        </prop>
-      </node>
       <node oor:name="MS WinWord 5">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Microsoft WinWord 1/2/5</value>
@@ -42,29 +37,14 @@
           <value xml:lang="pt-BR">Microsoft Word 95</value>
         </prop>
       </node>
-      <node oor:name="MS Word 95 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft Word 95</value>
-        </prop>
-      </node>
       <node oor:name="MS Word 97">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft Word 97-2003</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 97 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft Word 97-2003</value>
+          <value xml:lang="pt-BR">Microsoft Word 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="Rich Text Format">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Rich Text</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Writer)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento de texto do OpenOffice.org 1.0</value>
         </prop>
       </node>
       <node oor:name="WordPerfect">
@@ -77,19 +57,64 @@
           <value xml:lang="pt-BR">Documento Microsoft Works</value>
         </prop>
       </node>
-      <node oor:name="MS_Write">
+      <node oor:name="Beagle_Works">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft Write</value>
-        </prop>
-      </node>
-      <node oor:name="DosWord">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft Word para DOS</value>
+          <value xml:lang="pt-BR">Documento de texto BeagleWorks/WordPerfect Works v1</value>
         </prop>
       </node>
       <node oor:name="ClarisWorks">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Documento de texto ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="DocMaker">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento DOCMaker (v4)</value>
+        </prop>
+      </node>
+      <node oor:name="eDoc_Document">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento eDOC (v2)</value>
+        </prop>
+      </node>
+      <node oor:name="FullWrite_Professional">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento FullWrite Professional</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento de texto GreatWorks</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_J">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento HanMac Word-J</value>
+        </prop>
+      </node>
+      <node oor:name="HanMac_Word_K">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento HanMac Word-K</value>
+        </prop>
+      </node>
+      <node oor:name="LightWayText">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">LightWayText para Mac v4.5</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Acta">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento Acta Mac Classic</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_More">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento More Mac v2-3</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_RagTime">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento RagTime Mac v2-3</value>
         </prop>
       </node>
       <node oor:name="Mac_Word">
@@ -102,9 +127,19 @@
           <value xml:lang="pt-BR">Documento de texto Microsoft Works para Mac (v1 - v4)</value>
         </prop>
       </node>
+      <node oor:name="MacDoc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento MacDoc v1</value>
+        </prop>
+      </node>
       <node oor:name="MacWrite">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Documento MacWrite</value>
+        </prop>
+      </node>
+      <node oor:name="MacWritePro">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento do MacWriteII ou do MacWritePro</value>
         </prop>
       </node>
       <node oor:name="Mariner_Write">
@@ -112,9 +147,39 @@
           <value xml:lang="pt-BR">Mariner Write Mac Classic v1.6 - v3.5</value>
         </prop>
       </node>
+      <node oor:name="MindWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento MindWrite</value>
+        </prop>
+      </node>
+      <node oor:name="Nisus_Writer">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Nisus Writer Mac Classic v3.4 - 6.5</value>
+        </prop>
+      </node>
+      <node oor:name="TeachText">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento TeachText/SimpleText v1</value>
+        </prop>
+      </node>
+      <node oor:name="TexEdit">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento Tex-Edit v2</value>
+        </prop>
+      </node>
       <node oor:name="WriteNow">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Documento WriteNow</value>
+        </prop>
+      </node>
+      <node oor:name="WriterPlus">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento WriterPlus</value>
+        </prop>
+      </node>
+      <node oor:name="ZWrite">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento Z-Write 1.3</value>
         </prop>
       </node>
       <node oor:name="AbiWord">
@@ -132,24 +197,9 @@
           <value xml:lang="pt-BR">Documento Lotus WordPro</value>
         </prop>
       </node>
-      <node oor:name="Text">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Texto</value>
-        </prop>
-      </node>
-      <node oor:name="Text (encoded)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Texto - Escolha a codificação</value>
-        </prop>
-      </node>
       <node oor:name="writer_MIZI_Hwp_97">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Hangul WP 97</value>
-        </prop>
-      </node>
-      <node oor:name="writer_StarOffice_XML_Writer_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo de documento de texto do OpenOffice.org 1.0</value>
         </prop>
       </node>
       <node oor:name="writer_pdf_Export">
@@ -157,29 +207,14 @@
           <value xml:lang="pt-BR">PDF - Portable Document Format</value>
         </prop>
       </node>
-      <node oor:name="writer8">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento de texto ODF</value>
-        </prop>
-      </node>
-      <node oor:name="writer8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo de documento de texto ODF</value>
-        </prop>
-      </node>
       <node oor:name="MS Word 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">XML do Microsoft Word 2007-2019</value>
+          <value xml:lang="pt-BR">XML do Microsoft Word 2007-365</value>
         </prop>
       </node>
       <node oor:name="MS Word 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo XML do Microsoft Word 2007-2019</value>
-        </prop>
-      </node>
-      <node oor:name="MS Word 2007 XML VBA">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft Word 2007-2019 XML VBA</value>
+          <value xml:lang="pt-BR">Modelo XML do Microsoft Word 2007-365</value>
         </prop>
       </node>
       <node oor:name="Office Open XML Text">
@@ -202,6 +237,11 @@
           <value xml:lang="pt-BR">Livro eletrônico BroadBand</value>
         </prop>
       </node>
+      <node oor:name="eReader eBook">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Livro eletrônico eReader</value>
+        </prop>
+      </node>
       <node oor:name="FictionBook 2">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">FictionBook 2.0</value>
@@ -217,24 +257,84 @@
           <value xml:lang="pt-BR">Livro eletrônico Plucker</value>
         </prop>
       </node>
-      <node oor:name="Apple Pages">
+      <node oor:name="TealDoc">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apple Pages 4</value>
+          <value xml:lang="pt-BR">Livro eletrônico TealDoc</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Text_Document">
+      <node oor:name="zTXT">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento de texto do Mac legado</value>
+          <value xml:lang="pt-BR">Livro eletrônico zTXT</value>
         </prop>
       </node>
-      <node oor:name="Palm_Text_Document">
+      <node oor:name="HTML (StarWriter)">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento de texto do Palm</value>
+          <value xml:lang="pt-BR">Documento HTML (Writer)</value>
         </prop>
       </node>
-      <node oor:name="StarOffice_Writer">
+      <node oor:name="MS Word 95 Vorlage">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento de texto StarOffice antigo</value>
+          <value xml:lang="pt-BR">Modelo do Microsoft Word 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 97 Vorlage">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo do Microsoft Word 97/2000/XP/2003</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Writer)">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento de texto do OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="Text">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Texto</value>
+        </prop>
+      </node>
+      <node oor:name="Text (encoded)">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Texto - Escolha a codificação</value>
+        </prop>
+      </node>
+      <node oor:name="writer_StarOffice_XML_Writer_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo de documento de texto do OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="writer8">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento de texto ODF</value>
+        </prop>
+      </node>
+      <node oor:name="writer8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo de documento de texto ODF</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">XML do Microsoft Word 2007-365</value>
+        </prop>
+      </node>
+      <node oor:name="MS Word 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo XML do Microsoft Word 2007-365</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Texto Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Office Open XML Text Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo texto Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="writer_web_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PDF - Portable Document Format</value>
         </prop>
       </node>
       <node oor:name="HTML">
@@ -262,21 +362,6 @@
           <value xml:lang="pt-BR">Modelo de desenho do OpenOffice.org 1.0</value>
         </prop>
       </node>
-      <node oor:name="writer_web_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">PDF - Portable Document Format</value>
-        </prop>
-      </node>
-      <node oor:name="writer_web_png_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">PNG - Portable Network Graphic</value>
-        </prop>
-      </node>
-      <node oor:name="writer_web_jpg_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">JPEG - Joint Photographic Experts Group</value>
-        </prop>
-      </node>
       <node oor:name="writerweb8_writer_template">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Modelo de documento HTML</value>
@@ -285,6 +370,16 @@
       <node oor:name="writerweb8_writer">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Texto (Writer/Web)</value>
+        </prop>
+      </node>
+      <node oor:name="writer_globaldocument_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PDF - Portable Document Format</value>
+        </prop>
+      </node>
+      <node oor:name="writerglobal8_HTML">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">HTML (Writer/Global)</value>
         </prop>
       </node>
       <node oor:name="Text (encoded) (StarWriter/GlobalDocument)">
@@ -302,11 +397,6 @@
           <value xml:lang="pt-BR">Documento mestre do OpenOffice.org 1.0</value>
         </prop>
       </node>
-      <node oor:name="writer_globaldocument_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">PDF - Portable Document Format</value>
-        </prop>
-      </node>
       <node oor:name="writerglobal8">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Documento mestre ODF</value>
@@ -322,19 +412,9 @@
           <value xml:lang="pt-BR">Documento de texto ODF</value>
         </prop>
       </node>
-      <node oor:name="writerglobal8_HTML">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">HTML (Writer/Global)</value>
-        </prop>
-      </node>
       <node oor:name="DIF">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Data Interchange Format</value>
-        </prop>
-      </node>
-      <node oor:name="HTML (StarCalc)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento HTML (Calc)</value>
         </prop>
       </node>
       <node oor:name="Lotus">
@@ -352,19 +432,9 @@
           <value xml:lang="pt-BR">Microsoft Excel 4.0</value>
         </prop>
       </node>
-      <node oor:name="MS Excel 4.0 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft Excel 4.0</value>
-        </prop>
-      </node>
       <node oor:name="MS Excel 5.0/95">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Microsoft Excel 5.0</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft Excel 5.0</value>
         </prop>
       </node>
       <node oor:name="MS Excel 95">
@@ -372,19 +442,9 @@
           <value xml:lang="pt-BR">Microsoft Excel 95</value>
         </prop>
       </node>
-      <node oor:name="MS Excel 95 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft Excel 95</value>
-        </prop>
-      </node>
       <node oor:name="MS Excel 97">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft Excel 97-2003</value>
-        </prop>
-      </node>
-      <node oor:name="MS Excel 97 Vorlage/Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft Excel 97-2003</value>
+          <value xml:lang="pt-BR">Microsoft Excel 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="Rich Text Format (StarCalc)">
@@ -395,6 +455,76 @@
       <node oor:name="SYLK">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">SYLK</value>
+        </prop>
+      </node>
+      <node oor:name="calc_pdf_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PDF - Portable Document Format</value>
+        </prop>
+      </node>
+      <node oor:name="dBase">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">dBASE</value>
+        </prop>
+      </node>
+      <node oor:name="MS_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento Microsoft Works</value>
+        </prop>
+      </node>
+      <node oor:name="Beagle_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Planilha BeagleWorks/WordPerfect Works v1</value>
+        </prop>
+      </node>
+      <node oor:name="ClarisWorks_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Planilha ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="Claris_Resolve_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento ClarisResolve</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Planilha GreatWorks</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Wingz_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Wingz para documento Mac</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Calc">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Planilha Microsoft Works para Mac (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="HTML (StarCalc)">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento HTML (Calc)</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 4.0 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo do Microsoft Excel 4.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 5.0/95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo do Microsoft Excel 5.0</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 95 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo do Microsoft Excel 95</value>
+        </prop>
+      </node>
+      <node oor:name="MS Excel 97 Vorlage/Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo do Microsoft Excel 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Calc)">
@@ -417,16 +547,6 @@
           <value xml:lang="pt-BR">Modelo de planilha do OpenOffice.org 1.0</value>
         </prop>
       </node>
-      <node oor:name="calc_pdf_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">PDF - Portable Document Format</value>
-        </prop>
-      </node>
-      <node oor:name="dBase">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">dBASE</value>
-        </prop>
-      </node>
       <node oor:name="calc8">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Planilha ODF</value>
@@ -437,24 +557,14 @@
           <value xml:lang="pt-BR">Modelo de planilha ODF</value>
         </prop>
       </node>
-      <node oor:name="Gnumeric Spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Planilha Gnumeric</value>
-        </prop>
-      </node>
       <node oor:name="Calc MS Excel 2007 XML">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">XML do Microsoft Excel 2007-2019</value>
-        </prop>
-      </node>
-      <node oor:name="Calc MS Excel 2007 VBA XML">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">XML do Microsoft Excel 2007-2019 (com macros)</value>
+          <value xml:lang="pt-BR">XML do Microsoft Excel 2007-365</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo XML do Microsoft Excel 2007-2019</value>
+          <value xml:lang="pt-BR">Modelo XML do Microsoft Excel 2007-365</value>
         </prop>
       </node>
       <node oor:name="Calc MS Excel 2007 Binary">
@@ -472,79 +582,9 @@
           <value xml:lang="pt-BR">Modelo de planilha Office Open XML</value>
         </prop>
       </node>
-      <node oor:name="MS_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento Microsoft Works</value>
-        </prop>
-      </node>
-      <node oor:name="WPS_Lotus_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento Lotus</value>
-        </prop>
-      </node>
-      <node oor:name="WPS_QPro_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento QuattroPro</value>
-        </prop>
-      </node>
-      <node oor:name="ClarisWorks_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Planilha ClarisWorks/AppleWorks</value>
-        </prop>
-      </node>
-      <node oor:name="Claris_Resolve_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento ClarisResolve</value>
-        </prop>
-      </node>
-      <node oor:name="Mac_Works_Calc">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Planilha Microsoft Works para Mac (v1 - v4)</value>
-        </prop>
-      </node>
-      <node oor:name="Apple Numbers">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apple Numbers 2</value>
-        </prop>
-      </node>
-      <node oor:name="MWAW_Database">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Banco de dados do Mac legado</value>
-        </prop>
-      </node>
-      <node oor:name="MWAW_Spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Planilha do Mac legada</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice_Spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Planilha StarOffice antiga</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Draw)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Desenho do OpenOffice.org 1.0</value>
-        </prop>
-      </node>
-      <node oor:name="draw_StarOffice_XML_Draw_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo de desenho do OpenOffice.org 1.0</value>
-        </prop>
-      </node>
       <node oor:name="draw_pdf_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">PDF - Portable Document Format</value>
-        </prop>
-      </node>
-      <node oor:name="draw8">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Desenho ODF</value>
-        </prop>
-      </node>
-      <node oor:name="draw8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo de desenho ODF</value>
         </prop>
       </node>
       <node oor:name="WordPerfect Graphics">
@@ -577,9 +617,44 @@
           <value xml:lang="pt-BR">Adobe/Macromedia Freehand</value>
         </prop>
       </node>
+      <node oor:name="Beagle_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Desenho do BeagleWorks/WordPerfect Works v1</value>
+        </prop>
+      </node>
       <node oor:name="ClarisWorks_Draw">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Desenho ClarisWorks/AppleWorks</value>
+        </prop>
+      </node>
+      <node oor:name="Great_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Desenho GreatWorks</value>
+        </prop>
+      </node>
+      <node oor:name="MacDraw_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">MacDraw (v0-v1)</value>
+        </prop>
+      </node>
+      <node oor:name="MacDrawPro_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">MacDraw II</value>
+        </prop>
+      </node>
+      <node oor:name="Mac_Works_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Desenho Microsoft Works para Mac (v1 - v4)</value>
+        </prop>
+      </node>
+      <node oor:name="MacPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">MacPaint (v1)</value>
+        </prop>
+      </node>
+      <node oor:name="SuperPaint_Draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">SuperPaint (v1)</value>
         </prop>
       </node>
       <node oor:name="PageMaker Document">
@@ -587,24 +662,24 @@
           <value xml:lang="pt-BR">Adobe PageMaker</value>
         </prop>
       </node>
-      <node oor:name="ZMF Document">
+      <node oor:name="StarOffice XML (Draw)">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Zoner Callisto/Draw</value>
+          <value xml:lang="pt-BR">Desenho do OpenOffice.org 1.0</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Bitmap">
+      <node oor:name="draw_StarOffice_XML_Draw_Template">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Bitmap do Mac legado</value>
+          <value xml:lang="pt-BR">Modelo de desenho do OpenOffice.org 1.0</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Drawing">
+      <node oor:name="draw8">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Desenho do Mac legado</value>
+          <value xml:lang="pt-BR">Desenho ODF</value>
         </prop>
       </node>
-      <node oor:name="StarOffice_Drawing">
+      <node oor:name="draw8_template">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Desenho StarOffice antigo</value>
+          <value xml:lang="pt-BR">Modelo de desenho ODF</value>
         </prop>
       </node>
       <node oor:name="Apple Keynote">
@@ -614,32 +689,12 @@
       </node>
       <node oor:name="MS PowerPoint 97">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft PowerPoint 97-2003</value>
+          <value xml:lang="pt-BR">Microsoft PowerPoint 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="MS PowerPoint 97 AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação automática do Microsoft PowerPoint 97-2003</value>
-        </prop>
-      </node>
-      <node oor:name="MS PowerPoint 97 Vorlage">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo do Microsoft PowerPoint 97-2003</value>
-        </prop>
-      </node>
-      <node oor:name="impress_StarOffice_XML_Draw">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Desenho do OpenOffice.org 1.0 (Impress)</value>
-        </prop>
-      </node>
-      <node oor:name="StarOffice XML (Impress)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação do OpenOffice.org 1.0</value>
-        </prop>
-      </node>
-      <node oor:name="impress_StarOffice_XML_Impress_Template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo de apresentação do OpenOffice.org 1.0</value>
+          <value xml:lang="pt-BR">Apresentação automática do Microsoft PowerPoint 97/2000/XP/2003</value>
         </prop>
       </node>
       <node oor:name="impress_pdf_Export">
@@ -647,34 +702,19 @@
           <value xml:lang="pt-BR">PDF - Portable Document Format</value>
         </prop>
       </node>
-      <node oor:name="impress8">
+      <node oor:name="placeware_Export">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação ODF</value>
-        </prop>
-      </node>
-      <node oor:name="impress8_template">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo de apresentação ODF</value>
-        </prop>
-      </node>
-      <node oor:name="impress8_draw">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Desenho ODF (Impress)</value>
-        </prop>
-      </node>
-      <node oor:name="Impress MS PowerPoint 2007 XML">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">XML do Microsoft PowerPoint 2007-2019</value>
+          <value xml:lang="pt-BR">PWP - PlaceWare</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML AutoPlay">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação automática XML do Microsoft PowerPoint 2007-2019</value>
+          <value xml:lang="pt-BR">Apresentação automática XML do Microsoft PowerPoint 2007-365</value>
         </prop>
       </node>
       <node oor:name="Impress MS PowerPoint 2007 XML Template">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Modelo XML do Microsoft PowerPoint 2007-2019</value>
+          <value xml:lang="pt-BR">Modelo XML do Microsoft PowerPoint 2007-365</value>
         </prop>
       </node>
       <node oor:name="Impress Office Open XML">
@@ -697,19 +737,59 @@
           <value xml:lang="pt-BR">Apresentação ClarisWorks/AppleWorks</value>
         </prop>
       </node>
-      <node oor:name="StarOffice_Presentation">
+      <node oor:name="MS PowerPoint 97 Vorlage">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação StarOffice antiga</value>
+          <value xml:lang="pt-BR">Modelo do Microsoft PowerPoint 97/2000/XP/2003</value>
         </prop>
       </node>
-      <node oor:name="MWAW_Presentation">
+      <node oor:name="impress_StarOffice_XML_Draw">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação do Mac legada</value>
+          <value xml:lang="pt-BR">Desenho do OpenOffice.org 1.0 (Impress)</value>
         </prop>
       </node>
-      <node oor:name="PowerPoint 3">
+      <node oor:name="StarOffice XML (Impress)">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Microsoft PowerPoint 1-4 e 95</value>
+          <value xml:lang="pt-BR">Apresentação do OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="impress_StarOffice_XML_Impress_Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo de apresentação do OpenOffice.org 1.0</value>
+        </prop>
+      </node>
+      <node oor:name="impress8">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Apresentação ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo de apresentação ODF</value>
+        </prop>
+      </node>
+      <node oor:name="impress8_draw">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Desenho ODF (Impress)</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">XML do Microsoft PowerPoint 2007-365</value>
+        </prop>
+      </node>
+      <node oor:name="Impress MS PowerPoint 2007 XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo XML do Microsoft PowerPoint 2007-365</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Apresentação Office Open XML</value>
+        </prop>
+      </node>
+      <node oor:name="Impress Office Open XML Template">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Modelo de apresentação Office Open XML</value>
         </prop>
       </node>
       <node oor:name="StarOffice XML (Chart)">
@@ -724,7 +804,7 @@
       </node>
       <node oor:name="MathML XML (Math)">
         <prop oor:name="UIName">
-          <value xml:lang="pt-BR">MathML 2.0</value>
+          <value xml:lang="pt-BR">MathML 1.01</value>
         </prop>
       </node>
       <node oor:name="MathType 3.x">
@@ -732,14 +812,14 @@
           <value xml:lang="pt-BR">MathType3.x</value>
         </prop>
       </node>
-      <node oor:name="StarOffice XML (Math)">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Fórmula do OpenOffice.org 1.0</value>
-        </prop>
-      </node>
       <node oor:name="math_pdf_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">PDF - Portable Document Format</value>
+        </prop>
+      </node>
+      <node oor:name="StarOffice XML (Math)">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Fórmula do OpenOffice.org 1.0</value>
         </prop>
       </node>
       <node oor:name="math8">
@@ -912,14 +992,29 @@
           <value xml:lang="pt-BR">GIF - Graphics Interchange Format</value>
         </prop>
       </node>
-      <node oor:name="draw_html_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento HTML (Draw)</value>
-        </prop>
-      </node>
       <node oor:name="draw_jpg_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
+      <node oor:name="draw_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">MET - OS/2 Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PBM - Portable Bitmap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="draw_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PGM - Portable Graymap</value>
         </prop>
       </node>
       <node oor:name="draw_png_Export">
@@ -927,9 +1022,24 @@
           <value xml:lang="pt-BR">PNG - Portable Network Graphic</value>
         </prop>
       </node>
+      <node oor:name="draw_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PPM - Portable Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">RAS - Sun Raster Image</value>
+        </prop>
+      </node>
       <node oor:name="draw_svg_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">SVG - Scalable Vector Graphics</value>
+        </prop>
+      </node>
+      <node oor:name="draw_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">SVM - StarView Metafile</value>
         </prop>
       </node>
       <node oor:name="draw_tif_Export">
@@ -940,6 +1050,16 @@
       <node oor:name="draw_wmf_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">WMF - Windows Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="draw_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="draw_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento HTML (Draw)</value>
         </prop>
       </node>
       <node oor:name="CGM - Computer Graphics Metafile">
@@ -972,14 +1092,29 @@
           <value xml:lang="pt-BR">GIF - Graphics Interchange Format</value>
         </prop>
       </node>
-      <node oor:name="impress_html_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Documento HTML (Impress)</value>
-        </prop>
-      </node>
       <node oor:name="impress_jpg_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">JPEG - Joint Photographic Experts Group</value>
+        </prop>
+      </node>
+      <node oor:name="impress_met_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">MET - OS/2 Metafile</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pbm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PBM - Portable Bitmap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pct_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PCT - Mac Pict</value>
+        </prop>
+      </node>
+      <node oor:name="impress_pgm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PGM - Portable Graymap</value>
         </prop>
       </node>
       <node oor:name="impress_png_Export">
@@ -987,9 +1122,24 @@
           <value xml:lang="pt-BR">PNG - Portable Network Graphic</value>
         </prop>
       </node>
+      <node oor:name="impress_ppm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">PPM - Portable Pixelmap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_ras_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">RAS - Sun Raster Image</value>
+        </prop>
+      </node>
       <node oor:name="impress_svg_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">SVG - Scalable Vector Graphics</value>
+        </prop>
+      </node>
+      <node oor:name="impress_svm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">SVM - StarView Metafile</value>
         </prop>
       </node>
       <node oor:name="impress_tif_Export">
@@ -1002,6 +1152,16 @@
           <value xml:lang="pt-BR">WMF - Windows Metafile</value>
         </prop>
       </node>
+      <node oor:name="impress_xpm_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">XPM - X PixMap</value>
+        </prop>
+      </node>
+      <node oor:name="impress_html_Export">
+        <prop oor:name="UIName">
+          <value xml:lang="pt-BR">Documento HTML (Impress)</value>
+        </prop>
+      </node>
       <node oor:name="writer_jpg_Export">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">JPEG - Joint Photographic Experts Group</value>
@@ -1012,16 +1172,6 @@
           <value xml:lang="pt-BR">PNG - Portable Network Graphic</value>
         </prop>
       </node>
-      <node oor:name="calc_png_Export">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">PNG - Portable Network Graphic</value>
-        </prop>
-      </node>
-      <node oor:name="ADO Rowset XML">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">XML de conjunto de linhas ADO</value>
-        </prop>
-      </node>
       <node oor:name="MS Excel 2003 XML">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Microsoft Excel 2003 XML</value>
@@ -1030,21 +1180,6 @@
       <node oor:name="MS Word 2003 XML">
         <prop oor:name="UIName">
           <value xml:lang="pt-BR">Microsoft Word 2003 XML</value>
-        </prop>
-      </node>
-      <node oor:name="UOF text">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Texto Unified Office Format</value>
-        </prop>
-      </node>
-      <node oor:name="UOF spreadsheet">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Planilha Unified Office Format</value>
-        </prop>
-      </node>
-      <node oor:name="UOF presentation">
-        <prop oor:name="UIName">
-          <value xml:lang="pt-BR">Apresentação Unified Office Format</value>
         </prop>
       </node>
     </node>

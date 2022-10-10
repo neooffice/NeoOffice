@@ -37,7 +37,7 @@ $(eval $(call gb_Library_use_libraries,pyuno,\
     cppuhelper \
     sal \
     salhelper \
-    $(if $(filter $(PRODUCT_BUILD_TYPE),java),comphelper) \
+    $(if $(filter $(PRODUCT_BUILD_TYPE),java),tl) \
 ))
 
 $(eval $(call gb_Library_use_externals,pyuno,\
@@ -48,7 +48,6 @@ $(eval $(call gb_Library_use_externals,pyuno,\
 $(eval $(call gb_Library_add_exception_objects,pyuno,\
     pyuno/source/module/pyuno_runtime \
     pyuno/source/module/pyuno \
-    pyuno/source/module/pyuno_struct \
     pyuno/source/module/pyuno_callable \
     pyuno/source/module/pyuno_module \
     pyuno/source/module/pyuno_type \
@@ -56,7 +55,6 @@ $(eval $(call gb_Library_add_exception_objects,pyuno,\
     pyuno/source/module/pyuno_except \
     pyuno/source/module/pyuno_adapter \
     pyuno/source/module/pyuno_gc \
-    pyuno/source/module/pyuno_iterator \
 ))
 
 # vim:set noet sw=4 ts=4:

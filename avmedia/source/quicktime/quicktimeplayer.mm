@@ -39,6 +39,7 @@
 #include "quicktimeplayer.hxx"
 #include "quicktimewindow.hxx"
 
+#include <osl/objcutils.h>
 #include <rtl/uri.hxx>
 
 using namespace ::com::sun::star::awt;
@@ -58,7 +59,7 @@ Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mbLooping( sal_False ),
 	mfMediaTime( 0 ),
 	mxMgr( rxMgr ),
-	mpMoviePlayer( nullptr ),
+	mpMoviePlayer( NULL ),
 	mbMute( sal_False ),
 	mfStopTime( 0 ),
 	mnVolumeDB( 0 )
@@ -73,9 +74,8 @@ Player::~Player()
 
 	if ( mpMoviePlayer )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(destroy:) withObject:static_cast< id >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(destroy:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
+		[(AvmediaMoviePlayer *)mpMoviePlayer release];
 	}
 
 	[pPool release];
@@ -105,10 +105,9 @@ bool Player::create( const OUString& rURL )
 			}
 			else
 			{
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(destroy:) withObject:static_cast< id >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-				[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
-				mpMoviePlayer = nullptr;
+				osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(destroy:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
+				[(AvmediaMoviePlayer *)mpMoviePlayer release];
+				mpMoviePlayer = NULL;
 			}
 		}
 
@@ -125,7 +124,7 @@ bool Player::create( const OUString& rURL )
 
 			if ( aURL.getLength() )
 			{
-				NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aURL.getStr() ) length:aURL.getLength()];
+				NSString *pString = [NSString stringWithCharacters:aURL.getStr() length:aURL.getLength()];
 				if ( pString )
 				{
 					NSURL *pURL = [NSURL URLWithString:pString];
@@ -135,33 +134,31 @@ bool Player::create( const OUString& rURL )
 						mpMoviePlayer = [[AvmediaMoviePlayer alloc] initWithURL:pURL];
 						if ( mpMoviePlayer )
 						{
-							NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-							[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(initialize:) withObject:static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-
-							if ( ![static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) movie] || ![static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) movieView] )
+							osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(initialize:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
+							if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
 							{
-								[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(destroy:) withObject:static_cast< id >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-								[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
-								mpMoviePlayer = nullptr;
+								osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(destroy:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
+								[(AvmediaMoviePlayer *)mpMoviePlayer release];
+								mpMoviePlayer = NULL;
 							}
 							else
 							{
 								// Cache duration
 								AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-								[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(duration:) withObject:pArgs waitUntilDone:YES modes:pModes];
-								NSNumber *pDuration = static_cast< NSNumber* >( [pArgs result] );
+								osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(duration:), pArgs, YES );
+								NSNumber *pDuration = (NSNumber *)[pArgs result];
 								if ( pDuration )
 									mfDuration = [pDuration doubleValue];
 
 								// Cache preferred size
 								pArgs = [AvmediaArgs argsWithArgs:nil];
-								[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(preferredSize:) withObject:pArgs waitUntilDone:YES modes:pModes];
-								NSValue *pPreferredSize = static_cast< NSValue* >( [pArgs result] );
+								osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(preferredSize:), pArgs, YES );
+								NSValue *pPreferredSize = (NSValue *)[pArgs result];
 								if ( pPreferredSize )
 								{
 									NSSize aSize = [pPreferredSize sizeValue];
 									if ( aSize.width > 0 && aSize.height > 0 )
-										maPreferredSize = Size( static_cast< long >( aSize.width ), static_cast< long >( aSize.height ) );
+										maPreferredSize = Size( (long)aSize.width, (long)aSize.height );
 								}
 
 								maURL = aURL;
@@ -191,37 +188,31 @@ bool Player::create( const OUString& rURL )
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::start()
+void SAL_CALL Player::start() throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(play:) withObject:static_cast< id >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-	}
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(play:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
 
 	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::stop()
+void SAL_CALL Player::stop() throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(stop:) withObject:static_cast< id >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-	}
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(stop:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
 
 	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::isPlaying()
+sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
 	sal_Bool bRet = sal_False;
 
@@ -230,11 +221,10 @@ sal_Bool SAL_CALL Player::isPlaying()
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(isPlaying:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSNumber *pRet = static_cast< NSNumber* >( [pArgs result] );
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(isPlaying:), pArgs, YES );
+		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
-			bRet = static_cast< sal_Bool >( [pRet boolValue] );
+			bRet = (sal_Bool)[pRet boolValue];
 	}
 
 	[pPool release];
@@ -244,14 +234,14 @@ sal_Bool SAL_CALL Player::isPlaying()
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getDuration()
+double SAL_CALL Player::getDuration() throw( RuntimeException )
 {
 	return mfDuration;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setMediaTime( double fTime )
+void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -263,8 +253,7 @@ void SAL_CALL Player::setMediaTime( double fTime )
 			fTime = mfDuration;
 
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setCurrentTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setCurrentTime:), pArgs, YES );
 		mfMediaTime = fTime;
 	}
 
@@ -273,16 +262,15 @@ void SAL_CALL Player::setMediaTime( double fTime )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getMediaTime()
+double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(currentTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSNumber *pRet = static_cast< NSNumber* >( [pArgs result] );
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(currentTime:), pArgs, YES );
+		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
 			mfMediaTime = [pRet doubleValue];
 	}
@@ -296,7 +284,7 @@ double SAL_CALL Player::getMediaTime()
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setStopTime( double fTime )
+void SAL_CALL Player::setStopTime( double fTime ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -308,8 +296,7 @@ void SAL_CALL Player::setStopTime( double fTime )
 			fTime = mfDuration;
 
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setSelection:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setSelection:), pArgs, YES );
 		mfStopTime = fTime;
 	}
 
@@ -318,22 +305,21 @@ void SAL_CALL Player::setStopTime( double fTime )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getStopTime()
+double SAL_CALL Player::getStopTime() throw( RuntimeException )
 {
 	return mfStopTime;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setRate( double fRate )
+void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fRate]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setRate:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setRate:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -341,7 +327,7 @@ void SAL_CALL Player::setRate( double fRate )
 
 // ----------------------------------------------------------------------------
 
-double SAL_CALL Player::getRate()
+double SAL_CALL Player::getRate() throw( RuntimeException )
 {
 	double fRet = 1.0f;
 
@@ -350,9 +336,8 @@ double SAL_CALL Player::getRate()
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(rate:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSNumber *pRet = static_cast< NSNumber* >( [pArgs result] );
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(rate:), pArgs, YES );
+		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
 			fRet = [pRet doubleValue];
 	}
@@ -366,7 +351,7 @@ double SAL_CALL Player::getRate()
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
+void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -374,9 +359,8 @@ void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:static_cast< BOOL >( bSet )], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setLooping:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:(BOOL)bSet], nil]];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setLooping:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -385,22 +369,21 @@ void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet )
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::isPlaybackLoop()
+sal_Bool SAL_CALL Player::isPlaybackLoop() throw( RuntimeException )
 {
 	return mbLooping;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setMute( sal_Bool bSet )
+void SAL_CALL Player::setMute( sal_Bool bSet ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:( bSet ? YES : NO )]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setMute:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setMute:), pArgs, YES );
 		mbMute = bSet;
 	}
 
@@ -409,22 +392,21 @@ void SAL_CALL Player::setMute( sal_Bool bSet )
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::isMute()
+sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
 {
 	return mbMute;
 }
 
 // ----------------------------------------------------------------------------
 
-void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB )
+void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithShort:nVolumeDB]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setVolumeDB:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setVolumeDB:), pArgs, YES );
 		mnVolumeDB = nVolumeDB;
 	}
 
@@ -433,21 +415,21 @@ void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB )
 
 // ----------------------------------------------------------------------------
 
-sal_Int16 SAL_CALL Player::getVolumeDB()
+sal_Int16 SAL_CALL Player::getVolumeDB() throw( RuntimeException )
 {
 	return mnVolumeDB;
 }
 
 // ----------------------------------------------------------------------------
 
-Size SAL_CALL Player::getPreferredPlayerWindowSize()
+Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 {
 	return maPreferredSize;
 }
 
 // ----------------------------------------------------------------------------
 
-Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< Any >& rArguments )
+Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< Any >& rArguments ) throw( RuntimeException )
 {
 	Reference< XPlayerWindow > xRet;
 
@@ -468,7 +450,7 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 
 // ----------------------------------------------------------------------------
 
-Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber()
+Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeException )
 {
 	Reference< XFrameGrabber > xRet;
 
@@ -488,21 +470,21 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber()
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL Player::getImplementationName()
+OUString SAL_CALL Player::getImplementationName() throw( RuntimeException )
 {
 	return OUString( AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Player::supportsService( const OUString& ServiceName )
+sal_Bool SAL_CALL Player::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_PLAYER_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL Player::getSupportedServiceNames()
+Sequence< OUString > SAL_CALL Player::getSupportedServiceNames() throw( RuntimeException )
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_PLAYER_SERVICENAME );

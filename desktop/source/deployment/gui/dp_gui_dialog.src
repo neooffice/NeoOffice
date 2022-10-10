@@ -51,6 +51,11 @@ String RID_CTX_ITEM_CHECK_UPDATE
     Text [ en-US ] = "~Update...";
 };
 
+String RID_CTX_ITEM_OPTIONS
+{
+    Text [ en-US ] = "~Options...";
+};
+
 String RID_STR_ADDING_PACKAGES
 {
     Text [ en-US ] = "Adding %EXTENSION_NAME";
@@ -120,23 +125,11 @@ String RID_STR_WARNING_INSTALL_EXTENSION
     "Click 'Cancel' to stop the installation.";
 };
 
-String RID_STR_WARNING_INSTALL_EXTENSION_DISABLED
-{
-    Text [en-US] = "Extension installation is currently disabled. "
-    "Please consult your system administrator for more information.";
-};
-
 String RID_STR_WARNING_REMOVE_EXTENSION
 {
     Text [en-US] = "You are about to remove the extension '%NAME'.\n"
     "Click 'OK' to remove the extension.\n"
     "Click 'Cancel' to stop removing the extension.";
-};
-
-String RID_STR_WARNING_REMOVE_EXTENSION_DISABLED
-{
-    Text [en-US] = "Extension removal is currently disabled. "
-    "Please consult your system administrator for more information.";
 };
 
 String RID_STR_WARNING_REMOVE_SHARED_EXTENSION

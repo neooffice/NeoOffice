@@ -38,9 +38,11 @@
 
 #include <cppuhelper/compbase1.hxx>
 #include <com/sun/star/datatransfer/DataFlavor.hpp>
-#include <com/sun/star/datatransfer/UnsupportedFlavorException.hpp>
 #include <com/sun/star/datatransfer/XTransferable.hpp>
-#include <com/sun/star/io/IOException.hpp>
+
+#include <premac.h>
+#include <objc/NSObjCRuntime.h>
+#include <postmac.h>
 
 #define TRANSFERABLE_TYPE_CLIPBOARD		0x0
 #define TRANSFERABLE_TYPE_DRAG			0x1
@@ -57,27 +59,28 @@ struct NSString;
 class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
 {
 private:
-	int					mnChangeCount;
+	NSInteger			mnChangeCount;
 	NSString*			mpPasteboardName;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 
 public:
 	static NSArray*		getSupportedPasteboardTypes();
 
-						// Passing nullptr uses the system clipboard
-						DTransTransferable( NSString *pPasteboardName = nullptr );
+						// Passing NULL uses the system clipboard
+						DTransTransferable( NSString *pPasteboardName = NULL );
 	virtual				~DTransTransferable();
 
 	// XTransferable
-	virtual ::com::sun::star::uno::Any getTransferData( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) override;
-	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > getTransferDataFlavors() override;
-	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) override;
+	virtual ::com::sun::star::uno::Any getTransferData( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::datatransfer::UnsupportedFlavorException, ::com::sun::star::io::IOException, ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > getTransferDataFlavors() throw ( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 
 	void				flush();
-	int					getChangeCount();
+	NSInteger			getChangeCount();
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
 	sal_Bool			hasOwnership();
-	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, id *pPasteboardWriter = nullptr );
+	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable, id *pPasteboardWriter = NULL );
+	void				updateChangeCount();
 };
 
 #endif // _DTRANSTRANSFERABLE_HXX

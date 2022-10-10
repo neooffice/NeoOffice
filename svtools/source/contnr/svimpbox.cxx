@@ -30,19 +30,15 @@
 #include <vcl/settings.hxx>
 
 #include <cstdlib>
-#include <memory>
 #include <stack>
 
 #include <svtools/treelistbox.hxx>
-#include <svtools/iconview.hxx>
 #include <svtools/svlbitm.hxx>
 #include <svimpbox.hxx>
-#include <iconviewimpl.hxx>
 #include <rtl/instance.hxx>
 #include <svtools/svtresid.hxx>
 #include <tools/wintypes.hxx>
 #include <svtools/svtools.hrc>
-#include "bitmaps.hlst"
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
 
@@ -57,81 +53,84 @@ static ::std::map< SvImpLBox*, SvImpLBox* > aInShowCursorMap;
 
 #endif	// USE_JAVA
 
+#define NODE_BMP_TABDIST_NOTVALID   -2000000
+#define FIRST_ENTRY_TAB             1
+
 // #i27063# (pl), #i32300# (pb) never access VCL after DeInitVCL - also no destructors
-Image*  SvImpLBox::s_pDefCollapsed      = nullptr;
-Image*  SvImpLBox::s_pDefExpanded       = nullptr;
+Image*  SvImpLBox::s_pDefCollapsed      = NULL;
+Image*  SvImpLBox::s_pDefExpanded       = NULL;
 sal_Int32 SvImpLBox::s_nImageRefCount   = 0;
 
 SvImpLBox::SvImpLBox( SvTreeListBox* pLBView, SvTreeList* pLBTree, WinBits nWinStyle)
-    : aHorSBar(VclPtr<ScrollBar>::Create(pLBView, WB_DRAG | WB_HSCROLL))
-    , aScrBarBox(VclPtr<ScrollBarBox>::Create(pLBView))
-    , aFctSet(this, &aSelEng, pLBView)
-    , bAreChildrenTransient(true)
-    , m_pStringSorter(nullptr)
-    , aVerSBar(VclPtr<ScrollBar>::Create(pLBView, WB_DRAG | WB_VSCROLL))
+    : aVerSBar(pLBView, WB_DRAG | WB_VSCROLL)
+    , aHorSBar(pLBView, WB_DRAG | WB_HSCROLL)
+    , aScrBarBox(pLBView)
     , aOutputSize(0, 0)
-    , nExtendedWinBits(0)
-    , aSelEng(pLBView, nullptr)
+    , aSelEng(pLBView, (FunctionSet*)0)
+    , aFctSet(this, &aSelEng, pLBView)
     , nNextVerVisSize(0)
+    , nExtendedWinBits(0)
+    , bAreChildrenTransient(true)
+    , m_pStringSorter(NULL)
 {
     osl_atomic_increment(&s_nImageRefCount);
     pView = pLBView;
     pTree = pLBTree;
-    aSelEng.SetFunctionSet( static_cast<FunctionSet*>(&aFctSet) );
+    aSelEng.SetFunctionSet( (FunctionSet*)&aFctSet );
     aSelEng.ExpandSelectionOnMouseMove( false );
     SetStyle( nWinStyle );
-    SetSelectionMode( SelectionMode::Single );
-    SetDragDropMode( DragDropMode::NONE );
+    SetSelectionMode( SINGLE_SELECTION );
+    SetDragDropMode( 0 );
 
-    aVerSBar->SetScrollHdl( LINK( this, SvImpLBox, ScrollUpDownHdl ) );
-    aHorSBar->SetScrollHdl( LINK( this, SvImpLBox, ScrollLeftRightHdl ) );
-    aHorSBar->SetEndScrollHdl( LINK( this, SvImpLBox, EndScrollHdl ) );
-    aVerSBar->SetEndScrollHdl( LINK( this, SvImpLBox, EndScrollHdl ) );
-    aVerSBar->SetRange( Range(0,0) );
-    aVerSBar->Hide();
-    aHorSBar->SetRange( Range(0,0) );
-    aHorSBar->SetPageSize( 24 ); // pixels
-    aHorSBar->SetLineSize( 8 ); // pixels
+    aVerSBar.SetScrollHdl( LINK( this, SvImpLBox, ScrollUpDownHdl ) );
+    aHorSBar.SetScrollHdl( LINK( this, SvImpLBox, ScrollLeftRightHdl ) );
+    aHorSBar.SetEndScrollHdl( LINK( this, SvImpLBox, EndScrollHdl ) );
+    aVerSBar.SetEndScrollHdl( LINK( this, SvImpLBox, EndScrollHdl ) );
+    aVerSBar.SetRange( Range(0,0) );
+    aVerSBar.Hide();
+    aHorSBar.SetRange( Range(0,0) );
+    aHorSBar.SetPageSize( 24 ); // pixels
+    aHorSBar.SetLineSize( 8 ); // pixels
 
-    nHorSBarHeight = (short)aHorSBar->GetSizePixel().Height();
-    nVerSBarWidth = (short)aVerSBar->GetSizePixel().Width();
+    nHorSBarHeight = (short)aHorSBar.GetSizePixel().Height();
+    nVerSBarWidth = (short)aVerSBar.GetSizePixel().Width();
 
-    pStartEntry = nullptr;
-    pCursor             = nullptr;
-    pAnchor             = nullptr;
+    pStartEntry = 0;
+    pCursor             = 0;
+    pAnchor             = 0;
     nVisibleCount       = 0;    // number of rows of data in control
     nNodeBmpTabDistance = NODE_BMP_TABDIST_NOTVALID;
     nYoffsNodeBmp       = 0;
     nNodeBmpWidth       = 0;
 
     bAsyncBeginDrag     = false;
-    aAsyncBeginDragIdle.SetPriority( TaskPriority::HIGHEST );
-    aAsyncBeginDragIdle.SetInvokeHandler( LINK(this,SvImpLBox,BeginDragHdl));
+    aAsyncBeginDragTimer.SetTimeout( 0 );
+    aAsyncBeginDragTimer.SetTimeoutHdl( LINK(this,SvImpLBox,BeginDragHdl));
     // button animation in listbox
-    pActiveButton = nullptr;
-    pActiveEntry = nullptr;
-    pActiveTab = nullptr;
+    pActiveButton = 0;
+    pActiveEntry = 0;
+    pActiveTab = 0;
 
-    nFlags = LBoxFlags::NONE;
+    nFlags = 0;
     nCurTabPos = FIRST_ENTRY_TAB;
 
-    aEditIdle.SetPriority( TaskPriority::LOWEST );
-    aEditIdle.SetInvokeHandler( LINK(this,SvImpLBox,EditTimerCall) );
+    aEditTimer.SetTimeout( 800 );
+    aEditTimer.SetTimeoutHdl( LINK(this,SvImpLBox,EditTimerCall) );
 
     nMostRight = -1;
-    pMostRightEntry = nullptr;
-    nCurUserEvent = nullptr;
+    pMostRightEntry = 0;
+    nCurUserEvent = 0;
 
     bUpdateMode = true;
     bInVScrollHdl = false;
-    nFlags |= LBoxFlags::Filling;
+    nFlags |= F_FILLING;
 
     bSubLstOpRet = bSubLstOpLR = bContextMenuHandling = bIsCellFocusEnabled = false;
 }
 
 SvImpLBox::~SvImpLBox()
 {
-    aEditIdle.Stop();
+    aEditTimer.Stop();
     StopUserEvent();
 
     delete m_pStringSorter;
@@ -140,25 +139,22 @@ SvImpLBox::~SvImpLBox()
         DELETEZ(s_pDefCollapsed);
         DELETEZ(s_pDefExpanded);
     }
-    aVerSBar.disposeAndClear();
-    aHorSBar.disposeAndClear();
-    aScrBarBox.disposeAndClear();
 }
 
 void SvImpLBox::UpdateStringSorter()
 {
-    const css::lang::Locale& rNewLocale = Application::GetSettings().GetLanguageTag().getLocale();
+    const ::com::sun::star::lang::Locale& rNewLocale = Application::GetSettings().GetLanguageTag().getLocale();
 
     if( m_pStringSorter )
     {
         // different Locale from the older one, drop it and force recreate
-        const css::lang::Locale &aLocale = m_pStringSorter->getLocale();
+        const ::com::sun::star::lang::Locale &aLocale = m_pStringSorter->getLocale();
         if( aLocale.Language != rNewLocale.Language ||
             aLocale.Country != rNewLocale.Country ||
             aLocale.Variant != rNewLocale.Variant )
         {
             delete m_pStringSorter;
-            m_pStringSorter = nullptr;
+            m_pStringSorter = NULL;
         }
     }
 
@@ -170,6 +166,7 @@ void SvImpLBox::UpdateStringSorter()
     }
 }
 
+// #97680# ----------------------
 short SvImpLBox::UpdateContextBmpWidthVector( SvTreeListEntry* pEntry, short nWidth )
 {
     DBG_ASSERT( pView->pModel, "View and Model aren't valid!" );
@@ -202,7 +199,7 @@ void SvImpLBox::UpdateContextBmpWidthVectorFromMovedEntry( SvTreeListEntry* pEnt
 {
     DBG_ASSERT( pEntry, "Moved Entry is invalid!" );
 
-    SvLBoxContextBmp* pBmpItem = static_cast< SvLBoxContextBmp* >( pEntry->GetFirstItem(SvLBoxItemType::ContextBmp) );
+    SvLBoxContextBmp* pBmpItem = static_cast< SvLBoxContextBmp* >( pEntry->GetFirstItem( SV_ITEM_ID_LBOXCONTEXTBMP ) );
     short nExpWidth = (short)pBmpItem->GetBitmap1().GetSizePixel().Width();
     short nColWidth = (short)pBmpItem->GetBitmap2().GetSizePixel().Width();
     short nMax = std::max(nExpWidth, nColWidth);
@@ -228,25 +225,25 @@ void SvImpLBox::UpdateContextBmpWidthMax( SvTreeListEntry* pEntry )
     short nWidth = aContextBmpWidthVector[ nDepth ];
     if( nWidth != pView->nContextBmpWidthMax ) {
         pView->nContextBmpWidthMax = nWidth;
-        nFlags |= LBoxFlags::IgnoreChangedTabs;
+        nFlags |= F_IGNORE_CHANGED_TABS;
         pView->SetTabs();
-        nFlags &= ~LBoxFlags::IgnoreChangedTabs;
+        nFlags &= ~F_IGNORE_CHANGED_TABS;
     }
 }
 
-void SvImpLBox::CalcCellFocusRect( SvTreeListEntry* pEntry, tools::Rectangle& rRect )
+void SvImpLBox::CalcCellFocusRect( SvTreeListEntry* pEntry, Rectangle& rRect )
 {
     if ( pEntry && bIsCellFocusEnabled )
     {
         if ( nCurTabPos > FIRST_ENTRY_TAB )
         {
-            SvLBoxItem& rItem = pCursor->GetItem( nCurTabPos );
-            rRect.Left() = pView->GetTab( pCursor, &rItem )->GetPos();
+            SvLBoxItem* pItem = pCursor->GetItem( nCurTabPos );
+            rRect.Left() = pView->GetTab( pCursor, pItem )->GetPos();
         }
         if (pCursor->ItemCount() > static_cast<size_t>(nCurTabPos+1))
         {
-            SvLBoxItem& rNextItem = pCursor->GetItem( nCurTabPos + 1 );
-            long nRight = pView->GetTab( pCursor, &rNextItem )->GetPos() - 1;
+            SvLBoxItem* pNextItem = pCursor->GetItem( nCurTabPos + 1 );
+            long nRight = pView->GetTab( pCursor, pNextItem )->GetPos() - 1;
             if ( nRight < rRect.Right() )
                 rRect.Right() = nRight;
         }
@@ -256,7 +253,7 @@ void SvImpLBox::CalcCellFocusRect( SvTreeListEntry* pEntry, tools::Rectangle& rR
 void SvImpLBox::SetStyle( WinBits i_nWinStyle )
 {
     m_nStyle = i_nWinStyle;
-    if ( ( m_nStyle & WB_SIMPLEMODE) && ( aSelEng.GetSelectionMode() == SelectionMode::Multiple ) )
+    if ( ( m_nStyle & WB_SIMPLEMODE) && ( aSelEng.GetSelectionMode() == MULTIPLE_SELECTION ) )
         aSelEng.AddAlways( true );
 }
 
@@ -269,71 +266,75 @@ void SvImpLBox::SetExtendedWindowBits( ExtendedWinBits _nBits )
 void SvImpLBox::Clear()
 {
     StopUserEvent();
-    pStartEntry = nullptr;
-    pAnchor = nullptr;
+    pStartEntry = 0;
+    pAnchor = 0;
 
-    pActiveButton = nullptr;
-    pActiveEntry = nullptr;
-    pActiveTab = nullptr;
+    pActiveButton = 0;
+    pActiveEntry = 0;
+    pActiveTab = 0;
 
     nMostRight = -1;
-    pMostRightEntry = nullptr;
+    pMostRightEntry = 0;
 
     // don't touch the cursor any more
     if( pCursor )
     {
         if( pView->HasFocus() )
             pView->HideFocus();
-        pCursor = nullptr;
+        pCursor = 0;
     }
-    aVerSBar->Hide();
-    aVerSBar->SetThumbPos( 0 );
+    aVerSBar.Hide();
+    aVerSBar.SetThumbPos( 0 );
     Range aRange( 0, 0 );
-    aVerSBar->SetRange( aRange );
+    aVerSBar.SetRange( aRange );
     aOutputSize = pView->Control::GetOutputSizePixel();
-    aHorSBar->Hide();
-    aHorSBar->SetThumbPos( 0 );
+    nFlags &= ~(F_VER_SBARSIZE_WITH_HBAR | F_HOR_SBARSIZE_WITH_VBAR );
+    aHorSBar.Hide();
+    aHorSBar.SetThumbPos( 0 );
     MapMode aMapMode( pView->GetMapMode());
     aMapMode.SetOrigin( Point(0,0) );
     pView->Control::SetMapMode( aMapMode );
-    aHorSBar->SetRange( aRange );
-    aHorSBar->SetSizePixel(Size(aOutputSize.Width(),nHorSBarHeight));
+    aHorSBar.SetRange( aRange );
+    aHorSBar.SetSizePixel(Size(aOutputSize.Width(),nHorSBarHeight));
     pView->SetClipRegion();
     if( GetUpdateMode() )
         pView->Invalidate( GetVisibleArea() );
-    nFlags |= LBoxFlags::Filling;
-    if( !aHorSBar->IsVisible() && !aVerSBar->IsVisible() )
-        aScrBarBox->Hide();
+    nFlags |= F_FILLING;
+    if( !aHorSBar.IsVisible() && !aVerSBar.IsVisible() )
+        aScrBarBox.Hide();
 
     aContextBmpWidthVector.clear();
 
-    CallEventListeners( VclEventId::ListboxItemRemoved );
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMREMOVED, NULL );
 }
 
 // *********************************************************************
 // Paint, navigate, scroll
 // *********************************************************************
 
-IMPL_LINK_NOARG(SvImpLBox, EndScrollHdl, ScrollBar*, void)
+IMPL_LINK_NOARG_INLINE_START(SvImpLBox, EndScrollHdl)
 {
-    if( nFlags & LBoxFlags::EndScrollSetVisSize )
+    if( nFlags & F_ENDSCROLL_SET_VIS_SIZE )
     {
-        aVerSBar->SetVisibleSize( nNextVerVisSize );
-        nFlags &= ~LBoxFlags::EndScrollSetVisSize;
+        aVerSBar.SetVisibleSize( nNextVerVisSize );
+        nFlags &= ~F_ENDSCROLL_SET_VIS_SIZE;
     }
     EndScroll();
+    return 0;
 }
+IMPL_LINK_NOARG_INLINE_END(SvImpLBox, EndScrollHdl)
+
 
 // handler for vertical scrollbar
 
-IMPL_LINK( SvImpLBox, ScrollUpDownHdl, ScrollBar *, pScrollBar, void )
+IMPL_LINK( SvImpLBox, ScrollUpDownHdl, ScrollBar *, pScrollBar )
 {
     DBG_ASSERT(!bInVScrollHdl,"Scroll handler out-paces itself!");
     long nDelta = pScrollBar->GetDelta();
     if( !nDelta )
-        return;
+        return 0;
 
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
 
     bInVScrollHdl = true;
 
@@ -360,6 +361,7 @@ IMPL_LINK( SvImpLBox, ScrollUpDownHdl, ScrollBar *, pScrollBar, void )
             PageUp( (sal_uInt16) nDelta );
     }
     bInVScrollHdl = false;
+    return 0;
 }
 
 
@@ -371,12 +373,13 @@ void SvImpLBox::CursorDown()
     SvTreeListEntry* pNextFirstToDraw = pView->NextVisible(pStartEntry);
     if( pNextFirstToDraw )
     {
-        nFlags &= (~LBoxFlags::Filling);
+        nFlags &= (~F_FILLING);
+        pView->NotifyScrolling( -1 );
         ShowCursor( false );
         pView->Update();
         pStartEntry = pNextFirstToDraw;
-        tools::Rectangle aArea( GetVisibleArea() );
-        pView->Scroll( 0, -(pView->GetEntryHeight()), aArea, ScrollFlags::NoChildren );
+        Rectangle aArea( GetVisibleArea() );
+        pView->Scroll( 0, -(pView->GetEntryHeight()), aArea, SCROLL_NOCHILDREN );
         pView->Update();
         ShowCursor( true );
         pView->NotifyScrolled();
@@ -391,14 +394,15 @@ void SvImpLBox::CursorUp()
     SvTreeListEntry* pPrevFirstToDraw = pView->PrevVisible(pStartEntry);
     if( pPrevFirstToDraw )
     {
-        nFlags &= (~LBoxFlags::Filling);
+        nFlags &= (~F_FILLING);
         long nEntryHeight = pView->GetEntryHeight();
+        pView->NotifyScrolling( 1 );
         ShowCursor( false );
         pView->Update();
         pStartEntry = pPrevFirstToDraw;
-        tools::Rectangle aArea( GetVisibleArea() );
+        Rectangle aArea( GetVisibleArea() );
         aArea.Bottom() -= nEntryHeight;
-        pView->Scroll( 0, nEntryHeight, aArea, ScrollFlags::NoChildren );
+        pView->Scroll( 0, nEntryHeight, aArea, SCROLL_NOCHILDREN );
         pView->Update();
         ShowCursor( true );
         pView->NotifyScrolled();
@@ -421,7 +425,7 @@ void SvImpLBox::PageDown( sal_uInt16 nDelta )
 
     ShowCursor( false );
 
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
     pView->Update();
     pStartEntry = pNext;
 
@@ -432,11 +436,13 @@ void SvImpLBox::PageDown( sal_uInt16 nDelta )
     }
     else
     {
-        tools::Rectangle aArea( GetVisibleArea() );
-        long nScroll = pView->GetEntryHeight() * static_cast<long>(nRealDelta);
+        long nScroll = nRealDelta * (-1);
+        pView->NotifyScrolling( nScroll );
+        Rectangle aArea( GetVisibleArea() );
+        nScroll = pView->GetEntryHeight() * static_cast<long>(nRealDelta);
         nScroll = -nScroll;
         pView->Update();
-        pView->Scroll( 0, nScroll, aArea, ScrollFlags::NoChildren );
+        pView->Scroll( 0, nScroll, aArea, SCROLL_NOCHILDREN );
         pView->Update();
         pView->NotifyScrolled();
     }
@@ -457,7 +463,7 @@ void SvImpLBox::PageUp( sal_uInt16 nDelta )
     if( pPrev == pStartEntry )
         return;
 
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
     ShowCursor( false );
 
     pView->Update();
@@ -470,9 +476,10 @@ void SvImpLBox::PageUp( sal_uInt16 nDelta )
     else
     {
         long nEntryHeight = pView->GetEntryHeight();
-        tools::Rectangle aArea( GetVisibleArea() );
+        pView->NotifyScrolling( (long)nRealDelta );
+        Rectangle aArea( GetVisibleArea() );
         pView->Update();
-        pView->Scroll( 0, nEntryHeight*nRealDelta, aArea, ScrollFlags::NoChildren );
+        pView->Scroll( 0, nEntryHeight*nRealDelta, aArea, SCROLL_NOCHILDREN );
         pView->Update();
         pView->NotifyScrolled();
     }
@@ -480,18 +487,18 @@ void SvImpLBox::PageUp( sal_uInt16 nDelta )
     ShowCursor( true );
 }
 
-void SvImpLBox::KeyUp( bool bPageUp )
+void SvImpLBox::KeyUp( bool bPageUp, bool bNotifyScroll )
 {
-    if( !aVerSBar->IsVisible() )
+    if( !aVerSBar.IsVisible() )
         return;
 
     long nDelta;
     if( bPageUp )
-        nDelta = aVerSBar->GetPageSize();
+        nDelta = aVerSBar.GetPageSize();
     else
         nDelta = 1;
 
-    long nThumbPos = aVerSBar->GetThumbPos();
+    long nThumbPos = aVerSBar.GetThumbPos();
 
     if( nThumbPos < nDelta )
         nDelta = nThumbPos;
@@ -499,33 +506,35 @@ void SvImpLBox::KeyUp( bool bPageUp )
     if( nDelta <= 0 )
         return;
 
-    nFlags &= (~LBoxFlags::Filling);
-    BeginScroll();
+    nFlags &= (~F_FILLING);
+    if( bNotifyScroll )
+        BeginScroll();
 
-    aVerSBar->SetThumbPos( nThumbPos - nDelta );
+    aVerSBar.SetThumbPos( nThumbPos - nDelta );
     if( bPageUp )
         PageUp( (short)nDelta );
     else
         CursorUp();
 
-    EndScroll();
+    if( bNotifyScroll )
+        EndScroll();
 }
 
 
-void SvImpLBox::KeyDown( bool bPageDown )
+void SvImpLBox::KeyDown( bool bPageDown, bool bNotifyScroll )
 {
-    if( !aVerSBar->IsVisible() )
+    if( !aVerSBar.IsVisible() )
         return;
 
     long nDelta;
     if( bPageDown )
-        nDelta = aVerSBar->GetPageSize();
+        nDelta = aVerSBar.GetPageSize();
     else
         nDelta = 1;
 
-    long nThumbPos = aVerSBar->GetThumbPos();
-    long nVisibleSize = aVerSBar->GetVisibleSize();
-    long nRange = aVerSBar->GetRange().Len();
+    long nThumbPos = aVerSBar.GetThumbPos();
+    long nVisibleSize = aVerSBar.GetVisibleSize();
+    long nRange = aVerSBar.GetRange().Len();
 
     long nTmp = nThumbPos+nVisibleSize;
     while( (nDelta > 0) && (nTmp+nDelta) >= nRange )
@@ -534,24 +543,27 @@ void SvImpLBox::KeyDown( bool bPageDown )
     if( nDelta <= 0 )
         return;
 
-    nFlags &= (~LBoxFlags::Filling);
-    BeginScroll();
+    nFlags &= (~F_FILLING);
+    if( bNotifyScroll )
+        BeginScroll();
 
-    aVerSBar->SetThumbPos( nThumbPos+nDelta );
+    aVerSBar.SetThumbPos( nThumbPos+nDelta );
     if( bPageDown )
         PageDown( (short)nDelta );
     else
         CursorDown();
 
-    EndScroll();
+    if( bNotifyScroll )
+        EndScroll();
 }
+
 
 
 void SvImpLBox::InvalidateEntriesFrom( long nY ) const
 {
-    if( !(nFlags & LBoxFlags::InPaint ))
+    if( !(nFlags & F_IN_PAINT ))
     {
-        tools::Rectangle aRect( GetVisibleArea() );
+        Rectangle aRect( GetVisibleArea() );
         aRect.Top() = nY;
         pView->Invalidate( aRect );
     }
@@ -559,9 +571,9 @@ void SvImpLBox::InvalidateEntriesFrom( long nY ) const
 
 void SvImpLBox::InvalidateEntry( long nY ) const
 {
-    if( !(nFlags & LBoxFlags::InPaint ))
+    if( !(nFlags & F_IN_PAINT ))
     {
-        tools::Rectangle aRect( GetVisibleArea() );
+        Rectangle aRect( GetVisibleArea() );
         long nMaxBottom = aRect.Bottom();
         aRect.Top() = nY;
         aRect.Bottom() = nY; aRect.Bottom() += pView->GetEntryHeight();
@@ -582,7 +594,7 @@ void SvImpLBox::InvalidateEntry( SvTreeListEntry* pEntry )
         if( nPrev < nMostRight )
             ShowVerSBar();
     }
-    if( !(nFlags & LBoxFlags::InPaint ))
+    if( !(nFlags & F_IN_PAINT ))
     {
         bool bHasFocusRect = false;
         if( pEntry==pCursor && pView->HasFocus() )
@@ -603,7 +615,7 @@ void SvImpLBox::RecalcFocusRect()
     {
         pView->HideFocus();
         long nY = GetEntryLine( pCursor );
-        tools::Rectangle aRect = pView->GetFocusRect( pCursor, nY );
+        Rectangle aRect = pView->GetFocusRect( pCursor, nY );
         CalcCellFocusRect( pCursor, aRect );
         vcl::Region aOldClip( pView->GetClipRegion());
         vcl::Region aClipRegion( GetClipRegionRect() );
@@ -613,7 +625,7 @@ void SvImpLBox::RecalcFocusRect()
     }
 
 #ifdef USE_JAVA
-    if( pView->IsNativeControlSupported( ControlType::ListNode, ControlPart::Entire ) )
+    if( pView->IsNativeControlSupported( CTRL_LISTNODE, PART_ENTIRE_CONTROL ) )
     {
         ::std::map< SvImpLBox*, SvImpLBox* >::const_iterator it = aInShowCursorMap.find( this );
         if ( it == aInShowCursorMap.end() )
@@ -637,7 +649,7 @@ void SvImpLBox::RecalcFocusRect()
 
 void SvImpLBox::SetCursor( SvTreeListEntry* pEntry, bool bForceNoSelect )
 {
-    SvViewDataEntry* pViewDataNewCur = nullptr;
+    SvViewDataEntry* pViewDataNewCur = 0;
     if( pEntry )
         pViewDataNewCur= pView->GetViewDataEntry(pEntry);
     if( pEntry &&
@@ -653,7 +665,7 @@ void SvImpLBox::SetCursor( SvTreeListEntry* pEntry, bool bForceNoSelect )
     while( pEntry && pViewDataNewCur && !pViewDataNewCur->IsSelectable() )
     {
         pEntry = pView->NextVisible(pEntry);
-        pViewDataNewCur = pEntry ? pView->GetViewDataEntry(pEntry) : nullptr;
+        pViewDataNewCur = pEntry ? pView->GetViewDataEntry(pEntry) : 0;
     }
 
     SvTreeListEntry* pOldCursor = pCursor;
@@ -669,37 +681,37 @@ void SvImpLBox::SetCursor( SvTreeListEntry* pEntry, bool bForceNoSelect )
     {
         if (pViewDataNewCur)
             pViewDataNewCur->SetFocus( true );
-        if(!bForceNoSelect && bSimpleTravel && !(nFlags & LBoxFlags::DeselectAll) && GetUpdateMode())
+        if(!bForceNoSelect && bSimpleTravel && !(nFlags & F_DESEL_ALL) && GetUpdateMode())
         {
-            pView->Select( pCursor );
-            CallEventListeners( VclEventId::ListboxTreeFocus, pCursor );
+            pView->Select( pCursor, true );
+            CallEventListeners( VCLEVENT_LISTBOX_TREEFOCUS, pCursor );
         }
         // multiple selection: select in cursor move if we're not in
         // Add mode (Ctrl-F8)
         else if( GetUpdateMode() &&
-                 pView->GetSelectionMode() == SelectionMode::Multiple &&
-                 !(nFlags & LBoxFlags::DeselectAll) && !aSelEng.IsAddMode() &&
+                 pView->GetSelectionMode() == MULTIPLE_SELECTION &&
+                 !(nFlags & F_DESEL_ALL) && !aSelEng.IsAddMode() &&
                  !bForceNoSelect )
         {
-            pView->Select( pCursor );
-            CallEventListeners( VclEventId::ListboxTreeFocus, pCursor );
+            pView->Select( pCursor, true );
+            CallEventListeners( VCLEVENT_LISTBOX_TREEFOCUS, pCursor );
         }
         else
         {
             ShowCursor( true );
             if (bForceNoSelect && GetUpdateMode())
             {
-                CallEventListeners( VclEventId::ListboxTreeFocus, pCursor);
+                CallEventListeners( VCLEVENT_LISTBOX_TREEFOCUS, pCursor);
             }
         }
 
         if( pAnchor )
         {
-            DBG_ASSERT(aSelEng.GetSelectionMode() != SelectionMode::Single,"Mode?");
+            DBG_ASSERT(aSelEng.GetSelectionMode() != SINGLE_SELECTION,"Mode?");
             SetAnchorSelection( pOldCursor, pCursor );
         }
     }
-    nFlags &= (~LBoxFlags::DeselectAll);
+    nFlags &= (~F_DESEL_ALL);
 
     pView->OnCurrentEntryChanged();
 }
@@ -717,7 +729,7 @@ void SvImpLBox::ShowCursor( bool bShow )
     else
     {
         long nY = GetEntryLine( pCursor );
-        tools::Rectangle aRect = pView->GetFocusRect( pCursor, nY );
+        Rectangle aRect = pView->GetFocusRect( pCursor, nY );
         CalcCellFocusRect( pCursor, aRect );
         vcl::Region aOldClip( pView->GetClipRegion());
         vcl::Region aClipRegion( GetClipRegionRect() );
@@ -728,15 +740,18 @@ void SvImpLBox::ShowCursor( bool bShow )
 }
 
 
-void SvImpLBox::UpdateAll( bool bInvalidateCompleteView )
+
+void SvImpLBox::UpdateAll(
+    bool bInvalidateCompleteView, bool bUpdateVerScrollBar )
 {
-    FindMostRight(nullptr);
-    aVerSBar->SetRange( Range(0, pView->GetVisibleCount()-1 ) );
+    if( bUpdateVerScrollBar )
+        FindMostRight(0);
+    aVerSBar.SetRange( Range(0, pView->GetVisibleCount()-1 ) );
     SyncVerThumb();
     FillView();
     ShowVerSBar();
     if( bSimpleTravel && pCursor && pView->HasFocus() )
-        pView->Select( pCursor );
+        pView->Select( pCursor, true );
     ShowCursor( true );
     if( bInvalidateCompleteView )
         pView->Invalidate();
@@ -744,7 +759,7 @@ void SvImpLBox::UpdateAll( bool bInvalidateCompleteView )
         pView->Invalidate( GetVisibleArea() );
 }
 
-IMPL_LINK( SvImpLBox, ScrollLeftRightHdl, ScrollBar *, pScrollBar, void )
+IMPL_LINK_INLINE_START( SvImpLBox, ScrollLeftRightHdl, ScrollBar *, pScrollBar )
 {
     long nDelta = pScrollBar->GetDelta();
     if( nDelta )
@@ -757,28 +772,31 @@ IMPL_LINK( SvImpLBox, ScrollLeftRightHdl, ScrollBar *, pScrollBar, void )
         pView->nFocusWidth = -1;
         KeyLeftRight( nDelta );
     }
+    return 0;
 }
+IMPL_LINK_INLINE_END( SvImpLBox, ScrollLeftRightHdl, ScrollBar *, pScrollBar )
 
 void SvImpLBox::KeyLeftRight( long nDelta )
 {
-    if( !(nFlags & LBoxFlags::InResize) )
+    if( !(nFlags & F_IN_RESIZE) )
         pView->Update();
     BeginScroll();
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
+    pView->NotifyScrolling( 0 ); // 0 == horizontal scrolling
     ShowCursor( false );
 
     // neuen Origin berechnen
-    long nPos = aHorSBar->GetThumbPos();
+    long nPos = aHorSBar.GetThumbPos();
     Point aOrigin( -nPos, 0 );
 
     MapMode aMapMode( pView->GetMapMode() );
     aMapMode.SetOrigin( aOrigin );
     pView->SetMapMode( aMapMode );
 
-    if( !(nFlags & LBoxFlags::InResize) )
+    if( !(nFlags & F_IN_RESIZE) )
     {
-        tools::Rectangle aRect( GetVisibleArea() );
-        pView->Scroll( -nDelta, 0, aRect, ScrollFlags::NoChildren );
+        Rectangle aRect( GetVisibleArea() );
+        pView->Scroll( -nDelta, 0, aRect, SCROLL_NOCHILDREN );
     }
     else
         pView->Invalidate();
@@ -797,9 +815,9 @@ SvTreeListEntry* SvImpLBox::GetClickedEntry( const Point& rPoint ) const
         // suggest it isn't. Okay, make it safe, and wait for somebody to reproduce it
         // reliably :-\ ....
         // #122359# / 2005-05-23 / frank.schoenheit@sun.com
-        return nullptr;
+        return NULL;
     if( pView->GetEntryCount() == 0 || !pStartEntry || !pView->GetEntryHeight())
-        return nullptr;
+        return 0;
 
     sal_uInt16 nClickedEntry = (sal_uInt16)(rPoint.Y() / pView->GetEntryHeight() );
     sal_uInt16 nTemp = nClickedEntry;
@@ -809,7 +827,7 @@ SvTreeListEntry* SvImpLBox::GetClickedEntry( const Point& rPoint ) const
 
 
 //  checks if the entry was hit "the right way"
-//  (Focusrect+ ContextBitmap at TreeListBox)
+//  (Focusrect+ ContextBitmap bei TreeListBox)
 
 bool SvImpLBox::EntryReallyHit(SvTreeListEntry* pEntry, const Point& rPosPixel, long nLine)
 {
@@ -819,16 +837,19 @@ bool SvImpLBox::EntryReallyHit(SvTreeListEntry* pEntry, const Point& rPosPixel, 
     if( pEntry->ItemCount() >= 3 )
         return true;
 
-    tools::Rectangle aRect( pView->GetFocusRect( pEntry, nLine ));
+    Rectangle aRect( pView->GetFocusRect( pEntry, nLine ));
     aRect.Right() = GetOutputSize().Width() - pView->GetMapMode().GetOrigin().X();
 
-    SvLBoxContextBmp* pBmp = static_cast<SvLBoxContextBmp*>(pEntry->GetFirstItem(SvLBoxItemType::ContextBmp));
+    SvLBoxContextBmp* pBmp = static_cast<SvLBoxContextBmp*>(pEntry->GetFirstItem(SV_ITEM_ID_LBOXCONTEXTBMP));
     aRect.Left() -= pBmp->GetSize(pView,pEntry).Width();
     aRect.Left() -= 4; // a little tolerance
 
     Point aPos( rPosPixel );
     aPos -= pView->GetMapMode().GetOrigin();
-    bRet = aRect.IsInside( aPos );
+    if( aRect.IsInside( aPos ) )
+        bRet = true;
+    else
+        bRet = false;
     return bRet;
 }
 
@@ -839,23 +860,23 @@ SvTreeListEntry* SvImpLBox::GetEntry( const Point& rPoint ) const
     if( (pView->GetEntryCount() == 0) || !pStartEntry ||
         (rPoint.Y() > aOutputSize.Height())
         || !pView->GetEntryHeight())
-        return nullptr;
+        return 0;
 
     sal_uInt16 nClickedEntry = (sal_uInt16)(rPoint.Y() / pView->GetEntryHeight() );
     sal_uInt16 nTemp = nClickedEntry;
     SvTreeListEntry* pEntry = pView->NextVisible(pStartEntry, nTemp);
     if( nTemp != nClickedEntry )
-        pEntry = nullptr;
+        pEntry = 0;
     return pEntry;
 }
 
 
-SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint)
+SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint, bool bNotifyScroll)
 {
     if( !pCursor )
-        return nullptr;
+        return 0;
     long nY = rPoint.Y();
-    SvTreeListEntry* pEntry = nullptr;
+    SvTreeListEntry* pEntry = 0;
     long nMax = aOutputSize.Height();
     if( nY < 0 || nY >= nMax ) // aOutputSize.Height() )
     {
@@ -868,9 +889,9 @@ SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint)
             pView->SetEntryFocus( pCursor, false );
 
         if( nY < 0 )
-            KeyUp( false );
+            KeyUp( false, bNotifyScroll );
         else
-            KeyDown( false );
+            KeyDown( false, bNotifyScroll );
     }
     else
     {
@@ -884,7 +905,7 @@ SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint)
         if( pEntry )
         {
             if( pEntry != pCursor &&
-                 aSelEng.GetSelectionMode() == SelectionMode::Single
+                 aSelEng.GetSelectionMode() == SINGLE_SELECTION
             )
                 pView->Select( pCursor, false );
         }
@@ -892,90 +913,95 @@ SvTreeListEntry* SvImpLBox::MakePointVisible(const Point& rPoint)
     return pEntry;
 }
 
-tools::Rectangle SvImpLBox::GetClipRegionRect() const
+Rectangle SvImpLBox::GetClipRegionRect() const
 {
     Point aOrigin( pView->GetMapMode().GetOrigin() );
     aOrigin.X() *= -1; // conversion document coordinates
-    tools::Rectangle aClipRect( aOrigin, aOutputSize );
+    Rectangle aClipRect( aOrigin, aOutputSize );
     aClipRect.Bottom()++;
     return aClipRect;
 }
 
 
-void SvImpLBox::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect)
+void SvImpLBox::Paint( const Rectangle& rRect )
 {
-    if (!pView->GetVisibleCount())
+    if( !pView->GetVisibleCount() )
         return;
 
-    nFlags |= LBoxFlags::InPaint;
+    nFlags |= F_IN_PAINT;
 
-    if (nFlags & LBoxFlags::Filling)
+    if( nFlags & F_FILLING )
     {
         SvTreeListEntry* pFirst = pView->First();
-        if (pFirst != pStartEntry)
+        if( pFirst != pStartEntry )
         {
-            ShowCursor(false);
+            ShowCursor( false );
             pStartEntry = pView->First();
-            aVerSBar->SetThumbPos( 0 );
+            aVerSBar.SetThumbPos( 0 );
             StopUserEvent();
-            ShowCursor(true);
-            nCurUserEvent = Application::PostUserEvent(LINK(this, SvImpLBox, MyUserEvent),
-                                                       reinterpret_cast<void*>(1));
+            ShowCursor( true );
+            nCurUserEvent = Application::PostUserEvent(LINK(this,SvImpLBox,MyUserEvent), reinterpret_cast<void*>(1));
             return;
         }
     }
 
-    if (!pStartEntry)
+    if( !pStartEntry )
     {
         pStartEntry = pView->First();
     }
 
-    if (nNodeBmpTabDistance == NODE_BMP_TABDIST_NOTVALID)
+    if( nNodeBmpTabDistance == NODE_BMP_TABDIST_NOTVALID )
         SetNodeBmpTabDistance();
 
     long nRectHeight = rRect.GetHeight();
     long nEntryHeight = pView->GetEntryHeight();
 
     // calculate area for the entries we want to draw
-    sal_uInt16 nStartLine = static_cast<sal_uInt16>(rRect.Top() / nEntryHeight);
-    sal_uInt16 nCount = static_cast<sal_uInt16>(nRectHeight / nEntryHeight);
-    nCount += 2; // don't miss a row
+    sal_uInt16 nStartLine = (sal_uInt16)( rRect.Top() / nEntryHeight );
+    sal_uInt16 nCount = (sal_uInt16)( nRectHeight / nEntryHeight );
+        nCount += 2; // don't miss a row
 
     long nY = nStartLine * nEntryHeight;
     SvTreeListEntry* pEntry = pStartEntry;
-    while (nStartLine && pEntry)
+    while( nStartLine && pEntry )
     {
         pEntry = pView->NextVisible(pEntry);
         nStartLine--;
     }
 
-    vcl::Region aClipRegion(GetClipRegionRect());
+    vcl::Region aClipRegion( GetClipRegionRect() );
 
     // first draw the lines, then clip them!
-    rRenderContext.SetClipRegion();
-    if (m_nStyle & (WB_HASLINES | WB_HASLINESATROOT))
-        DrawNet(rRenderContext);
+    pView->SetClipRegion();
+    if( m_nStyle & ( WB_HASLINES | WB_HASLINESATROOT ) )
+        DrawNet();
 
-    rRenderContext.SetClipRegion(aClipRegion);
+    pView->SetClipRegion( aClipRegion );
 
-    if (!pCursor && ((nExtendedWinBits & EWB_NO_AUTO_CURENTRY) == 0))
-    {
-        // do not select if multiselection or explicit set
-        bool bNotSelect = (aSelEng.GetSelectionMode() == SelectionMode::Multiple ) || ((m_nStyle & WB_NOINITIALSELECTION) == WB_NOINITIALSELECTION);
-        SetCursor(pStartEntry, bNotSelect);
-    }
-
-    for(sal_uInt16 n=0; n< nCount && pEntry; n++)
+    for( sal_uInt16 n=0; n< nCount && pEntry; n++ )
     {
         /*long nMaxRight=*/
-        pView->PaintEntry1(*pEntry, nY, rRenderContext );
+        pView->PaintEntry1( pEntry, nY, 0xffff, true );
         nY += nEntryHeight;
         pEntry = pView->NextVisible(pEntry);
     }
 
-    nFlags &= (~LBoxFlags::DeselectAll);
-    rRenderContext.SetClipRegion();
-    nFlags &= (~LBoxFlags::InPaint);
+    if ( !pCursor && ( ( nExtendedWinBits & EWB_NO_AUTO_CURENTRY ) == 0 ) )
+    {
+        // do not select if multiselection or explicit set
+        bool bNotSelect = ( aSelEng.GetSelectionMode() == MULTIPLE_SELECTION )
+                || ( ( m_nStyle & WB_NOINITIALSELECTION ) == WB_NOINITIALSELECTION );
+        SetCursor( pStartEntry, bNotSelect );
+    }
+
+    nFlags &= (~F_DESEL_ALL);
+    pView->SetClipRegion();
+    if( !(nFlags & F_PAINTED) )
+    {
+        nFlags |= F_PAINTED;
+        RepaintScrollBars();
+    }
+    nFlags &= (~F_IN_PAINT);
 }
 
 void SvImpLBox::MakeVisible( SvTreeListEntry* pEntry, bool bMoveToTop )
@@ -989,7 +1015,7 @@ void SvImpLBox::MakeVisible( SvTreeListEntry* pEntry, bool bMoveToTop )
         return;  // is already visible
 
     if( pStartEntry || (m_nStyle & WB_FORCE_MAKEVISIBLE) )
-        nFlags &= (~LBoxFlags::Filling);
+        nFlags &= (~F_FILLING);
     if( !bInView )
     {
         if( !pView->IsEntryVisible(pEntry) )  // Parent(s) collapsed?
@@ -999,7 +1025,10 @@ void SvImpLBox::MakeVisible( SvTreeListEntry* pEntry, bool bMoveToTop )
             {
                 if( !pView->IsExpanded( pParent ) )
                 {
-                    bool bRet = pView->Expand( pParent );
+                    #ifdef DBG_UTIL
+                    bool bRet =
+                    #endif
+                        pView->Expand( pParent );
                     DBG_ASSERT(bRet,"Not expanded!");
                 }
                 pParent = pView->GetParent( pParent );
@@ -1013,7 +1042,7 @@ void SvImpLBox::MakeVisible( SvTreeListEntry* pEntry, bool bMoveToTop )
     pStartEntry = pEntry;
     ShowCursor( false );
     FillView();
-    aVerSBar->SetThumbPos( (long)(pView->GetVisiblePos( pStartEntry )) );
+    aVerSBar.SetThumbPos( (long)(pView->GetVisiblePos( pStartEntry )) );
     ShowCursor( true );
     pView->Invalidate();
 }
@@ -1029,47 +1058,46 @@ void SvImpLBox::ScrollToAbsPos( long nPos )
     else if( nPos > nLastEntryPos )
         nPos = nLastEntryPos;
 
-    SvTreeListEntry* pEntry = pView->GetEntryAtAbsPos( nPos );
+    SvTreeListEntry* pEntry = (SvTreeListEntry*)pView->GetEntryAtAbsPos( nPos );
     if( !pEntry || pEntry == pStartEntry )
         return;
 
     if( pStartEntry || (m_nStyle & WB_FORCE_MAKEVISIBLE) )
-        nFlags &= (~LBoxFlags::Filling);
+        nFlags &= (~F_FILLING);
 
     if( pView->IsEntryVisible(pEntry) )
     {
         pStartEntry = pEntry;
         ShowCursor( false );
-        aVerSBar->SetThumbPos( nPos );
+        aVerSBar.SetThumbPos( nPos );
         ShowCursor( true );
         if (GetUpdateMode())
             pView->Invalidate();
     }
 }
 
-void SvImpLBox::DrawNet(vcl::RenderContext& rRenderContext)
+void SvImpLBox::DrawNet()
 {
 #ifdef USE_JAVA
     // Don't draw the underlying connections between our tree nodes if we're
     // performing native rendering of the tree node controls
-    if( rRenderContext.IsNativeControlSupported( ControlType::ListNode, ControlPart::Entire ) )
+    if( pView->IsNativeControlSupported( CTRL_LISTNODE, PART_ENTIRE_CONTROL ) )
         return;
 #endif	// USE_JAVA
 
-    if (pView->GetVisibleCount() < 2 && !pStartEntry->HasChildrenOnDemand() &&
-        !pStartEntry->HasChildren())
-    {
+    if( pView->GetVisibleCount() < 2 && !pStartEntry->HasChildrenOnDemand() &&
+        !pStartEntry->HasChildren() )
         return;
-    }
 
     // for platforms that don't have nets, DrawNativeControl does nothing and returns true
     // so that SvImpLBox::DrawNet() doesn't draw anything either
-     if (rRenderContext.IsNativeControlSupported(ControlType::ListNet, ControlPart::Entire))
-     {
-        ImplControlValue aControlValue;
-        ControlState nState = ControlState::ENABLED;
-        if (rRenderContext.DrawNativeControl(ControlType::ListNet, ControlPart::Entire,
-                                             tools::Rectangle(), nState, aControlValue, OUString()))
+     if(pView->IsNativeControlSupported( CTRL_LISTNET, PART_ENTIRE_CONTROL)) {
+        ImplControlValue    aControlValue;
+        Point  aTemp(0,0);   // temporary needed for g++ 3.3.5
+        Rectangle aCtrlRegion( aTemp, Size( 0, 0 ) );
+        ControlState        nState = CTRL_STATE_ENABLED;
+        if( pView->DrawNativeControl( CTRL_LISTNET, PART_ENTIRE_CONTROL,
+                                      aCtrlRegion, nState, aControlValue, OUString() ) )
         {
             return;
         }
@@ -1085,38 +1113,36 @@ void SvImpLBox::DrawNet(vcl::RenderContext& rRenderContext)
     SvTreeListEntry* pEntry = pStartEntry;
 
     SvLBoxTab* pFirstDynamicTab = pView->GetFirstDynamicTab();
-    while (pTree->GetDepth( pEntry ) > 0)
-    {
-        pEntry = pView->GetParent(pEntry);
-    }
-    sal_uInt16 nOffs = static_cast<sal_uInt16>(pView->GetVisiblePos(pStartEntry) - pView->GetVisiblePos(pEntry));
+    while( pTree->GetDepth( pEntry ) > 0 )
+        pEntry = pView->GetParent( pEntry );
+    sal_uInt16 nOffs = (sal_uInt16)(pView->GetVisiblePos( pStartEntry ) -
+                            pView->GetVisiblePos( pEntry ));
     long nY = 0;
-    nY -= (nOffs * nEntryHeight);
+    nY -= ( nOffs * nEntryHeight );
 
     DBG_ASSERT(pFirstDynamicTab,"No Tree!");
 
-    rRenderContext.Push(PushFlags::LINECOLOR);
+    Color aOldLineColor = pView->GetLineColor();
+    const StyleSettings& rStyleSettings = pView->GetSettings().GetStyleSettings();
+    Color aCol= rStyleSettings.GetFaceColor();
 
-    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
-    Color aCol = rStyleSettings.GetFaceColor();
-
-    if (aCol.IsRGBEqual(rRenderContext.GetBackground().GetColor()))
+    if( aCol.IsRGBEqual( pView->GetBackground().GetColor()) )
         aCol = rStyleSettings.GetShadowColor();
-    rRenderContext.SetLineColor(aCol);
+    pView->SetLineColor( aCol );
     Point aPos1, aPos2;
     sal_uInt16 nDistance;
     sal_uLong nMax = nVisibleCount + nOffs + 1;
 
     const Image& rExpandedNodeBitmap = GetExpandedNodeBmp();
 
-    for (sal_uLong n=0; n< nMax && pEntry; n++)
+    for( sal_uLong n=0; n< nMax && pEntry; n++ )
     {
-        if (pView->IsExpanded(pEntry))
+        if( pView->IsExpanded(pEntry) )
         {
             aPos1.X() = pView->GetTabPos(pEntry, pFirstDynamicTab);
             // if it is not a context bitmap, go a little to the right below the
             // first text (node bitmap, too)
-            if (!pView->nContextBmpWidthMax)
+            if( !pView->nContextBmpWidthMax )
                 aPos1.X() += rExpandedNodeBitmap.GetSizePixel().Width() / 2;
 
             aPos1.Y() = nY;
@@ -1124,23 +1150,24 @@ void SvImpLBox::DrawNet(vcl::RenderContext& rRenderContext)
 
             pChild = pView->FirstChild( pEntry );
             DBG_ASSERT(pChild,"Child?");
-            pChild = SvTreeList::LastSibling( pChild );
-            nDistance = static_cast<sal_uInt16>(pView->GetVisiblePos(pChild) - pView->GetVisiblePos(pEntry));
+            pChild = pTree->LastSibling( pChild );
+            nDistance = (sal_uInt16)(pView->GetVisiblePos(pChild) -
+                                 pView->GetVisiblePos(pEntry));
             aPos2 = aPos1;
             aPos2.Y() += nDistance * nEntryHeight;
-            rRenderContext.DrawLine(aPos1, aPos2);
+            pView->DrawLine( aPos1, aPos2 );
         }
         // visible in control?
-        if (n >= nOffs && ((m_nStyle & WB_HASLINESATROOT) || !pTree->IsAtRootDepth(pEntry)))
+        if( n>= nOffs && ((m_nStyle & WB_HASLINESATROOT) || !pTree->IsAtRootDepth(pEntry)))
         {
             // can we recycle aPos1?
-            if (!pView->IsExpanded(pEntry))
+            if( !pView->IsExpanded(pEntry) )
             {
                 // nope
                 aPos1.X() = pView->GetTabPos(pEntry, pFirstDynamicTab);
                 // if it is not a context bitmap, go a little to the right below
                 // the first text (node bitmap, too)
-                if (!pView->nContextBmpWidthMax)
+                if( !pView->nContextBmpWidthMax )
                     aPos1.X() += rExpandedNodeBitmap.GetSizePixel().Width() / 2;
                 aPos1.Y() = nY;
                 aPos1.Y() += nEntryHeightDIV2;
@@ -1148,29 +1175,29 @@ void SvImpLBox::DrawNet(vcl::RenderContext& rRenderContext)
             }
             aPos2.Y() = aPos1.Y();
             aPos2.X() -= pView->GetIndent();
-            rRenderContext.DrawLine(aPos1, aPos2);
+            pView->DrawLine( aPos1, aPos2 );
         }
         nY += nEntryHeight;
         pEntry = pView->NextVisible(pEntry);
     }
-    if (m_nStyle & WB_HASLINESATROOT)
+    if( m_nStyle & WB_HASLINESATROOT )
     {
         pEntry = pView->First();
-        aPos1.X() = pView->GetTabPos(pEntry, pFirstDynamicTab);
+        aPos1.X() = pView->GetTabPos( pEntry, pFirstDynamicTab);
         // if it is not a context bitmap, go a little to the right below the
         // first text (node bitmap, too)
-        if (!pView->nContextBmpWidthMax)
+        if( !pView->nContextBmpWidthMax )
             aPos1.X() += rExpandedNodeBitmap.GetSizePixel().Width() / 2;
         aPos1.X() -=  pView->GetIndent();
         aPos1.Y() = GetEntryLine( pEntry );
         aPos1.Y() += nEntryHeightDIV2;
-        pChild = SvTreeList::LastSibling( pEntry );
+        pChild = pTree->LastSibling( pEntry );
         aPos2.X() = aPos1.X();
         aPos2.Y() = GetEntryLine( pChild );
         aPos2.Y() += nEntryHeightDIV2;
-        rRenderContext.DrawLine(aPos1, aPos2);
+        pView->DrawLine( aPos1, aPos2 );
     }
-    rRenderContext.Pop();
+    pView->SetLineColor( aOldLineColor );
 }
 
 void SvImpLBox::PositionScrollBars( Size& rSize, sal_uInt16 nMask )
@@ -1187,12 +1214,12 @@ void SvImpLBox::PositionScrollBars( Size& rSize, sal_uInt16 nMask )
 
     aVerSize.Height() += 2 * nOverlap;
     Point aVerPos( rSize.Width() - aVerSize.Width() + nOverlap, -nOverlap );
-    aVerSBar->SetPosSizePixel( aVerPos, aVerSize );
+    aVerSBar.SetPosSizePixel( aVerPos, aVerSize );
 
     aHorSize.Width() += 2 * nOverlap;
     Point aHorPos( -nOverlap, rSize.Height() - aHorSize.Height() + nOverlap );
 
-    aHorSBar->SetPosSizePixel( aHorPos, aHorSize );
+    aHorSBar.SetPosSizePixel( aHorPos, aHorSize );
 
     if( nMask & 0x0001 )
         rSize.Width() = aVerPos.X();
@@ -1200,16 +1227,17 @@ void SvImpLBox::PositionScrollBars( Size& rSize, sal_uInt16 nMask )
         rSize.Height() = aHorPos.Y();
 
     if( (nMask & (0x0001|0x0002)) == (0x0001|0x0002) )
-        aScrBarBox->Show();
+        aScrBarBox.Show();
     else
-        aScrBarBox->Hide();
+        aScrBarBox.Hide();
 }
 
-void SvImpLBox::AdjustScrollBars( Size& rSize )
+// nResult: Bit0 == VerSBar Bit1 == HorSBar
+sal_uInt16 SvImpLBox::AdjustScrollBars( Size& rSize )
 {
     long nEntryHeight = pView->GetEntryHeight();
     if( !nEntryHeight )
-        return;
+        return 0;
 
     sal_uInt16 nResult = 0;
 
@@ -1239,6 +1267,7 @@ void SvImpLBox::AdjustScrollBars( Size& rSize )
     if( bVerSBar || nTotalCount > nVisibleCount )
     {
         nResult = 1;
+        nFlags |= F_HOR_SBARSIZE_WITH_VBAR;
         nMaxRight -= nVerSBarWidth;
         if( !bHorBar )
         {
@@ -1260,6 +1289,7 @@ void SvImpLBox::AdjustScrollBars( Size& rSize )
             ((nTotalCount > nVisibleCount) || bVerSBar) )
         {
             nResult = 3;
+            nFlags |= F_VER_SBARSIZE_WITH_HBAR;
         }
     }
 
@@ -1268,36 +1298,36 @@ void SvImpLBox::AdjustScrollBars( Size& rSize )
     // adapt Range, VisibleRange etc.
 
     // refresh output size, in case we have to scroll
-    tools::Rectangle aRect;
+    Rectangle aRect;
     aRect.SetSize( aOSize );
     aSelEng.SetVisibleArea( aRect );
 
     // vertical scrollbar
     long nTemp = (long)nVisibleCount;
     nTemp--;
-    if( nTemp != aVerSBar->GetVisibleSize() )
+    if( nTemp != aVerSBar.GetVisibleSize() )
     {
         if( !bInVScrollHdl )
         {
-            aVerSBar->SetPageSize( nTemp - 1 );
-            aVerSBar->SetVisibleSize( nTemp );
+            aVerSBar.SetPageSize( nTemp - 1 );
+            aVerSBar.SetVisibleSize( nTemp );
         }
         else
         {
-            nFlags |= LBoxFlags::EndScrollSetVisSize;
+            nFlags |= F_ENDSCROLL_SET_VIS_SIZE;
             nNextVerVisSize = nTemp;
         }
     }
 
     // horizontal scrollbar
-    nTemp = aHorSBar->GetThumbPos();
-    aHorSBar->SetVisibleSize( aOSize.Width() );
-    long nNewThumbPos = aHorSBar->GetThumbPos();
-    Range aRange( aHorSBar->GetRange() );
+    nTemp = aHorSBar.GetThumbPos();
+    aHorSBar.SetVisibleSize( aOSize.Width() );
+    long nNewThumbPos = aHorSBar.GetThumbPos();
+    Range aRange( aHorSBar.GetRange() );
     if( aRange.Max() < nMostRight+25 )
     {
         aRange.Max() = nMostRight+25;
-        aHorSBar->SetRange( aRange );
+        aHorSBar.SetRange( aRange );
     }
 
     if( nTemp != nNewThumbPos )
@@ -1313,24 +1343,25 @@ void SvImpLBox::AdjustScrollBars( Size& rSize )
     }
 
     if( nResult & 0x0001 )
-        aVerSBar->Show();
+        aVerSBar.Show();
     else
-        aVerSBar->Hide();
+        aVerSBar.Hide();
 
     if( nResult & 0x0002 )
-        aHorSBar->Show();
+        aHorSBar.Show();
     else
     {
-        aHorSBar->Hide();
+        aHorSBar.Hide();
     }
     rSize = aOSize;
+    return nResult;
 }
 
 void SvImpLBox::InitScrollBarBox()
 {
-    aScrBarBox->SetSizePixel( Size(nVerSBarWidth, nHorSBarHeight) );
+    aScrBarBox.SetSizePixel( Size(nVerSBarWidth, nHorSBarHeight) );
     Size aSize( pView->Control::GetOutputSizePixel() );
-    aScrBarBox->SetPosPixel( Point(aSize.Width()-nVerSBarWidth, aSize.Height()-nHorSBarHeight));
+    aScrBarBox.SetPosPixel( Point(aSize.Width()-nVerSBarWidth, aSize.Height()-nHorSBarHeight));
 }
 
 void SvImpLBox::Resize()
@@ -1338,7 +1369,7 @@ void SvImpLBox::Resize()
     aOutputSize = pView->Control::GetOutputSizePixel();
     if( aOutputSize.Width() <= 0 || aOutputSize.Height() <= 0 )
         return;
-    nFlags |= LBoxFlags::InResize;
+    nFlags |= F_IN_RESIZE;
     InitScrollBarBox();
 
     if( pView->GetEntryHeight())
@@ -1348,11 +1379,11 @@ void SvImpLBox::Resize()
     }
     // HACK, as in floating and docked windows the scrollbars might not be drawn
     // correctly/not be drawn at all after resizing!
-    if( aHorSBar->IsVisible())
-        aHorSBar->Invalidate();
-    if( aVerSBar->IsVisible())
-        aVerSBar->Invalidate();
-    nFlags &= ~LBoxFlags::InResize;
+    if( aHorSBar.IsVisible())
+        aHorSBar.Invalidate();
+    if( aVerSBar.IsVisible())
+        aVerSBar.Invalidate();
+    nFlags &= (~(F_IN_RESIZE | F_PAINTED));
 }
 
 void SvImpLBox::FillView()
@@ -1360,7 +1391,7 @@ void SvImpLBox::FillView()
     if( !pStartEntry )
     {
         sal_uInt16 nVisibleViewCount = (sal_uInt16)(pView->GetVisibleCount());
-        sal_uInt16 nTempThumb = (sal_uInt16)aVerSBar->GetThumbPos();
+        sal_uInt16 nTempThumb = (sal_uInt16)aVerSBar.GetThumbPos();
         if( nTempThumb >= nVisibleViewCount )
             nTempThumb = nVisibleViewCount - 1;
         pStartEntry = pView->GetEntryAtVisPos(nTempThumb);
@@ -1369,7 +1400,7 @@ void SvImpLBox::FillView()
     {
         sal_uInt16 nLast = (sal_uInt16)(pView->GetVisiblePos(pView->LastVisible()));
         sal_uInt16 nThumb = (sal_uInt16)(pView->GetVisiblePos( pStartEntry ));
-        sal_uLong nCurDispEntries = nLast-nThumb+1;
+        sal_uInt16 nCurDispEntries = nLast-nThumb+1;
         if( nCurDispEntries <  nVisibleCount )
         {
             ShowCursor( false );
@@ -1389,13 +1420,15 @@ void SvImpLBox::FillView()
             }
             if( bFound )
             {
-                aVerSBar->SetThumbPos( nThumb );
+                aVerSBar.SetThumbPos( nThumb );
                 ShowCursor( true ); // recalculate focus rectangle
                 pView->Invalidate();
             }
         }
     }
 }
+
+
 
 
 void SvImpLBox::ShowVerSBar()
@@ -1406,17 +1439,17 @@ void SvImpLBox::ShowVerSBar()
         nVis = pView->GetVisibleCount();
     if( bVerBar || (nVisibleCount && nVis > (sal_uLong)(nVisibleCount-1)) )
     {
-        if( !aVerSBar->IsVisible() )
+        if( !aVerSBar.IsVisible() )
         {
             pView->nFocusWidth = -1;
             AdjustScrollBars( aOutputSize );
             if( GetUpdateMode() )
-                aVerSBar->Update();
+                aVerSBar.Update();
         }
     }
     else
     {
-        if( aVerSBar->IsVisible() )
+        if( aVerSBar.IsVisible() )
         {
             pView->nFocusWidth = -1;
             AdjustScrollBars( aOutputSize );
@@ -1429,20 +1462,20 @@ void SvImpLBox::ShowVerSBar()
     nMaxRight = nMaxRight + aPos.X() - 1;
     if( nMaxRight < nMostRight  )
     {
-        if( !aHorSBar->IsVisible() )
+        if( !aHorSBar.IsVisible() )
         {
             pView->nFocusWidth = -1;
             AdjustScrollBars( aOutputSize );
             if( GetUpdateMode() )
-                aHorSBar->Update();
+                aHorSBar.Update();
         }
         else
         {
-            Range aRange( aHorSBar->GetRange() );
+            Range aRange( aHorSBar.GetRange() );
             if( aRange.Max() < nMostRight+25 )
             {
                 aRange.Max() = nMostRight+25;
-                aHorSBar->SetRange( aRange );
+                aHorSBar.SetRange( aRange );
             }
             else
             {
@@ -1453,7 +1486,7 @@ void SvImpLBox::ShowVerSBar()
     }
     else
     {
-        if( aHorSBar->IsVisible() )
+        if( aHorSBar.IsVisible() )
         {
             pView->nFocusWidth = -1;
             AdjustScrollBars( aOutputSize );
@@ -1467,10 +1500,10 @@ void SvImpLBox::SyncVerThumb()
     if( pStartEntry )
     {
         long nEntryPos = pView->GetVisiblePos( pStartEntry );
-        aVerSBar->SetThumbPos( nEntryPos );
+        aVerSBar.SetThumbPos( nEntryPos );
     }
     else
-        aVerSBar->SetThumbPos( 0 );
+        aVerSBar.SetThumbPos( 0 );
 }
 
 bool SvImpLBox::IsEntryInView( SvTreeListEntry* pEntry ) const
@@ -1482,7 +1515,9 @@ bool SvImpLBox::IsEntryInView( SvTreeListEntry* pEntry ) const
     if( nY < 0 )
         return false;
     long nMax = nVisibleCount * pView->GetEntryHeight();
-    return nY < nMax;
+    if( nY >= nMax )
+        return false;
+    return true;
 }
 
 
@@ -1498,7 +1533,7 @@ long SvImpLBox::GetEntryLine( SvTreeListEntry* pEntry ) const
     return nFirstVisPos;
 }
 
-void SvImpLBox::SetEntryHeight()
+void SvImpLBox::SetEntryHeight( short /* nHeight */ )
 {
     SetNodeBmpYOffset( GetExpandedNodeBmp() );
     SetNodeBmpYOffset( GetCollapsedNodeBmp() );
@@ -1516,6 +1551,7 @@ void SvImpLBox::SetEntryHeight()
 }
 
 
+
 // ***********************************************************************
 // Callback Functions
 // ***********************************************************************
@@ -1530,9 +1566,9 @@ void SvImpLBox::EntryExpanded( SvTreeListEntry* pEntry )
         if( IsLineVisible(nY) )
         {
             InvalidateEntriesFrom( nY );
-            FindMostRight( pEntry, nullptr  );
+            FindMostRight( pEntry, 0  );
         }
-        aVerSBar->SetRange( Range(0, pView->GetVisibleCount()-1 ) );
+        aVerSBar.SetRange( Range(0, pView->GetVisibleCount()-1 ) );
         // if we expanded before the thumb, the thumb's position has to be
         // corrected
         SyncVerThumb();
@@ -1550,15 +1586,15 @@ void SvImpLBox::EntryCollapsed( SvTreeListEntry* pEntry )
 
     if( !pMostRightEntry || pTree->IsChild( pEntry,pMostRightEntry ) )
     {
-        FindMostRight(nullptr);
+        FindMostRight(0);
     }
 
     if( pStartEntry )
     {
-        long nOldThumbPos   = aVerSBar->GetThumbPos();
+        long nOldThumbPos   = aVerSBar.GetThumbPos();
         sal_uLong nVisList      = pView->GetVisibleCount();
-        aVerSBar->SetRange( Range(0, nVisList-1) );
-        long nNewThumbPos   = aVerSBar->GetThumbPos();
+        aVerSBar.SetRange( Range(0, nVisList-1) );
+        long nNewThumbPos   = aVerSBar.GetThumbPos();
         if( nNewThumbPos != nOldThumbPos  )
         {
             pStartEntry = pView->First();
@@ -1579,7 +1615,7 @@ void SvImpLBox::EntryCollapsed( SvTreeListEntry* pEntry )
         ShowVerSBar();
     ShowCursor( true );
     if( GetUpdateMode() && pCursor )
-        pView->Select( pCursor );
+        pView->Select( pCursor, true );
 }
 
 void SvImpLBox::CollapsingEntry( SvTreeListEntry* pEntry )
@@ -1587,7 +1623,7 @@ void SvImpLBox::CollapsingEntry( SvTreeListEntry* pEntry )
     if( !pView->IsEntryVisible( pEntry ) || !pStartEntry )
         return;
 
-    SelAllDestrAnch( false ); // deselect all
+    SelAllDestrAnch( false, true ); // deselect all
 
     // is the collapsed cursor visible?
     long nY = GetEntryLine( pEntry );
@@ -1631,12 +1667,12 @@ void SvImpLBox::SetNodeBmpTabDistance()
 
 void SvImpLBox::EntrySelected( SvTreeListEntry* pEntry, bool bSelect )
 {
-    if( nFlags & LBoxFlags::IgnoreSelect )
+    if( nFlags & F_IGNORE_SELECT )
         return;
 
-    nFlags &= (~LBoxFlags::DeselectAll);
+    nFlags &= (~F_DESEL_ALL);
     if( bSelect &&
-        aSelEng.GetSelectionMode() == SelectionMode::Single &&
+        aSelEng.GetSelectionMode() == SINGLE_SELECTION &&
         pEntry != pCursor )
     {
         SetCursor( pEntry );
@@ -1648,9 +1684,9 @@ void SvImpLBox::EntrySelected( SvTreeListEntry* pEntry, bool bSelect )
         long nY = GetEntryLine( pEntry );
         if( IsLineVisible( nY ) )
         {
-            ShowCursor(false);
-            InvalidateEntry(pEntry);
-            ShowCursor(true);
+            ShowCursor( false );
+            pView->PaintEntry1( pEntry, nY, 0xffff ); // because of ItemsetBrowser SV_LBOXTAB_SHOW_SELECTION );
+            ShowCursor( true );
         }
     }
 }
@@ -1658,14 +1694,14 @@ void SvImpLBox::EntrySelected( SvTreeListEntry* pEntry, bool bSelect )
 
 void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
 {
-    CallEventListeners( VclEventId::ListboxItemRemoved , pEntry );
+    CallEventListeners( VCLEVENT_LISTBOX_ITEMREMOVED , pEntry );
 
     DestroyAnchor();
 
     if( !pView->IsEntryVisible( pEntry ) )
     {
         // if parent is collapsed => bye!
-        nFlags |= LBoxFlags::RemovedEntryInvisible;
+        nFlags |= F_REMOVED_ENTRY_INVISIBLE;
         return;
     }
 
@@ -1673,7 +1709,7 @@ void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
         pEntry->HasChildren() && pView->IsExpanded(pEntry) &&
         pTree->IsChild(pEntry, pMostRightEntry)))
     {
-        nFlags |= LBoxFlags::RemovedRecalcMostRight;
+        nFlags |= F_REMOVED_RECALC_MOST_RIGHT;
     }
 
     SvTreeListEntry* pOldStartEntry = pStartEntry;
@@ -1683,7 +1719,7 @@ void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
     if (pParent && pView->GetModel()->GetChildList(pParent).size() == 1)
     {
         DBG_ASSERT( pView->IsExpanded( pParent ), "Parent not expanded");
-        pParent->SetFlags( pParent->GetFlags() | SvTLEntryFlags::NO_NODEBMP);
+        pParent->SetFlags( pParent->GetFlags() | SV_ENTRYFLAG_NO_NODEBMP);
         InvalidateEntry( pParent );
     }
 
@@ -1699,7 +1735,7 @@ void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
             pView->Select( pCursor, false );
         ShowCursor( false );    // focus rectangle gone
         // NextSibling, because we also delete the children of the cursor
-        pTemp = SvTreeListBox::NextSibling( pCursor );
+        pTemp = pView->NextSibling( pCursor );
         if( !pTemp )
             pTemp = pView->PrevVisible(pCursor);
 
@@ -1707,7 +1743,7 @@ void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
     }
     if( pStartEntry && pStartEntry == pEntry )
     {
-        pTemp = SvTreeListBox::NextSibling( pStartEntry );
+        pTemp = pView->NextSibling( pStartEntry );
         if( !pTemp )
             pTemp = pView->PrevVisible(pStartEntry);
         pStartEntry = pTemp;
@@ -1716,9 +1752,9 @@ void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
     {
         // if it is the last one, we have to invalidate it, so the lines are
         // drawn correctly (in this case they're deleted)
-        if( pStartEntry && (pStartEntry != pOldStartEntry || pEntry == pView->GetModel()->Last()) )
+        if( pStartEntry && (pStartEntry != pOldStartEntry || pEntry == (SvTreeListEntry*)pView->GetModel()->Last()) )
         {
-            aVerSBar->SetThumbPos( pView->GetVisiblePos( pStartEntry ));
+            aVerSBar.SetThumbPos( pView->GetVisiblePos( pStartEntry ));
             pView->Invalidate( GetVisibleArea() );
         }
         else
@@ -1728,9 +1764,9 @@ void SvImpLBox::RemovingEntry( SvTreeListEntry* pEntry )
 
 void SvImpLBox::EntryRemoved()
 {
-    if( nFlags & LBoxFlags::RemovedEntryInvisible )
+    if( nFlags & F_REMOVED_ENTRY_INVISIBLE )
     {
-        nFlags &= (~LBoxFlags::RemovedEntryInvisible);
+        nFlags &= (~F_REMOVED_ENTRY_INVISIBLE);
         return;
     }
     if( !pStartEntry )
@@ -1739,17 +1775,17 @@ void SvImpLBox::EntryRemoved()
         SetCursor( pStartEntry, true );
 
     if( pCursor && (bSimpleTravel || !pView->GetSelectionCount() ))
-        pView->Select( pCursor );
+        pView->Select( pCursor, true );
 
     if( GetUpdateMode())
     {
-        if( nFlags & LBoxFlags::RemovedRecalcMostRight )
-            FindMostRight(nullptr);
-        aVerSBar->SetRange( Range(0, pView->GetVisibleCount()-1 ) );
+        if( nFlags & F_REMOVED_RECALC_MOST_RIGHT )
+            FindMostRight(0);
+        aVerSBar.SetRange( Range(0, pView->GetVisibleCount()-1 ) );
         FillView();
         if( pStartEntry )
             // if something above the thumb was deleted
-            aVerSBar->SetThumbPos( pView->GetVisiblePos( pStartEntry) );
+            aVerSBar.SetThumbPos( pView->GetVisiblePos( pStartEntry) );
 
         ShowVerSBar();
         if( pCursor && pView->HasFocus() && !pView->IsSelected(pCursor) )
@@ -1757,9 +1793,9 @@ void SvImpLBox::EntryRemoved()
             if( pView->GetSelectionCount() )
             {
                 // is a neighboring entry selected?
-                SvTreeListEntry* pNextCursor = pView->PrevVisible( pCursor );
+                SvTreeListEntry* pNextCursor = (SvTreeListEntry*)pView->PrevVisible( pCursor );
                 if( !pNextCursor || !pView->IsSelected( pNextCursor ))
-                    pNextCursor = pView->NextVisible( pCursor );
+                    pNextCursor = (SvTreeListEntry*)pView->NextVisible( pCursor );
                 if( !pNextCursor || !pView->IsSelected( pNextCursor ))
                     // no neighbor selected: use first selected
                     pNextCursor = pView->FirstSelected();
@@ -1767,20 +1803,20 @@ void SvImpLBox::EntryRemoved()
                 MakeVisible( pCursor );
             }
             else
-                pView->Select( pCursor );
+                pView->Select( pCursor, true );
         }
         ShowCursor( true );
     }
-    nFlags &= (~LBoxFlags::RemovedRecalcMostRight);
+    nFlags &= (~F_REMOVED_RECALC_MOST_RIGHT);
 }
 
 
 void SvImpLBox::MovingEntry( SvTreeListEntry* pEntry )
 {
-    bool bDeselAll(nFlags & LBoxFlags::DeselectAll);
-    SelAllDestrAnch( false );  // DeselectAll();
+    int bDeselAll = nFlags & F_DESEL_ALL;
+    SelAllDestrAnch( false, true );  // DeselectAll();
     if( !bDeselAll )
-        nFlags &= (~LBoxFlags::DeselectAll);
+        nFlags &= (~F_DESEL_ALL);
 
     if( pEntry == pCursor )
         ShowCursor( false );
@@ -1788,7 +1824,7 @@ void SvImpLBox::MovingEntry( SvTreeListEntry* pEntry )
         pView->Invalidate();
     if( pEntry == pStartEntry )
     {
-        SvTreeListEntry* pNew = nullptr;
+        SvTreeListEntry* pNew = 0;
         if( !pEntry->HasChildren() )
         {
             pNew = pView->NextVisible(pStartEntry);
@@ -1797,9 +1833,9 @@ void SvImpLBox::MovingEntry( SvTreeListEntry* pEntry )
         }
         else
         {
-            pNew = SvTreeList::NextSibling( pEntry );
+            pNew = pTree->NextSibling( pEntry );
             if( !pNew )
-                pNew = SvTreeList::PrevSibling( pEntry );
+                pNew = pTree->PrevSibling( pEntry );
         }
         pStartEntry = pNew;
     }
@@ -1814,10 +1850,10 @@ void SvImpLBox::EntryMoved( SvTreeListEntry* pEntry )
         // #i97346#
         pStartEntry = pView->First();
 
-    aVerSBar->SetRange( Range(0, pView->GetVisibleCount()-1));
+    aVerSBar.SetRange( Range(0, pView->GetVisibleCount()-1));
     sal_uInt16 nFirstPos = (sal_uInt16)pTree->GetAbsPos( pStartEntry );
     sal_uInt16 nNewPos = (sal_uInt16)pTree->GetAbsPos( pEntry );
-    FindMostRight(nullptr);
+    FindMostRight(0);
     if( nNewPos < nFirstPos ) // HACK!
         pStartEntry = pEntry;
     SyncVerThumb();
@@ -1840,23 +1876,24 @@ void SvImpLBox::EntryMoved( SvTreeListEntry* pEntry )
 }
 
 
+
 void SvImpLBox::EntryInserted( SvTreeListEntry* pEntry )
 {
     if( GetUpdateMode() )
     {
-        SvTreeListEntry* pParent = pTree->GetParent(pEntry);
+        SvTreeListEntry* pParent = (SvTreeListEntry*)pTree->GetParent(pEntry);
         if (pParent && pTree->GetChildList(pParent).size() == 1)
             // draw plus sign
             pTree->InvalidateEntry( pParent );
 
         if( !pView->IsEntryVisible( pEntry ) )
             return;
-        bool bDeselAll(nFlags & LBoxFlags::DeselectAll);
+        int bDeselAll = nFlags & F_DESEL_ALL;
         if( bDeselAll )
-            SelAllDestrAnch( false );
+            SelAllDestrAnch( false, true );
         else
             DestroyAnchor();
-        //  nFlags &= (~LBoxFlags::DeselectAll);
+        //  nFlags &= (~F_DESEL_ALL);
 //      ShowCursor( false ); // if cursor is moved lower
         long nY = GetEntryLine( pEntry );
         bool bEntryVisible = IsLineVisible( nY );
@@ -1876,8 +1913,8 @@ void SvImpLBox::EntryInserted( SvTreeListEntry* pEntry )
             if( nCurDispEntries < nVisibleCount )
             {
                 // set at the next paint event
-                pStartEntry = nullptr;
-                SetCursor( nullptr );
+                pStartEntry = 0;
+                SetCursor( 0 );
                 pView->Invalidate();
             }
         }
@@ -1885,14 +1922,15 @@ void SvImpLBox::EntryInserted( SvTreeListEntry* pEntry )
             pView->Invalidate();
 
         SetMostRight( pEntry );
-        aVerSBar->SetRange( Range(0, pView->GetVisibleCount()-1));
+        aVerSBar.SetRange( Range(0, pView->GetVisibleCount()-1));
         SyncVerThumb(); // if something was inserted before the thumb
         ShowVerSBar();
         ShowCursor( true );
-        if( pStartEntry != pView->First() && (nFlags & LBoxFlags::Filling) )
+        if( pStartEntry != pView->First() && (nFlags & F_FILLING) )
             pView->Update();
     }
 }
+
 
 
 // ********************************************************************
@@ -1902,10 +1940,11 @@ void SvImpLBox::EntryInserted( SvTreeListEntry* pEntry )
 
 // ****** Control the control animation
 
-bool SvImpLBox::ButtonDownCheckCtrl(const MouseEvent& rMEvt, SvTreeListEntry* pEntry)
+bool SvImpLBox::ButtonDownCheckCtrl(
+    const MouseEvent& rMEvt, SvTreeListEntry* pEntry, long nY)
 {
     SvLBoxItem* pItem = pView->GetItem(pEntry,rMEvt.GetPosPixel().X(),&pActiveTab);
-    if (pItem && pItem->GetType() == SvLBoxItemType::Button)
+    if (pItem && pItem->GetType() == SV_ITEM_ID_LBOXBUTTON)
     {
         pActiveButton = static_cast<SvLBoxButton*>(pItem);
         pActiveEntry = pEntry;
@@ -1913,11 +1952,13 @@ bool SvImpLBox::ButtonDownCheckCtrl(const MouseEvent& rMEvt, SvTreeListEntry* pE
             pView->HideFocus();
         pView->CaptureMouse();
         pActiveButton->SetStateHilighted( true );
-        InvalidateEntry(pActiveEntry);
+        pView->PaintEntry1( pActiveEntry, nY,
+                    SV_LBOXTAB_PUSHABLE | SV_LBOXTAB_ADJUST_CENTER |
+                    SV_LBOXTAB_ADJUST_RIGHT );
         return true;
     }
     else
-        pActiveButton = nullptr;
+        pActiveButton = 0;
     return false;
 }
 
@@ -1925,6 +1966,7 @@ bool SvImpLBox::MouseMoveCheckCtrl(const MouseEvent& rMEvt, SvTreeListEntry* pEn
 {
     if( pActiveButton )
     {
+        long nY;
         long nMouseX = rMEvt.GetPosPixel().X();
         if( pEntry == pActiveEntry &&
              pView->GetItem(pActiveEntry, nMouseX) == pActiveButton )
@@ -1932,7 +1974,10 @@ bool SvImpLBox::MouseMoveCheckCtrl(const MouseEvent& rMEvt, SvTreeListEntry* pEn
             if( !pActiveButton->IsStateHilighted() )
             {
                 pActiveButton->SetStateHilighted(true );
-                InvalidateEntry(pActiveEntry);
+                nY = GetEntryLine( pActiveEntry );
+                pView->PaintEntry1( pActiveEntry, nY,
+                    SV_LBOXTAB_PUSHABLE | SV_LBOXTAB_ADJUST_CENTER |
+                    SV_LBOXTAB_ADJUST_RIGHT );
             }
         }
         else
@@ -1940,7 +1985,8 @@ bool SvImpLBox::MouseMoveCheckCtrl(const MouseEvent& rMEvt, SvTreeListEntry* pEn
             if( pActiveButton->IsStateHilighted() )
             {
                 pActiveButton->SetStateHilighted(false );
-                InvalidateEntry(pActiveEntry);
+                nY = GetEntryLine( pActiveEntry );
+                pView->PaintEntry1( pActiveEntry, nY, SV_LBOXTAB_PUSHABLE );
             }
         }
         return true;
@@ -1954,16 +2000,20 @@ bool SvImpLBox::ButtonUpCheckCtrl( const MouseEvent& rMEvt )
     {
         pView->ReleaseMouse();
         SvTreeListEntry* pEntry = GetClickedEntry( rMEvt.GetPosPixel() );
+        long nY = GetEntryLine( pActiveEntry );
         pActiveButton->SetStateHilighted( false );
         long nMouseX = rMEvt.GetPosPixel().X();
-        if (pEntry == pActiveEntry && pView->GetItem(pActiveEntry, nMouseX) == pActiveButton)
-            pActiveButton->ClickHdl(pActiveEntry);
-        InvalidateEntry(pActiveEntry);
-        if (pCursor == pActiveEntry)
-            ShowCursor(true);
-        pActiveButton = nullptr;
-        pActiveEntry = nullptr;
-        pActiveTab = nullptr;
+        if( pEntry == pActiveEntry &&
+             pView->GetItem( pActiveEntry, nMouseX ) == pActiveButton )
+            pActiveButton->ClickHdl( pView, pActiveEntry );
+        pView->PaintEntry1( pActiveEntry, nY,
+                    SV_LBOXTAB_PUSHABLE | SV_LBOXTAB_ADJUST_CENTER |
+                    SV_LBOXTAB_ADJUST_RIGHT );
+        if( pCursor == pActiveEntry )
+            ShowCursor( true );
+        pActiveButton = 0;
+        pActiveEntry = 0;
+        pActiveTab = 0;
         return true;
     }
     return false;
@@ -1991,11 +2041,13 @@ bool SvImpLBox::IsNodeButton( const Point& rPosPixel, SvTreeListEntry* pEntry ) 
     if( nMouseX < nX )
         return false;
     nX += nNodeBmpWidth;
-    return nMouseX <= nX;
+    if( nMouseX > nX )
+        return false;
+    return true;
 }
 
 // false == hit no node button
-bool SvImpLBox::ButtonDownCheckExpand( const MouseEvent& rMEvt, SvTreeListEntry* pEntry )
+bool SvImpLBox::ButtonDownCheckExpand( const MouseEvent& rMEvt, SvTreeListEntry* pEntry, long /* nY */ )
 {
     bool bRet = false;
 
@@ -2025,7 +2077,7 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
     if ( !rMEvt.IsLeft() && !rMEvt.IsRight())
         return;
 
-    aEditIdle.Stop();
+    aEditTimer.Stop();
     Point aPos( rMEvt.GetPosPixel());
 
     if( aPos.X() > aOutputSize.Width() || aPos.Y() > aOutputSize.Height() )
@@ -2035,7 +2087,7 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
     if ( pEntry != pCursor )
         // new entry selected -> reset current tab position to first tab
         nCurTabPos = FIRST_ENTRY_TAB;
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
     pView->GrabFocus();
     //fdo#82270 Grabbing focus can invalidate the entries, re-fetch
     pEntry = GetEntry(aPos);
@@ -2045,7 +2097,7 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
 
     long nY = GetEntryLine( pEntry );
     // Node-Button?
-    if( ButtonDownCheckExpand( rMEvt, pEntry ) )
+    if( ButtonDownCheckExpand( rMEvt, pEntry, nY ) )
         return;
 
     if( !EntryReallyHit(pEntry,aPos,nY))
@@ -2056,17 +2108,17 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
     {
         SvLBoxTab* pXTab = pView->GetTab( pEntry, pXItem );
         if ( !rMEvt.IsMod1() && !rMEvt.IsMod2() && rMEvt.IsLeft() && pXTab->IsEditable()
-            && pEntry == pView->FirstSelected() && nullptr == pView->NextSelected( pEntry ) )
+            && pEntry == pView->FirstSelected() && NULL == pView->NextSelected( pEntry ) )
                 // #i8234# FirstSelected() and NextSelected() ensures, that inplace editing is only triggered, when only one entry is selected
-            nFlags |= LBoxFlags::StartEditTimer;
+            nFlags |= F_START_EDITTIMER;
         if ( !pView->IsSelected( pEntry ) )
-            nFlags &= ~LBoxFlags::StartEditTimer;
+            nFlags &= ~F_START_EDITTIMER;
     }
 
 
     if( (rMEvt.GetClicks() % 2) == 0 )
     {
-        nFlags &= (~LBoxFlags::StartEditTimer);
+        nFlags &= (~F_START_EDITTIMER);
         pView->pHdlEntry = pEntry;
         if( pView->DoubleClickHdl() )
         {
@@ -2078,7 +2130,7 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
             {
                 // select anew & bye
                 if( !bSimpleTravel && !aSelEng.IsAlwaysAdding())
-                    SelAllDestrAnch( false ); // DeselectAll();
+                    SelAllDestrAnch( false, true ); // DeselectAll();
                 SetCursor( pEntry );
 
                 return;
@@ -2091,7 +2143,7 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
                     pView->Expand( pEntry );
                 if( pEntry == pCursor )  // only if Entryitem was clicked
                                           // (Nodebutton is not an Entryitem!)
-                    pView->Select( pCursor );
+                    pView->Select( pCursor, true );
                 return;
             }
         }
@@ -2099,24 +2151,24 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
     else
     {
         // CheckButton? (TreeListBox: Check + Info)
-        if( ButtonDownCheckCtrl(rMEvt, pEntry) )
+        if( ButtonDownCheckCtrl(rMEvt, pEntry, nY) == true)
             return;
         // Inplace-Editing?
     }
-    if ( aSelEng.GetSelectionMode() != SelectionMode::NONE )
+    if ( aSelEng.GetSelectionMode() != NO_SELECTION )
         aSelEng.SelMouseButtonDown( rMEvt );
 }
 
 void SvImpLBox::MouseButtonUp( const MouseEvent& rMEvt)
 {
-    if ( !ButtonUpCheckCtrl( rMEvt ) && ( aSelEng.GetSelectionMode() != SelectionMode::NONE ) )
+    if ( !ButtonUpCheckCtrl( rMEvt ) && ( aSelEng.GetSelectionMode() != NO_SELECTION ) )
         aSelEng.SelMouseButtonUp( rMEvt );
     EndScroll();
-    if( nFlags & LBoxFlags::StartEditTimer )
+    if( nFlags & F_START_EDITTIMER )
     {
-        nFlags &= (~LBoxFlags::StartEditTimer);
+        nFlags &= (~F_START_EDITTIMER);
         aEditClickPos = rMEvt.GetPosPixel();
-        aEditIdle.Start();
+        aEditTimer.Start();
     }
 
     return;
@@ -2125,20 +2177,20 @@ void SvImpLBox::MouseButtonUp( const MouseEvent& rMEvt)
 void SvImpLBox::MouseMove( const MouseEvent& rMEvt)
 {
     SvTreeListEntry* pEntry = GetClickedEntry( rMEvt.GetPosPixel() );
-    if ( !MouseMoveCheckCtrl( rMEvt, pEntry ) && ( aSelEng.GetSelectionMode() != SelectionMode::NONE ) )
+    if ( !MouseMoveCheckCtrl( rMEvt, pEntry ) && ( aSelEng.GetSelectionMode() != NO_SELECTION ) )
         aSelEng.SelMouseMove( rMEvt );
     return;
 }
 
 bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
 {
-    aEditIdle.Stop();
+    aEditTimer.Stop();
     const vcl::KeyCode& rKeyCode = rKEvt.GetKeyCode();
 
     if( rKeyCode.IsMod2() )
         return false; // don't evaluate Alt key
 
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
 
     if( !pCursor )
         pCursor = pStartEntry;
@@ -2147,7 +2199,7 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
 
     bool bKeyUsed = true;
 
-    sal_uInt16  nDelta = (sal_uInt16)aVerSBar->GetPageSize();
+    sal_uInt16  nDelta = (sal_uInt16)aVerSBar.GetPageSize();
     sal_uInt16  aCode = rKeyCode.GetCode();
 
     bool    bShift = rKeyCode.IsShift();
@@ -2174,13 +2226,16 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
             // if there is no next entry, take the current one
             // this ensures that in case of _one_ entry in the list, this entry is selected when pressing
             // the cursor key
-            if (!pNewCursor)
+            if ( !pNewCursor && pCursor )
                 pNewCursor = pCursor;
 
-            aSelEng.CursorPosChanging( bShift, bMod1 );
-            SetCursor( pNewCursor, bMod1 );     // no selection, when Ctrl is on
-            if( !IsEntryInView( pNewCursor ) )
-                KeyUp( false );
+            if( pNewCursor )
+            {
+                aSelEng.CursorPosChanging( bShift, bMod1 );
+                SetCursor( pNewCursor, bMod1 );     // no selection, when Ctrl is on
+                if( !IsEntryInView( pNewCursor ) )
+                    KeyUp( false );
+            }
             break;
 
         case KEY_DOWN:
@@ -2228,7 +2283,7 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
             {
                 // only try to expand if sublist is expandable,
                 // otherwise ignore the key press
-                if( IsExpandable() && !pView->IsExpanded( pCursor ) )
+                if( IsNowExpandable() )
                     pView->Expand( pCursor );
             }
             else if ( bIsCellFocusEnabled && pCursor )
@@ -2237,17 +2292,17 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
                 {
                     ++nCurTabPos;
                     ShowCursor( true );
-                    CallEventListeners( VclEventId::ListboxSelect, pCursor );
+                    CallEventListeners( VCLEVENT_LISTBOX_SELECT, pCursor );
                 }
             }
             else if( nWindowStyle & WB_HSCROLL )
             {
-                long    nThumb = aHorSBar->GetThumbPos();
-                nThumb += aHorSBar->GetLineSize();
-                long    nOldThumb = aHorSBar->GetThumbPos();
-                aHorSBar->SetThumbPos( nThumb );
+                long    nThumb = aHorSBar.GetThumbPos();
+                nThumb += aHorSBar.GetLineSize();
+                long    nOldThumb = aHorSBar.GetThumbPos();
+                aHorSBar.SetThumbPos( nThumb );
                 nThumb = nOldThumb;
-                nThumb -= aHorSBar->GetThumbPos();
+                nThumb -= aHorSBar.GetThumbPos();
                 nThumb *= -1;
                 if( nThumb )
                 {
@@ -2268,17 +2323,17 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
                 {
                     --nCurTabPos;
                     ShowCursor( true );
-                    CallEventListeners( VclEventId::ListboxSelect, pCursor );
+                    CallEventListeners( VCLEVENT_LISTBOX_SELECT, pCursor );
                 }
             }
             else if ( nWindowStyle & WB_HSCROLL )
             {
-                long    nThumb = aHorSBar->GetThumbPos();
-                nThumb -= aHorSBar->GetLineSize();
-                long    nOldThumb = aHorSBar->GetThumbPos();
-                aHorSBar->SetThumbPos( nThumb );
+                long    nThumb = aHorSBar.GetThumbPos();
+                nThumb -= aHorSBar.GetLineSize();
+                long    nOldThumb = aHorSBar.GetThumbPos();
+                aHorSBar.SetThumbPos( nThumb );
                 nThumb = nOldThumb;
-                nThumb -= aHorSBar->GetThumbPos();
+                nThumb -= aHorSBar.GetThumbPos();
                 if( nThumb )
                 {
                     KeyLeftRight( -nThumb );
@@ -2371,11 +2426,11 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
             break;
 
         case KEY_SPACE:
-            if ( pView->GetSelectionMode() != SelectionMode::NONE )
+            if ( pView->GetSelectionMode() != NO_SELECTION )
             {
                 if ( bMod1 )
                 {
-                    if ( pView->GetSelectionMode() == SelectionMode::Multiple && !bShift )
+                    if ( pView->GetSelectionMode() == MULTIPLE_SELECTION && !bShift )
                         // toggle selection
                         pView->Select( pCursor, !pView->IsSelected( pCursor ) );
                 }
@@ -2389,7 +2444,7 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
                     else if ( !pView->IsSelected( pCursor ) )
                     {
                         SelAllDestrAnch( false );
-                        pView->Select( pCursor );
+                        pView->Select( pCursor, true );
                     }
                     else
                         bKeyUsed = false;
@@ -2417,14 +2472,14 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
             if( !bShift && !bMod1 )
             {
                 aEditClickPos = Point( -1, -1 );
-                EditTimerCall( nullptr );
+                EditTimerCall( 0 );
             }
             else
                 bKeyUsed = false;
             break;
 
         case KEY_F8:
-            if( bShift && pView->GetSelectionMode()==SelectionMode::Multiple &&
+            if( bShift && pView->GetSelectionMode()==MULTIPLE_SELECTION &&
                 !(m_nStyle & WB_SIMPLEMODE))
             {
                 if( aSelEng.IsAlwaysAdding() )
@@ -2472,13 +2527,13 @@ bool SvImpLBox::KeyInput( const KeyEvent& rKEvt)
                 if( bMod1 )
                 {
                     // collapse all parents until we get to the root
-                    SvTreeListEntry* pParentToCollapse = pTree->GetRootLevelParent(pCursor);
+                    SvTreeListEntry* pParentToCollapse = (SvTreeListEntry*)pTree->GetRootLevelParent(pCursor);
                     if( pParentToCollapse )
                     {
                         sal_uInt16 nRefDepth;
                         // special case explorer: if the root only has a single
                         // entry, don't collapse the root entry
-                        if (pTree->GetChildList(nullptr).size() < 2)
+                        if (pTree->GetChildList(0).size() < 2)
                         {
                             nRefDepth = 1;
                             pParentToCollapse = pCursor;
@@ -2607,14 +2662,14 @@ void SvImpLBox::GetFocus()
 
 void SvImpLBox::LoseFocus()
 {
-    aEditIdle.Stop();
+    aEditTimer.Stop();
     if( pCursor )
         pView->SetEntryFocus( pCursor,false );
     ShowCursor( false );
 
     if( m_nStyle & WB_HIDESELECTION )
     {
-        SvTreeListEntry* pEntry = pView ?  pView->FirstSelected() : nullptr;
+        SvTreeListEntry* pEntry = pView->FirstSelected();
         while( pEntry )
         {
             InvalidateEntry( pEntry );
@@ -2657,7 +2712,7 @@ void ImpLBSelEng::CreateAnchor()
 
 void ImpLBSelEng::DestroyAnchor()
 {
-    pImp->pAnchor = nullptr;
+    pImp->pAnchor = 0;
 }
 
 bool ImpLBSelEng::SetCursorAtPoint(const Point& rPoint, bool bDontSelectAtCursor)
@@ -2697,7 +2752,7 @@ void ImpLBSelEng::DeselectAtPoint( const Point& rPoint )
 void ImpLBSelEng::DeselectAll()
 {
     pImp->SelAllDestrAnch( false, false ); // don't reset SelectionEngine!
-    pImp->nFlags &= (~LBoxFlags::DeselectAll);
+    pImp->nFlags &= (~F_DESEL_ALL);
 }
 
 // ***********************************************************************
@@ -2719,11 +2774,11 @@ void SvImpLBox::SetAnchorSelection(SvTreeListEntry* pOldCursor,SvTreeListEntry* 
             pEntry = pOldCursor;
             while( pEntry && pEntry != pNewCursor )
             {
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
                 pEntry = pView->NextVisible(pEntry);
             }
             if( pEntry )
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
             return;
         }
 
@@ -2741,11 +2796,11 @@ void SvImpLBox::SetAnchorSelection(SvTreeListEntry* pOldCursor,SvTreeListEntry* 
             pEntry = pNewCursor;
             while( pEntry && pEntry != pAnchor )
             {
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
                 pEntry = pView->NextVisible(pEntry);
             }
             if( pEntry )
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
             return;
         }
 
@@ -2770,11 +2825,11 @@ void SvImpLBox::SetAnchorSelection(SvTreeListEntry* pOldCursor,SvTreeListEntry* 
             pEntry = pNewCursor;
             while( pEntry && pEntry != pOldCursor )
             {
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
                 pEntry = pView->NextVisible(pEntry);
             }
             if( pEntry )
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
             return;
         }
 
@@ -2791,11 +2846,11 @@ void SvImpLBox::SetAnchorSelection(SvTreeListEntry* pOldCursor,SvTreeListEntry* 
             pEntry = pAnchor;
             while( pEntry && pEntry != pNewCursor )
             {
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
                 pEntry = pView->NextVisible(pEntry);
             }
             if( pEntry )
-                pView->Select( pEntry );
+                pView->Select( pEntry, true );
             return;
         }
 
@@ -2816,19 +2871,19 @@ void SvImpLBox::SelAllDestrAnch(
     bool bSelect, bool bDestroyAnchor, bool bSingleSelToo )
 {
     SvTreeListEntry* pEntry;
-    nFlags &= (~LBoxFlags::DeselectAll);
+    nFlags &= (~F_DESEL_ALL);
     if( bSelect && bSimpleTravel )
     {
         if( pCursor && !pView->IsSelected( pCursor ))
         {
-            pView->Select( pCursor );
+            pView->Select( pCursor, true );
         }
         return;
     }
     if( !bSelect && pView->GetSelectionCount() == 0 )
     {
         if( bSimpleTravel && ( !GetUpdateMode() || !pCursor) )
-            nFlags |= LBoxFlags::DeselectAll;
+            nFlags |= F_DESEL_ALL;
         return;
     }
     if( bSelect && pView->GetSelectionCount() == pView->GetEntryCount())
@@ -2843,17 +2898,17 @@ void SvImpLBox::SelAllDestrAnch(
         if( bDestroyAnchor )
             DestroyAnchor(); // delete anchor & reset SelectionEngine
         else
-            pAnchor = nullptr; // always delete internal anchor
+            pAnchor = 0; // always delete internal anchor
         return;
     }
 
     if( bSimpleTravel && !pCursor && !GetUpdateMode() )
-        nFlags |= LBoxFlags::DeselectAll;
+        nFlags |= F_DESEL_ALL;
 
     ShowCursor( false );
     bool bUpdate = GetUpdateMode();
 
-    nFlags |= LBoxFlags::IgnoreSelect; // EntryInserted should not do anything
+    nFlags |= F_IGNORE_SELECT; // EntryInserted should not do anything
     pEntry = pTree->First();
     while( pEntry )
     {
@@ -2863,28 +2918,28 @@ void SvImpLBox::SelAllDestrAnch(
             {
                 long nY = GetEntryLine( pEntry );
                 if( IsLineVisible( nY ) )
-                    InvalidateEntry(pEntry);
+                    pView->PaintEntry1( pEntry, nY, 0xffff ); // because of ItemsetBrowser SV_LBOXTAB_SHOW_SELECTION );
             }
         }
         pEntry = pTree->Next( pEntry );
     }
-    nFlags &= ~LBoxFlags::IgnoreSelect;
+    nFlags &= ~F_IGNORE_SELECT;
 
     if( bDestroyAnchor )
         DestroyAnchor(); // delete anchor & reset SelectionEngine
     else
-        pAnchor = nullptr; // always delete internal anchor
+        pAnchor = 0; // always delete internal anchor
     ShowCursor( true );
 }
 
 void SvImpLBox::SetSelectionMode( SelectionMode eSelMode  )
 {
     aSelEng.SetSelectionMode( eSelMode);
-    if( eSelMode == SelectionMode::Single )
+    if( eSelMode == SINGLE_SELECTION )
         bSimpleTravel = true;
     else
         bSimpleTravel = false;
-    if( (m_nStyle & WB_SIMPLEMODE) && (eSelMode == SelectionMode::Multiple) )
+    if( (m_nStyle & WB_SIMPLEMODE) && (eSelMode == MULTIPLE_SELECTION) )
         aSelEng.AddAlways( true );
 }
 
@@ -2894,21 +2949,21 @@ void SvImpLBox::SetSelectionMode( SelectionMode eSelMode  )
 
 void SvImpLBox::SetDragDropMode( DragDropMode eDDMode )
 {
-    if( eDDMode != DragDropMode::NONE && eDDMode != DragDropMode::APP_DROP )
+    if( eDDMode && eDDMode != SV_DRAGDROP_APP_DROP )
     {
         aSelEng.ExpandSelectionOnMouseMove( false );
         aSelEng.EnableDrag( true );
     }
     else
     {
-        aSelEng.ExpandSelectionOnMouseMove();
+        aSelEng.ExpandSelectionOnMouseMove( true );
         aSelEng.EnableDrag( false );
     }
 }
 
 void SvImpLBox::BeginDrag()
 {
-    nFlags &= (~LBoxFlags::Filling);
+    nFlags &= (~F_FILLING);
     if( !bAsyncBeginDrag )
     {
         BeginScroll();
@@ -2918,13 +2973,14 @@ void SvImpLBox::BeginDrag()
     else
     {
         aAsyncBeginDragPos = aSelEng.GetMousePosPixel();
-        aAsyncBeginDragIdle.Start();
+        aAsyncBeginDragTimer.Start();
     }
 }
 
-IMPL_LINK_NOARG(SvImpLBox, BeginDragHdl, Timer *, void)
+IMPL_LINK_NOARG(SvImpLBox, BeginDragHdl)
 {
     pView->StartDrag( 0, aAsyncBeginDragPos );
+    return 0;
 }
 
 void SvImpLBox::PaintDDCursor( SvTreeListEntry* pInsertionPos )
@@ -2938,7 +2994,7 @@ void SvImpLBox::PaintDDCursor( SvTreeListEntry* pInsertionPos )
     else
         nY = 1;
     RasterOp eOldOp = pView->GetRasterOp();
-    pView->SetRasterOp( RasterOp::Invert );
+    pView->SetRasterOp( ROP_INVERT );
     Color aOldLineColor = pView->GetLineColor();
     pView->SetLineColor( Color( COL_BLACK ) );
     pView->DrawLine( Point( 0, nY ), Point( aOutputSize.Width(), nY ) );
@@ -2946,19 +3002,33 @@ void SvImpLBox::PaintDDCursor( SvTreeListEntry* pInsertionPos )
     pView->SetRasterOp( eOldOp );
 }
 
+// Delete all submenus of a PopupMenu, recursively
+static void lcl_DeleteSubPopups(PopupMenu* pPopup)
+{
+    for(sal_uInt16 i = 0; i < pPopup->GetItemCount(); i++)
+    {
+        PopupMenu* pSubPopup = pPopup->GetPopupMenu( pPopup->GetItemId( i ));
+        if(pSubPopup)
+        {
+            lcl_DeleteSubPopups(pSubPopup);
+            delete pSubPopup;
+        }
+    }
+}
+
 void SvImpLBox::Command( const CommandEvent& rCEvt )
 {
-    CommandEventId   nCommand = rCEvt.GetCommand();
+    sal_uInt16              nCommand = rCEvt.GetCommand();
 
-    if( nCommand == CommandEventId::ContextMenu )
-        aEditIdle.Stop();
+    if( nCommand == COMMAND_CONTEXTMENU )
+        aEditTimer.Stop();
 
     // scroll mouse event?
-    if( ( ( nCommand == CommandEventId::Wheel ) || ( nCommand == CommandEventId::StartAutoScroll ) || ( nCommand == CommandEventId::AutoScroll ) )
-        && pView->HandleScrollCommand( rCEvt, aHorSBar.get(), aVerSBar.get() ) )
+    if( ( ( nCommand == COMMAND_WHEEL ) || ( nCommand == COMMAND_STARTAUTOSCROLL ) || ( nCommand == COMMAND_AUTOSCROLL ) )
+        && pView->HandleScrollCommand( rCEvt, &aHorSBar, &aVerSBar ) )
             return;
 
-    if( bContextMenuHandling && nCommand == CommandEventId::ContextMenu )
+    if( bContextMenuHandling && nCommand == COMMAND_CONTEXTMENU )
     {
         Point   aPopupPos;
         bool    bClickedIsFreePlace = false;
@@ -2989,12 +3059,12 @@ void SvImpLBox::Command( const CommandEvent& rCEvt )
                     pView->SetCursor( pClickedEntry );
                 }
             }
-            else if( aSelEng.GetSelectionMode() == SelectionMode::Single )
+            else if( aSelEng.GetSelectionMode() == SINGLE_SELECTION )
             {
                 bClickedIsFreePlace = true;
                 sal_Int32               nSelectedEntries = pView->GetSelectionCount();
                 SvTreeListEntry*        pSelected = pView->FirstSelected();
-                for(sal_Int32 nSel = 0; nSel < nSelectedEntries; nSel++ )
+                for(sal_uInt16 nSel = 0; nSel < nSelectedEntries; nSel++ )
                 {
                     aSelRestore.push(pSelected);
                     pSelected = pView->NextSelected( pSelected );
@@ -3036,16 +3106,16 @@ void SvImpLBox::Command( const CommandEvent& rCEvt )
                 aPopupPos = Point( 0, 0 );
         }
 
+        PopupMenu*  pPopup = pView->CreateContextMenu();
+
+        if( pPopup )
         {
-            VclPtr<PopupMenu> pPopup = pView->CreateContextMenu();
-            if (pPopup)
-            {
-                // do action for selected entry in popup menu
-                sal_uInt16 nMenuAction = pPopup->Execute( pView, aPopupPos );
-                if ( nMenuAction )
-                    pView->ExecuteContextMenuAction( nMenuAction );
-                pPopup.disposeAndClear();
-            }
+            // do action for selected entry in popup menu
+            sal_uInt16 nMenuAction = pPopup->Execute( pView, aPopupPos );
+            if ( nMenuAction )
+                pView->ExcecuteContextMenuAction( nMenuAction );
+            lcl_DeleteSubPopups(pPopup);
+            delete pPopup;
         }
 
         if( bClickedIsFreePlace )
@@ -3067,37 +3137,40 @@ void SvImpLBox::Command( const CommandEvent& rCEvt )
             }
         }
     }
+#ifndef NOCOMMAND
     else
     {
         const Point& rPos = rCEvt.GetMousePosPixel();
         if( rPos.X() < aOutputSize.Width() && rPos.Y() < aOutputSize.Height() )
             aSelEng.Command( rCEvt );
     }
+#endif
 }
 
 void SvImpLBox::BeginScroll()
 {
-    if( !(nFlags & LBoxFlags::InScrolling))
+    if( !(nFlags & F_IN_SCROLLING))
     {
-        nFlags |= LBoxFlags::InScrolling;
+        pView->NotifyBeginScroll();
+        nFlags |= F_IN_SCROLLING;
     }
 }
 
 void SvImpLBox::EndScroll()
 {
-    if( nFlags & LBoxFlags::InScrolling)
+    if( nFlags & F_IN_SCROLLING)
     {
         pView->NotifyEndScroll();
-        nFlags &= (~LBoxFlags::InScrolling);
+        nFlags &= (~F_IN_SCROLLING);
     }
 }
 
 
-tools::Rectangle SvImpLBox::GetVisibleArea() const
+Rectangle SvImpLBox::GetVisibleArea() const
 {
     Point aPos( pView->GetMapMode().GetOrigin() );
     aPos.X() *= -1;
-    tools::Rectangle aRect( aPos, aOutputSize );
+    Rectangle aRect( aPos, aOutputSize );
     return aRect;
 }
 
@@ -3108,18 +3181,18 @@ void SvImpLBox::Invalidate()
 
 void SvImpLBox::SetCurEntry( SvTreeListEntry* pEntry )
 {
-    if  (  ( aSelEng.GetSelectionMode() != SelectionMode::Single )
-        && ( aSelEng.GetSelectionMode() != SelectionMode::NONE )
+    if  (  ( aSelEng.GetSelectionMode() != SINGLE_SELECTION )
+        && ( aSelEng.GetSelectionMode() != NO_SELECTION )
         )
-        SelAllDestrAnch( false );
+        SelAllDestrAnch( false, true, false );
     if ( pEntry )
         MakeVisible( pEntry );
     SetCursor( pEntry );
-    if ( pEntry && ( aSelEng.GetSelectionMode() != SelectionMode::NONE ) )
-        pView->Select( pEntry );
+    if ( pEntry && ( aSelEng.GetSelectionMode() != NO_SELECTION ) )
+        pView->Select( pEntry, true );
 }
 
-IMPL_LINK_NOARG(SvImpLBox, EditTimerCall, Timer *, void)
+IMPL_LINK_NOARG(SvImpLBox, EditTimerCall)
 {
     if( pView->IsInplaceEditingEnabled() )
     {
@@ -3131,7 +3204,7 @@ IMPL_LINK_NOARG(SvImpLBox, EditTimerCall, Timer *, void)
                 ||  ( std::abs( aCurrentMousePos.Y() - aEditClickPos.Y() ) > 5 )
                 )
             {
-                return;
+                return 0L;
             }
         }
 
@@ -3143,6 +3216,7 @@ IMPL_LINK_NOARG(SvImpLBox, EditTimerCall, Timer *, void)
             ShowCursor( true );
         }
     }
+    return 0;
 }
 
 bool SvImpLBox::RequestHelp( const HelpEvent& rHEvt )
@@ -3158,8 +3232,8 @@ bool SvImpLBox::RequestHelp( const HelpEvent& rHEvt )
         {
             // recalculate text rectangle
             SvLBoxTab* pTab;
-            SvLBoxItem* pItem = pView->GetItem( pEntry, aPos.X(), &pTab );
-            if (!pItem || pItem->GetType() != SvLBoxItemType::String)
+            SvLBoxString* pItem = static_cast<SvLBoxString*>(pView->GetItem( pEntry, aPos.X(), &pTab ));
+            if (!pItem || pItem->GetType() != SV_ITEM_ID_LBOXSTRING)
                 return false;
 
             aPos = GetEntryPosition( pEntry );
@@ -3173,9 +3247,9 @@ bool SvImpLBox::RequestHelp( const HelpEvent& rHEvt )
                 aSize.Width() = pNextTab->GetPos() - pTab->GetPos();
                 bItemClipped = true;
             }
-            tools::Rectangle aItemRect( aPos, aSize );
+            Rectangle aItemRect( aPos, aSize );
 
-            tools::Rectangle aViewRect( GetVisibleArea() );
+            Rectangle aViewRect( GetVisibleArea() );
 
             if( bItemClipped || !aViewRect.IsInside( aItemRect ) )
             {
@@ -3191,7 +3265,7 @@ bool SvImpLBox::RequestHelp( const HelpEvent& rHEvt )
                 aItemRect.Bottom() = aPt.Y();
 
                 Help::ShowQuickHelp( pView, aItemRect,
-                                     static_cast<SvLBoxString*>(pItem)->GetText(), QuickHelpFlags::Left | QuickHelpFlags::VCenter );
+                                     pItem->GetText(), QUICKHELP_LEFT | QUICKHELP_VCENTER );
                 return true;
             }
         }
@@ -3203,19 +3277,23 @@ SvLBoxTab* SvImpLBox::NextTab( SvLBoxTab* pTab )
 {
     sal_uInt16 nTabCount = pView->TabCount();
     if( nTabCount <= 1 )
-        return nullptr;
-    for( int nTab=0; nTab < (nTabCount-1); nTab++)
+        return 0;
+    for( sal_uInt16 nTab=0; nTab < (nTabCount-1); nTab++)
     {
         if( pView->aTabs[nTab]==pTab )
-            return pView->aTabs[nTab+1];
+            return (SvLBoxTab*)(pView->aTabs[nTab+1]);
     }
-    return nullptr;
+    return 0;
 }
 
 void SvImpLBox::EndSelection()
 {
     DestroyAnchor();
-    nFlags &=  ~LBoxFlags::StartEditTimer;
+    nFlags &=  ~F_START_EDITTIMER;
+}
+
+void SvImpLBox::RepaintScrollBars()
+{
 }
 
 void SvImpLBox::SetUpdateMode( bool bMode )
@@ -3230,11 +3308,11 @@ void SvImpLBox::SetUpdateMode( bool bMode )
 
 bool SvImpLBox::SetMostRight( SvTreeListEntry* pEntry )
 {
-    if( pView->nTreeFlags & SvTreeFlags::RECALCTABS )
+    if( pView->nTreeFlags & TREEFLAG_RECALCTABS )
     {
-        nFlags |= LBoxFlags::IgnoreChangedTabs;
+        nFlags |= F_IGNORE_CHANGED_TABS;
         pView->SetTabs();
-        nFlags &= ~LBoxFlags::IgnoreChangedTabs;
+        nFlags &= ~F_IGNORE_CHANGED_TABS;
     }
 
     sal_uInt16 nLastTab = pView->aTabs.size() - 1;
@@ -3245,7 +3323,7 @@ bool SvImpLBox::SetMostRight( SvTreeListEntry* pEntry )
             nLastTab = nLastItem;
 
         SvLBoxTab* pTab = pView->aTabs[ nLastTab ];
-        SvLBoxItem& rItem = pEntry->GetItem( nLastTab );
+        SvLBoxItem* pItem = pEntry->GetItem( nLastTab );
 
         long nTabPos = pView->GetTabPos( pEntry, pTab );
 
@@ -3256,7 +3334,7 @@ bool SvImpLBox::SetMostRight( SvTreeListEntry* pEntry )
 
         long nNextTab = nTabPos < nMaxRight ? nMaxRight : nMaxRight + 50;
         long nTabWidth = nNextTab - nTabPos + 1;
-        long nItemSize = rItem.GetSize(pView,pEntry).Width();
+        long nItemSize = pItem->GetSize(pView,pEntry).Width();
         long nOffset = pTab->CalcOffset( nItemSize, nTabWidth );
 
         long nRight = nTabPos + nOffset + nItemSize;
@@ -3273,16 +3351,16 @@ bool SvImpLBox::SetMostRight( SvTreeListEntry* pEntry )
 void SvImpLBox::FindMostRight( SvTreeListEntry* pEntryToIgnore )
 {
     nMostRight = -1;
-    pMostRightEntry = nullptr;
+    pMostRightEntry = 0;
     if( !pView->GetModel() )
         return;
 
-    SvTreeListEntry* pEntry = pView->FirstVisible();
+    SvTreeListEntry* pEntry = (SvTreeListEntry*)pView->FirstVisible();
     while( pEntry )
     {
         if( pEntry != pEntryToIgnore )
             SetMostRight( pEntry );
-        pEntry = pView->NextVisible( pEntry );
+        pEntry = (SvTreeListEntry*)pView->NextVisible( pEntry );
     }
 }
 
@@ -3301,7 +3379,7 @@ void SvImpLBox::FindMostRight_Impl( SvTreeListEntry* pParent, SvTreeListEntry* p
     size_t nCount = rList.size();
     for( size_t nCur = 0; nCur < nCount; nCur++ )
     {
-        SvTreeListEntry* pChild = rList[nCur].get();
+        SvTreeListEntry* pChild = &rList[nCur];
         if( pChild != pEntryToIgnore )
         {
             SetMostRight( pChild );
@@ -3313,10 +3391,10 @@ void SvImpLBox::FindMostRight_Impl( SvTreeListEntry* pParent, SvTreeListEntry* p
 
 void SvImpLBox::NotifyTabsChanged()
 {
-    if( GetUpdateMode() && !(nFlags & LBoxFlags::IgnoreChangedTabs ) &&
-        nCurUserEvent == nullptr )
+    if( GetUpdateMode() && !(nFlags & F_IGNORE_CHANGED_TABS ) &&
+        nCurUserEvent == 0 )
     {
-        nCurUserEvent = Application::PostUserEvent(LINK(this,SvImpLBox,MyUserEvent));
+        nCurUserEvent = Application::PostUserEvent(LINK(this,SvImpLBox,MyUserEvent),(void*)0);
     }
 }
 
@@ -3325,9 +3403,14 @@ bool SvImpLBox::IsExpandable() const
     return pCursor->HasChildren() || pCursor->HasChildrenOnDemand();
 }
 
-IMPL_LINK(SvImpLBox, MyUserEvent, void*, pArg, void )
+bool SvImpLBox::IsNowExpandable() const
 {
-    nCurUserEvent = nullptr;
+    return IsExpandable() && !pView->IsExpanded( pCursor );
+}
+
+IMPL_LINK(SvImpLBox,MyUserEvent,void*, pArg )
+{
+    nCurUserEvent = 0;
     if( !pArg )
     {
         pView->Invalidate();
@@ -3335,19 +3418,20 @@ IMPL_LINK(SvImpLBox, MyUserEvent, void*, pArg, void )
     }
     else
     {
-        FindMostRight( nullptr );
+        FindMostRight( 0 );
         ShowVerSBar();
         pView->Invalidate( GetVisibleArea() );
     }
+    return 0;
 }
 
 
 void SvImpLBox::StopUserEvent()
 {
-    if( nCurUserEvent != nullptr )
+    if( nCurUserEvent != 0 )
     {
         Application::RemoveUserEvent( nCurUserEvent );
-        nCurUserEvent = nullptr;
+        nCurUserEvent = 0;
     }
 }
 
@@ -3355,8 +3439,8 @@ void SvImpLBox::ShowFocusRect( const SvTreeListEntry* pEntry )
 {
     if( pEntry )
     {
-        long nY = GetEntryLine( const_cast<SvTreeListEntry*>(pEntry) );
-        tools::Rectangle aRect = pView->GetFocusRect( const_cast<SvTreeListEntry*>(pEntry), nY );
+        long nY = GetEntryLine( (SvTreeListEntry*)pEntry );
+        Rectangle aRect = pView->GetFocusRect( (SvTreeListEntry*)pEntry, nY );
         vcl::Region aOldClip( pView->GetClipRegion());
         vcl::Region aClipRegion( GetClipRegionRect() );
         pView->SetClipRegion( aClipRegion );
@@ -3377,8 +3461,8 @@ void SvImpLBox::implInitDefaultNodeImages()
         // assume that all or nothing is initialized
         return;
 
-    s_pDefCollapsed = new Image(BitmapEx(RID_BMP_TREENODE_COLLAPSED));
-    s_pDefExpanded = new Image(BitmapEx(RID_BMP_TREENODE_EXPANDED));
+    s_pDefCollapsed  = new Image( SvtResId( RID_IMG_TREENODE_COLLAPSED ) );
+    s_pDefExpanded   = new Image( SvtResId( RID_IMG_TREENODE_EXPANDED ) );
 }
 
 
@@ -3396,11 +3480,12 @@ const Image& SvImpLBox::GetDefaultCollapsedNodeImage( )
 }
 
 
-void SvImpLBox::CallEventListeners( VclEventId nEvent, void* pData )
+void SvImpLBox::CallEventListeners( sal_uLong nEvent, void* pData )
 {
     if ( pView )
         pView->CallImplEventListeners( nEvent, pData);
 }
+
 
 
 bool SvImpLBox::SetCurrentTabPos( sal_uInt16 _nNewPos )
@@ -3418,12 +3503,13 @@ bool SvImpLBox::SetCurrentTabPos( sal_uInt16 _nNewPos )
 }
 
 
+
 bool SvImpLBox::IsSelectable( const SvTreeListEntry* pEntry )
 {
     if( pEntry )
     {
         SvViewDataEntry* pViewDataNewCur = pView->GetViewDataEntry(const_cast<SvTreeListEntry*>(pEntry));
-        return (pViewDataNewCur == nullptr) || pViewDataNewCur->IsSelectable();
+        return (pViewDataNewCur == 0) || pViewDataNewCur->IsSelectable();
     }
     else
     {

@@ -33,62 +33,62 @@
 #include <redline.hxx>
 
 SwUndoInserts::SwUndoInserts( SwUndoId nUndoId, const SwPaM& rPam )
-    : SwUndo( nUndoId, rPam.GetDoc() ), SwUndRng( rPam ),
-    pTextFormatColl( nullptr ), pLastNdColl(nullptr), pFrameFormats( nullptr ), pRedlData( nullptr ),
-    bSttWasTextNd( true ), nNdDiff( 0 ), nSetPos( 0 )
+    : SwUndo( nUndoId ), SwUndRng( rPam ),
+    pTxtFmtColl( 0 ), pLastNdColl(0), pFrmFmts( 0 ), pRedlData( 0 ),
+    bSttWasTxtNd( true ), nNdDiff( 0 ), nSetPos( 0 )
 {
-    pHistory.reset( new SwHistory );
-    SwDoc* pDoc = rPam.GetDoc();
+    pHistory = new SwHistory;
+    SwDoc* pDoc = (SwDoc*)rPam.GetDoc();
 
-    SwTextNode* pTextNd = rPam.GetPoint()->nNode.GetNode().GetTextNode();
-    if( pTextNd )
+    SwTxtNode* pTxtNd = rPam.GetPoint()->nNode.GetNode().GetTxtNode();
+    if( pTxtNd )
     {
-        pTextFormatColl = pTextNd->GetTextColl();
-        pHistory->CopyAttr( pTextNd->GetpSwpHints(), nSttNode,
-                            0, pTextNd->GetText().getLength(), false );
-        if( pTextNd->HasSwAttrSet() )
-            pHistory->CopyFormatAttr( *pTextNd->GetpSwAttrSet(), nSttNode );
+        pTxtFmtColl = pTxtNd->GetTxtColl();
+        pHistory->CopyAttr( pTxtNd->GetpSwpHints(), nSttNode,
+                            0, pTxtNd->GetTxt().getLength(), false );
+        if( pTxtNd->HasSwAttrSet() )
+            pHistory->CopyFmtAttr( *pTxtNd->GetpSwAttrSet(), nSttNode );
 
 #ifdef NO_LIBO_BUG_108124_FIX
-        if( !nSttContent )    // than take the Flys along
+        if( !nSttCntnt )    // than take the Flys along
 #else	// NO_LIBO_BUG_108124_FIX
         // We may have some flys anchored to paragraph where we inserting.
         // These flys will be saved in pFrameFormats array (only flys which exist BEFORE insertion!)
         // Then in SwUndoInserts::SetInsertRange the flys saved in pFrameFormats will NOT create Undos.
         // m_FlyUndos will only be filled with newly inserted flys.
 
-        const size_t nArrLen = pDoc->GetSpzFrameFormats()->size();
+        const size_t nArrLen = pDoc->GetSpzFrmFmts()->size();
         for( size_t n = 0; n < nArrLen; ++n )
 #endif	// NO_LIBO_BUG_108124_FIX
         {
 #ifdef NO_LIBO_BUG_108124_FIX
-            const size_t nArrLen = pDoc->GetSpzFrameFormats()->size();
+            const size_t nArrLen = pDoc->GetSpzFrmFmts()->size();
             for( size_t n = 0; n < nArrLen; ++n )
 #else	// NO_LIBO_BUG_108124_FIX
-            SwFrameFormat* pFormat = (*pDoc->GetSpzFrameFormats())[n];
-            SwFormatAnchor const*const  pAnchor = &pFormat->GetAnchor();
-            const SwPosition* pAPos = pAnchor->GetContentAnchor();
+            SwFrmFmt* pFmt = (*pDoc->GetSpzFrmFmts())[n];
+            SwFmtAnchor const*const  pAnchor = &pFmt->GetAnchor();
+            const SwPosition* pAPos = pAnchor->GetCntntAnchor();
             if (pAPos &&
                 (pAnchor->GetAnchorId() == RndStdIds::FLY_AT_PARA) &&
                  nSttNode == pAPos->nNode.GetIndex() )
 #endif	// NO_LIBO_BUG_108124_FIX
             {
 #ifdef NO_LIBO_BUG_108124_FIX
-                SwFrameFormat* pFormat = (*pDoc->GetSpzFrameFormats())[n];
-                SwFormatAnchor const*const  pAnchor = &pFormat->GetAnchor();
-                const SwPosition* pAPos = pAnchor->GetContentAnchor();
+                SwFrmFmt* pFmt = (*pDoc->GetSpzFrmFmts())[n];
+                SwFmtAnchor const*const  pAnchor = &pFmt->GetAnchor();
+                const SwPosition* pAPos = pAnchor->GetCntntAnchor();
                 if (pAPos &&
-                    (pAnchor->GetAnchorId() == RndStdIds::FLY_AT_PARA) &&
+                    (pAnchor->GetAnchorId() == FLY_AT_PARA) &&
                      nSttNode == pAPos->nNode.GetIndex() )
                 {
-                    if( !pFrameFormats )
-                        pFrameFormats = new std::vector<SwFrameFormat*>;
-                    pFrameFormats->push_back( pFormat );
+                    if( !pFrmFmts )
+                        pFrmFmts = new std::vector<SwFrmFmt*>;
+                    pFrmFmts->push_back( pFmt );
                 }
 #else	// NO_LIBO_BUG_108124_FIX
-                if( !pFrameFormats )
-                    pFrameFormats = new std::vector<SwFrameFormat*>;
-                pFrameFormats->push_back( pFormat );
+                if( !pFrmFmts )
+                    pFrmFmts = new std::vector<SwFrmFmt*>;
+                pFrmFmts->push_back( pFmt );
 #endif	// NO_LIBO_BUG_108124_FIX
             }
         }
@@ -97,7 +97,7 @@ SwUndoInserts::SwUndoInserts( SwUndoId nUndoId, const SwPaM& rPam )
     if( pDoc->getIDocumentRedlineAccess().IsRedlineOn() )
     {
         pRedlData = new SwRedlineData( nsRedlineType_t::REDLINE_INSERT, pDoc->getIDocumentRedlineAccess().GetRedlineAuthor() );
-        SetRedlineFlags( pDoc->getIDocumentRedlineAccess().GetRedlineFlags() );
+        SetRedlineMode( pDoc->getIDocumentRedlineAccess().GetRedlineMode() );
     }
 }
 
@@ -118,11 +118,11 @@ SwUndoInserts::SwUndoInserts( SwUndoId nUndoId, const SwPaM& rPam )
 #endif	// NO_LIBO_BUG_108124_FIX
 
 void SwUndoInserts::SetInsertRange( const SwPaM& rPam, bool bScanFlys,
-                                    bool bSttIsTextNd )
+                                    bool bSttIsTxtNd )
 {
     const SwPosition* pTmpPos = rPam.End();
     nEndNode = pTmpPos->nNode.GetIndex();
-    nEndContent = pTmpPos->nContent.GetIndex();
+    nEndCntnt = pTmpPos->nContent.GetIndex();
     if( rPam.HasMark() )
     {
         if( pTmpPos == rPam.GetPoint() )
@@ -131,17 +131,17 @@ void SwUndoInserts::SetInsertRange( const SwPaM& rPam, bool bScanFlys,
             pTmpPos = rPam.GetPoint();
 
         nSttNode = pTmpPos->nNode.GetIndex();
-        nSttContent = pTmpPos->nContent.GetIndex();
+        nSttCntnt = pTmpPos->nContent.GetIndex();
 
-        if( !bSttIsTextNd )      // if a table selection is added ...
+        if( !bSttIsTxtNd )      // if a table selection is added ...
         {
             ++nSttNode;         // ... than the CopyPam is not fully correct
-            bSttWasTextNd = false;
+            bSttWasTxtNd = false;
         }
     }
 
 #ifdef NO_LIBO_BUG_108124_FIX
-    if( bScanFlys && !nSttContent )
+    if( bScanFlys && !nSttCntnt )
 #else	// NO_LIBO_BUG_108124_FIX
     // Fill m_FlyUndos with flys anchored to first and last paragraphs
 
@@ -149,35 +149,34 @@ void SwUndoInserts::SetInsertRange( const SwPaM& rPam, bool bScanFlys,
 #endif	// NO_LIBO_BUG_108124_FIX
     {
         // than collect all new Flys
-        SwDoc* pDoc = rPam.GetDoc();
-        const size_t nArrLen = pDoc->GetSpzFrameFormats()->size();
+        SwDoc* pDoc = (SwDoc*)rPam.GetDoc();
+        const size_t nArrLen = pDoc->GetSpzFrmFmts()->size();
         for( size_t n = 0; n < nArrLen; ++n )
         {
-            SwFrameFormat* pFormat = (*pDoc->GetSpzFrameFormats())[n];
-            SwFormatAnchor const*const pAnchor = &pFormat->GetAnchor();
-            SwPosition const*const pAPos = pAnchor->GetContentAnchor();
+            SwFrmFmt* pFmt = (*pDoc->GetSpzFrmFmts())[n];
+            SwFmtAnchor const*const pAnchor = &pFmt->GetAnchor();
+            SwPosition const*const pAPos = pAnchor->GetCntntAnchor();
             if (pAPos &&
-                (pAnchor->GetAnchorId() == RndStdIds::FLY_AT_PARA) &&
+                (pAnchor->GetAnchorId() == FLY_AT_PARA) &&
 #ifdef NO_LIBO_BUG_108124_FIX
                 nSttNode == pAPos->nNode.GetIndex() )
 #else	// NO_LIBO_BUG_108124_FIX
                 (nSttNode == pAPos->nNode.GetIndex() || nEndNode == pAPos->nNode.GetIndex()))
 #endif	// NO_LIBO_BUG_108124_FIX
             {
-                std::vector<SwFrameFormat*>::iterator it;
-                if( !pFrameFormats ||
-                    pFrameFormats->end() == ( it = std::find( pFrameFormats->begin(), pFrameFormats->end(), pFormat ) ) )
+                std::vector<SwFrmFmt*>::iterator it;
+                if( !pFrmFmts ||
+                    pFrmFmts->end() == ( it = std::find( pFrmFmts->begin(), pFrmFmts->end(), pFmt ) ) )
                 {
-                    std::shared_ptr<SwUndoInsLayFormat> const pFlyUndo(
-                        new SwUndoInsLayFormat(pFormat, 0, 0));
+                    ::boost::shared_ptr<SwUndoInsLayFmt> const pFlyUndo(
+                        new SwUndoInsLayFmt(pFmt, 0, 0));
                     m_FlyUndos.push_back(pFlyUndo);
                 }
                 else
-                    pFrameFormats->erase( it );
+                    pFrmFmts->erase( it );
             }
         }
-        delete pFrameFormats;
-        pFrameFormats = nullptr;
+        delete pFrmFmts, pFrmFmts = 0;
     }
 }
 
@@ -191,7 +190,7 @@ SwUndoInserts::~SwUndoInserts()
             rUNds.GetEndOfExtras().GetIndex() - m_pUndoNodeIndex->GetIndex());
         m_pUndoNodeIndex.reset();
     }
-    delete pFrameFormats;
+    delete pFrmFmts;
     delete pRedlData;
 }
 
@@ -220,94 +219,94 @@ SwUndoInserts::~SwUndoInserts()
 
 void SwUndoInserts::UndoImpl(::sw::UndoRedoContext & rContext)
 {
-    SwDoc& rDoc = rContext.GetDoc();
-    SwPaM& rPam = AddUndoRedoPaM(rContext);
+    SwDoc *const pDoc = & rContext.GetDoc();
+    SwPaM *const pPam = & AddUndoRedoPaM(rContext);
 
-    if( IDocumentRedlineAccess::IsRedlineOn( GetRedlineFlags() ))
-        rDoc.getIDocumentRedlineAccess().DeleteRedline(rPam, true, USHRT_MAX);
+    if( IDocumentRedlineAccess::IsRedlineOn( GetRedlineMode() ))
+        pDoc->getIDocumentRedlineAccess().DeleteRedline( *pPam, true, USHRT_MAX );
 
     // if Point and Mark are different text nodes so a JoinNext has to be done
     bool bJoinNext = nSttNode != nEndNode &&
-                rPam.GetMark()->nNode.GetNode().GetTextNode() &&
-                rPam.GetPoint()->nNode.GetNode().GetTextNode();
+                pPam->GetMark()->nNode.GetNode().GetTxtNode() &&
+                pPam->GetPoint()->nNode.GetNode().GetTxtNode();
 
     // Is there any content? (loading from template does not have content)
-    if( nSttNode != nEndNode || nSttContent != nEndContent )
+    if( nSttNode != nEndNode || nSttCntnt != nEndCntnt )
     {
         if( nSttNode != nEndNode )
         {
-            SwTextNode* pTextNd = rDoc.GetNodes()[ nEndNode ]->GetTextNode();
-            if (pTextNd && pTextNd->GetText().getLength() == nEndContent)
-                pLastNdColl = pTextNd->GetTextColl();
+            SwTxtNode* pTxtNd = pDoc->GetNodes()[ nEndNode ]->GetTxtNode();
+            if (pTxtNd && pTxtNd->GetTxt().getLength() == nEndCntnt)
+                pLastNdColl = pTxtNd->GetTxtColl();
         }
 
-        RemoveIdxFromRange(rPam, false);
-        SetPaM(rPam);
+        RemoveIdxFromRange( *pPam, false );
+        SetPaM(*pPam);
 
-        // are there Footnotes or ContentFlyFrames in text?
+        // are there Footnotes or CntntFlyFrames in text?
         nSetPos = pHistory->Count();
-        nNdDiff = rPam.GetMark()->nNode.GetIndex();
-        DelContentIndex(*rPam.GetMark(), *rPam.GetPoint());
-        nNdDiff -= rPam.GetMark()->nNode.GetIndex();
+        nNdDiff = pPam->GetMark()->nNode.GetIndex();
+        DelCntntIndex( *pPam->GetMark(), *pPam->GetPoint() );
+        nNdDiff -= pPam->GetMark()->nNode.GetIndex();
 
-        if( *rPam.GetPoint() != *rPam.GetMark() )
+        if( *pPam->GetPoint() != *pPam->GetMark() )
         {
             m_pUndoNodeIndex.reset(
-                    new SwNodeIndex(rDoc.GetNodes().GetEndOfContent()));
-            MoveToUndoNds(rPam, m_pUndoNodeIndex.get());
+                    new SwNodeIndex(pDoc->GetNodes().GetEndOfContent()));
+            MoveToUndoNds(*pPam, m_pUndoNodeIndex.get());
 
-            if( !bSttWasTextNd )
-                rPam.Move( fnMoveBackward, GoInContent );
+            if( !bSttWasTxtNd )
+                pPam->Move( fnMoveBackward, fnGoCntnt );
         }
     }
 
     if (m_FlyUndos.size())
     {
-        sal_uLong nTmp = rPam.GetPoint()->nNode.GetIndex();
+        sal_uLong nTmp = pPam->GetPoint()->nNode.GetIndex();
         for (size_t n = m_FlyUndos.size(); 0 < n; --n)
         {
             m_FlyUndos[ n-1 ]->UndoImpl(rContext);
         }
-        nNdDiff += nTmp - rPam.GetPoint()->nNode.GetIndex();
+        nNdDiff += nTmp - pPam->GetPoint()->nNode.GetIndex();
     }
 
-    SwNodeIndex& rIdx = rPam.GetPoint()->nNode;
-    SwTextNode* pTextNode = rIdx.GetNode().GetTextNode();
-    if( pTextNode )
+    SwNodeIndex& rIdx = pPam->GetPoint()->nNode;
+    SwTxtNode* pTxtNode = rIdx.GetNode().GetTxtNode();
+    if( pTxtNode )
     {
-        if( !pTextFormatColl ) // if 0 than it's no TextNode -> delete
+        if( !pTxtFmtColl ) // if 0 than it's no TextNode -> delete
         {
             SwNodeIndex aDelIdx( rIdx );
             ++rIdx;
-            SwContentNode* pCNd = rIdx.GetNode().GetContentNode();
-            rPam.GetPoint()->nContent.Assign( pCNd, pCNd ? pCNd->Len() : 0 );
-            rPam.SetMark();
-            rPam.DeleteMark();
+            SwCntntNode* pCNd = rIdx.GetNode().GetCntntNode();
+            pPam->GetPoint()->nContent.Assign( pCNd, pCNd ? pCNd->Len() : 0 );
+            pPam->SetMark();
+            pPam->DeleteMark();
 
-            RemoveIdxRel(aDelIdx.GetIndex(), *rPam.GetPoint());
+            RemoveIdxRel( aDelIdx.GetIndex(), *pPam->GetPoint() );
 
-            rDoc.GetNodes().Delete( aDelIdx );
+            pDoc->GetNodes().Delete( aDelIdx, 1 );
         }
         else
         {
-            if( bJoinNext && pTextNode->CanJoinNext())
+            if( bJoinNext && pTxtNode->CanJoinNext())
             {
                 {
                     RemoveIdxRel( rIdx.GetIndex()+1, SwPosition( rIdx,
-                        SwIndex( pTextNode, pTextNode->GetText().getLength() )));
+                        SwIndex( pTxtNode, pTxtNode->GetTxt().getLength() )));
                 }
-                pTextNode->JoinNext();
+                pTxtNode->JoinNext();
             }
             // reset all text attributes in the paragraph!
-            pTextNode->RstTextAttr( SwIndex(pTextNode, 0), pTextNode->Len(), 0, nullptr, true );
+            pTxtNode->RstTxtAttr( SwIndex(pTxtNode, 0), pTxtNode->Len(), 0, 0, true );
 
-            pTextNode->ResetAllAttr();
+            pTxtNode->ResetAllAttr();
 
-            if (rDoc.GetTextFormatColls()->IsAlive(pTextFormatColl))
-                pTextFormatColl = static_cast<SwTextFormatColl*>(pTextNode->ChgFormatColl( pTextFormatColl )) ;
+            if( USHRT_MAX != pDoc->GetTxtFmtColls()->GetPos( pTxtFmtColl ))
+                pTxtFmtColl = (SwTxtFmtColl*)pTxtNode->ChgFmtColl( pTxtFmtColl );
 
             pHistory->SetTmpEnd( nSetPos );
-            pHistory->TmpRollback(&rDoc, 0, false);
+            pHistory->TmpRollback( pDoc, 0, false );
         }
     }
 }
@@ -320,49 +319,52 @@ void SwUndoInserts::UndoImpl(::sw::UndoRedoContext & rContext)
 void SwUndoInserts::RedoImpl(::sw::UndoRedoContext & rContext)
 {
     // position cursor onto REDO section
-    SwPaM& rPam(rContext.GetCursorSupplier().CreateNewShellCursor());
-    SwDoc* pDoc = rPam.GetDoc();
-    rPam.DeleteMark();
-    rPam.GetPoint()->nNode = nSttNode - nNdDiff;
-    SwContentNode* pCNd = rPam.GetContentNode();
-    rPam.GetPoint()->nContent.Assign( pCNd, nSttContent );
+    SwPaM *const pPam(& rContext.GetCursorSupplier().CreateNewShellCursor());
+    SwDoc* pDoc = pPam->GetDoc();
+    pPam->DeleteMark();
+    pPam->GetPoint()->nNode = nSttNode - nNdDiff;
+    SwCntntNode* pCNd = pPam->GetCntntNode();
+    pPam->GetPoint()->nContent.Assign( pCNd, nSttCntnt );
 
-    SwTextFormatColl* pSavTextFormatColl = pTextFormatColl;
-    if( pTextFormatColl && pCNd && pCNd->IsTextNode() )
-        pSavTextFormatColl = static_cast<SwTextNode*>(pCNd)->GetTextColl();
+    SwTxtFmtColl* pSavTxtFmtColl = pTxtFmtColl;
+    if( pTxtFmtColl && pCNd && pCNd->IsTxtNode() )
+        pSavTxtFmtColl = ((SwTxtNode*)pCNd)->GetTxtColl();
 
     pHistory->SetTmpEnd( nSetPos );
 
     // retrieve start position for rollback
-    if( ( nSttNode != nEndNode || nSttContent != nEndContent ) && m_pUndoNodeIndex)
+    if( ( nSttNode != nEndNode || nSttCntnt != nEndCntnt ) && m_pUndoNodeIndex)
     {
-        const bool bMvBkwrd = MovePtBackward(rPam);
+        const bool bMvBkwrd = MovePtBackward( *pPam );
 
         // re-insert content again (first detach m_pUndoNodeIndex!)
         sal_uLong const nMvNd = m_pUndoNodeIndex->GetIndex();
         m_pUndoNodeIndex.reset();
-        MoveFromUndoNds(*pDoc, nMvNd, *rPam.GetMark());
-        if( bSttWasTextNd )
-            MovePtForward(rPam, bMvBkwrd);
-        rPam.Exchange();
+        MoveFromUndoNds(*pDoc, nMvNd, *pPam->GetMark());
+        if( bSttWasTxtNd )
+            MovePtForward( *pPam, bMvBkwrd );
+        pPam->Exchange();
     }
 
-    if (pDoc->GetTextFormatColls()->IsAlive(pTextFormatColl))
+    if( USHRT_MAX != pDoc->GetTxtFmtColls()->GetPos( pTxtFmtColl ))
     {
-        SwTextNode* pTextNd = rPam.GetMark()->nNode.GetNode().GetTextNode();
-        if( pTextNd )
-            pTextNd->ChgFormatColl( pTextFormatColl );
+        SwTxtNode* pTxtNd = pPam->GetMark()->nNode.GetNode().GetTxtNode();
+        if( pTxtNd )
+            pTxtNd->ChgFmtColl( pTxtFmtColl );
     }
-    pTextFormatColl = pSavTextFormatColl;
+    pTxtFmtColl = pSavTxtFmtColl;
 
-    if (pLastNdColl && pDoc->GetTextFormatColls()->IsAlive(pLastNdColl)
-        && rPam.GetPoint()->nNode != rPam.GetMark()->nNode)
+    if( pLastNdColl && USHRT_MAX != pDoc->GetTxtFmtColls()->GetPos( pLastNdColl ) &&
+        pPam->GetPoint()->nNode != pPam->GetMark()->nNode )
     {
-        SwTextNode* pTextNd = rPam.GetPoint()->nNode.GetNode().GetTextNode();
-        if( pTextNd )
-            pTextNd->ChgFormatColl( pLastNdColl );
+        SwTxtNode* pTxtNd = pPam->GetPoint()->nNode.GetNode().GetTxtNode();
+        if( pTxtNd )
+            pTxtNd->ChgFmtColl( pLastNdColl );
     }
 
+#ifdef NO_LIBO_BUG_108124_FIX
+    for (size_t n = m_FlyUndos.size(); 0 < n; --n)
+#else	// NO_LIBO_BUG_108124_FIX
     // tdf#108124 (10/25/2017)
     // During UNDO we call SwUndoInsLayFormat::UndoImpl in reverse order,
     //  firstly for m_FlyUndos[ m_FlyUndos.size()-1 ], etc.
@@ -372,22 +374,27 @@ void SwUndoInserts::RedoImpl(::sw::UndoRedoContext & rContext)
     //  firstly m_FlyUndos[0], then with m_FlyUndos[1] index, etc.
 
     for (size_t n = 0; m_FlyUndos.size() > n; ++n)
+#endif	// NO_LIBO_BUG_108124_FIX
     {
+#ifdef NO_LIBO_BUG_108124_FIX
+        m_FlyUndos[ n-1 ]->RedoImpl(rContext);
+#else	// NO_LIBO_BUG_108124_FIX
         m_FlyUndos[n]->RedoImpl(rContext);
+#endif	// NO_LIBO_BUG_108124_FIX
     }
 
     pHistory->Rollback( pDoc, nSetPos );
 
-    if( pRedlData && IDocumentRedlineAccess::IsRedlineOn( GetRedlineFlags() ))
+    if( pRedlData && IDocumentRedlineAccess::IsRedlineOn( GetRedlineMode() ))
     {
-        RedlineFlags eOld = pDoc->getIDocumentRedlineAccess().GetRedlineFlags();
-        pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld & ~RedlineFlags::Ignore );
-        pDoc->getIDocumentRedlineAccess().AppendRedline( new SwRangeRedline( *pRedlData, rPam ), true);
-        pDoc->getIDocumentRedlineAccess().SetRedlineFlags_intern( eOld );
+        RedlineMode_t eOld = pDoc->getIDocumentRedlineAccess().GetRedlineMode();
+        pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern((RedlineMode_t)( eOld & ~nsRedlineMode_t::REDLINE_IGNORE ));
+        pDoc->getIDocumentRedlineAccess().AppendRedline( new SwRangeRedline( *pRedlData, *pPam ), true);
+        pDoc->getIDocumentRedlineAccess().SetRedlineMode_intern( eOld );
     }
-    else if( !( RedlineFlags::Ignore & GetRedlineFlags() ) &&
-            !pDoc->getIDocumentRedlineAccess().GetRedlineTable().empty() )
-        pDoc->getIDocumentRedlineAccess().SplitRedline(rPam);
+    else if( !( nsRedlineMode_t::REDLINE_IGNORE & GetRedlineMode() ) &&
+            !pDoc->getIDocumentRedlineAccess().GetRedlineTbl().empty() )
+        pDoc->getIDocumentRedlineAccess().SplitRedline( *pPam );
 }
 
 void SwUndoInserts::RepeatImpl(::sw::RepeatContext & rContext)
@@ -395,16 +402,16 @@ void SwUndoInserts::RepeatImpl(::sw::RepeatContext & rContext)
     SwPaM aPam( rContext.GetDoc().GetNodes().GetEndOfContent() );
     SetPaM( aPam );
     SwPaM & rRepeatPaM( rContext.GetRepeatPaM() );
-    aPam.GetDoc()->getIDocumentContentOperations().CopyRange( aPam, *rRepeatPaM.GetPoint(), /*bCopyAll=*/false, /*bCheckPos=*/true );
+    aPam.GetDoc()->getIDocumentContentOperations().CopyRange( aPam, *rRepeatPaM.GetPoint(), false );
 }
 
 SwUndoInsDoc::SwUndoInsDoc( const SwPaM& rPam )
-    : SwUndoInserts( SwUndoId::INSDOKUMENT, rPam )
+    : SwUndoInserts( UNDO_INSDOKUMENT, rPam )
 {
 }
 
 SwUndoCpyDoc::SwUndoCpyDoc( const SwPaM& rPam )
-    : SwUndoInserts( SwUndoId::COPY, rPam )
+    : SwUndoInserts( UNDO_COPY, rPam )
 {
 }
 

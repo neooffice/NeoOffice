@@ -23,8 +23,7 @@
 #include "SysShExec.hxx"
 #include <osl/file.hxx>
 #include <sal/macros.h>
-#include <com/sun/star/lang/IllegalArgumentException.hpp>
-#include <com/sun/star/system/SystemShellExecuteException.hpp>
+
 #include <com/sun/star/system/SystemShellExecuteFlags.hpp>
 #include <com/sun/star/uri/UriReferenceFactory.hpp>
 #include <cppuhelper/supportsservice.hxx>
@@ -40,11 +39,18 @@
 #pragma warning(pop)
 #endif
 
+
+// namespace directives
+
+
 using com::sun::star::uno::Reference;
 using com::sun::star::uno::RuntimeException;
 using com::sun::star::uno::Sequence;
+using com::sun::star::uno::XInterface;
+using com::sun::star::lang::EventObject;
 using com::sun::star::lang::XServiceInfo;
 using com::sun::star::lang::IllegalArgumentException;
+using osl::Mutex;
 using com::sun::star::system::XSystemShellExecute;
 using com::sun::star::system::SystemShellExecuteException;
 
@@ -53,11 +59,16 @@ using namespace cppu;
 
 #define SYSSHEXEC_IMPL_NAME  "com.sun.star.sys.shell.SystemShellExecute"
 
-namespace
+
+// helper functions
+
+
+namespace // private
 {
     Sequence< OUString > SAL_CALL SysShExec_getSupportedServiceNames()
     {
-        Sequence< OUString > aRet { "com.sun.star.system.SystemShellExecute" };
+        Sequence< OUString > aRet(1);
+        aRet[0] = "com.sun.star.sys.shell.SystemShellExecute";
         return aRet;
     }
 
@@ -162,6 +173,7 @@ namespace
     #define E_UNKNOWN_EXEC_ERROR -1
 
 
+
     bool is_system_path(const OUString& path_or_uri)
     {
         OUString url;
@@ -175,9 +187,9 @@ namespace
 
     const OUString    JUMP_MARK_HTM(".htm#");
     const OUString    JUMP_MARK_HTML(".html#");
-    const sal_Unicode HASH_MARK      = '#';
+    const sal_Unicode HASH_MARK      = (sal_Unicode)'#';
 
-    bool has_jump_mark(const OUString& system_path, sal_Int32* jmp_mark_start = nullptr)
+    bool has_jump_mark(const OUString& system_path, sal_Int32* jmp_mark_start = NULL)
     {
         sal_Int32 jmp_mark = std::max<int>(
             system_path.lastIndexOf(JUMP_MARK_HTM),
@@ -188,6 +200,7 @@ namespace
 
         return (jmp_mark > -1);
     }
+
 
 
     bool is_existing_file(const OUString& file_name)
@@ -227,10 +240,12 @@ namespace
         }
     }
 
-}
+} // end namespace
+
+
 
 CSysShExec::CSysShExec( const Reference< css::uno::XComponentContext >& xContext ) :
-    WeakComponentImplHelper< XSystemShellExecute, XServiceInfo >( m_aMutex ),
+    WeakComponentImplHelper2< XSystemShellExecute, XServiceInfo >( m_aMutex ),
     m_xContext(xContext)
 {
     /*
@@ -241,10 +256,13 @@ CSysShExec::CSysShExec( const Reference< css::uno::XComponentContext >& xContext
      * Once this changed, we can remove the uninitialize call.
      */
     CoUninitialize();
-    CoInitialize( nullptr );
+    CoInitialize( NULL );
 }
 
+
+
 void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags )
+        throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException)
 {
     // parameter checking
     if (0 == aCommand.getLength())
@@ -266,8 +284,8 @@ void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aPa
         if (!(uri.is() && uri->isAbsolute()))
         {
             throw css::lang::IllegalArgumentException(
-                "XSystemShellExecute.execute URIS_ONLY with"
-                         " non-absolute URI reference "
+                OUString("XSystemShellExecute.execute URIS_ONLY with"
+                         " non-absolute URI reference ")
                  + aCommand,
                 static_cast< cppu::OWeakObject * >(this), 0);
         }
@@ -404,7 +422,7 @@ void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aPa
 
     SetLastError( 0 );
 
-    bool bRet = ShellExecuteExW(&sei);
+    sal_Bool bRet = ShellExecuteExW(&sei) ? sal_True : sal_False;
 
     if (!bRet && (nFlags & NO_SYSTEM_ERROR_MESSAGE))
     {
@@ -421,43 +439,25 @@ void SAL_CALL CSysShExec::execute( const OUString& aCommand, const OUString& aPa
             static_cast< XSystemShellExecute* >(this),
             psxErr);
     }
-    else
-    {
-        // Get Permission make changes to the Window of the created Process
-        HWND procHandle = nullptr;
-        DWORD procId = GetProcessId(sei.hProcess);
-        AllowSetForegroundWindow(procId);
-
-        // Get the handle of the created Window
-        DWORD check = 0;
-        GetWindowThreadProcessId(procHandle, &check);
-        SAL_WARN_IF(check != procId, "shell", "Could not get handle of process called by shell.");
-
-        // Move created Window into the foreground
-        if(procHandle != nullptr)
-        {
-            SetForegroundWindow(procHandle);
-            SetActiveWindow(procHandle);
-        }
-    }
-
-    // Close the handle for the created childprocess when we are done
-    CloseHandle(sei.hProcess);
 }
 
 // XServiceInfo
-
 OUString SAL_CALL CSysShExec::getImplementationName(  )
+    throw( RuntimeException )
 {
     return OUString(SYSSHEXEC_IMPL_NAME );
 }
 
+//  XServiceInfo
 sal_Bool SAL_CALL CSysShExec::supportsService( const OUString& ServiceName )
+    throw( RuntimeException )
 {
     return cppu::supportsService(this, ServiceName);
 }
 
+//  XServiceInfo
 Sequence< OUString > SAL_CALL CSysShExec::getSupportedServiceNames(  )
+    throw( RuntimeException )
 {
     return SysShExec_getSupportedServiceNames();
 }

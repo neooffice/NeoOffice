@@ -37,14 +37,13 @@
 class ScInsertContentsDlg : public ModalDialog
 {
 public:
-            ScInsertContentsDlg( vcl::Window*      pParent,
-                                 InsertDeleteFlags nCheckDefaults,
-                                 const OUString*   pStrTitle );
-    virtual ~ScInsertContentsDlg() override;
-    virtual void dispose() override;
+            ScInsertContentsDlg( vcl::Window*          pParent,
+                                 InsertDeleteFlags nCheckDefaults = IDF_NONE,
+                                 const OUString*  pStrTitle = NULL );
+            virtual ~ScInsertContentsDlg();
 
     InsertDeleteFlags GetInsContentsCmdBits() const;
-    ScPasteFunc       GetFormulaCmdBits() const;
+    sal_uInt16      GetFormulaCmdBits() const;
     bool            IsSkipEmptyCells() const;
     bool            IsTranspose() const;
     bool            IsLink() const;
@@ -53,35 +52,35 @@ public:
     void    SetOtherDoc( bool bSet );
     void    SetFillMode( bool bSet );
     void    SetChangeTrack( bool bSet );
-    void    SetCellShiftDisabled( CellShiftDisabledFlags nDisable );
+    void    SetCellShiftDisabled( int nDisable );
 
 private:
-    VclPtr<CheckBox>        mpBtnInsAll;
-    VclPtr<CheckBox>        mpBtnInsStrings;
-    VclPtr<CheckBox>        mpBtnInsNumbers;
-    VclPtr<CheckBox>        mpBtnInsDateTime;
-    VclPtr<CheckBox>        mpBtnInsFormulas;
-    VclPtr<CheckBox>        mpBtnInsNotes;
-    VclPtr<CheckBox>        mpBtnInsAttrs;
-    VclPtr<CheckBox>        mpBtnInsObjects;
+    CheckBox*        mpBtnInsAll;
+    CheckBox*        mpBtnInsStrings;
+    CheckBox*        mpBtnInsNumbers;
+    CheckBox*        mpBtnInsDateTime;
+    CheckBox*        mpBtnInsFormulas;
+    CheckBox*        mpBtnInsNotes;
+    CheckBox*        mpBtnInsAttrs;
+    CheckBox*        mpBtnInsObjects;
 
-    VclPtr<CheckBox>        mpBtnSkipEmptyCells;
-    VclPtr<CheckBox>        mpBtnTranspose;
-    VclPtr<CheckBox>        mpBtnLink;
+    CheckBox*        mpBtnSkipEmptyCells;
+    CheckBox*        mpBtnTranspose;
+    CheckBox*        mpBtnLink;
 
-    VclPtr<RadioButton>     mpRbNoOp;
-    VclPtr<RadioButton>     mpRbAdd;
-    VclPtr<RadioButton>     mpRbSub;
-    VclPtr<RadioButton>     mpRbMul;
-    VclPtr<RadioButton>     mpRbDiv;
+    RadioButton*     mpRbNoOp;
+    RadioButton*     mpRbAdd;
+    RadioButton*     mpRbSub;
+    RadioButton*     mpRbMul;
+    RadioButton*     mpRbDiv;
 
-    VclPtr<RadioButton>     mpRbMoveNone;
-    VclPtr<RadioButton>     mpRbMoveDown;
-    VclPtr<RadioButton>     mpRbMoveRight;
+    RadioButton*     mpRbMoveNone;
+    RadioButton*     mpRbMoveDown;
+    RadioButton*     mpRbMoveRight;
 
-    VclPtr<PushButton>      mpBtnShortCutPasteValuesOnly;
-    VclPtr<PushButton>      mpBtnShortCutPasteValuesFormats;
-    VclPtr<PushButton>      mpBtnShortCutPasteTranspose;
+    PushButton*      mpBtnShortCutPasteValuesOnly;
+    PushButton*      mpBtnShortCutPasteValuesFormats;
+    PushButton*      mpBtnShortCutPasteTranspose;
 
     bool              bOtherDoc;
     bool              bFillMode;
@@ -91,25 +90,28 @@ private:
     bool              bUsedShortCut;
 
     InsertDeleteFlags nShortCutInsContentsCmdBits;
+    sal_uInt16        nShortCutFormulaCmdBits;
+    bool              bShortCutSkipEmptyCells;
     bool              bShortCutTranspose;
+    bool              bShortCutIsLink;
     InsCellCmd        nShortCutMoveMode;
 
     static bool         bPreviousAllCheck;
     static InsertDeleteFlags nPreviousChecks;
-    static InsertContentsFlags nPreviousChecks2;
-    static ScPasteFunc  nPreviousFormulaChecks;
+    static sal_uInt16   nPreviousChecks2;
+    static sal_uInt16   nPreviousFormulaChecks;
     static sal_uInt16   nPreviousMoveMode;          // enum InsCellCmd
 #ifdef USE_JAVA
     static sal_Bool     bPreviousValuesInitialized;
 #endif	// USE_JAVA
 
-    void DisableChecks( bool bInsAllChecked );
+    void DisableChecks( bool bInsAllChecked = true );
     void TestModes();
 
     // Handler
-    DECL_LINK( InsAllHdl, Button*, void );
-    DECL_LINK( LinkBtnHdl, Button*, void );
-    DECL_LINK( ShortCutHdl, Button*, void );
+    DECL_LINK( InsAllHdl, void* );
+    DECL_LINK( LinkBtnHdl, void* );
+    DECL_LINK( ShortCutHdl, PushButton* );
 };
 
 #endif // INCLUDED_SC_SOURCE_UI_INC_INSCODLG_HXX

@@ -24,6 +24,7 @@
  */
 
 interface _Annotation
+[ Automation = FALSE; ]
 {
     FN_DELETE_COMMENT
     [
@@ -87,7 +88,7 @@ interface _Annotation
     [
         ExecMethod = ExecClpbrd ;
         StateMethod = StateClpbrd ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_COPY // api:
@@ -100,21 +101,21 @@ interface _Annotation
     [
         ExecMethod = ExecClpbrd ;
         StateMethod = StateClpbrd ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_PASTE_SPECIAL  // api:
     [
         StateMethod = StateClpbrd ;
         ExecMethod = ExecClpbrd ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_CLIPBOARD_FORMAT_ITEMS  // status(final|play)
     [
         StateMethod = StateClpbrd ;
         ExecMethod = ExecClpbrd ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_SELECTALL  // api:
@@ -157,7 +158,7 @@ interface _Annotation
     [
         ExecMethod = Exec ;
         StateMethod = NoState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     FN_FORMAT_FOOTNOTE_DLG // status()
@@ -183,32 +184,12 @@ interface _Annotation
     SID_CHARMAP // api:
     [
         ExecMethod = Exec ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
-    ]
-
-    SID_EMOJI_CONTROL
-    [
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_LRSPACE
     [
         ExecMethod = Exec;
-        StateMethod = GetState ;
-    ]
-
-    SID_ATTR_PARA_LEFTSPACE
-    [
-        StateMethod = GetState ;
-    ]
-
-    SID_ATTR_PARA_RIGHTSPACE
-    [
-        StateMethod = GetState ;
-    ]
-
-    SID_ATTR_PARA_FIRSTLINESPACE
-    [
         StateMethod = GetState ;
     ]
 
@@ -224,216 +205,172 @@ interface _Annotation
         StateMethod = GetState ;
     ]
 
-    SID_ATTR_PARA_ABOVESPACE
-    [
-        StateMethod = GetState ;
-    ]
-
-    SID_ATTR_PARA_BELOWSPACE
-    [
-        StateMethod = GetState ;
-    ]
-
-    SID_PARASPACE_INCREASE
-    [
-        ExecMethod = Exec;
-        StateMethod = GetState;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
-    ]
-    SID_PARASPACE_DECREASE
-    [
-        ExecMethod = Exec;
-        StateMethod = GetState;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
-    ]
-
     FN_INSERT_STRING
     [
             ExecMethod = Exec ;
             StateMethod = NoState ;
-            DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+            DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_FONT // status()
     [
         ExecMethod = Exec;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_FONTHEIGHT // status()
     [
         ExecMethod = Exec;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
-    ]
-
-    FN_GROW_FONT_SIZE
-    [
-        ExecMethod = Exec;
-        StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
-    ]
-
-    FN_SHRINK_FONT_SIZE
-    [
-        ExecMethod = Exec;
-        StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_COLOR // api:
     [
         ExecMethod = Exec;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
-    ]
-
-    SID_ATTR_CHAR_BACK_COLOR // api:
-    [
-        ExecMethod = Exec;
-        StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_CHAR_DLG_EFFECT
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_WEIGHT // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_POSTURE // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_UNDERLINE // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_OVERLINE // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_CONTOUR
     [
         ExecMethod = Exec;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_SHADOWED
     [
         ExecMethod = Exec;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_STRIKEOUT
     [
         ExecMethod = Exec;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_CHAR_LANGUAGE // status(final|play)
     [
         ExecMethod = Execute ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_ADJUST_LEFT // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_ADJUST_CENTER // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_ADJUST_RIGHT // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_ADJUST_BLOCK // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_LINESPACE_10 // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_LINESPACE_15 // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_ATTR_PARA_LINESPACE_20 // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_CHAR_DLG  // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_PARA_DLG // api:
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     FN_SET_SUPER_SCRIPT
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     FN_SET_SUB_SCRIPT
     [
         ExecMethod = Exec ;
         StateMethod = GetState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 
     SID_SEARCH_ITEM // status()
@@ -461,7 +398,7 @@ interface _Annotation
     FID_SEARCH_REPLACESET // status()
     [
         ExecMethod = ExecSearch ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
       // ab hier Export = FALSE;
     FID_SEARCH_ON // status()
@@ -479,7 +416,7 @@ interface _Annotation
     [
         ExecMethod = Exec ;
         StateMethod = NoState ;
-        DisableFlags="SfxDisableFlags::SwOnProtectedCursor";
+        DisableFlags="SW_DISABLE_ON_PROTECTED_CURSOR";
     ]
 // #endif	// USE_JAVA
 }

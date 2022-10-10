@@ -56,7 +56,6 @@
 #include <svl/stritem.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/diagnose_ex.h>
-#include <vcl/syswin.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -64,7 +63,10 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::util;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::beans;
+using ::com::sun::star::lang::XMultiServiceFactory;
+using ::com::sun::star::lang::XComponent;
 using ::com::sun::star::frame::XComponentLoader;
+
 
 
 class SfxFrameWindow_Impl : public vcl::Window
@@ -73,13 +75,14 @@ public:
     SfxFrame*           pFrame;
 
     SfxFrameWindow_Impl( SfxFrame* pF, vcl::Window& i_rContainerWindow );
+    virtual ~SfxFrameWindow_Impl( );
 
-    virtual void        DataChanged( const DataChangedEvent& rDCEvt ) override;
-    virtual void        StateChanged( StateChangedType nStateChange ) override;
-    virtual bool        PreNotify( NotifyEvent& rNEvt ) override;
-    virtual bool        EventNotify( NotifyEvent& rEvt ) override;
-    virtual void        Resize() override;
-    virtual void        GetFocus() override;
+    virtual void        DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
+    virtual void        StateChanged( StateChangedType nStateChange ) SAL_OVERRIDE;
+    virtual bool        PreNotify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
+    virtual bool        Notify( NotifyEvent& rEvt ) SAL_OVERRIDE;
+    virtual void        Resize() SAL_OVERRIDE;
+    virtual void        GetFocus() SAL_OVERRIDE;
     void                DoResize();
 };
 
@@ -89,28 +92,32 @@ SfxFrameWindow_Impl::SfxFrameWindow_Impl( SfxFrame* pF, vcl::Window& i_rContaine
 {
 }
 
+SfxFrameWindow_Impl::~SfxFrameWindow_Impl( )
+{
+}
+
 void SfxFrameWindow_Impl::DataChanged( const DataChangedEvent& rDCEvt )
 {
     Window::DataChanged( rDCEvt );
     SfxWorkWindow *pWorkWin = pFrame->GetWorkWindow_Impl();
     if ( pWorkWin )
-        pWorkWin->DataChanged_Impl();
+        pWorkWin->DataChanged_Impl( rDCEvt );
 }
 
-bool SfxFrameWindow_Impl::EventNotify( NotifyEvent& rNEvt )
+bool SfxFrameWindow_Impl::Notify( NotifyEvent& rNEvt )
 {
     if ( pFrame->IsClosing_Impl() || !pFrame->GetFrameInterface().is() )
         return false;
 
     SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
     if ( !pView || !pView->GetObjectShell() )
-        return Window::EventNotify( rNEvt );
+        return Window::Notify( rNEvt );
 
-    if ( rNEvt.GetType() == MouseNotifyEvent::GETFOCUS )
+    if ( rNEvt.GetType() == EVENT_GETFOCUS )
     {
         if ( pView->GetViewShell() && !pView->GetViewShell()->GetUIActiveIPClient_Impl() && !pFrame->IsInPlace() )
         {
-            SAL_INFO("sfx", "SfxFrame: GotFocus");
+            OSL_TRACE("SfxFrame: GotFocus");
             pView->MakeActive_Impl( false );
         }
 
@@ -128,47 +135,47 @@ bool SfxFrameWindow_Impl::EventNotify( NotifyEvent& rNEvt )
         pView->GetBindings().Invalidate( SID_PASTE_SPECIAL );
         return true;
     }
-    else if( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
+    else if( rNEvt.GetType() == EVENT_KEYINPUT )
     {
         if ( pView->GetViewShell()->KeyInput( *rNEvt.GetKeyEvent() ) )
             return true;
     }
-    else if ( rNEvt.GetType() == MouseNotifyEvent::EXECUTEDIALOG /*|| rNEvt.GetType() == MouseNotifyEvent::INPUTDISABLE*/ )
+    else if ( rNEvt.GetType() == EVENT_EXECUTEDIALOG /*|| rNEvt.GetType() == EVENT_INPUTDISABLE*/ )
     {
         pView->SetModalMode( true );
         return true;
     }
-    else if ( rNEvt.GetType() == MouseNotifyEvent::ENDEXECUTEDIALOG /*|| rNEvt.GetType() == MouseNotifyEvent::INPUTENABLE*/ )
+    else if ( rNEvt.GetType() == EVENT_ENDEXECUTEDIALOG /*|| rNEvt.GetType() == EVENT_INPUTENABLE*/ )
     {
         pView->SetModalMode( false );
         return true;
     }
 
-    return Window::EventNotify( rNEvt );
+    return Window::Notify( rNEvt );
 }
 
 bool SfxFrameWindow_Impl::PreNotify( NotifyEvent& rNEvt )
 {
-    MouseNotifyEvent nType = rNEvt.GetType();
-    if ( nType == MouseNotifyEvent::KEYINPUT || nType == MouseNotifyEvent::KEYUP )
+    sal_uInt16 nType = rNEvt.GetType();
+    if ( nType == EVENT_KEYINPUT || nType == EVENT_KEYUP )
     {
         SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
-        SfxViewShell* pShell = pView ? pView->GetViewShell() : nullptr;
+        SfxViewShell* pShell = pView ? pView->GetViewShell() : NULL;
         if ( pShell && pShell->HasKeyListeners_Impl() && pShell->HandleNotifyEvent_Impl( rNEvt ) )
             return true;
     }
-    else if ( nType == MouseNotifyEvent::MOUSEBUTTONUP || nType == MouseNotifyEvent::MOUSEBUTTONDOWN )
+    else if ( nType == EVENT_MOUSEBUTTONUP || nType == EVENT_MOUSEBUTTONDOWN )
     {
         vcl::Window* pWindow = rNEvt.GetWindow();
         SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
-        SfxViewShell* pShell = pView ? pView->GetViewShell() : nullptr;
+        SfxViewShell* pShell = pView ? pView->GetViewShell() : NULL;
         if ( pShell )
             if ( pWindow == pShell->GetWindow() || pShell->GetWindow()->IsChild( pWindow ) )
                 if ( pShell->HasMouseClickListeners_Impl() && pShell->HandleNotifyEvent_Impl( rNEvt ) )
                     return true;
     }
 
-    if ( nType == MouseNotifyEvent::MOUSEBUTTONDOWN )
+    if ( nType == EVENT_MOUSEBUTTONDOWN )
     {
         vcl::Window* pWindow = rNEvt.GetWindow();
         const MouseEvent* pMEvent = rNEvt.GetMouseEvent();
@@ -195,9 +202,9 @@ void SfxFrameWindow_Impl::Resize()
 
 void SfxFrameWindow_Impl::StateChanged( StateChangedType nStateChange )
 {
-    if ( nStateChange == StateChangedType::InitShow )
+    if ( nStateChange == StateChangedType::INITSHOW )
     {
-        pFrame->pImpl->bHidden = false;
+        pFrame->pImp->bHidden = false;
         if ( pFrame->IsInPlace() )
             // TODO/MBA: workaround for bug in LayoutManager: the final resize does not get through because the
             // LayoutManager works asynchronously and between resize and time execution the DockingAcceptor was exchanged so that
@@ -215,7 +222,7 @@ void SfxFrameWindow_Impl::StateChanged( StateChangedType nStateChange )
 
 void SfxFrameWindow_Impl::DoResize()
 {
-    if ( !pFrame->pImpl->bLockResize )
+    if ( !pFrame->pImp->bLockResize )
         pFrame->Resize();
 }
 
@@ -234,9 +241,9 @@ Reference < XFrame > SfxFrame::CreateBlankFrame()
     return xFrame;
 }
 
-SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, vcl::Window& rWindow, SfxInterfaceId nViewId, bool bHidden )
+SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, vcl::Window& rWindow, sal_uInt16 nViewId, bool bHidden )
 {
-    SfxFrame* pFrame = nullptr;
+    SfxFrame* pFrame = NULL;
     try
     {
         // create and initialize new top level frame for this window
@@ -258,8 +265,8 @@ SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, vcl::Window& rWindow, SfxInter
         ::comphelper::NamedValueCollection aArgs( aLoadArgs );
         aArgs.put( "Model", rDoc.GetModel() );
         aArgs.put( "Hidden", bHidden );
-        if ( nViewId != SFX_INTERFACE_NONE )
-            aArgs.put( "ViewId", (sal_uInt16)nViewId );
+        if ( nViewId )
+            aArgs.put( "ViewId", nViewId );
 
         aLoadArgs = aArgs.getPropertyValues();
 
@@ -268,7 +275,7 @@ SfxFrame* SfxFrame::Create( SfxObjectShell& rDoc, vcl::Window& rWindow, SfxInter
         Reference< XComponentLoader > xLoader( xFrame, UNO_QUERY_THROW );
         xLoader->loadComponentFromURL(
             sLoaderURL,
-            "_self",
+            OUString( "_self" ),
             0,
             aLoadArgs
         );
@@ -296,26 +303,28 @@ SfxFrame* SfxFrame::Create( const Reference < XFrame >& i_rFrame )
 {
     // create a new TopFrame to an external XFrame object ( wrap controller )
     ENSURE_OR_THROW( i_rFrame.is(), "NULL frame not allowed" );
-    VclPtr<vcl::Window> pWindow = VCLUnoHelper::GetWindow( i_rFrame->getContainerWindow() );
+    vcl::Window* pWindow = VCLUnoHelper::GetWindow( i_rFrame->getContainerWindow() );
     ENSURE_OR_THROW( pWindow, "frame without container window not allowed" );
 
-    SfxFrame* pFrame = new SfxFrame( *pWindow );
+    SfxFrame* pFrame = new SfxFrame( *pWindow, false );
     pFrame->SetFrameInterface_Impl( i_rFrame );
     return pFrame;
 }
 
-SfxFrame::SfxFrame( vcl::Window& i_rContainerWindow )
+SfxFrame::SfxFrame( vcl::Window& i_rContainerWindow, bool i_bHidden )
     :SvCompatWeakBase<SfxFrame>( this )
-    ,pChildArr( nullptr )
-    ,pWindow( nullptr )
+    ,pParentFrame( NULL )
+    ,pChildArr( NULL )
+    ,pImp( NULL )
+    ,pWindow( NULL )
 {
     Construct_Impl();
 
-    pImpl->bHidden = false;
+    pImp->bHidden = i_bHidden;
     InsertTopFrame_Impl( this );
-    pImpl->pExternalContainerWindow = &i_rContainerWindow;
+    pImp->pExternalContainerWindow = &i_rContainerWindow;
 
-    pWindow = VclPtr<SfxFrameWindow_Impl>::Create( this, i_rContainerWindow );
+    pWindow = new SfxFrameWindow_Impl( this, i_rContainerWindow );
 
     // always show pWindow, which is the ComponentWindow of the XFrame we live in
     // nowadays, since SfxFrames can be created with an XFrame only, hiding or showing the complete XFrame
@@ -329,8 +338,8 @@ void SfxFrame::SetPresentationMode( bool bSet )
     if ( GetCurrentViewFrame() )
         GetCurrentViewFrame()->GetWindow().SetBorderStyle( bSet ? WindowBorderStyle::NOBORDER : WindowBorderStyle::NORMAL );
 
-    Reference< css::beans::XPropertySet > xPropSet( GetFrameInterface(), UNO_QUERY );
-    Reference< css::frame::XLayoutManager > xLayoutManager;
+    Reference< com::sun::star::beans::XPropertySet > xPropSet( GetFrameInterface(), UNO_QUERY );
+    Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
 
     if ( xPropSet.is() )
     {
@@ -355,10 +364,10 @@ SystemWindow* SfxFrame::GetSystemWindow() const
 
 SystemWindow* SfxFrame::GetTopWindow_Impl() const
 {
-    if ( pImpl->pExternalContainerWindow->IsSystemWindow() )
-        return static_cast<SystemWindow*>( pImpl->pExternalContainerWindow.get() );
+    if ( pImp->pExternalContainerWindow->IsSystemWindow() )
+        return static_cast<SystemWindow*>( pImp->pExternalContainerWindow );
     else
-        return nullptr;
+        return NULL;
 }
 
 
@@ -370,15 +379,15 @@ bool SfxFrame::Close()
 
 void SfxFrame::LockResize_Impl( bool bLock )
 {
-    pImpl->bLockResize = bLock;
+    pImp->bLockResize = bLock;
 }
 
 void SfxFrame::SetMenuBarOn_Impl( bool bOn )
 {
-    pImpl->bMenuBarOn = bOn;
+    pImp->bMenuBarOn = bOn;
 
-    Reference< css::beans::XPropertySet > xPropSet( GetFrameInterface(), UNO_QUERY );
-    Reference< css::frame::XLayoutManager > xLayoutManager;
+    Reference< com::sun::star::beans::XPropertySet > xPropSet( GetFrameInterface(), UNO_QUERY );
+    Reference< ::com::sun::star::frame::XLayoutManager > xLayoutManager;
 
     if ( xPropSet.is() )
     {
@@ -399,7 +408,7 @@ void SfxFrame::SetMenuBarOn_Impl( bool bOn )
 
 bool SfxFrame::IsMenuBarOn_Impl() const
 {
-    return pImpl->bMenuBarOn;
+    return pImp->bMenuBarOn;
 }
 
 void SfxFrame::PrepareForDoc_Impl( SfxObjectShell& i_rDoc )
@@ -407,8 +416,8 @@ void SfxFrame::PrepareForDoc_Impl( SfxObjectShell& i_rDoc )
     const ::comphelper::NamedValueCollection aDocumentArgs( i_rDoc.GetModel()->getArgs() );
 
     // hidden?
-    OSL_ENSURE( !pImpl->bHidden, "when does this happen?" );
-    pImpl->bHidden = aDocumentArgs.getOrDefault( "Hidden", pImpl->bHidden );
+    OSL_ENSURE( !pImp->bHidden, "when does this happen?" );
+    pImp->bHidden = aDocumentArgs.getOrDefault( "Hidden", pImp->bHidden );
 
     // update our descriptor
     UpdateDescriptor( &i_rDoc );
@@ -416,12 +425,12 @@ void SfxFrame::PrepareForDoc_Impl( SfxObjectShell& i_rDoc )
     // plugin mode
     sal_Int16 nPluginMode = aDocumentArgs.getOrDefault( "PluginMode", sal_Int16( 0 ) );
     if ( nPluginMode && ( nPluginMode != 2 ) )
-        pImpl->bInPlace = true;
+        SetInPlace_Impl( true );
 }
 
 bool SfxFrame::IsMarkedHidden_Impl() const
 {
-    return pImpl->bHidden;
+    return pImp->bHidden;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

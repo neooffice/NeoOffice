@@ -36,22 +36,20 @@
 #include <list>
 #include <mach-o/dyld.h>
 
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
+
+#include "java/salinst.h"
 
 #include "DTransClipboard.hxx"
 #include "DTransTransferable.hxx"
-
 #include "../../../osx/HtmlFmtFlt.hxx"
-
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#import <CoreServices/CoreServices.h>
-#include <postmac.h>
 
 #define HTML_TYPE_TAG @"HTML"
 #define PDF_TYPE_TAG @"PDF"
 #define STRING_TYPE_TAG @"STRING"
 #define URL_TYPE_TAG @"URL"
+#define FILE_TYPE_TAG @"FILE"
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
@@ -60,7 +58,7 @@ using namespace vcl;
 
 CFStringRef kNeoOfficeInternalPboardType = CFSTR( "NeoOfficeInternalPboardType" );
 
-static sal_uInt16 nSupportedTypes = 7;
+static sal_uInt16 nSupportedTypes = 8;
 
 // List of supported native type symbol names in priority order. The first
 // item on each line is the most current symbol name and the second item is a
@@ -68,6 +66,7 @@ static sal_uInt16 nSupportedTypes = 7;
 // assigned to.
 static NSString *aSupportedPasteboardTypeSymbolNames[] = {
 	NSPasteboardTypeURL, URL_TYPE_TAG,
+	NSPasteboardTypeFileURL, FILE_TYPE_TAG,
 	NSPasteboardTypeRTF, nil,
 	NSPasteboardTypeHTML, HTML_TYPE_TAG,
 	NSPasteboardTypeString, STRING_TYPE_TAG,
@@ -79,6 +78,7 @@ static NSString *aSupportedPasteboardTypeSymbolNames[] = {
 static NSArray *pSupportedPasteboardTypes = nil;
 
 // Special native symbols for conditional checking
+static const NSString *pFilePasteboardType = nil;
 static const NSString *pHTMLPasteboardType = nil;
 static const NSString *pPDFPasteboardType = nil;
 static const NSString *pStringPasteboardType = nil;
@@ -86,6 +86,7 @@ static const NSString *pURLPasteboardType = nil;
 
 // List of supported native types in priority order
 static NSString *aSupportedPasteboardTypes[] = {
+	nil,
 	nil,
 	nil,
 	nil,
@@ -101,6 +102,7 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	true,
+	true,
 	false,
 	false,
 	false
@@ -108,6 +110,7 @@ static bool aSupportedTextTypes[] = {
 
 // List of supported mime types in priority order
 static OUString aSupportedMimeTypes[] = {
+	"application/x-openoffice-file;windows_formatname=\"FileName\"",
 	"application/x-openoffice-file;windows_formatname=\"FileName\"",
 	"text/richtext",
 	"text/html",
@@ -119,13 +122,14 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
-	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
-	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
-	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
-	::cppu::UnoType< OUString >::get(),
-	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
-	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get(),
-	::cppu::UnoType< ::com::sun::star::uno::Sequence< sal_Int8 > >::get()
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( OUString* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
 static ::std::list< DTransTransferable* > aTransferableList;
@@ -137,7 +141,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 @interface DTransPasteboardHelper : NSObject
 {
 	NSData*							mpPNGData;
-	int								mnChangeCount;
+	NSInteger						mnChangeCount;
 	NSData*							mpData;
 	NSString*						mpPasteboardName;
 	NSString*						mpString;
@@ -145,7 +149,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	NSArray*						mpTypes;
 }
 + (id)createWithPasteboardName:(NSString *)pPasteboardName;
-- (int)changeCount;
+- (NSInteger)changeCount;
 - (void)clearContentsWithChangeCount:(NSNumber *)pChangeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
@@ -167,14 +171,14 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 @interface DTransPasteboardOwner : NSObject <NSPasteboardWriting>
 {
-	int								mnChangeCount;
+	NSInteger						mnChangeCount;
 	DTransTransferable*				mpTransferable;
 	BOOL							mbTransferableOwner;
 	NSString*						mpPasteboardName;
 	NSArray*						mpTypes;
 }
 + (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
-- (int)changeCount;
+- (NSInteger)changeCount;
 - (void)dealloc;
 - (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
 - (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
@@ -203,7 +207,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (int)changeCount
+- (NSInteger)changeCount
 {
 	return mnChangeCount;
 }
@@ -296,7 +300,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 						{
 							bStringTypeFound = true;
 						}
-						else if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+						else if ( ( pFilePasteboardType && [pFilePasteboardType isEqualToString:pType] ) || ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] ) )
 						{
 							bURLTypeFound = true;
 							NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
@@ -357,7 +361,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 				if ( [pChangeCount intValue] != [pPasteboard changeCount] )
 					break;
 
-				NSString *pType = static_cast< NSString* >( [pTypes objectAtIndex:i] );
+				NSString *pType = (NSString *)[pTypes objectAtIndex:i];
 				if ( pType )
 					[pPasteboard dataForType:pType];
 			}
@@ -442,7 +446,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 			if ( pFilteredTypes && [pFilteredTypes containsObject:pType] )
 			{
 				mbTypeAvailable = YES;
-				if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+				if ( ( pFilePasteboardType && [pFilePasteboardType isEqualToString:pType] ) || ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] ) )
 				{
 					NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
 					if ( pURL && [pURL isFileURL] )
@@ -586,7 +590,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	return pRet;
 }
 
-- (int)changeCount
+- (NSInteger)changeCount
 {
 	return mnChangeCount;
 }
@@ -605,10 +609,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		// deleting the transferable asynchronously
 		DTransTransferableDeletor *pDeletor = [DTransTransferableDeletor createWithTransferable:mpTransferable];
 		if ( pDeletor )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pDeletor performSelectorOnMainThread:@selector(deleteTransferable:) withObject:pDeletor waitUntilDone:NO modes:pModes];
-		}
+			osl_performSelectorOnMainThread( pDeletor, @selector(deleteTransferable:), pDeletor, NO );
 	}
 
 	[super dealloc];
@@ -630,7 +631,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 	// the UTTypeCreatePreferredIdentifierForTag() function to avoid "invalid
 	// UTI" errors in [DTransPasteboardOwner writeableTypesForPasteboard:].
 	if ( ( !mpTypes || ![mpTypes count] ) && mpPasteboardName && [mpPasteboardName isEqualToString:@"JavaDNDPasteboardHelper"] )
-		mpTypes = [NSArray arrayWithObject:static_cast< NSString* >( UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData ) )];
+		mpTypes = [NSArray arrayWithObject:(NSString *)UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData )];
 	if ( mpTypes )
 		[mpTypes retain];
 
@@ -649,9 +650,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 		if ( pData )
 		{
 			if ( [pData isKindOfClass:[NSString class]] )
-				[pSender setString:static_cast< NSString* >( pData ) forType:pType];
+				[pSender setString:(NSString *)pData forType:pType];
 			else if ( [pData isKindOfClass:[NSData class]] )
-				[pSender setData:static_cast< NSData* >( pData ) forType:pType];
+				[pSender setData:(NSData *)pData forType:pType];
 		}
 	}
 }
@@ -740,14 +741,10 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 	if ( mpTransferable )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			delete mpTransferable;
-			mpTransferable = nil;
-		}
-		rSolarMutex.release();
+		ACQUIRE_SOLARMUTEX
+		delete mpTransferable;
+		mpTransferable = nil;
+		RELEASE_SOLARMUTEX
 	}
 }
 
@@ -777,7 +774,7 @@ static void ImplInitializeSupportedPasteboardTypes()
 		NSBundle *pBundle = [NSBundle bundleForClass:[NSPasteboard class]];
 		if ( pBundle )
 		{
-			CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( static_cast<  CFStringRef >( [pBundle bundleIdentifier] ) );
+			CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( (CFStringRef)[pBundle bundleIdentifier] );
 			if ( aBundle )
 			{
 				for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
@@ -796,6 +793,8 @@ static void ImplInitializeSupportedPasteboardTypes()
 							pStringPasteboardType = aSupportedPasteboardTypes[ i ];
 						else if ( [URL_TYPE_TAG isEqualToString:pLocalName] )
 							pURLPasteboardType = aSupportedPasteboardTypes[ i ];
+						else if ( [FILE_TYPE_TAG isEqualToString:pLocalName] )
+							pFilePasteboardType = aSupportedPasteboardTypes[ i ];
 					}
 
 					// Add to supported types array
@@ -809,7 +808,7 @@ static void ImplInitializeSupportedPasteboardTypes()
 		// Fix failure to drag slides in presentation sidebar by using the
 		// UTTypeCreatePreferredIdentifierForTag() function to avoid "invalid
 		// UTI" errors in [DTransPasteboardOwner writeableTypesForPasteboard:].
-		[pTypes addObject:static_cast< NSString* >( UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData ) )];
+		[pTypes addObject:(NSString *)UTTypeCreatePreferredIdentifierForTag( kUTTagClassNSPboardType, kNeoOfficeInternalPboardType, kUTTypeData )];
 
 		[pTypes retain];
 		pSupportedPasteboardTypes = pTypes;
@@ -824,12 +823,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 {
 	id pRet = nil;
 
-	if ( pTransferable && pType && !Application::IsShutDown() )
+	if ( pTransferable && pType && ImplApplicationIsRunning() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
+			ACQUIRE_SOLARMUTEX
 			bool bTransferableFound = false;
 			if ( pTransferable )
 			{
@@ -877,11 +873,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 
 					if ( bDataFound )
 					{
-						if ( aValue.getValueType() == cppu::UnoType< OUString >::get() )
+						if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
 						{
 							OUString aString;
 							aValue >>= aString;
-							const unichar* pArray = reinterpret_cast< const unichar *>( aString.getStr() );
+							sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
 							sal_Int32 nLen = aString.getLength();
 							if ( pArray && nLen )
 							{
@@ -890,7 +886,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 									pRet = pData;
 							}
 						}
-						else if ( aValue.getValueType() == cppu::UnoType< Sequence< sal_Int8 > >::get() )
+						else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 						{
 							Sequence< sal_Int8 > aData;
 							aValue >>= aData;
@@ -916,11 +912,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 											if ( pImageRep )
 											{
 												if ( [pImageRep isKindOfClass:[NSPDFImageRep class]] )
-													pData = [static_cast< NSPDFImageRep* >( pImageRep ) PDFRepresentation];
+													pData = [(NSPDFImageRep *)pImageRep PDFRepresentation];
 												else if ( [pImageRep isKindOfClass:[NSEPSImageRep class]] )
-													pData = [static_cast< NSEPSImageRep* >( pImageRep ) EPSRepresentation];
+													pData = [(NSEPSImageRep *)pImageRep EPSRepresentation];
 												else if ( [pImageRep isKindOfClass:[NSBitmapImageRep class]] )
-													pData = [static_cast< NSBitmapImageRep* >( pImageRep ) TIFFRepresentation];
+													pData = [(NSBitmapImageRep *)pImageRep TIFFRepresentation];
 												else
 													pData = nil;
 											}
@@ -935,9 +931,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, NSString *pType
 					}
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return pRet;
@@ -957,16 +951,13 @@ NSArray *DTransTransferable::getSupportedPasteboardTypes()
 void DTransTransferable::flush()
 {
 	// Force transferable to render data if we still have ownership
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(flush:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( pHelper, @selector(flush:), [NSNumber numberWithInt:mnChangeCount], YES );
 
 		[pPool release];
 	}
@@ -974,14 +965,14 @@ void DTransTransferable::flush()
 
 // ----------------------------------------------------------------------------
 
-int DTransTransferable::getChangeCount()
+NSInteger DTransTransferable::getChangeCount()
 {
 	return mnChangeCount;
 }
 
 // ----------------------------------------------------------------------------
 
-Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
+Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException, std::exception )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferData( aFlavor );
@@ -997,7 +988,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 	{
 		NSString *pRequestedType = nil;
 		bool bRequestedTypeIsText = false;
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
 		// Run a loop so that if data type fails, we can try another
 		for ( sal_uInt16 i = 0; !bDataRetrieved && i < nSupportedTypes; i++ )
@@ -1012,15 +1002,15 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 				continue;
 			}
 
-			if ( aFlavor.DataType == cppu::UnoType< OUString >::get() )
+			if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 			{
-				[pHelper performSelectorOnMainThread:@selector(getStringForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pHelper, @selector(getStringForType:), pRequestedType, YES );
 				bDataAvailable = [pHelper isTypeAvailable];
 				NSString *pString = [pHelper stringForType];
 				if ( pString )
 				{
 					NSUInteger nLen = [pString length];
-					OUStringBuffer aExportData( static_cast< unsigned int >( nLen ) );
+					OUStringBuffer aExportData( nLen );
 
 					// Replace carriage returns with line feeds
 					unsigned int nCopiedChars = 0;
@@ -1037,7 +1027,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 						}
 						else
 						{
-								aExportData.append( static_cast< sal_Unicode >( nChar ) );
+								aExportData.append( (sal_Unicode)nChar );
 						}
 					}
 
@@ -1046,16 +1036,16 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 					bDataRetrieved = true;
 				}
 			}
-			else if ( aFlavor.DataType == cppu::UnoType< Sequence< sal_Int8 > >::get() )
+			else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 			{
 				if ( bRequestedTypeIsText )
 				{
-					[pHelper performSelectorOnMainThread:@selector(getDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+					osl_performSelectorOnMainThread( pHelper, @selector(getDataForType:), pRequestedType, YES );
 					bDataAvailable = [pHelper isTypeAvailable];
 					NSData *pData = [pHelper dataForType];
 					if ( pData )
 					{
-						const char *pArray = static_cast< const char* >( [pData bytes] );
+						const char *pArray = (const char *)[pData bytes];
 						unsigned int nLen = [pData length];
 
 						if ( pArray && nLen )
@@ -1063,7 +1053,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 							Sequence< sal_Int8 > aExportData( nLen );
 
 							// Replace carriage returns with line feeds
-							sal_Char *pCharArray = reinterpret_cast< sal_Char* >( aExportData.getArray() );
+							sal_Char *pCharArray = (sal_Char *)aExportData.getArray();
 							if ( pCharArray )
 							{
 								memset( pCharArray, 0, nLen );
@@ -1103,7 +1093,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor )
 					// code asks for BMP data as we have made some changes
 					// to the vcl/source/gdi/bitmap2.cxx code to accept
 					// PNG data
-					[pHelper performSelectorOnMainThread:@selector(getPNGDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+					osl_performSelectorOnMainThread( pHelper, @selector(getPNGDataForType:), pRequestedType, YES );
 					bDataAvailable = [pHelper isTypeAvailable];
 					NSData *pData = [pHelper PNGDataForType];
 					if ( pData )
@@ -1163,16 +1153,13 @@ DTransTransferable::~DTransTransferable()
 	// by clearing the pasteboard's contents is this object is the pasteboard
 	// owner:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8508
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(clearContentsWithChangeCount:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( pHelper, @selector(clearContentsWithChangeCount:), [NSNumber numberWithInt:mnChangeCount], YES );
 
 		[pPool release];
 	}
@@ -1183,7 +1170,7 @@ DTransTransferable::~DTransTransferable()
 
 // ----------------------------------------------------------------------------
 
-Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors()
+Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( RuntimeException, std::exception )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->getTransferDataFlavors();
@@ -1195,8 +1182,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors()
 	DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 	if ( pHelper )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pHelper performSelectorOnMainThread:@selector(getTypes:) withObject:pHelper waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pHelper, @selector(getTypes:), pHelper, YES );
 		NSArray *pTypes = [pHelper types];
 		if ( pTypes )
 		{
@@ -1206,7 +1192,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors()
 				unsigned int j = 0;
 				for ( ; j < nCount; j++ )
 				{
-					NSString *pType = static_cast< NSString* >( [pTypes objectAtIndex:j] );
+					NSString *pType = (NSString *)[pTypes objectAtIndex:j];
 					if ( pType && aSupportedPasteboardTypes[ i ] && [aSupportedPasteboardTypes[ i ] isEqualToString:pType] )
 					{
 						DataFlavor aFlavor;
@@ -1232,15 +1218,14 @@ sal_Bool DTransTransferable::hasOwnership()
 {
 	sal_Bool out = sal_False;
 
-	if ( mnChangeCount >= 0 )
+	if ( mxTransferable.is() && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(getChangeCount:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pHelper, @selector(getChangeCount:), pHelper, YES );
 			if ( [pHelper changeCount] == mnChangeCount )
 				out = sal_True;
 		}
@@ -1253,7 +1238,7 @@ sal_Bool DTransTransferable::hasOwnership()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor )
+sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) throw ( RuntimeException, std::exception )
 {
 	if ( mxTransferable.is() )
 		return mxTransferable->isDataFlavorSupported( aFlavor );
@@ -1262,14 +1247,12 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	const NSString *pRequestedType = nil;
-	Type aRequestedDataType;
+	NSString *pRequestedType = nil;
 	for ( sal_uInt16 i = 0; i < nSupportedTypes; i++ )
 	{
 		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
 		{
 			pRequestedType = aSupportedPasteboardTypes[ i ];
-			aRequestedDataType = aSupportedDataTypes[ i ];
 			break;
 		}
 	}
@@ -1279,8 +1262,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor )
 		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(getTypeAvailable:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pHelper, @selector(getTypeAvailable:), pRequestedType, YES );
 			if ( [pHelper isTypeAvailable] )
 				out = sal_True;
 		}
@@ -1360,8 +1342,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 			DTransPasteboardOwner *pOwner = [DTransPasteboardOwner createWithTransferable:this pasteboardName:mpPasteboardName types:pTypes];
 			if ( pOwner )
 			{
-				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:[NSNumber numberWithBool:( pPasteboardWriter ? YES : NO )] waitUntilDone:YES modes:pModes];
+				osl_performSelectorOnMainThread( pOwner, @selector(setContents:), [NSNumber numberWithBool:( pPasteboardWriter ? YES : NO )], YES );
 				mnChangeCount = [pOwner changeCount];
 				if ( mnChangeCount >= 0 )
 				{
@@ -1381,3 +1362,23 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 
 	return out;
 }
+
+// ----------------------------------------------------------------------------
+
+void DTransTransferable::updateChangeCount()
+{
+	if ( !mxTransferable.is() && mnChangeCount < 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
+		if ( pHelper )
+		{
+			osl_performSelectorOnMainThread( pHelper, @selector(getChangeCount:), pHelper, YES );
+			mnChangeCount = [pHelper changeCount];
+		}
+
+		[pPool release];
+	}
+}
+

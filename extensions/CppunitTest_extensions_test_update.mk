@@ -16,6 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+#
 
 $(eval $(call gb_CppunitTest_CppunitTest,extensions_test_update))
 
@@ -32,6 +33,7 @@ $(eval $(call gb_CppunitTest_use_libraries,extensions_test_update, \
 	salhelper \
 	test \
 	unotest \
+	$(gb_UWINAPI) \
 ))
 
 ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
@@ -62,7 +64,10 @@ $(eval $(call gb_CppunitTest_set_include,extensions_test_update,\
 	-I$(SRCDIR)/extensions/inc \
 ))
 
-$(eval $(call gb_CppunitTest_use_sdk_api,extensions_test_update))
+$(eval $(call gb_CppunitTest_use_api,extensions_test_update,\
+	offapi \
+	udkapi \
+))
 
 $(eval $(call gb_CppunitTest_use_ure,extensions_test_update))
 $(eval $(call gb_CppunitTest_use_vcl,extensions_test_update))

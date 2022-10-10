@@ -28,26 +28,42 @@
 #include <sanedlg.hxx>
 #include <osl/thread.hxx>
 #include <cppuhelper/queryinterface.hxx>
-#include <memory>
+#include <boost/shared_ptr.hpp>
+
+#if OSL_DEBUG_LEVEL > 1
+#include <stdio.h>
+#endif
 
 #ifdef USE_JAVA
 #include "scanunx_cocoa.h"
 #endif	// USE_JAVA
 
-
 BitmapTransporter::BitmapTransporter()
 {
-    SAL_INFO("extensions.scanner", "BitmapTransporter");
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "BitmapTransporter\n" );
+#endif
 }
-
 
 BitmapTransporter::~BitmapTransporter()
 {
-    SAL_INFO("extensions.scanner", "~BitmapTransporter");
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "~BitmapTransporter\n" );
+#endif
 }
 
 
-css::awt::Size BitmapTransporter::getSize()
+
+Any SAL_CALL BitmapTransporter::queryInterface( const Type& rType ) throw( RuntimeException, std::exception )
+{
+    const Any aRet( cppu::queryInterface( rType, static_cast< css::awt::XBitmap* >( this ) ) );
+
+    return( aRet.hasValue() ? aRet : OWeakObject::queryInterface( rType ) );
+}
+
+
+
+css::awt::Size BitmapTransporter::getSize() throw(std::exception)
 {
     osl::MutexGuard aGuard( m_aProtector );
     int         nPreviousPos = m_aStream.Tell();
@@ -70,7 +86,8 @@ css::awt::Size BitmapTransporter::getSize()
 }
 
 
-Sequence< sal_Int8 > BitmapTransporter::getDIB()
+
+Sequence< sal_Int8 > BitmapTransporter::getDIB() throw(std::exception)
 {
     osl::MutexGuard aGuard( m_aProtector );
     int         nPreviousPos = m_aStream.Tell();
@@ -81,11 +98,14 @@ Sequence< sal_Int8 > BitmapTransporter::getDIB()
     m_aStream.Seek( 0 );
 
     Sequence< sal_Int8 > aValue( nBytes );
-    m_aStream.ReadBytes( aValue.getArray(), nBytes );
+    m_aStream.Read( aValue.getArray(), nBytes );
     m_aStream.Seek( nPreviousPos );
 
     return aValue;
 }
+
+
+// - SaneHolder -
 
 
 struct SaneHolder
@@ -99,10 +119,9 @@ struct SaneHolder
     SaneHolder() : m_nError(ScanError_ScanErrorNone), m_bBusy(false) {}
 };
 
-
 namespace
 {
-    typedef std::vector< std::shared_ptr<SaneHolder> > sanevec;
+    typedef std::vector< boost::shared_ptr<SaneHolder> > sanevec;
     class allSanes
     {
     private:
@@ -133,37 +152,44 @@ namespace
 }
 
 
+// - ScannerThread -
+
+
 class ScannerThread : public osl::Thread
 {
-    std::shared_ptr<SaneHolder>               m_pHolder;
-    Reference< css::lang::XEventListener >    m_xListener;
-    ScannerManager*                           m_pManager; // just for the disposing call
+    boost::shared_ptr<SaneHolder>               m_pHolder;
+    Reference< com::sun::star::lang::XEventListener > m_xListener;
+    ScannerManager*                             m_pManager; // just for the disposing call
 
 public:
-    virtual void run() override;
-    virtual void onTerminated() override { delete this; }
+    virtual void run() SAL_OVERRIDE;
+    virtual void onTerminated() SAL_OVERRIDE { delete this; }
 public:
-    ScannerThread( const std::shared_ptr<SaneHolder>& pHolder,
-                   const Reference< css::lang::XEventListener >& listener,
+    ScannerThread( boost::shared_ptr<SaneHolder> pHolder,
+                   const Reference< com::sun::star::lang::XEventListener >& listener,
                    ScannerManager* pManager );
-    virtual ~ScannerThread() override;
+    virtual ~ScannerThread();
 };
 
 
-ScannerThread::ScannerThread(const std::shared_ptr<SaneHolder>& pHolder,
-                             const Reference< css::lang::XEventListener >& listener,
-                             ScannerManager* pManager)
+
+ScannerThread::ScannerThread(
+                             boost::shared_ptr<SaneHolder> pHolder,
+                             const Reference< com::sun::star::lang::XEventListener >& listener,
+                             ScannerManager* pManager )
         : m_pHolder( pHolder ), m_xListener( listener ), m_pManager( pManager )
 {
-    SAL_INFO("extensions.scanner", "ScannerThread");
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "ScannerThread\n" );
+#endif
 }
-
 
 ScannerThread::~ScannerThread()
 {
-    SAL_INFO("extensions.scanner", "~ScannerThread");
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "~ScannerThread\n" );
+#endif
 }
-
 
 void ScannerThread::run()
 {
@@ -173,7 +199,7 @@ void ScannerThread::run()
     BitmapTransporter*  pTransporter = new BitmapTransporter;
     Reference< XInterface >   aIf( static_cast< OWeakObject* >( pTransporter ) );
 
-    m_pHolder->m_xBitmap.set( aIf, UNO_QUERY );
+    m_pHolder->m_xBitmap = Reference< css::awt::XBitmap >( aIf, UNO_QUERY );
 
     m_pHolder->m_bBusy = true;
     if( m_pHolder->m_aSane.IsOpen() )
@@ -191,9 +217,12 @@ void ScannerThread::run()
 
 
     Reference< XInterface > xXInterface( static_cast< OWeakObject* >( m_pManager ) );
-    m_xListener->disposing( css::lang::EventObject(xXInterface) );
+    m_xListener->disposing( com::sun::star::lang::EventObject(xXInterface) );
     m_pHolder->m_bBusy = false;
 }
+
+
+// - ScannerManager -
 
 
 void ScannerManager::AcquireData()
@@ -202,7 +231,6 @@ void ScannerManager::AcquireData()
     theSanes::get().acquire();
 }
 
-
 void ScannerManager::ReleaseData()
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
@@ -210,7 +238,8 @@ void ScannerManager::ReleaseData()
 }
 
 
-css::awt::Size ScannerManager::getSize()
+
+css::awt::Size ScannerManager::getSize() throw(std::exception)
 {
     css::awt::Size aRet;
     aRet.Width = aRet.Height = 0;
@@ -218,13 +247,15 @@ css::awt::Size ScannerManager::getSize()
 }
 
 
-Sequence< sal_Int8 > ScannerManager::getDIB()
+
+Sequence< sal_Int8 > ScannerManager::getDIB() throw(std::exception)
 {
     return Sequence< sal_Int8 >();
 }
 
 
-Sequence< ScannerContext > ScannerManager::getAvailableScanners()
+
+Sequence< ScannerContext > ScannerManager::getAvailableScanners() throw(std::exception)
 {
 #ifdef USE_JAVA
     Sequence< ScannerContext > aRet(1);
@@ -237,7 +268,7 @@ Sequence< ScannerContext > ScannerManager::getAvailableScanners()
 
     if( rSanes.empty() )
     {
-        std::shared_ptr<SaneHolder> pSaneHolder(new SaneHolder);
+        boost::shared_ptr<SaneHolder> pSaneHolder(new SaneHolder);
         if( Sane::IsSane() )
             rSanes.push_back( pSaneHolder );
     }
@@ -255,13 +286,10 @@ Sequence< ScannerContext > ScannerManager::getAvailableScanners()
 }
 
 
-#ifdef USE_JAVA
-sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& /* scanner_context */,
-                                                  const Reference< css::lang::XEventListener >& /* listener */ )
-#else	// USE_JAVA
+
 sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_context,
-                                                  const Reference< css::lang::XEventListener >& listener )
-#endif	// USE_JAVA
+                                                  const Reference< com::sun::star::lang::XEventListener >& listener )
+    throw (ScannerException, RuntimeException, std::exception)
 {
 #ifdef USE_JAVA
     return sal_True;
@@ -272,7 +300,9 @@ sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_contex
         osl::MutexGuard aGuard( theSaneProtector::get() );
         sanevec &rSanes = theSanes::get().m_aSanes;
 
-        SAL_INFO("extensions.scanner", "ScannerManager::configureScanner");
+#if OSL_DEBUG_LEVEL > 1
+        fprintf( stderr, "ScannerManager::configureScanner\n" );
+#endif
 
         if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
             throw ScannerException(
@@ -281,7 +311,7 @@ sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_contex
                 ScanError_InvalidContext
             );
 
-        std::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
+        boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
         if( pHolder->m_bBusy )
             throw ScannerException(
                 "Scanner is busy",
@@ -290,9 +320,9 @@ sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_contex
             );
 
         pHolder->m_bBusy = true;
-        ScopedVclPtrInstance< SaneDlg > aDlg(nullptr, pHolder->m_aSane, listener.is());
-        bRet = aDlg->Execute();
-        bScan = aDlg->getDoScan();
+        SaneDlg aDlg( NULL, pHolder->m_aSane, listener.is() );
+        bRet = aDlg.Execute();
+        bScan = aDlg.getDoScan();
         pHolder->m_bBusy = false;
     }
     if ( bScan )
@@ -303,13 +333,9 @@ sal_Bool ScannerManager::configureScannerAndScan( ScannerContext& scanner_contex
 }
 
 
-#ifdef USE_JAVA
-void ScannerManager::startScan( const ScannerContext& /* scanner_context */,
-                                const Reference< css::lang::XEventListener >& /* listener */ )
-#else	// USE_JAVA
+
 void ScannerManager::startScan( const ScannerContext& scanner_context,
-                                const Reference< css::lang::XEventListener >& listener )
-#endif	// USE_JAVA
+                                const Reference< com::sun::star::lang::XEventListener >& listener ) throw( ScannerException, std::exception )
 {
 #ifdef USE_JAVA
     // Launch the ImageCapture application
@@ -318,7 +344,9 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
     osl::MutexGuard aGuard( theSaneProtector::get() );
     sanevec &rSanes = theSanes::get().m_aSanes;
 
-    SAL_INFO("extensions.scanner", "ScannerManager::startScan");
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "ScannerManager::startScan\n" );
+#endif
 
     if( scanner_context.InternalData < 0 || (sal_uLong)scanner_context.InternalData >= rSanes.size() )
         throw ScannerException(
@@ -326,7 +354,7 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
             Reference< XScannerManager >( this ),
             ScanError_InvalidContext
             );
-    std::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
+    boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
     if( pHolder->m_bBusy )
         throw ScannerException(
             "Scanner is busy",
@@ -341,7 +369,8 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
 }
 
 
-ScanError ScannerManager::getError( const ScannerContext& scanner_context )
+
+ScanError ScannerManager::getError( const ScannerContext& scanner_context ) throw( ScannerException, std::exception )
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
     sanevec &rSanes = theSanes::get().m_aSanes;
@@ -353,13 +382,14 @@ ScanError ScannerManager::getError( const ScannerContext& scanner_context )
             ScanError_InvalidContext
             );
 
-    std::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
+    boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
 
     return pHolder->m_nError;
 }
 
 
-Reference< css::awt::XBitmap > ScannerManager::getBitmap( const ScannerContext& scanner_context )
+
+Reference< css::awt::XBitmap > ScannerManager::getBitmap( const ScannerContext& scanner_context ) throw( ScannerException, std::exception )
 {
     osl::MutexGuard aGuard( theSaneProtector::get() );
     sanevec &rSanes = theSanes::get().m_aSanes;
@@ -370,12 +400,12 @@ Reference< css::awt::XBitmap > ScannerManager::getBitmap( const ScannerContext& 
             Reference< XScannerManager >( this ),
             ScanError_InvalidContext
             );
-    std::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
+    boost::shared_ptr<SaneHolder> pHolder = rSanes[scanner_context.InternalData];
 
     osl::MutexGuard aProtGuard( pHolder->m_aProtector );
 
     Reference< css::awt::XBitmap > xRet( pHolder->m_xBitmap );
-    pHolder->m_xBitmap.clear();
+    pHolder->m_xBitmap = Reference< css::awt::XBitmap >();
 
     return xRet;
 }

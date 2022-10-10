@@ -31,7 +31,7 @@
 
 #include <cppuhelper/findsofficepath.h>
 
-#if defined(_WIN32)
+#if defined WNT
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -135,6 +135,8 @@ static char* platformSpecific(void)
     char* env = NULL;
     char* str = NULL;
     char* dir = NULL;
+    char* file = NULL;
+    char* resolved = NULL;
     char* sep = NULL;
 
     char buffer[PATH_MAX];
@@ -155,8 +157,7 @@ static char* platformSpecific(void)
     while ( dir )
     {
         /* construct soffice file path */
-        char* resolved = NULL;
-        char* file = (char*) malloc( strlen( dir ) + strlen( APPENDIX ) + 1 );
+        file = (char*) malloc( strlen( dir ) + strlen( APPENDIX ) + 1 );
         if (file == NULL)
         {
             free(str);

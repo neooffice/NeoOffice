@@ -28,7 +28,6 @@ $(eval $(call gb_Library_set_componentfile,dbtools,connectivity/source/dbtools/d
 
 $(eval $(call gb_Library_set_include,dbtools,\
 	$$(INCLUDE) \
-	-I$(SRCDIR)/connectivity/inc \
 	-I$(SRCDIR)/connectivity/source/inc \
 ))
 
@@ -49,6 +48,7 @@ $(eval $(call gb_Library_use_libraries,dbtools,\
 	tl \
 	comphelper \
 	i18nlangtag \
+	$(gb_UWINAPI) \
 	svt \
 ))
 
@@ -83,6 +83,8 @@ connectivity/source/parse/sqlflex \
 ))
 
 $(call gb_LexTarget_get_scanner_target,connectivity/source/parse/sqlflex) : T_LEXFLAGS := -i -8 -PSQLyy -L
+
+
 
 $(eval $(call gb_Library_add_exception_objects,dbtools,\
 	connectivity/source/commontools/AutoRetrievingBase \
@@ -142,6 +144,11 @@ $(eval $(call gb_Library_add_exception_objects,dbtools,\
 	connectivity/source/sdbcx/VTable \
 	connectivity/source/sdbcx/VUser \
 	connectivity/source/sdbcx/VView \
+	connectivity/source/simpledbt/charset_s \
+	connectivity/source/simpledbt/dbtfactory \
+	connectivity/source/simpledbt/parsenode_s \
+	connectivity/source/simpledbt/parser_s \
+	connectivity/source/simpledbt/staticdbtools_s \
 ))
 
 # vim: set noet sw=4 ts=4:

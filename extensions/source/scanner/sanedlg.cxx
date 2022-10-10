@@ -22,47 +22,16 @@
 #include <tools/config.hxx>
 #include <vcl/dibtools.hxx>
 #include <vcl/layout.hxx>
-#include <vcl/builderfactory.hxx>
 #include <sanedlg.hxx>
 #include <grid.hxx>
 #include <math.h>
 #include <sal/macros.h>
 #include <rtl/strbuf.hxx>
-#include <memory>
+#include <boost/scoped_array.hpp>
 #include "strings.hrc"
 
 #define PREVIEW_WIDTH       113
 #define PREVIEW_HEIGHT      160
-
-#define RECT_SIZE_PIX 7
-
-namespace {
-
-void DrawRectangles(vcl::RenderContext& rRenderContext, Point& rUL, Point& rBR)
-{
-    int nMiddleX, nMiddleY;
-    Point aBL, aUR;
-
-    aUR = Point(rBR.X(), rUL.Y());
-    aBL = Point(rUL.X(), rBR.Y());
-    nMiddleX = (rBR.X() - rUL.X()) / 2 + rUL.X();
-    nMiddleY = (rBR.Y() - rUL.Y()) / 2 + rUL.Y();
-
-    rRenderContext.DrawLine(rUL, aBL);
-    rRenderContext.DrawLine(aBL, rBR);
-    rRenderContext.DrawLine(rBR, aUR);
-    rRenderContext.DrawLine(aUR, rUL);
-    rRenderContext.DrawRect(tools::Rectangle(rUL, Size(RECT_SIZE_PIX,RECT_SIZE_PIX)));
-    rRenderContext.DrawRect(tools::Rectangle(aBL, Size(RECT_SIZE_PIX, -RECT_SIZE_PIX)));
-    rRenderContext.DrawRect(tools::Rectangle(rBR, Size(-RECT_SIZE_PIX, -RECT_SIZE_PIX)));
-    rRenderContext.DrawRect(tools::Rectangle(aUR, Size(-RECT_SIZE_PIX, RECT_SIZE_PIX )));
-    rRenderContext.DrawRect(tools::Rectangle(Point(nMiddleX - RECT_SIZE_PIX / 2, rUL.Y()), Size(RECT_SIZE_PIX, RECT_SIZE_PIX)));
-    rRenderContext.DrawRect(tools::Rectangle(Point(nMiddleX - RECT_SIZE_PIX / 2, rBR.Y()), Size(RECT_SIZE_PIX, -RECT_SIZE_PIX)));
-    rRenderContext.DrawRect(tools::Rectangle(Point(rUL.X(), nMiddleY - RECT_SIZE_PIX / 2), Size(RECT_SIZE_PIX, RECT_SIZE_PIX)));
-    rRenderContext.DrawRect(tools::Rectangle(Point(rBR.X(), nMiddleY - RECT_SIZE_PIX / 2), Size(-RECT_SIZE_PIX, RECT_SIZE_PIX)));
-}
-
-}
 
 class ScanPreview : public vcl::Window
 {
@@ -71,43 +40,31 @@ private:
                          BottomLeft, Left };
 
     Bitmap    maPreviewBitmap;
-    tools::Rectangle maPreviewRect;
+    Rectangle maPreviewRect;
     Point     maTopLeft, maBottomRight;
     Point     maMinTopLeft, maMaxBottomRight;
-    VclPtr<SaneDlg>  mpParentDialog;
+    SaneDlg*  mpParentDialog;
     DragDirection meDragDirection;
     bool      mbDragEnable;
     bool      mbDragDrawn;
     bool      mbIsDragging;
 
+    void DrawRectangles(Point& rUL, Point& rBR);
 public:
     ScanPreview(vcl::Window* pParent, WinBits nStyle)
         : Window(pParent, nStyle)
         , maMaxBottomRight(PREVIEW_WIDTH,  PREVIEW_HEIGHT)
-        , mpParentDialog(nullptr)
+        , mpParentDialog(NULL)
         , meDragDirection(TopLeft)
         , mbDragEnable(false)
         , mbDragDrawn(false)
         , mbIsDragging(false)
     {
     }
-
-    virtual ~ScanPreview() override
-    {
-        disposeOnce();
-    }
-
-    virtual void dispose() override
-    {
-        mpParentDialog.clear();
-        vcl::Window::dispose();
-    }
-
     void Init(SaneDlg *pParent)
     {
         mpParentDialog = pParent;
     }
-
     void ResetForNewScanner()
     {
         maTopLeft = Point();
@@ -115,27 +72,15 @@ public:
         maMinTopLeft = Point();
         maMaxBottomRight = Point(PREVIEW_WIDTH,  PREVIEW_HEIGHT);
     }
-
-    void EnableDrag()
-    {
-        mbDragEnable = true;
-    }
-    void DisableDrag()
-    {
-        mbDragEnable = false;
-    }
-    bool IsDragEnabled()
-    {
-        return mbDragEnable;
-    }
-
-    virtual void Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect) override;
-    virtual void MouseButtonDown(const MouseEvent& rMEvt) override;
-    virtual void MouseMove(const MouseEvent& rMEvt) override;
-    virtual void MouseButtonUp(const MouseEvent& rMEvt) override;
+    void EnableDrag() { mbDragEnable = true; }
+    void DisableDrag() { mbDragEnable = false; }
+    bool IsDragEnabled() { return mbDragEnable; }
+    virtual void Paint(const Rectangle& rRect) SAL_OVERRIDE;
+    virtual void MouseButtonDown(const MouseEvent& rMEvt) SAL_OVERRIDE;
+    virtual void MouseMove(const MouseEvent& rMEvt) SAL_OVERRIDE;
+    virtual void MouseButtonUp(const MouseEvent& rMEvt) SAL_OVERRIDE;
     Point GetPixelPos(const Point& rIn) const;
     Point GetLogicPos(const Point& rIn) const;
-
     void GetPreviewLogicRect(Point& rTopLeft, Point &rBottomRight) const
     {
         rTopLeft = GetLogicPos(maTopLeft);
@@ -175,31 +120,40 @@ public:
     {
         maTopLeft = GetPixelPos(rTopLeft);
         maBottomRight = GetPixelPos(rBottomRight);
-        maPreviewRect = tools::Rectangle(maTopLeft,
-                                  Size(maBottomRight.X() - maTopLeft.X(),
-                                       maBottomRight.Y() - maTopLeft.Y()));
+        maPreviewRect = Rectangle( maTopLeft,
+                                   Size( maBottomRight.X() - maTopLeft.X(),
+                                         maBottomRight.Y() - maTopLeft.Y() )
+                                   );
     }
     void SetPreviewMaxRect(const Point& rTopLeft, const Point &rBottomRight)
     {
         maMinTopLeft = rTopLeft;
         maMaxBottomRight = rBottomRight;
     }
-    void DrawDrag(vcl::RenderContext& rRenderContext);
+    void DrawDrag();
     void UpdatePreviewBounds();
     void SetBitmap(SvStream &rStream)
     {
         ReadDIB(maPreviewBitmap, rStream, true);
     }
-    virtual Size GetOptimalSize() const override
+    virtual Size GetOptimalSize() const SAL_OVERRIDE
     {
-        Size aSize(LogicToPixel(Size(PREVIEW_WIDTH, PREVIEW_HEIGHT), MapUnit::MapAppFont));
+        Size aSize(LogicToPixel(Size(PREVIEW_WIDTH, PREVIEW_HEIGHT), MAP_APPFONT));
         aSize.setWidth(aSize.getWidth()+1);
         aSize.setHeight(aSize.getHeight()+1);
         return aSize;
     }
 };
 
-VCL_BUILDER_FACTORY_CONSTRUCTOR(ScanPreview, 0)
+extern "C" SAL_DLLPUBLIC_EXPORT vcl::Window* SAL_CALL makeScanPreview(vcl::Window *pParent, VclBuilder::stringmap &rMap)
+{
+    WinBits nWinStyle = 0;
+    OString sBorder = VclBuilder::extractCustomProperty(rMap);
+    if (!sBorder.isEmpty())
+        nWinStyle |= WB_BORDER;
+    ScanPreview *pWindow = new ScanPreview(pParent, nWinStyle);
+    return pWindow;
+}
 
 SaneDlg::SaneDlg( vcl::Window* pParent, Sane& rSane, bool bScanEnabled ) :
         ModalDialog(pParent, "SaneDialog", "modules/scanner/ui/sanedialog.ui"),
@@ -207,7 +161,7 @@ SaneDlg::SaneDlg( vcl::Window* pParent, Sane& rSane, bool bScanEnabled ) :
         mbScanEnabled( bScanEnabled ),
         mnCurrentOption(0),
         mnCurrentElement(0),
-        mpRange(nullptr),
+        mpRange(0),
         mfMin(0.0),
         mfMax(0.0),
         doScan(false)
@@ -219,7 +173,7 @@ SaneDlg::SaneDlg( vcl::Window* pParent, Sane& rSane, bool bScanEnabled ) :
     get(mpScanButton, "scanButton");
     get(mpButtonOption, "optionsButton");
     get(mpOptionTitle, "optionTitleLabel");
-    Size aSize(LogicToPixel(Size(130, 102), MapUnit::MapAppFont));
+    Size aSize(LogicToPixel(Size(130, 102), MAP_APPFONT));
     mpOptionTitle->set_width_request(aSize.Width());
     mpOptionTitle->set_height_request(aSize.Height() / 2);
     get(mpOptionDescTxt, "optionsDescLabel");
@@ -273,45 +227,19 @@ SaneDlg::SaneDlg( vcl::Window* pParent, Sane& rSane, bool bScanEnabled ) :
     maOldLink = mrSane.SetReloadOptionsHdl( LINK( this, SaneDlg, ReloadSaneOptionsHdl ) );
 
     mpOptionBox->SetNodeBitmaps(get<FixedImage>("plus")->GetImage(),
-                                get<FixedImage>("minus")->GetImage());
-    mpOptionBox->SetStyle(mpOptionBox->GetStyle() |
-                          WB_HASLINES | WB_HASBUTTONS | WB_NOINITIALSELECTION |
-                          WB_HASBUTTONSATROOT | WB_HASLINESATROOT);
+        get<FixedImage>("minus")->GetImage());
+    mpOptionBox->SetStyle( mpOptionBox->GetStyle()|
+                          WB_HASLINES           |
+                          WB_HASBUTTONS         |
+                          WB_NOINITIALSELECTION |
+                          WB_HASBUTTONSATROOT   |
+                          WB_HASLINESATROOT
+                        );
 }
 
 SaneDlg::~SaneDlg()
 {
-    disposeOnce();
-}
-
-void SaneDlg::dispose()
-{
-    mrSane.SetReloadOptionsHdl(maOldLink);
-    mpOKButton.clear();
-    mpCancelButton.clear();
-    mpDeviceInfoButton.clear();
-    mpPreviewButton.clear();
-    mpScanButton.clear();
-    mpButtonOption.clear();
-    mpOptionTitle.clear();
-    mpOptionDescTxt.clear();
-    mpVectorTxt.clear();
-    mpLeftField.clear();
-    mpTopField.clear();
-    mpRightField.clear();
-    mpBottomField.clear();
-    mpDeviceBox.clear();
-    mpReslBox.clear();
-    mpAdvancedBox.clear();
-    mpVectorBox.clear();
-    mpQuantumRangeBox.clear();
-    mpStringRangeBox.clear();
-    mpBoolCheckBox.clear();
-    mpStringEdit.clear();
-    mpNumericEdit.clear();
-    mpOptionBox.clear();
-    mpPreview.clear();
-    ModalDialog::dispose();
+    mrSane.SetReloadOptionsHdl( maOldLink );
 }
 
 namespace {
@@ -328,9 +256,9 @@ short SaneDlg::Execute()
 {
     if( ! Sane::IsSane() )
     {
-        ScopedVclPtrInstance< MessageDialog > aErrorBox(nullptr, SaneResId(STR_COULD_NOT_BE_INIT));
-        aErrorBox->Execute();
-        return RET_CANCEL;
+        MessageDialog aErrorBox(NULL, SaneResId(STR_COULD_NOT_BE_INIT));
+        aErrorBox.Execute();
+        return sal_False;
     }
     LoadState();
     return ModalDialog::Execute();
@@ -361,6 +289,7 @@ void SaneDlg::InitFields()
 
     int nOption, i, nValue;
     double fValue;
+    bool bSuccess = false;
     const char *ppSpecialOptions[] = {
         "resolution",
         "tl-x",
@@ -387,16 +316,16 @@ void SaneDlg::InitFields()
     {
         double fRes;
 
-        if( mrSane.GetOptionValue( nOption, fRes ) )
+        bSuccess = mrSane.GetOptionValue( nOption, fRes );
+        if( bSuccess )
         {
-            mpReslBox->Enable();
+            mpReslBox->Enable( true );
 
             mpReslBox->SetValue( (long)fRes );
-            double *pDouble = nullptr;
+            double *pDouble = NULL;
             nValue = mrSane.GetRange( nOption, pDouble );
             if( nValue > -1 )
             {
-                assert(pDouble);
                 if( nValue )
                 {
                     mpReslBox->SetMin( (long)pDouble[0] );
@@ -418,7 +347,7 @@ void SaneDlg::InitFields()
                     // workaround: offer at least some more standard dpi resolution between
                     // min and max value
                     int bGot300 = 0;
-                    for ( long nRes = (long) pDouble[0] * 2; nRes < (long) pDouble[1]; nRes = nRes * 2 )
+                    for ( int nRes = (long) pDouble[0] * 2; nRes < (long) pDouble[1]; nRes = nRes * 2 )
                     {
                         if ( !bGot300 && nRes > 300 ) {
                             nRes = 300; bGot300 = 1;
@@ -439,8 +368,8 @@ void SaneDlg::InitFields()
     // set scan area
     for( i = 0; i < 4; i++ )
     {
-        char const *pOptionName = nullptr;
-        MetricField* pField = nullptr;
+        char const *pOptionName = NULL;
+        MetricField* pField = NULL;
         switch( i )
         {
             case 0:
@@ -460,9 +389,11 @@ void SaneDlg::InitFields()
                 pField = mpBottomField;
         }
         nOption = pOptionName ? mrSane.GetOptionByName( pOptionName ) : -1;
+        bSuccess = false;
         if( nOption != -1 )
         {
-            if( mrSane.GetOptionValue( nOption, fValue ) )
+            bSuccess = mrSane.GetOptionValue( nOption, fValue, 0 );
+            if( bSuccess )
             {
                 if( mrSane.GetOptionUnit( nOption ) == SANE_UNIT_MM )
                 {
@@ -472,7 +403,7 @@ void SaneDlg::InitFields()
                 else // SANE_UNIT_PIXEL
                 {
                     pField->SetValue( (int)fValue, FUNIT_CUSTOM );
-                    pField->SetCustomUnitText("Pixel");
+                    pField->SetCustomUnitText(OUString("Pixel"));
                 }
                 switch( i ) {
                     case 0: aTopLeft.X() = (int)fValue;break;
@@ -481,7 +412,7 @@ void SaneDlg::InitFields()
                     case 3: aBottomRight.Y() = (int)fValue;break;
                 }
             }
-            double *pDouble = nullptr;
+            double *pDouble = NULL;
             nValue = mrSane.GetRange( nOption, pDouble );
             if( nValue > -1 )
             {
@@ -515,7 +446,7 @@ void SaneDlg::InitFields()
 #ifndef NO_LIBO_RANGE_ARRAY_LEAK_FIX
             delete [] pDouble;
 #endif	// !NO_LIBO_RANGE_ARRAY_LEAK_FIX
-            pField->Enable();
+            pField->Enable( true );
         }
         else
         {
@@ -557,14 +488,14 @@ void SaneDlg::InitFields()
 
     // fill OptionBox
     mpOptionBox->Clear();
-    SvTreeListEntry* pParentEntry = nullptr;
+    SvTreeListEntry* pParentEntry = 0;
     bool bGroupRejected = false;
     for( i = 1; i < mrSane.CountOptions(); i++ )
     {
         OUString aOption=mrSane.GetOptionName( i );
         bool bInsertAdvanced =
-            (mrSane.GetOptionCap( i ) & SANE_CAP_ADVANCED) == 0 ||
-            mpAdvancedBox->IsChecked();
+            mrSane.GetOptionCap( i ) & SANE_CAP_ADVANCED &&
+            ! mpAdvancedBox->IsChecked() ? sal_False : sal_True;
         if( mrSane.GetOptionType( i ) == SANE_TYPE_GROUP )
         {
             if( bInsertAdvanced )
@@ -602,7 +533,7 @@ void SaneDlg::InitFields()
     }
 }
 
-IMPL_LINK( SaneDlg, ClickBtnHdl, Button*, pButton, void )
+IMPL_LINK( SaneDlg, ClickBtnHdl, Button*, pButton )
 {
     if( mrSane.IsOpen() )
     {
@@ -613,8 +544,8 @@ IMPL_LINK( SaneDlg, ClickBtnHdl, Button*, pButton, void )
             aString = aString.replaceFirst( "%s", Sane::GetVendor( mrSane.GetDeviceNumber() ) );
             aString = aString.replaceFirst( "%s", Sane::GetModel( mrSane.GetDeviceNumber() ) );
             aString = aString.replaceFirst( "%s", Sane::GetType( mrSane.GetDeviceNumber() ) );
-            ScopedVclPtrInstance< MessageDialog > aInfoBox(this, aString, VclMessageType::Info);
-            aInfoBox->Execute();
+            MessageDialog aInfoBox(this, aString, VCL_MESSAGE_INFO);
+            aInfoBox.Execute();
         }
         else if( pButton == mpPreviewButton )
             AcquirePreview();
@@ -636,17 +567,17 @@ IMPL_LINK( SaneDlg, ClickBtnHdl, Button*, pButton, void )
                 case SANE_TYPE_INT:
                 {
                     int nElements = mrSane.GetOptionElements( mnCurrentOption );
-                    std::unique_ptr<double[]> x(new double[ nElements ]);
-                    std::unique_ptr<double[]> y(new double[ nElements ]);
+                    boost::scoped_array<double> x(new double[ nElements ]);
+                    boost::scoped_array<double> y(new double[ nElements ]);
                     for( int i = 0; i < nElements; i++ )
                         x[ i ] = (double)i;
                     mrSane.GetOptionValue( mnCurrentOption, y.get() );
 
-                    ScopedVclPtrInstance< GridDialog > aGrid( x.get(), y.get(), nElements, this );
-                    aGrid->SetText( mrSane.GetOptionName( mnCurrentOption ) );
-                    aGrid->setBoundings( 0, mfMin, nElements, mfMax );
-                    if( aGrid->Execute() && aGrid->getNewYValues() )
-                        mrSane.SetOptionValue( mnCurrentOption, aGrid->getNewYValues() );
+                    GridDialog aGrid( x.get(), y.get(), nElements, this );
+                    aGrid.SetText( mrSane.GetOptionName( mnCurrentOption ) );
+                    aGrid.setBoundings( 0, mfMin, nElements, mfMax );
+                    if( aGrid.Execute() && aGrid.getNewYValues() )
+                        mrSane.SetOptionValue( mnCurrentOption, aGrid.getNewYValues() );
                 }
                 break;
                 case SANE_TYPE_BOOL:
@@ -657,7 +588,7 @@ IMPL_LINK( SaneDlg, ClickBtnHdl, Button*, pButton, void )
         }
         else if( pButton == mpAdvancedBox )
         {
-            ReloadSaneOptionsHdl( mrSane );
+            ReloadSaneOptionsHdl( NULL );
         }
     }
     if( pButton == mpOKButton || pButton == mpScanButton )
@@ -672,13 +603,14 @@ IMPL_LINK( SaneDlg, ClickBtnHdl, Button*, pButton, void )
     else if( pButton == mpCancelButton )
     {
         mrSane.Close();
-        EndDialog();
+        EndDialog( 0 );
     }
+    return 0;
 }
 
-IMPL_LINK( SaneDlg, SelectHdl, ListBox&, rListBox, void )
+IMPL_LINK( SaneDlg, SelectHdl, ListBox*, pListBox )
 {
-    if( &rListBox == mpDeviceBox && Sane::IsSane() && Sane::CountDevices() )
+    if( pListBox == mpDeviceBox && Sane::IsSane() && Sane::CountDevices() )
     {
         int nNewNumber = mpDeviceBox->GetSelectEntryPos();
         int nOldNumber = mrSane.GetDeviceNumber();
@@ -692,21 +624,22 @@ IMPL_LINK( SaneDlg, SelectHdl, ListBox&, rListBox, void )
     }
     if( mrSane.IsOpen() )
     {
-        if( &rListBox == mpQuantumRangeBox )
+        if( pListBox == mpQuantumRangeBox )
         {
             OString aValue(OUStringToOString(mpQuantumRangeBox->GetSelectEntry(),
                 osl_getThreadTextEncoding()));
             double fValue = atof(aValue.getStr());
             mrSane.SetOptionValue( mnCurrentOption, fValue, mnCurrentElement );
         }
-        else if( &rListBox == mpStringRangeBox )
+        else if( pListBox == mpStringRangeBox )
         {
             mrSane.SetOptionValue( mnCurrentOption, mpStringRangeBox->GetSelectEntry() );
         }
     }
+    return 0;
 }
 
-IMPL_LINK( SaneDlg, OptionsBoxSelectHdl, SvTreeListBox*, pBox, void )
+IMPL_LINK( SaneDlg, OptionsBoxSelectHdl, SvTreeListBox*, pBox )
 {
     if( pBox == mpOptionBox && Sane::IsSane() )
     {
@@ -753,8 +686,8 @@ IMPL_LINK( SaneDlg, OptionsBoxSelectHdl, SvTreeListBox*, pBox, void )
                             mpVectorBox->SetMin( 1 );
                             mpVectorBox->SetMax(
                                 mrSane.GetOptionElements( mnCurrentOption ) );
-                            mpVectorBox->Show();
-                            mpVectorTxt->Show();
+                            mpVectorBox->Show( true );
+                            mpVectorTxt->Show( true );
                         }
                         else
                         {
@@ -772,23 +705,24 @@ IMPL_LINK( SaneDlg, OptionsBoxSelectHdl, SvTreeListBox*, pBox, void )
             }
         }
     }
+    return 0;
 }
 
-IMPL_LINK( SaneDlg, ModifyHdl, Edit&, rEdit, void )
+IMPL_LINK( SaneDlg, ModifyHdl, Edit*, pEdit )
 {
     if( mrSane.IsOpen() )
     {
-        if( &rEdit == mpStringEdit )
+        if( pEdit == mpStringEdit )
         {
             mrSane.SetOptionValue( mnCurrentOption, mpStringEdit->GetText() );
         }
-        else if( &rEdit == mpReslBox )
+        else if( pEdit == mpReslBox )
         {
             double fRes = (double)mpReslBox->GetValue();
             int nOption = mrSane.GetOptionByName( "resolution" );
             if( nOption != -1 )
             {
-                double* pDouble = nullptr;
+                double* pDouble = NULL;
                 int nValues = mrSane.GetRange( nOption, pDouble );
                 if( nValues > 0 )
                 {
@@ -812,7 +746,7 @@ IMPL_LINK( SaneDlg, ModifyHdl, Edit&, rEdit, void )
                 mpReslBox->SetValue( (sal_uLong)fRes );
             }
         }
-        else if( &rEdit == mpNumericEdit )
+        else if( pEdit == mpNumericEdit )
         {
             double fValue;
             OString aContents(OUStringToOString(mpNumericEdit->GetText(),
@@ -830,49 +764,51 @@ IMPL_LINK( SaneDlg, ModifyHdl, Edit&, rEdit, void )
             }
             mrSane.SetOptionValue( mnCurrentOption, fValue, mnCurrentElement );
         }
-        else if( &rEdit == mpVectorBox )
+        else if( pEdit == mpVectorBox )
         {
+            char pBuf[256];
             mnCurrentElement = mpVectorBox->GetValue()-1;
             double fValue;
             if( mrSane.GetOptionValue( mnCurrentOption, fValue, mnCurrentElement ))
             {
-                char pBuf[256];
                 sprintf( pBuf, "%g", fValue );
                 OUString aValue( pBuf, strlen(pBuf), osl_getThreadTextEncoding() );
                 mpNumericEdit->SetText( aValue );
                 mpQuantumRangeBox->SelectEntry( aValue );
             }
         }
-        else if( &rEdit == mpTopField )
+        else if( pEdit == mpTopField )
         {
             mpPreview->ChangePreviewLogicTopLeftY(mpTopField->GetValue());
-            mpPreview->Invalidate();
+            mpPreview->DrawDrag();
         }
-        else if( &rEdit == mpLeftField )
+        else if( pEdit == mpLeftField )
         {
             mpPreview->ChangePreviewLogicTopLeftX(mpLeftField->GetValue());
-            mpPreview->Invalidate();
+            mpPreview->DrawDrag();
         }
-        else if( &rEdit == mpBottomField )
+        else if( pEdit == mpBottomField )
         {
             mpPreview->ChangePreviewLogicBottomRightY(mpBottomField->GetValue());
-            mpPreview->Invalidate();
+            mpPreview->DrawDrag();
         }
-        else if( &rEdit == mpRightField )
+        else if( pEdit == mpRightField )
         {
             mpPreview->ChangePreviewLogicBottomRightX(mpRightField->GetValue());
-            mpPreview->Invalidate();
+            mpPreview->DrawDrag();
         }
     }
+    return 0;
 }
 
-IMPL_LINK_NOARG( SaneDlg, ReloadSaneOptionsHdl, Sane&, void )
+IMPL_LINK( SaneDlg, ReloadSaneOptionsHdl, Sane*, /*pSane*/ )
 {
     mnCurrentOption = -1;
     mnCurrentElement = 0;
     DisableOption();
     InitFields();
     mpPreview->Invalidate();
+    return 0;
 }
 
 void SaneDlg::AcquirePreview()
@@ -889,27 +825,27 @@ void SaneDlg::AcquirePreview()
     if( nOption == -1 )
     {
         OUString aString(SaneResId(STR_SLOW_PREVIEW));
-        ScopedVclPtrInstance< MessageDialog > aBox(this, aString, VclMessageType::Warning, VclButtonsType::OkCancel);
-        if (aBox->Execute() == RET_CANCEL)
+        MessageDialog aBox(this, aString, VCL_MESSAGE_WARNING, VCL_BUTTONS_OK_CANCEL);
+        if (aBox.Execute() == RET_CANCEL)
             return;
     }
     else
         mrSane.SetOptionValue( nOption, true );
 
-    rtl::Reference<BitmapTransporter> xTransporter(new BitmapTransporter);
-    if( ! mrSane.Start( *xTransporter.get() ) )
+    BitmapTransporter aTransporter;
+    if( ! mrSane.Start( aTransporter ) )
     {
-        ScopedVclPtrInstance< MessageDialog > aErrorBox(this, SaneResId(STR_ERROR_SCAN));
-        aErrorBox->Execute();
+        MessageDialog aErrorBox(this, SaneResId(STR_ERROR_SCAN));
+        aErrorBox.Execute();
     }
     else
     {
-#if OSL_DEBUG_LEVEL > 0
-        xTransporter->getStream().Seek( STREAM_SEEK_TO_END );
-        SAL_INFO("extensions.scanner", "Previewbitmapstream contains " << xTransporter->getStream().Tell() << "bytes");
+#if OSL_DEBUG_LEVEL > 1
+        aTransporter.getStream().Seek( STREAM_SEEK_TO_END );
+        fprintf( stderr, "Previewbitmapstream contains %d bytes\n", (int)aTransporter.getStream().Tell() );
 #endif
-        xTransporter->getStream().Seek( STREAM_SEEK_TO_BEGIN );
-        mpPreview->SetBitmap(xTransporter->getStream());
+        aTransporter.getStream().Seek( STREAM_SEEK_TO_BEGIN );
+        mpPreview->SetBitmap(aTransporter.getStream());
     }
 
     SetAdjustedNumericalValue( "resolution", fResl );
@@ -923,7 +859,7 @@ void ScanPreview::UpdatePreviewBounds()
 {
     if( mbDragEnable )
     {
-        maPreviewRect = tools::Rectangle( maTopLeft,
+        maPreviewRect = Rectangle( maTopLeft,
                                    Size( maBottomRight.X() - maTopLeft.X(),
                                          maBottomRight.Y() - maTopLeft.Y() )
                                    );
@@ -934,34 +870,35 @@ void ScanPreview::UpdatePreviewBounds()
         if( aBMSize.Width() > aBMSize.Height() && aBMSize.Width() )
         {
             int nVHeight = (maBottomRight.X() - maTopLeft.X()) * aBMSize.Height() / aBMSize.Width();
-            maPreviewRect = tools::Rectangle( Point( maTopLeft.X(), ( maTopLeft.Y() + maBottomRight.Y() )/2 - nVHeight/2 ),
+            maPreviewRect = Rectangle( Point( maTopLeft.X(), ( maTopLeft.Y() + maBottomRight.Y() )/2 - nVHeight/2 ),
                                        Size( maBottomRight.X() - maTopLeft.X(),
                                              nVHeight ) );
         }
         else if (aBMSize.Height())
         {
             int nVWidth = (maBottomRight.Y() - maTopLeft.Y()) * aBMSize.Width() / aBMSize.Height();
-            maPreviewRect = tools::Rectangle( Point( ( maTopLeft.X() + maBottomRight.X() )/2 - nVWidth/2, maTopLeft.Y() ),
+            maPreviewRect = Rectangle( Point( ( maTopLeft.X() + maBottomRight.X() )/2 - nVWidth/2, maTopLeft.Y() ),
                                        Size( nVWidth,
                                              maBottomRight.Y() - maTopLeft.Y() ) );
         }
     }
 }
 
-void ScanPreview::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRect)
+void ScanPreview::Paint(const Rectangle& rRect)
 {
-    Window::Paint(rRenderContext, rRect);
-    rRenderContext.SetMapMode(MapUnit::MapAppFont);
-    rRenderContext.SetFillColor(Color(COL_WHITE));
-    rRenderContext.SetLineColor(Color(COL_WHITE));
-    rRenderContext.DrawRect(tools::Rectangle(Point(0, 0),
-                                      Size(PREVIEW_WIDTH, PREVIEW_HEIGHT)));
-    rRenderContext.SetMapMode(MapMode(MapUnit::MapPixel));
+    Window::Paint(rRect);
+    SetMapMode(MAP_APPFONT);
+    SetFillColor( Color( COL_WHITE ) );
+    SetLineColor( Color( COL_WHITE ) );
+    DrawRect( Rectangle( Point( 0, 0 ),
+                         Size( PREVIEW_WIDTH, PREVIEW_HEIGHT ) ) );
+    SetMapMode( MapMode( MAP_PIXEL ) );
     // check for sane values
-    rRenderContext.DrawBitmap(maPreviewRect.TopLeft(), maPreviewRect.GetSize(), maPreviewBitmap);
+    DrawBitmap( maPreviewRect.TopLeft(), maPreviewRect.GetSize(),
+                maPreviewBitmap );
 
     mbDragDrawn = false;
-    DrawDrag(rRenderContext);
+    DrawDrag();
 }
 
 void SaneDlg::DisableOption()
@@ -986,7 +923,7 @@ void SaneDlg::EstablishBoolOption()
     {
         mpBoolCheckBox->SetText( mrSane.GetOptionName( mnCurrentOption ) );
         mpBoolCheckBox->Check( bValue );
-        mpBoolCheckBox->Show();
+        mpBoolCheckBox->Show( true );
     }
 }
 
@@ -999,9 +936,9 @@ void SaneDlg::EstablishStringOption()
     if( bSuccess )
     {
         mpOptionDescTxt->SetText( mrSane.GetOptionName( mnCurrentOption ) );
-        mpOptionDescTxt->Show();
+        mpOptionDescTxt->Show( true );
         mpStringEdit->SetText(OStringToOUString(aValue, osl_getThreadTextEncoding()));
-        mpStringEdit->Show();
+        mpStringEdit->Show( true );
     }
 }
 
@@ -1009,14 +946,14 @@ void SaneDlg::EstablishStringRange()
 {
     const char** ppStrings = mrSane.GetStringConstraint( mnCurrentOption );
     mpStringRangeBox->Clear();
-    for( int i = 0; ppStrings[i] != nullptr; i++ )
+    for( int i = 0; ppStrings[i] != 0; i++ )
         mpStringRangeBox->InsertEntry( OUString( ppStrings[i], strlen(ppStrings[i]), osl_getThreadTextEncoding() ) );
     OString aValue;
     mrSane.GetOptionValue( mnCurrentOption, aValue );
     mpStringRangeBox->SelectEntry(OStringToOUString(aValue, osl_getThreadTextEncoding()));
-    mpStringRangeBox->Show();
+    mpStringRangeBox->Show( true );
     mpOptionDescTxt->SetText( mrSane.GetOptionName( mnCurrentOption ) );
-    mpOptionDescTxt->Show();
+    mpOptionDescTxt->Show( true );
 }
 
 void SaneDlg::EstablishQuantumRange()
@@ -1024,7 +961,7 @@ void SaneDlg::EstablishQuantumRange()
     if( mpRange )
     {
         delete [] mpRange;
-        mpRange = nullptr;
+        mpRange = 0;
     }
     int nValues = mrSane.GetRange( mnCurrentOption, mpRange );
     if( nValues == 0 )
@@ -1032,7 +969,7 @@ void SaneDlg::EstablishQuantumRange()
         mfMin = mpRange[ 0 ];
         mfMax = mpRange[ 1 ];
         delete [] mpRange;
-        mpRange = nullptr;
+        mpRange = 0;
         EstablishNumericOption();
     }
     else if( nValues > 0 )
@@ -1052,12 +989,12 @@ void SaneDlg::EstablishQuantumRange()
             sprintf( pBuf, "%g", fValue );
             mpQuantumRangeBox->SelectEntry( OUString( pBuf, strlen(pBuf), osl_getThreadTextEncoding() ) );
         }
-        mpQuantumRangeBox->Show();
+        mpQuantumRangeBox->Show( true );
         OUString aText( mrSane.GetOptionName( mnCurrentOption ) );
         aText += " ";
         aText += mrSane.GetOptionUnitName( mnCurrentOption );
         mpOptionDescTxt->SetText( aText );
-        mpOptionDescTxt->Show();
+        mpOptionDescTxt->Show( true );
     }
 }
 
@@ -1080,18 +1017,20 @@ void SaneDlg::EstablishNumericOption()
         aText += OUString( pBuf, strlen(pBuf), osl_getThreadTextEncoding() );
     }
     mpOptionDescTxt->SetText( aText );
-    mpOptionDescTxt->Show();
+    mpOptionDescTxt->Show( true );
     sprintf( pBuf, "%g", fValue );
     mpNumericEdit->SetText( OUString( pBuf, strlen(pBuf), osl_getThreadTextEncoding() ) );
-    mpNumericEdit->Show();
+    mpNumericEdit->Show( true );
 }
 
 void SaneDlg::EstablishButtonOption()
 {
     mpOptionDescTxt->SetText( mrSane.GetOptionName( mnCurrentOption ) );
-    mpOptionDescTxt->Show();
-    mpButtonOption->Show();
+    mpOptionDescTxt->Show( true );
+    mpButtonOption->Show( true );
 }
+
+#define RECT_SIZE_PIX 7
 
 void ScanPreview::MouseMove(const MouseEvent& rMEvt)
 {
@@ -1132,7 +1071,7 @@ void ScanPreview::MouseMove(const MouseEvent& rMEvt)
             maTopLeft.Y() = maBottomRight.Y();
             maBottomRight.Y() = nSwap;
         }
-        Invalidate();
+        DrawDrag();
         mpParentDialog->UpdateScanArea(false);
     }
     Window::MouseMove( rMEvt );
@@ -1218,7 +1157,7 @@ void ScanPreview::MouseButtonDown( const MouseEvent& rMEvt )
     if( mbIsDragging )
     {
         SetPointerPosPixel( aMousePixel );
-        Invalidate();
+        DrawDrag();
     }
     Window::MouseButtonDown( rMEvt );
 }
@@ -1234,27 +1173,51 @@ void ScanPreview::MouseButtonUp( const MouseEvent& rMEvt )
     Window::MouseButtonUp( rMEvt );
 }
 
-void ScanPreview::DrawDrag(vcl::RenderContext& rRenderContext)
+void ScanPreview::DrawRectangles( Point& rUL, Point& rBR )
+{
+    int nMiddleX, nMiddleY;
+    Point aBL, aUR;
+
+    aUR = Point( rBR.X(), rUL.Y() );
+    aBL = Point( rUL.X(), rBR.Y() );
+    nMiddleX = ( rBR.X() - rUL.X() ) / 2 + rUL.X();
+    nMiddleY = ( rBR.Y() - rUL.Y() ) / 2 + rUL.Y();
+
+    DrawLine( rUL, aBL );
+    DrawLine( aBL, rBR );
+    DrawLine( rBR, aUR );
+    DrawLine( aUR, rUL );
+    DrawRect( Rectangle( rUL, Size( RECT_SIZE_PIX,RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( aBL, Size( RECT_SIZE_PIX, -RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( rBR, Size( -RECT_SIZE_PIX, -RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( aUR, Size( -RECT_SIZE_PIX, RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( Point( nMiddleX - RECT_SIZE_PIX/2, rUL.Y() ), Size( RECT_SIZE_PIX, RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( Point( nMiddleX - RECT_SIZE_PIX/2, rBR.Y() ), Size( RECT_SIZE_PIX, -RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( Point( rUL.X(), nMiddleY - RECT_SIZE_PIX/2 ), Size( RECT_SIZE_PIX, RECT_SIZE_PIX ) ) );
+    DrawRect( Rectangle( Point( rBR.X(), nMiddleY - RECT_SIZE_PIX/2 ), Size( -RECT_SIZE_PIX, RECT_SIZE_PIX ) ) );
+}
+
+void ScanPreview::DrawDrag()
 {
     static Point aLastUL, aLastBR;
 
-    if (!mbDragEnable)
+    if( ! mbDragEnable )
         return;
 
-    RasterOp eROP = rRenderContext.GetRasterOp();
-    rRenderContext.SetRasterOp(RasterOp::Invert);
-    rRenderContext.SetMapMode(MapMode(MapUnit::MapPixel));
+    RasterOp eROP = GetRasterOp();
+    SetRasterOp( ROP_INVERT );
+    SetMapMode( MapMode( MAP_PIXEL ) );
 
-    if (mbDragDrawn)
-        DrawRectangles(rRenderContext, aLastUL, aLastBR);
+    if( mbDragDrawn )
+        DrawRectangles( aLastUL, aLastBR );
 
     aLastUL = maTopLeft;
     aLastBR = maBottomRight;
-    DrawRectangles(rRenderContext, maTopLeft, maBottomRight);
+    DrawRectangles( maTopLeft, maBottomRight );
 
     mbDragDrawn = true;
-    rRenderContext.SetRasterOp(eROP);
-    rRenderContext.SetMapMode(MapUnit::MapAppFont);
+    SetRasterOp( eROP );
+    SetMapMode(MAP_APPFONT);
 }
 
 Point ScanPreview::GetPixelPos( const Point& rIn) const
@@ -1267,12 +1230,12 @@ Point ScanPreview::GetPixelPos( const Point& rIn) const
           / ( maMaxBottomRight.Y() - maMinTopLeft.Y() ) )
         );
 
-    return LogicToPixel(aConvert, MapUnit::MapAppFont);
+    return LogicToPixel(aConvert, MAP_APPFONT);
 }
 
 Point ScanPreview::GetLogicPos(const Point& rIn) const
 {
-    Point aConvert = PixelToLogic(rIn, MapUnit::MapAppFont);
+    Point aConvert = PixelToLogic(rIn, MAP_APPFONT);
     if( aConvert.X() < 0 )
         aConvert.X() = 0;
     if( aConvert.X() >= PREVIEW_WIDTH )
@@ -1412,10 +1375,10 @@ void SaneDlg::SaveState()
         "br-x",
         "br-y"
     };
-    for(const char * pSaveOption : pSaveOptions)
+    for( size_t i = 0; i < SAL_N_ELEMENTS(pSaveOptions); ++i )
     {
-        OString aOption = pSaveOption;
-        int nOption = mrSane.GetOptionByName( pSaveOption );
+        OString aOption = pSaveOptions[i];
+        int nOption = mrSane.GetOptionByName( pSaveOptions[i] );
         if( nOption > -1 )
         {
             SANE_Value_Type nType = mrSane.GetOptionType( nOption );
@@ -1476,16 +1439,14 @@ bool SaneDlg::SetAdjustedNumericalValue(
     double fValue,
     int nElement )
 {
-    if (! Sane::IsSane() || ! mrSane.IsOpen())
-        return false;
-    int const nOption(mrSane.GetOptionByName(pOption));
-    if (nOption == -1)
+    int nOption;
+    if( ! Sane::IsSane() || ! mrSane.IsOpen() || ( nOption = mrSane.GetOptionByName( pOption ) ) == -1 )
         return false;
 
     if( nElement < 0 || nElement >= mrSane.GetOptionElements( nOption ) )
         return false;
 
-    double* pValues = nullptr;
+    double* pValues = NULL;
     int nValues;
     if( ( nValues = mrSane.GetRange( nOption, pValues ) ) < 0 )
     {
@@ -1493,7 +1454,10 @@ bool SaneDlg::SetAdjustedNumericalValue(
         return false;
     }
 
-    SAL_INFO("extensions.scanner", "SaneDlg::SetAdjustedNumericalValue(\"" << pOption << "\", " << fValue << ") ");
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "SaneDlg::SetAdjustedNumericalValue( \"%s\", %lg ) ",
+             pOption, fValue );
+#endif
 
     if( nValues )
     {
@@ -1518,7 +1482,9 @@ bool SaneDlg::SetAdjustedNumericalValue(
     }
     delete [] pValues;
     mrSane.SetOptionValue( nOption, fValue, nElement );
-    SAL_INFO("extensions.scanner", "yields " << fValue);
+#if OSL_DEBUG_LEVEL > 1
+    fprintf( stderr, "yields %lg\n", fValue );
+#endif
 
 
     return true;

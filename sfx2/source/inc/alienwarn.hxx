@@ -32,19 +32,16 @@
 class SfxAlienWarningDialog : public MessageDialog
 {
 private:
-    VclPtr<PushButton>             m_pKeepCurrentBtn;
-    VclPtr<PushButton>             m_pUseDefaultFormatBtn;
-    VclPtr<CheckBox>               m_pWarningOnBox;
+    PushButton*             m_pKeepCurrentBtn;
+    CheckBox*               m_pWarningOnBox;
 
 public:
-    SfxAlienWarningDialog(vcl::Window* pParent, const OUString& _rFormatName,
 #ifdef USE_JAVA
-                          const OUString& _rDefaultExtension, bool rDefaultIsAlien, bool bHideWarningOnBox);
+    SfxAlienWarningDialog(vcl::Window* pParent, const OUString& _rFormatName, bool bHideWarningOnBox);
 #else	// USE_JAVA
-                          const OUString& _rDefaultExtension, bool rDefaultIsAlien);
+    SfxAlienWarningDialog(vcl::Window* pParent, const OUString& _rFormatName);
 #endif	// USE_JAVA
-    virtual ~SfxAlienWarningDialog() override;
-    virtual void dispose() override;
+    virtual ~SfxAlienWarningDialog();
 };
 
 #endif // INCLUDED_SFX2_SOURCE_INC_ALIENWARN_HXX

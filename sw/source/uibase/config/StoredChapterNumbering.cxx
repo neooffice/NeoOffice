@@ -9,12 +9,11 @@
 
 #include <uinums.hxx>
 
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase2.hxx>
 
 #include <com/sun/star/container/XIndexReplace.hpp>
 #include <com/sun/star/container/XNamed.hpp>
 #include <com/sun/star/io/XActiveDataSource.hpp>
-#include <com/sun/star/lang/IndexOutOfBoundsException.hpp>
 #include <com/sun/star/util/MeasureUnit.hpp>
 #include <com/sun/star/xml/sax/Parser.hpp>
 #include <com/sun/star/xml/sax/Writer.hpp>
@@ -43,7 +42,7 @@ using namespace ::xmloff::token;
 namespace sw {
 
 class StoredChapterNumberingRules
-    : public ::cppu::WeakImplHelper<container::XNamed,container::XIndexReplace>
+    : public ::cppu::WeakImplHelper2<container::XNamed,container::XIndexReplace>
 {
 private:
     // TODO in case this ever becomes accessible via api need a invalidate
@@ -72,7 +71,8 @@ public:
     }
 
     // XNamed
-    virtual OUString SAL_CALL getName() override
+    virtual OUString SAL_CALL getName()
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE
     {
         SolarMutexGuard g;
         SwNumRulesWithName const* pRules(m_rNumRules.GetRules(m_nIndex));
@@ -83,7 +83,8 @@ public:
         return pRules->GetName();
     }
 
-    virtual void SAL_CALL setName(OUString const& rName) override
+    virtual void SAL_CALL setName(OUString const& rName)
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE
     {
         SolarMutexGuard g;
         SwNumRulesWithName *const pRules(GetOrCreateRules());
@@ -91,23 +92,28 @@ public:
     }
 
     // XElementAccess
-    virtual uno::Type SAL_CALL getElementType() override
+    virtual uno::Type SAL_CALL getElementType()
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE
     {
         return ::cppu::UnoType<uno::Sequence<beans::PropertyValue>>::get();
     }
 
-    virtual ::sal_Bool SAL_CALL hasElements() override
+    virtual ::sal_Bool SAL_CALL hasElements()
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE
     {
-        return true;
+        return sal_True;
     }
 
     // XIndexAccess
-    virtual sal_Int32 SAL_CALL getCount() override
+    virtual sal_Int32 SAL_CALL getCount()
+        throw (uno::RuntimeException, std::exception) SAL_OVERRIDE
     {
         return MAXLEVEL;
     }
 
-    virtual uno::Any SAL_CALL getByIndex(sal_Int32 nIndex) override
+    virtual uno::Any SAL_CALL getByIndex(sal_Int32 nIndex)
+        throw (lang::IndexOutOfBoundsException, lang::WrappedTargetException,
+               uno::RuntimeException, std::exception) SAL_OVERRIDE
     {
         if (nIndex < 0 || MAXLEVEL <= nIndex)
             throw lang::IndexOutOfBoundsException();
@@ -118,28 +124,31 @@ public:
         {
             return uno::Any();
         }
-        SwNumFormat const* pNumFormat(nullptr);
-        OUString const* pCharStyleName(nullptr);
-        pRules->GetNumFormat(nIndex, pNumFormat, pCharStyleName);
-        if (!pNumFormat)
+        SwNumFmt const* pNumFmt(0);
+        OUString const* pCharStyleName(0);
+        pRules->GetNumFmt(nIndex, pNumFmt, pCharStyleName);
+        if (!pNumFmt)
         {   // the dialog only fills in those levels that are non-default
             return uno::Any(); // the export will ignore this level, yay
         }
         assert(pCharStyleName);
         OUString dummy; // pass in empty HeadingStyleName - can't import anyway
         uno::Sequence<beans::PropertyValue> const ret(
-            SwXNumberingRules::GetPropertiesForNumFormat(
+            SwXNumberingRules::GetPropertiesForNumFmt(
 #ifdef NO_LIBO_NUMBERING_REFERER_FIX
-                *pNumFormat, *pCharStyleName, &dummy));
+                *pNumFmt, *pCharStyleName, &dummy));
 #else	// NO_LIBO_NUMBERING_REFERER_FIX
-                *pNumFormat, *pCharStyleName, &dummy, ""));
+                *pNumFmt, *pCharStyleName, &dummy, ""));
 #endif	// NO_LIBO_NUMBERING_REFERER_FIX
         return uno::makeAny(ret);
     }
 
     // XIndexReplace
     virtual void SAL_CALL replaceByIndex(
-            sal_Int32 nIndex, uno::Any const& rElement) override
+            sal_Int32 nIndex, uno::Any const& rElement)
+        throw (lang::IllegalArgumentException, lang::IndexOutOfBoundsException,
+               lang::WrappedTargetException, uno::RuntimeException,
+               std::exception) SAL_OVERRIDE
     {
         if (nIndex < 0 || MAXLEVEL <= nIndex)
             throw lang::IndexOutOfBoundsException();
@@ -149,15 +158,15 @@ public:
                     static_cast< ::cppu::OWeakObject*>(this), 1);
 
         SolarMutexGuard g;
-        SwNumFormat aNumberFormat;
+        SwNumFmt numFmt;
         OUString charStyleName;
-        SwXNumberingRules::SetPropertiesToNumFormat(
-            aNumberFormat,
+        SwXNumberingRules::SetPropertiesToNumFmt(
+            numFmt,
             charStyleName,
-            nullptr, nullptr, nullptr, nullptr, nullptr,
+            0, 0, 0, 0, 0,
             props);
         SwNumRulesWithName *const pRules(GetOrCreateRules());
-        pRules->SetNumFormat(nIndex, aNumberFormat, charStyleName);
+        pRules->SetNumFmt(nIndex, numFmt, charStyleName);
     }
 };
 
@@ -172,21 +181,21 @@ public:
         : SvXMLExport(xContext, "sw::StoredChapterNumberingExport", rFileName,
             util::MeasureUnit::CM, xHandler)
     {
-        GetNamespaceMap_().Add(GetXMLToken(XML_NP_OFFICE),
+        _GetNamespaceMap().Add(GetXMLToken(XML_NP_OFFICE),
                                GetXMLToken(XML_N_OFFICE), XML_NAMESPACE_OFFICE);
-        GetNamespaceMap_().Add(GetXMLToken(XML_NP_TEXT),
+        _GetNamespaceMap().Add(GetXMLToken(XML_NP_TEXT),
                                GetXMLToken(XML_N_TEXT), XML_NAMESPACE_TEXT);
-        GetNamespaceMap_().Add(GetXMLToken(XML_NP_STYLE),
+        _GetNamespaceMap().Add(GetXMLToken(XML_NP_STYLE),
                                GetXMLToken(XML_N_STYLE), XML_NAMESPACE_STYLE);
-        GetNamespaceMap_().Add(GetXMLToken(XML_NP_FO),
+        _GetNamespaceMap().Add(GetXMLToken(XML_NP_FO),
                                GetXMLToken(XML_N_FO), XML_NAMESPACE_FO);
-        GetNamespaceMap_().Add(GetXMLToken(XML_NP_SVG),
+        _GetNamespaceMap().Add(GetXMLToken(XML_NP_SVG),
                                GetXMLToken(XML_N_SVG), XML_NAMESPACE_SVG);
     }
 
-    virtual void ExportAutoStyles_() override {}
-    virtual void ExportMasterStyles_() override {}
-    virtual void ExportContent_() override {}
+    virtual void _ExportAutoStyles() SAL_OVERRIDE {}
+    virtual void _ExportMasterStyles() SAL_OVERRIDE {}
+    virtual void _ExportContent() SAL_OVERRIDE {}
 
     void ExportRule(SvxXMLNumRuleExport & rExport,
             uno::Reference<container::XIndexReplace> const& xRule)
@@ -213,20 +222,20 @@ public:
         GetDocHandler()->startDocument();
 
         AddAttribute(XML_NAMESPACE_NONE,
-                      GetNamespaceMap_().GetAttrNameByKey(XML_NAMESPACE_OFFICE),
-                      GetNamespaceMap_().GetNameByKey(XML_NAMESPACE_OFFICE));
+                      _GetNamespaceMap().GetAttrNameByKey(XML_NAMESPACE_OFFICE),
+                      _GetNamespaceMap().GetNameByKey(XML_NAMESPACE_OFFICE));
         AddAttribute(XML_NAMESPACE_NONE,
-                      GetNamespaceMap_().GetAttrNameByKey (XML_NAMESPACE_TEXT),
-                      GetNamespaceMap_().GetNameByKey(XML_NAMESPACE_TEXT));
+                      _GetNamespaceMap().GetAttrNameByKey (XML_NAMESPACE_TEXT),
+                      _GetNamespaceMap().GetNameByKey(XML_NAMESPACE_TEXT));
         AddAttribute(XML_NAMESPACE_NONE,
-                      GetNamespaceMap_().GetAttrNameByKey(XML_NAMESPACE_STYLE),
-                      GetNamespaceMap_().GetNameByKey(XML_NAMESPACE_STYLE));
+                      _GetNamespaceMap().GetAttrNameByKey(XML_NAMESPACE_STYLE),
+                      _GetNamespaceMap().GetNameByKey(XML_NAMESPACE_STYLE));
         AddAttribute(XML_NAMESPACE_NONE,
-                      GetNamespaceMap_().GetAttrNameByKey(XML_NAMESPACE_FO),
-                      GetNamespaceMap_().GetNameByKey(XML_NAMESPACE_FO));
+                      _GetNamespaceMap().GetAttrNameByKey(XML_NAMESPACE_FO),
+                      _GetNamespaceMap().GetNameByKey(XML_NAMESPACE_FO));
         AddAttribute(XML_NAMESPACE_NONE,
-                      GetNamespaceMap_().GetAttrNameByKey(XML_NAMESPACE_SVG),
-                      GetNamespaceMap_().GetNameByKey(XML_NAMESPACE_SVG));
+                      _GetNamespaceMap().GetAttrNameByKey(XML_NAMESPACE_SVG),
+                      _GetNamespaceMap().GetNameByKey(XML_NAMESPACE_SVG));
 
         {
             // let's just have a office:styles as a dummy root
@@ -321,7 +330,7 @@ class StoredChapterNumberingRootContext
 private:
     SwChapterNumRules & m_rNumRules;
     size_t m_nCounter;
-    std::vector<tools::SvRef<SvxXMLListStyleContext>> m_Contexts;
+    ::std::vector<tools::SvRef<SvxXMLListStyleContext>> m_Contexts;
 
 public:
     StoredChapterNumberingRootContext(
@@ -333,7 +342,7 @@ public:
     {
     }
 
-    virtual void EndElement() override
+    virtual void EndElement() SAL_OVERRIDE
     {
         assert(m_Contexts.size() < SwChapterNumRules::nMaxRules);
         for (auto iter = m_Contexts.begin(); iter != m_Contexts.end(); ++iter)
@@ -350,7 +359,7 @@ public:
 
     virtual SvXMLImportContext * CreateChildContext(
         sal_uInt16 const nPrefix, OUString const& rLocalName,
-        uno::Reference<xml::sax::XAttributeList> const& xAttrList) override
+        uno::Reference<xml::sax::XAttributeList> const& xAttrList) SAL_OVERRIDE
     {
         if (XML_NAMESPACE_TEXT == nPrefix && IsXMLToken(rLocalName, XML_OUTLINE_STYLE))
         {
@@ -385,14 +394,14 @@ public:
     StoredChapterNumberingImport(
             uno::Reference<uno::XComponentContext> const& xContext,
             SwChapterNumRules & rNumRules)
-        : SvXMLImport(xContext, "sw::StoredChapterNumberingImport", SvXMLImportFlags::ALL)
+        : SvXMLImport(xContext, "sw::StoredChapterNumberingImport", IMPORT_ALL)
         , m_rNumRules(rNumRules)
     {
     }
 
     virtual SvXMLImportContext * CreateContext(
         sal_uInt16 const nPrefix, OUString const& rLocalName,
-        uno::Reference<xml::sax::XAttributeList> const& xAttrList) override
+        uno::Reference<xml::sax::XAttributeList> const& xAttrList) SAL_OVERRIDE
     {
         if (XML_NAMESPACE_OFFICE == nPrefix && IsXMLToken(rLocalName, XML_STYLES))
         {
@@ -418,7 +427,10 @@ void ExportStoredChapterNumberingRules(SwChapterNumRules & rRules,
     uno::Reference<io::XActiveDataSource> const xADS(xWriter, uno::UNO_QUERY);
     xADS->setOutputStream(xOutStream);
 
-    rtl::Reference<StoredChapterNumberingExport> exp(new StoredChapterNumberingExport(xContext, rFileName, xWriter));
+    uno::Reference<xml::sax::XDocumentHandler> const xHandler(
+            xWriter, uno::UNO_QUERY);
+
+    StoredChapterNumberingExport exp(xContext, rFileName, xWriter);
 
     // if style name contains a space then name != display-name
     // ... and the import needs to map from name to display-name then!
@@ -430,9 +442,9 @@ void ExportStoredChapterNumberingRules(SwChapterNumRules & rRules,
         {
             for (size_t j = 0; j < MAXLEVEL; ++j)
             {
-                SwNumFormat const* pDummy(nullptr);
-                OUString const* pCharStyleName(nullptr);
-                pRule->GetNumFormat(j, pDummy, pCharStyleName);
+                SwNumFmt const* pDummy(0);
+                OUString const* pCharStyleName(0);
+                pRule->GetNumFmt(j, pDummy, pCharStyleName);
                 if (pCharStyleName && !pCharStyleName->isEmpty())
                 {
                     charStyles.insert(*pCharStyleName);
@@ -444,7 +456,7 @@ void ExportStoredChapterNumberingRules(SwChapterNumRules & rRules,
 
     try
     {
-        exp->ExportRules(charStyles, numRules);
+        exp.ExportRules(charStyles, numRules);
     }
     catch (uno::Exception const& e)
     {

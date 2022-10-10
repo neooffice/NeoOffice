@@ -43,7 +43,6 @@ $(eval $(call gb_Library_set_include,sw,\
 
 $(eval $(call gb_Library_use_custom_headers,sw,\
 	officecfg/registry \
-	sw/generated \
 ))
 
 $(eval $(call gb_Library_use_sdk_api,sw))
@@ -51,6 +50,7 @@ $(eval $(call gb_Library_use_sdk_api,sw))
 $(eval $(call gb_Library_add_defs,sw,\
     -DSW_DLLIMPLEMENTATION \
 	-DSWUI_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,swui))\" \
+	-DDBTOOLS_DLL_NAME=\"$(call gb_Library_get_runtime_filename,$(call gb_Library__get_name,dbtools))\" \
 ))
 
 $(eval $(call gb_Library_use_libraries,sw,\
@@ -59,8 +59,6 @@ $(eval $(call gb_Library_use_libraries,sw,\
     comphelper \
     cppu \
     cppuhelper \
-    $(call gb_Helper_optional,DBCONNECTIVITY, \
-        dbtools) \
     drawinglayer \
     editeng \
     i18nlangtag \
@@ -85,6 +83,7 @@ $(eval $(call gb_Library_use_libraries,sw,\
     vcl \
     xmlreader \
     xo \
+	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_use_externals,sw,\
@@ -137,7 +136,7 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/bastyp/checkit \
     sw/source/core/bastyp/index \
     sw/source/core/bastyp/init \
-    sw/source/core/bastyp/proofreadingiterator \
+    sw/source/core/bastyp/ring \
     sw/source/core/bastyp/swcache \
     sw/source/core/bastyp/swrect \
     sw/source/core/bastyp/swregion \
@@ -163,6 +162,7 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/crsr/trvlfnfl \
     sw/source/core/crsr/trvlreg \
     sw/source/core/crsr/trvltbl \
+    sw/source/core/crsr/unocrsr \
     sw/source/core/crsr/viscrs \
     sw/source/core/crsr/overlayrangesoutline \
     sw/source/core/doc/SwStyleNameMapper \
@@ -220,7 +220,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/doc/notxtfrm \
     sw/source/core/doc/number \
     sw/source/core/doc/poolfmt \
-    sw/source/core/doc/rdfhelper \
     sw/source/core/doc/sortopt \
     sw/source/core/doc/swserv \
     sw/source/core/doc/swstylemanager \
@@ -232,12 +231,14 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/docnode/cancellablejob \
     sw/source/core/docnode/finalthreadmanager \
     sw/source/core/docnode/ndcopy \
+    sw/source/core/docnode/ndindex \
     sw/source/core/docnode/ndnotxt \
     sw/source/core/docnode/ndnum \
     sw/source/core/docnode/ndsect \
     sw/source/core/docnode/ndtbl \
     sw/source/core/docnode/ndtbl1 \
     sw/source/core/docnode/node \
+    sw/source/core/docnode/nodedump \
     sw/source/core/docnode/node2lay \
     sw/source/core/docnode/nodes \
     sw/source/core/docnode/observablethread \
@@ -352,6 +353,7 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/objectpositioning/tolayoutanchoredobjectposition \
     sw/source/core/ole/ndole \
     sw/source/core/para/paratr \
+    sw/source/core/sw3io/sw3convert \
     sw/source/core/sw3io/swacorr \
     sw/source/core/swg/SwXMLBlockExport \
     sw/source/core/swg/SwXMLBlockImport \
@@ -464,7 +466,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/unocore/unobkm \
     sw/source/core/unocore/unochart \
     sw/source/core/unocore/unocoll \
-    sw/source/core/unocore/unocrsr \
     sw/source/core/unocore/unocrsrhelper \
     sw/source/core/unocore/unodraw \
     sw/source/core/unocore/unoevent \
@@ -474,7 +475,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/core/unocore/unoftn \
     sw/source/core/unocore/unoidx \
     sw/source/core/unocore/unomap \
-    sw/source/core/unocore/unomap1 \
     sw/source/core/unocore/unoobj \
     sw/source/core/unocore/unoobj2 \
     sw/source/core/unocore/unoparagraph \
@@ -577,12 +577,9 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/app/swmodul1 \
     sw/source/uibase/app/swmodule \
     sw/source/uibase/app/swwait \
-    sw/source/uibase/dbui/dbmgr \
-    sw/source/uibase/dbui/dbui \
-    sw/source/uibase/dbui/maildispatcher \
-    sw/source/uibase/dbui/mailmergehelper \
-    sw/source/uibase/dbui/mmconfigitem \
     sw/source/uibase/cctrl/actctrl \
+    sw/source/uibase/cctrl/popbox \
+    sw/source/uibase/cctrl/swlbox \
     sw/source/uibase/chrdlg/ccoll \
     sw/source/uibase/config/StoredChapterNumbering \
     sw/source/uibase/config/barcfg \
@@ -599,22 +596,20 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/dialog/regionsw \
     sw/source/uibase/dialog/swabstdlg \
     sw/source/uibase/dialog/swwrtshitem \
-    sw/source/uibase/dialog/watermarkdialog \
     sw/source/uibase/dochdl/gloshdl \
     sw/source/uibase/dochdl/swdtflvr \
     sw/source/uibase/docvw/AnchorOverlayObject \
     sw/source/uibase/docvw/AnnotationMenuButton \
     sw/source/uibase/docvw/AnnotationWin \
-    sw/source/uibase/docvw/AnnotationWin2 \
     sw/source/uibase/docvw/DashedLine \
     sw/source/uibase/docvw/FrameControlsManager \
     sw/source/uibase/docvw/PageBreakWin \
     sw/source/uibase/docvw/OverlayRanges \
     sw/source/uibase/docvw/PostItMgr \
     sw/source/uibase/docvw/ShadowOverlayObject \
-    sw/source/uibase/docvw/SidebarScrollBar \
     sw/source/uibase/docvw/SidebarTxtControl \
     sw/source/uibase/docvw/SidebarTxtControlAcc \
+    sw/source/uibase/docvw/SidebarWin \
     sw/source/uibase/docvw/SidebarWinAcc \
     sw/source/uibase/docvw/HeaderFooterWin \
     sw/source/uibase/docvw/edtdd \
@@ -655,6 +650,8 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/ribbar/drawbase \
     sw/source/uibase/ribbar/dselect \
     sw/source/uibase/ribbar/inputwin \
+    sw/source/uibase/ribbar/tblctrl \
+    sw/source/uibase/ribbar/tbxanchr \
     sw/source/uibase/ribbar/workctrl \
     sw/source/uibase/shells/annotsh \
     sw/source/uibase/shells/basesh \
@@ -685,26 +682,17 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/shells/txtattr \
     sw/source/uibase/shells/txtcrsr \
     sw/source/uibase/shells/txtnum \
-    sw/source/uibase/sidebar/StylePresetsPanel \
     sw/source/uibase/sidebar/PageOrientationControl \
-    sw/source/uibase/sidebar/PageOrientationPopup \
     sw/source/uibase/sidebar/PageMarginControl \
-    sw/source/uibase/sidebar/PageMarginPopup \
     sw/source/uibase/sidebar/PageSizeControl \
-    sw/source/uibase/sidebar/PageSizePopup \
     sw/source/uibase/sidebar/PageColumnControl \
-    sw/source/uibase/sidebar/PageColumnPopup \
-    sw/source/uibase/sidebar/PageFormatPanel \
-    sw/source/uibase/sidebar/PageHeaderPanel \
-    sw/source/uibase/sidebar/PageFooterPanel \
-    sw/source/uibase/sidebar/PageStylesPanel \
+    sw/source/uibase/sidebar/PagePropertyPanel \
     sw/source/uibase/sidebar/WrapPropertyPanel \
-    sw/source/uibase/sidebar/ThemePanel \
     sw/source/uibase/sidebar/SwPanelFactory \
+    sw/source/uibase/smartmenu/stmenu \
     sw/source/uibase/table/chartins \
     sw/source/uibase/table/swtablerep \
     sw/source/uibase/table/tablemgr \
-    sw/source/uibase/uitest/uiobject \
     sw/source/uibase/uiview/formatclipboard \
     sw/source/uibase/uiview/pview \
     sw/source/uibase/uiview/scroll \
@@ -734,7 +722,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/uno/unodispatch \
     sw/source/uibase/uno/unodoc \
     sw/source/uibase/uno/unofreg \
-    sw/source/uibase/uno/unomailmerge \
     sw/source/uibase/uno/unomod \
     sw/source/uibase/uno/unomodule \
     sw/source/uibase/uno/unotxdoc \
@@ -748,7 +735,6 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
     sw/source/uibase/utlui/initui \
     sw/source/uibase/utlui/navicfg \
     sw/source/uibase/utlui/navipi \
-    sw/source/uibase/utlui/gotodlg \
     sw/source/uibase/utlui/numfmtlb \
     sw/source/uibase/utlui/prcntfld \
     sw/source/uibase/utlui/shdwcrsr \
@@ -781,8 +767,15 @@ $(eval $(call gb_Library_add_exception_objects,sw,\
 
 ifneq (,$(filter DBCONNECTIVITY,$(BUILD_TYPE)))
 $(eval $(call gb_Library_add_exception_objects,sw,\
+    sw/source/uibase/dbui/dbmgr \
     sw/source/uibase/dbui/dbtree \
-    sw/source/uibase/dbui/mailmergetoolbarcontrols \
+    sw/source/uibase/dbui/dbui \
+    sw/source/uibase/dbui/maildispatcher \
+    sw/source/uibase/dbui/mailmergechildwindow \
+    sw/source/uibase/dbui/mailmergehelper \
+    sw/source/uibase/dbui/mmconfigitem \
+    sw/source/uibase/dbui/swdbtoolsclient \
+    sw/source/uibase/uno/unomailmerge \
 ))
 endif
 

@@ -24,10 +24,9 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sal/config.h>
-
+#include <sot/factory.hxx>
 #include <tools/poly.hxx>
-#include <vcl/bitmapaccess.hxx>
+#include <vcl/bmpacc.hxx>
 #include <vcl/virdev.hxx>
 #include <vcl/wrkwin.hxx>
 #include <svl/solar.hrc>
@@ -39,16 +38,14 @@
 #include <vcl/graphicfilter.hxx>
 #include <vcl/cvtgrf.hxx>
 #include <sax/tools/converter.hxx>
-#include <memory>
+#include <boost/scoped_array.hpp>
 
-#define FORMAT_BMP  "bmp"
-#define FORMAT_GIF  "gif"
-#define FORMAT_JPG  "jpg"
-#define FORMAT_PNG  "png"
+#define FORMAT_BMP  OUString("bmp")
+#define FORMAT_GIF  OUString("gif")
+#define FORMAT_JPG  OUString("jpg")
+#define FORMAT_PNG  OUString("png")
 
-using namespace com::sun::star;
-
-GraphicFilter* XOutBitmap::pGrfFilter = nullptr;
+GraphicFilter* XOutBitmap::pGrfFilter = NULL;
 
 Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, bool bHMirr, bool bVMirr )
 {
@@ -57,13 +54,13 @@ Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, bool bHMirr,
     if( bHMirr || bVMirr )
     {
         const Size& rGlobalSize = aNewAnim.GetDisplaySizePixel();
-        BmpMirrorFlags nMirrorFlags = BmpMirrorFlags::NONE;
+        sal_uIntPtr     nMirrorFlags = 0L;
 
         if( bHMirr )
-            nMirrorFlags |= BmpMirrorFlags::Horizontal;
+            nMirrorFlags |= BMP_MIRROR_HORZ;
 
         if( bVMirr )
-            nMirrorFlags |= BmpMirrorFlags::Vertical;
+            nMirrorFlags |= BMP_MIRROR_VERT;
 
         for( sal_uInt16 i = 0, nCount = aNewAnim.Count(); i < nCount; i++ )
         {
@@ -88,17 +85,17 @@ Animation XOutBitmap::MirrorAnimation( const Animation& rAnimation, bool bHMirr,
     return aNewAnim;
 }
 
-Graphic XOutBitmap::MirrorGraphic( const Graphic& rGraphic, const BmpMirrorFlags nMirrorFlags )
+Graphic XOutBitmap::MirrorGraphic( const Graphic& rGraphic, const sal_uIntPtr nMirrorFlags )
 {
     Graphic aRetGraphic;
 
-    if( nMirrorFlags != BmpMirrorFlags::NONE )
+    if( nMirrorFlags )
     {
         if( rGraphic.IsAnimated() )
         {
             aRetGraphic = MirrorAnimation( rGraphic.GetAnimation(),
-                                           bool( nMirrorFlags & BmpMirrorFlags::Horizontal ),
-                                           bool( nMirrorFlags & BmpMirrorFlags::Vertical ) );
+                                           ( nMirrorFlags & BMP_MIRROR_HORZ ) == BMP_MIRROR_HORZ,
+                                           ( nMirrorFlags & BMP_MIRROR_VERT ) == BMP_MIRROR_VERT );
         }
         else
         {
@@ -125,10 +122,10 @@ Graphic XOutBitmap::MirrorGraphic( const Graphic& rGraphic, const BmpMirrorFlags
 }
 
 sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileName,
-                                 const OUString& rFilterName, const XOutFlags nFlags,
+                                 const OUString& rFilterName, const sal_uIntPtr nFlags,
                                  const Size* pMtfSize_100TH_MM )
 {
-    if( rGraphic.GetType() != GraphicType::NONE )
+    if( rGraphic.GetType() != GRAPHIC_NONE )
     {
         INetURLObject   aURL( rFileName );
         Graphic         aGraphic;
@@ -137,10 +134,10 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
         sal_uInt16          nErr = GRFILTER_FILTERERROR, nFilter = GRFILTER_FORMAT_NOTFOUND;
         bool            bTransparent = rGraphic.IsTransparent(), bAnimated = rGraphic.IsAnimated();
 
-        DBG_ASSERT( aURL.GetProtocol() != INetProtocol::NotValid, "XOutBitmap::WriteGraphic(...): invalid URL" );
+        DBG_ASSERT( aURL.GetProtocol() != INET_PROT_NOT_VALID, "XOutBitmap::WriteGraphic(...): invalid URL" );
 
         // calculate correct file name
-        if( !( nFlags & XOutFlags::DontExpandFilename ) )
+        if( !( nFlags & XOUTBMP_DONT_EXPAND_FILENAME ) )
         {
             OUString aName( aURL.getBase() );
             aName += "_";
@@ -154,24 +151,24 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
         }
 
         // #i121128# use shortcut to write SVG data in original form (if possible)
-        const SvgDataPtr& aSvgDataPtr(rGraphic.getSvgData());
+        const SvgDataPtr aSvgDataPtr(rGraphic.getSvgData());
 
         if(aSvgDataPtr.get()
             && aSvgDataPtr->getSvgDataArrayLength()
             && rFilterName.equalsIgnoreAsciiCase("svg"))
         {
-            if(!(nFlags & XOutFlags::DontAddExtension))
+            if(!(nFlags & XOUTBMP_DONT_ADD_EXTENSION))
             {
                 aURL.setExtension(rFilterName);
             }
 
-            rFileName = aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE);
-            SfxMedium aMedium(aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE), StreamMode::WRITE|StreamMode::SHARE_DENYNONE|StreamMode::TRUNC);
+            rFileName = aURL.GetMainURL(INetURLObject::NO_DECODE);
+            SfxMedium aMedium(aURL.GetMainURL(INetURLObject::NO_DECODE), STREAM_WRITE|STREAM_SHARE_DENYNONE|STREAM_TRUNC);
             SvStream* pOStm = aMedium.GetOutStream();
 
             if(pOStm)
             {
-                pOStm->WriteBytes(aSvgDataPtr->getSvgDataArray().getConstArray(), aSvgDataPtr->getSvgDataArrayLength());
+                pOStm->Write(aSvgDataPtr->getSvgDataArray().get(), aSvgDataPtr->getSvgDataArrayLength());
                 aMedium.Commit();
 
                 if(!aMedium.GetError())
@@ -181,43 +178,25 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
             }
         }
 
-        // Write PDF data in original form if possible.
-        if (rGraphic.getPdfData().hasElements() && rFilterName.equalsIgnoreAsciiCase("pdf"))
-        {
-            if (!(nFlags & XOutFlags::DontAddExtension))
-                aURL.setExtension(rFilterName);
-
-            rFileName = aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE);
-            SfxMedium aMedium(aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE), StreamMode::WRITE|StreamMode::SHARE_DENYNONE|StreamMode::TRUNC);
-            if (SvStream* pOutStream = aMedium.GetOutStream())
-            {
-                uno::Sequence<sal_Int8> aPdfData = rGraphic.getPdfData();
-                pOutStream->WriteBytes(aPdfData.getConstArray(), aPdfData.getLength());
-                aMedium.Commit();
-                if (!aMedium.GetError())
-                    nErr = GRFILTER_OK;
-            }
-        }
-
         if( GRFILTER_OK != nErr )
         {
-            if( ( nFlags & XOutFlags::UseNativeIfPossible ) &&
-                !( nFlags & XOutFlags::MirrorHorz ) &&
-                !( nFlags & XOutFlags::MirrorVert ) &&
-                ( rGraphic.GetType() != GraphicType::GdiMetafile ) && rGraphic.IsLink() )
+            if( ( nFlags & XOUTBMP_USE_NATIVE_IF_POSSIBLE ) &&
+                !( nFlags & XOUTBMP_MIRROR_HORZ ) &&
+                !( nFlags & XOUTBMP_MIRROR_VERT ) &&
+                ( rGraphic.GetType() != GRAPHIC_GDIMETAFILE ) && rGraphic.IsLink() )
             {
                 // try to write native link
                 const GfxLink aGfxLink( ( (Graphic&) rGraphic ).GetLink() );
 
                 switch( aGfxLink.GetType() )
                 {
-                    case GfxLinkType::NativeGif: aExt = FORMAT_GIF; break;
+                    case( GFX_LINK_TYPE_NATIVE_GIF ): aExt = FORMAT_GIF; break;
 
                     // #i15508# added BMP type for better exports (no call/trigger found, prob used in HTML export)
-                    case GfxLinkType::NativeBmp: aExt = FORMAT_BMP; break;
+                    case( GFX_LINK_TYPE_NATIVE_BMP ): aExt = FORMAT_BMP; break;
 
-                    case GfxLinkType::NativeJpg: aExt = FORMAT_JPG; break;
-                    case GfxLinkType::NativePng: aExt = FORMAT_PNG; break;
+                    case( GFX_LINK_TYPE_NATIVE_JPG ): aExt = FORMAT_JPG; break;
+                    case( GFX_LINK_TYPE_NATIVE_PNG ): aExt = FORMAT_PNG; break;
 
                     default:
                     break;
@@ -225,16 +204,16 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
 
                 if( !aExt.isEmpty() )
                 {
-                    if( !(nFlags & XOutFlags::DontAddExtension) )
+                    if( 0 == (nFlags & XOUTBMP_DONT_ADD_EXTENSION))
                         aURL.setExtension( aExt );
-                    rFileName = aURL.GetMainURL( INetURLObject::DecodeMechanism::NONE );
+                    rFileName = aURL.GetMainURL( INetURLObject::NO_DECODE );
 
-                    SfxMedium   aMedium(aURL.GetMainURL(INetURLObject::DecodeMechanism::NONE), StreamMode::WRITE | StreamMode::SHARE_DENYNONE | StreamMode::TRUNC);
+                    SfxMedium   aMedium(aURL.GetMainURL(INetURLObject::NO_DECODE), STREAM_WRITE | STREAM_SHARE_DENYNONE | STREAM_TRUNC);
                     SvStream*   pOStm = aMedium.GetOutStream();
 
                     if( pOStm && aGfxLink.GetDataSize() && aGfxLink.GetData() )
                     {
-                        pOStm->WriteBytes(aGfxLink.GetData(), aGfxLink.GetDataSize());
+                        pOStm->Write( aGfxLink.GetData(), aGfxLink.GetDataSize() );
                         aMedium.Commit();
 
                         if( !aMedium.GetError() )
@@ -249,8 +228,8 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
             OUString  aFilter( rFilterName );
             bool    bWriteTransGrf = ( aFilter.equalsIgnoreAsciiCase( "transgrf" ) ) ||
                                      ( aFilter.equalsIgnoreAsciiCase( "gif" ) ) ||
-                                     ( nFlags & XOutFlags::UseGifIfPossible ) ||
-                                     ( ( nFlags & XOutFlags::UseGifIfSensible ) && ( bAnimated || bTransparent ) );
+                                     ( nFlags & XOUTBMP_USE_GIF_IF_POSSIBLE ) ||
+                                     ( ( nFlags & XOUTBMP_USE_GIF_IF_SENSIBLE ) && ( bAnimated || bTransparent ) );
 
             // get filter and extension
             if( bWriteTransGrf )
@@ -276,29 +255,29 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
                         aGraphic = rGraphic;
                     else
                     {
-                        if( pMtfSize_100TH_MM && ( rGraphic.GetType() != GraphicType::Bitmap ) )
+                        if( pMtfSize_100TH_MM && ( rGraphic.GetType() != GRAPHIC_BITMAP ) )
                         {
-                            ScopedVclPtrInstance< VirtualDevice > pVDev;
-                            const Size    aSize( pVDev->LogicToPixel( *pMtfSize_100TH_MM, MapUnit::Map100thMM ) );
+                            VirtualDevice aVDev;
+                            const Size    aSize( aVDev.LogicToPixel( *pMtfSize_100TH_MM, MAP_100TH_MM ) );
 
-                            if( pVDev->SetOutputSizePixel( aSize ) )
+                            if( aVDev.SetOutputSizePixel( aSize ) )
                             {
-                                const Wallpaper aWallpaper( pVDev->GetBackground() );
+                                const Wallpaper aWallpaper( aVDev.GetBackground() );
                                 const Point     aPt;
 
-                                pVDev->SetBackground( Wallpaper( Color( COL_BLACK ) ) );
-                                pVDev->Erase();
-                                rGraphic.Draw( pVDev.get(), aPt, aSize );
+                                aVDev.SetBackground( Wallpaper( Color( COL_BLACK ) ) );
+                                aVDev.Erase();
+                                rGraphic.Draw( &aVDev, aPt, aSize );
 
-                                const Bitmap aBitmap( pVDev->GetBitmap( aPt, aSize ) );
+                                const Bitmap aBitmap( aVDev.GetBitmap( aPt, aSize ) );
 
-                                pVDev->SetBackground( aWallpaper );
-                                pVDev->Erase();
-                                rGraphic.Draw( pVDev.get(), aPt, aSize );
+                                aVDev.SetBackground( aWallpaper );
+                                aVDev.Erase();
+                                rGraphic.Draw( &aVDev, aPt, aSize );
 
-                                pVDev->SetRasterOp( RasterOp::Xor );
-                                pVDev->DrawBitmap( aPt, aSize, aBitmap );
-                                aGraphic = BitmapEx( aBitmap, pVDev->GetBitmap( aPt, aSize ) );
+                                aVDev.SetRasterOp( ROP_XOR );
+                                aVDev.DrawBitmap( aPt, aSize, aBitmap );
+                                aGraphic = BitmapEx( aBitmap, aVDev.GetBitmap( aPt, aSize ) );
                             }
                             else
                                 aGraphic = rGraphic.GetBitmapEx();
@@ -309,15 +288,15 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
                 }
                 else
                 {
-                    if( pMtfSize_100TH_MM && ( rGraphic.GetType() != GraphicType::Bitmap ) )
+                    if( pMtfSize_100TH_MM && ( rGraphic.GetType() != GRAPHIC_BITMAP ) )
                     {
-                        ScopedVclPtrInstance< VirtualDevice > pVDev;
-                        const Size      aSize( pVDev->LogicToPixel( *pMtfSize_100TH_MM, MapUnit::Map100thMM ) );
+                        VirtualDevice   aVDev;
+                        const Size      aSize( aVDev.LogicToPixel( *pMtfSize_100TH_MM, MAP_100TH_MM ) );
 
-                        if( pVDev->SetOutputSizePixel( aSize ) )
+                        if( aVDev.SetOutputSizePixel( aSize ) )
                         {
-                            rGraphic.Draw( pVDev.get(), Point(), aSize );
-                            aGraphic = pVDev->GetBitmap( Point(), aSize );
+                            rGraphic.Draw( &aVDev, Point(), aSize );
+                            aGraphic =  aVDev.GetBitmap( Point(), aSize );
                         }
                         else
                             aGraphic = rGraphic.GetBitmap();
@@ -327,22 +306,15 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
                 }
 
                 // mirror?
-                if( ( nFlags & XOutFlags::MirrorHorz ) || ( nFlags & XOutFlags::MirrorVert ) )
-                {
-                    BmpMirrorFlags nBmpMirrorFlags = BmpMirrorFlags::NONE;
-                    if( nFlags & XOutFlags::MirrorHorz )
-                      nBmpMirrorFlags |= BmpMirrorFlags::Horizontal;
-                    if( nFlags & XOutFlags::MirrorVert )
-                      nBmpMirrorFlags |= BmpMirrorFlags::Vertical;
-                    aGraphic = MirrorGraphic( aGraphic, nBmpMirrorFlags );
-                }
+                if( ( nFlags & XOUTBMP_MIRROR_HORZ ) || ( nFlags & XOUTBMP_MIRROR_VERT ) )
+                    aGraphic = MirrorGraphic( aGraphic, nFlags );
 
-                if( ( GRFILTER_FORMAT_NOTFOUND != nFilter ) && ( aGraphic.GetType() != GraphicType::NONE ) )
+                if( ( GRFILTER_FORMAT_NOTFOUND != nFilter ) && ( aGraphic.GetType() != GRAPHIC_NONE ) )
                 {
-                    if( !(nFlags & XOutFlags::DontAddExtension) )
+                    if( 0 == (nFlags & XOUTBMP_DONT_ADD_EXTENSION))
                         aURL.setExtension( aExt );
-                    rFileName = aURL.GetMainURL( INetURLObject::DecodeMechanism::NONE );
-                    nErr = ExportGraphic( aGraphic, aURL, rFilter, nFilter );
+                    rFileName = aURL.GetMainURL( INetURLObject::NO_DECODE );
+                    nErr = ExportGraphic( aGraphic, aURL, rFilter, nFilter, NULL );
                 }
             }
         }
@@ -355,29 +327,29 @@ sal_uInt16 XOutBitmap::WriteGraphic( const Graphic& rGraphic, OUString& rFileNam
     }
 }
 
-bool XOutBitmap::GraphicToBase64(const Graphic& rGraphic, OUString& rOUString)
+sal_uLong XOutBitmap::GraphicToBase64(const Graphic& rGraphic, OUString& rOUString)
 {
     SvMemoryStream aOStm;
     OUString aMimeType;
     GfxLink aLink = rGraphic.GetLink();
-    ConvertDataFormat aCvtType;
+    sal_uLong aCvtType;
     switch(  aLink.GetType() )
     {
-        case GfxLinkType::NativeJpg:
-            aCvtType = ConvertDataFormat::JPG;
+        case( GFX_LINK_TYPE_NATIVE_JPG ):
+            aCvtType = CVT_JPG;
             aMimeType = "image/jpeg";
             break;
-        case GfxLinkType::NativePng:
-            aCvtType = ConvertDataFormat::PNG;
+        case( GFX_LINK_TYPE_NATIVE_PNG ):
+            aCvtType = CVT_PNG;
             aMimeType = "image/png";
             break;
-        case GfxLinkType::NativeSvg:
-            aCvtType = ConvertDataFormat::SVG;
+        case( GFX_LINK_TYPE_NATIVE_SVG ):
+            aCvtType = CVT_SVG;
             aMimeType = "image/svg+xml";
             break;
         default:
             // save everything else (including gif) into png
-            aCvtType = ConvertDataFormat::PNG;
+            aCvtType = CVT_PNG;
             aMimeType = "image/png";
             break;
     }
@@ -385,41 +357,23 @@ bool XOutBitmap::GraphicToBase64(const Graphic& rGraphic, OUString& rOUString)
     if ( nErr )
     {
         SAL_WARN("svx", "XOutBitmap::GraphicToBase64() invalid Graphic? error: " << nErr );
-        return false;
+        return nErr;
     }
     aOStm.Seek(STREAM_SEEK_TO_END);
-    css::uno::Sequence<sal_Int8> aOStmSeq( static_cast<sal_Int8 const *>(aOStm.GetData()),aOStm.Tell() );
+    css::uno::Sequence<sal_Int8> aOStmSeq( (sal_Int8*) aOStm.GetData(),aOStm.Tell() );
     OUStringBuffer aStrBuffer;
     ::sax::Converter::encodeBase64(aStrBuffer,aOStmSeq);
-    OUString aEncodedBase64Image = aStrBuffer.makeStringAndClear();
-    if( aLink.GetType() == GfxLinkType::NativeSvg )
-    {
-      sal_Int32 ite(8);
-      sal_Int32 nBufferLength(aOStmSeq.getLength());
-      const sal_Int8* pBuffer = aOStmSeq.getConstArray();
-      css::uno::Sequence<sal_Int8> newTempSeq = aOStmSeq;        // creates new Sequence to remove front 8 bits of garbage and encodes in base64
-      sal_Int8 *pOutBuffer = newTempSeq.getArray();
-      while(ite < nBufferLength)
-      {
-        *pOutBuffer++ = pBuffer[ite];
-        ite++;
-      }
-      ::sax::Converter::encodeBase64(aStrBuffer, newTempSeq);
-      aEncodedBase64Image = aStrBuffer.makeStringAndClear();
-      sal_Int32 SVGFixLength = aEncodedBase64Image.getLength();
-      aEncodedBase64Image = aEncodedBase64Image.replaceAt(SVGFixLength - 12, SVGFixLength, "") + "PC9zdmc+Cg=="; // removes rear 12 bits of garbage and adds svg closing tag in base64
-    }
-    rOUString = aMimeType + ";base64," + aEncodedBase64Image;
-    return true;
+    rOUString = aMimeType + ";base64," + aStrBuffer.makeStringAndClear();
+    return 0;
 }
 
 sal_uInt16 XOutBitmap::ExportGraphic( const Graphic& rGraphic, const INetURLObject& rURL,
                                   GraphicFilter& rFilter, const sal_uInt16 nFormat,
-                                  const css::uno::Sequence< css::beans::PropertyValue >* pFilterData )
+                                  const com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue >* pFilterData )
 {
-    DBG_ASSERT( rURL.GetProtocol() != INetProtocol::NotValid, "XOutBitmap::ExportGraphic(...): invalid URL" );
+    DBG_ASSERT( rURL.GetProtocol() != INET_PROT_NOT_VALID, "XOutBitmap::ExportGraphic(...): invalid URL" );
 
-    SfxMedium   aMedium( rURL.GetMainURL( INetURLObject::DecodeMechanism::NONE ), StreamMode::WRITE | StreamMode::SHARE_DENYNONE | StreamMode::TRUNC );
+    SfxMedium   aMedium( rURL.GetMainURL( INetURLObject::NO_DECODE ), STREAM_WRITE | STREAM_SHARE_DENYNONE | STREAM_TRUNC );
     SvStream*   pOStm = aMedium.GetOutStream();
     sal_uInt16      nRet = GRFILTER_IOERROR;
 
@@ -427,9 +381,9 @@ sal_uInt16 XOutBitmap::ExportGraphic( const Graphic& rGraphic, const INetURLObje
     {
         pGrfFilter = &rFilter;
 
-        nRet = rFilter.ExportGraphic( rGraphic, rURL.GetMainURL( INetURLObject::DecodeMechanism::NONE ), *pOStm, nFormat, pFilterData );
+        nRet = rFilter.ExportGraphic( rGraphic, rURL.GetMainURL( INetURLObject::NO_DECODE ), *pOStm, nFormat, pFilterData );
 
-        pGrfFilter = nullptr;
+        pGrfFilter = NULL;
         aMedium.Commit();
 
         if( aMedium.GetError() && ( GRFILTER_OK == nRet  ) )
@@ -443,6 +397,7 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const sal_uInt8 cThreshold )
 {
     const Size  aSize( rBmp.GetSizePixel() );
     Bitmap      aRetBmp;
+    bool        bRet = false;
 
     if( ( aSize.Width() > 2L ) && ( aSize.Height() > 2L ) )
     {
@@ -454,14 +409,12 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const sal_uInt8 cThreshold )
         // only trimming out pixels that are absolutely white:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8538
 #else	// USE_JAVA
-        if( aWorkBmp.Convert( BmpConversion::N8BitGreys ) )
+        if( aWorkBmp.Convert( BMP_CONVERSION_8BIT_GREYS ) )
 #endif	// USE_JAVA
         {
-            bool bRet = false;
-
             Bitmap              aDstBmp( aSize, 1 );
-            Bitmap::ScopedReadAccess pReadAcc(aWorkBmp);
-            Bitmap::ScopedWriteAccess pWriteAcc(aDstBmp);
+            BitmapReadAccess*   pReadAcc = aWorkBmp.AcquireReadAccess();
+            BitmapWriteAccess*  pWriteAcc = aDstBmp.AcquireWriteAccess();
 
             if( pReadAcc && pWriteAcc )
             {
@@ -554,8 +507,8 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const sal_uInt8 cThreshold )
                 bRet = true;
             }
 
-            pReadAcc.reset();
-            pWriteAcc.reset();
+            aWorkBmp.ReleaseAccess( pReadAcc );
+            aDstBmp.ReleaseAccess( pWriteAcc );
 
             if( bRet )
                 aRetBmp = aDstBmp;
@@ -571,16 +524,15 @@ Bitmap XOutBitmap::DetectEdges( const Bitmap& rBmp, const sal_uInt8 cThreshold )
     }
 
     return aRetBmp;
-}
+};
 
-tools::Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const XOutFlags nFlags,
-                                        const sal_uInt8 cEdgeDetectThreshold,
-                                        const tools::Rectangle* pWorkRectPixel )
+Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const sal_uIntPtr nFlags,
+                                 const sal_uInt8 cEdgeDetectThreshold, const Rectangle* pWorkRectPixel )
 {
     Bitmap      aWorkBmp;
-    tools::Polygon aRetPoly;
+    Polygon     aRetPoly;
     Point       aTmpPoint;
-    tools::Rectangle   aWorkRect( aTmpPoint, rBmp.GetSizePixel() );
+    Rectangle   aWorkRect( aTmpPoint, rBmp.GetSizePixel() );
 
     if( pWorkRectPixel )
         aWorkRect.Intersection( *pWorkRectPixel );
@@ -590,7 +542,7 @@ tools::Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const XOutFlags nFla
     if( ( aWorkRect.GetWidth() > 4 ) && ( aWorkRect.GetHeight() > 4 ) )
     {
         // if the flag is set, we need to detect edges
-        if( nFlags & XOutFlags::ContourEdgeDetect )
+        if( nFlags & XOUTBMP_CONTOUR_EDGEDETECT )
             aWorkBmp = DetectEdges( rBmp, cEdgeDetectThreshold );
         else
             aWorkBmp = rBmp;
@@ -611,13 +563,13 @@ tools::Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const XOutFlags nFla
             const long          nStartY1 = aWorkRect.Top() + 1L;
             const long          nEndY1 = aWorkRect.Bottom();
             const long          nStartY2 = nEndY1 - 1L;
-            std::unique_ptr<Point[]> pPoints1;
-            std::unique_ptr<Point[]> pPoints2;
+            boost::scoped_array<Point> pPoints1;
+            boost::scoped_array<Point> pPoints2;
             long                nX, nY;
             sal_uInt16              nPolyPos = 0;
             const BitmapColor   aBlack = pAcc->GetBestMatchingColor( Color( COL_BLACK ) );
 
-            if( nFlags & XOutFlags::ContourVert )
+            if( nFlags & XOUTBMP_CONTOUR_VERT )
             {
                 pPoints1.reset(new Point[ nWidth ]);
                 pPoints2.reset(new Point[ nWidth ]);
@@ -694,7 +646,7 @@ tools::Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const XOutFlags nFla
 
             const sal_uInt16 nNewSize1 = nPolyPos << 1;
 
-            aRetPoly = tools::Polygon( nPolyPos, pPoints1.get() );
+            aRetPoly = Polygon( nPolyPos, pPoints1.get() );
             aRetPoly.SetSize( nNewSize1 + 1 );
             aRetPoly[ nNewSize1 ] = aRetPoly[ 0 ];
 
@@ -704,19 +656,17 @@ tools::Polygon XOutBitmap::GetCountour( const Bitmap& rBmp, const XOutFlags nFla
             if( ( fFactorX != 0. ) && ( fFactorY != 0. ) )
                 aRetPoly.Scale( fFactorX, fFactorY );
         }
-
-        Bitmap::ReleaseAccess(pAcc);
     }
 
     return aRetPoly;
-}
+};
 
 bool DitherBitmap( Bitmap& rBitmap )
 {
     bool bRet = false;
 
     if( ( rBitmap.GetBitCount() >= 8 ) && ( Application::GetDefaultDevice()->GetColorCount() < 257 ) )
-        bRet = rBitmap.Dither( BmpDitherFlags::Floyd );
+        bRet = rBitmap.Dither( BMP_DITHER_FLOYD );
     else
         bRet = false;
 

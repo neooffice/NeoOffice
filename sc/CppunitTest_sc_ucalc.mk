@@ -7,15 +7,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# This file incorporates work covered by the following license notice:
-# 
-#   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
-#   under the GNU General Public License, Version 3 as allowed by Section 3.3
-#   of the Mozilla Public License, v. 2.0.
-#
-#   You should have received a copy of the GNU General Public License
-#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 #*************************************************************************
 
 $(eval $(call gb_CppunitTest_CppunitTest,sc_ucalc))
@@ -23,7 +14,6 @@ $(eval $(call gb_CppunitTest_CppunitTest,sc_ucalc))
 $(eval $(call gb_CppunitTest_add_exception_objects,sc_ucalc, \
     sc/qa/unit/ucalc \
     sc/qa/unit/ucalc_column \
-    sc/qa/unit/ucalc_condformat \
     sc/qa/unit/ucalc_formula \
     sc/qa/unit/ucalc_pivottable \
     sc/qa/unit/ucalc_sharedformula \
@@ -35,10 +25,12 @@ $(eval $(call gb_CppunitTest_use_library_objects,sc_ucalc, \
 	scqahelper \
 ))
 
+ifeq ($(ENABLE_TELEPATHY),TRUE)
+$(eval $(call gb_CppunitTest_use_libraries,sc_ucalc,tubes))
+endif
+
 $(eval $(call gb_CppunitTest_use_externals,sc_ucalc,\
 	boost_headers \
-    $(call gb_Helper_optional,OPENCL, \
-        clew) \
     icu_headers \
     icui18n \
     icuuc \
@@ -51,10 +43,11 @@ $(eval $(call gb_CppunitTest_use_externals,sc_ucalc,\
 $(eval $(call gb_CppunitTest_use_libraries,sc_ucalc, \
 	$(call gb_Helper_optional,AVMEDIA,avmedia) \
     basegfx \
+    $(call gb_Helper_optional,OPENCL, \
+        clew) \
     comphelper \
     cppu \
     cppuhelper \
-    dbtools \
     drawinglayer \
     editeng \
     for \
@@ -82,6 +75,7 @@ $(eval $(call gb_CppunitTest_use_libraries,sc_ucalc, \
     vbahelper \
     vcl \
     xo \
+	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_CppunitTest_set_include,sc_ucalc,\
@@ -91,10 +85,9 @@ $(eval $(call gb_CppunitTest_set_include,sc_ucalc,\
     $$(INCLUDE) \
 ))
 
-$(eval $(call gb_CppunitTest_use_sdk_api,sc_ucalc))
-
-$(eval $(call gb_CppunitTest_use_custom_headers,sc_ucalc,\
-	officecfg/registry \
+$(eval $(call gb_CppunitTest_use_api,sc_ucalc,\
+    offapi \
+    udkapi \
 ))
 
 $(eval $(call gb_CppunitTest_use_ure,sc_ucalc))

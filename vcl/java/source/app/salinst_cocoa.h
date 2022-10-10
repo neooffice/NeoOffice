@@ -38,11 +38,14 @@
 
 #include <sal/types.h>
 
+#include <com/sun/star/lang/DisposedException.hpp>
+
 #include "java/salinst.h"
 
 SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents( sal_Bool bInNativeDragPrint, sal_Bool bWait );
 SAL_DLLPRIVATE id NSApplication_getModalWindow();
 SAL_DLLPRIVATE sal_Bool VCLInstance_isInDragPrintLock();
+SAL_DLLPRIVATE sal_Bool VCLInstance_isInOrAcquiringDragPrintLock();
 SAL_DLLPRIVATE sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject );
 SAL_DLLPRIVATE sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock );
 SAL_DLLPRIVATE sal_Bool VCLInstance_updateNativeMenus();
@@ -60,5 +63,20 @@ SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURLFromOUString( const 
 SAL_DLLPUBLIC_EXPORT void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL );
 SAL_DLLPUBLIC_EXPORT void Application_releaseSecurityScopedURL( id pSecurityScopedURLs );
 }
+
+#define ACQUIRE_DRAGPRINTLOCK \
+	if ( VCLInstance_setDragPrintLock( sal_True ) ) { \
+		try {
+
+#define RELEASE_DRAGPRINTLOCKIFNEEDED \
+			VCLInstance_setDragPrintLock( sal_False );
+
+#define RELEASE_DRAGPRINTLOCK \
+		} catch ( const ::com::sun::star::lang::DisposedException& ) { \
+		} catch ( ... ) { \
+			NSLog( @"Exception caught while in drag print lock: %s", __PRETTY_FUNCTION__ ); \
+		} \
+		RELEASE_DRAGPRINTLOCKIFNEEDED \
+	}
 
 #endif

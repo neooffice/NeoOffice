@@ -26,6 +26,7 @@
 #include <unotools/tempfile.hxx>
 #include <unotools/localfilehelper.hxx>
 #include <unotools/ucbstreamhelper.hxx>
+#include <ucbhelper/fileidentifierconverter.hxx>
 #include <rtl/ustring.hxx>
 #include <rtl/instance.hxx>
 #include <osl/detail/file.h>
@@ -36,10 +37,6 @@
 
 #ifdef UNX
 #include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
-#elif defined( WNT )
-#include <process.h>
 #endif
 
 using namespace osl;
@@ -61,7 +58,7 @@ OUString getParentName( const OUString& aFileName )
     if( aParent.endsWith(":") && aParent.getLength() == 6 )
         aParent += "/";
 
-    if( aParent.equalsIgnoreAsciiCase( "file://" ) )
+    if( aParent.equalsAscii( "file://" ) )
         aParent = "file:///";
 
     return aParent;
@@ -116,12 +113,20 @@ OUString ConstructTempDir_Impl( const OUString* pParent )
     OUString aName;
     if ( pParent && !pParent->isEmpty() )
     {
+        com::sun::star::uno::Reference<
+            com::sun::star::ucb::XUniversalContentBroker > pBroker(
+                com::sun::star::ucb::UniversalContentBroker::create(
+                    comphelper::getProcessComponentContext() ) );
+
+        // if parent given try to use it
+        OUString aTmp( *pParent );
+
         // test for valid filename
         OUString aRet;
-        if ((osl::FileBase::getSystemPathFromFileURL(*pParent, aRet)
-             == osl::FileBase::E_None)
-            && (osl::FileBase::getFileURLFromSystemPath(aRet, aRet)
-                == osl::FileBase::E_None))
+        ::osl::FileBase::getFileURLFromSystemPath(
+            ::ucbhelper::getSystemPathFromFileURL( pBroker, aTmp ),
+            aRet );
+        if ( !aRet.isEmpty() )
         {
             ::osl::DirectoryItem aItem;
             sal_Int32 i = aRet.getLength();
@@ -169,8 +174,8 @@ class SequentialTokens: public Tokens {
 public:
     explicit SequentialTokens(bool showZero): m_value(0), m_show(showZero) {}
 
-    bool next(OUString * token) override {
-        assert(token != nullptr);
+    bool next(OUString * token) SAL_OVERRIDE {
+        assert(token != 0);
         if (m_value == SAL_MAX_UINT32) {
             return false;
         }
@@ -189,8 +194,8 @@ class UniqueTokens: public Tokens {
 public:
     UniqueTokens(): m_count(0) {}
 
-    bool next(OUString * token) override {
-        assert(token != nullptr);
+    bool next(OUString * token) SAL_OVERRIDE {
+        assert(token != 0);
         // Because of the shared globalValue, no single instance of UniqueTokens
         // is guaranteed to exhaustively test all 36^6 possible values, but stop
         // after that many attempts anyway:
@@ -222,39 +227,11 @@ private:
 
 sal_uInt32 UniqueTokens::globalValue = SAL_MAX_UINT32;
 
-namespace
-{
-    class TempDirCreatedObserver : public DirectoryCreationObserver
-    {
-    public:
-        virtual void DirectoryCreated(const rtl::OUString& aDirectoryUrl) override
-        {
-            File::setAttributes( aDirectoryUrl, osl_File_Attribute_OwnRead |
-                osl_File_Attribute_OwnWrite | osl_File_Attribute_OwnExe );
-        };
-    };
-};
-
 OUString lcl_createName(
     const OUString& rLeadingChars, Tokens & tokens, const OUString* pExtension,
-    const OUString* pParent, bool bDirectory, bool bKeep, bool bLock,
-    bool bCreateParentDirs )
+    const OUString* pParent, bool bDirectory, bool bKeep, bool bLock)
 {
-    OUString aName = ConstructTempDir_Impl( pParent );
-    if ( bCreateParentDirs )
-    {
-        sal_Int32 nOffset = rLeadingChars.lastIndexOf("/");
-        if (-1 != nOffset)
-        {
-            OUString aDirName = aName + OUString( rLeadingChars.getStr(), nOffset );
-            TempDirCreatedObserver observer;
-            FileBase::RC err = Directory::createPath( aDirName, &observer );
-            if ( err != FileBase::E_None && err != FileBase::E_EXIST )
-                return OUString();
-        }
-    }
-    aName += rLeadingChars;
-
+    OUString aName = ConstructTempDir_Impl( pParent ) + rLeadingChars;;
     OUString token;
     while (tokens.next(&token))
     {
@@ -313,31 +290,22 @@ OUString lcl_createName(
 OUString CreateTempName_Impl( const OUString* pParent, bool bKeep, bool bDir = true )
 {
     OUString aEyeCatcher = "lu";
-#ifdef UNX
 #ifdef DBG_UTIL
+#ifdef UNX
     const char* eye = getenv("LO_TESTNAME");
     if(eye)
     {
         aEyeCatcher = OUString(eye, strlen(eye), RTL_TEXTENCODING_ASCII_US);
     }
-#else
-    static const pid_t pid = getpid();
-    static const OUString aPidString = OUString::number(pid);
-    aEyeCatcher += aPidString;
 #endif
-#elif defined(WNT)
-    static const int pid = _getpid();
-    static const OUString aPidString = OUString::number(pid);
-    aEyeCatcher += aPidString;
 #endif
     UniqueTokens t;
-    return lcl_createName( aEyeCatcher, t, nullptr, pParent, bDir, bKeep,
-                           false, false);
+    return lcl_createName(aEyeCatcher, t, 0, pParent, bDir, bKeep, false);
 }
 
 OUString TempFile::CreateTempName()
 {
-    OUString aName(CreateTempName_Impl( nullptr, false ));
+    OUString aName(CreateTempName_Impl( 0, false ));
 
     // convert to file URL
     OUString aTmp;
@@ -347,23 +315,20 @@ OUString TempFile::CreateTempName()
 }
 
 TempFile::TempFile( const OUString* pParent, bool bDirectory )
-    : pStream( nullptr )
+    : pStream( 0 )
     , bIsDirectory( bDirectory )
     , bKillingFileEnabled( false )
 {
     aName = CreateTempName_Impl( pParent, true, bDirectory );
 }
 
-TempFile::TempFile( const OUString& rLeadingChars, bool _bStartWithZero,
-                    const OUString* pExtension, const OUString* pParent,
-                    bool bCreateParentDirs )
-    : pStream( nullptr )
-    , bIsDirectory( false )
+TempFile::TempFile( const OUString& rLeadingChars, bool _bStartWithZero, const OUString* pExtension, const OUString* pParent, bool bDirectory)
+    : pStream( 0 )
+    , bIsDirectory( bDirectory )
     , bKillingFileEnabled( false )
 {
     SequentialTokens t(_bStartWithZero);
-    aName = lcl_createName( rLeadingChars, t, pExtension, pParent, false,
-                            true, true, bCreateParentDirs );
+    aName = lcl_createName(rLeadingChars, t, pExtension, pParent, bDirectory, true, true);
 }
 
 TempFile::~TempFile()
@@ -391,24 +356,30 @@ bool TempFile::IsValid() const
 OUString TempFile::GetFileName() const
 {
     OUString aTmp;
-    FileBase::getSystemPathFromFileURL(aName, aTmp);
+    FileBase::getSystemPathFromFileURL( aName, aTmp );
     return aTmp;
 }
 
-OUString const & TempFile::GetURL()
+OUString TempFile::GetURL()
 {
-    assert(!aName.isEmpty() && "TempFile::GetURL failed: unit test is leaking temp files, add the ucpfile1 component!");
-    return aName;
+    if ( aURL.isEmpty() )
+    {
+        OUString const name(GetFileName());
+        LocalFileHelper::ConvertPhysicalNameToURL(name, aURL);
+        assert((name.isEmpty() || !aURL.isEmpty()) && "TempFile::GetURL failed: unit test is leaking temp files, add the ucpfile1 component!");
+    }
+
+    return aURL;
 }
 
 SvStream* TempFile::GetStream( StreamMode eMode )
 {
-    if (!pStream)
+    if ( !pStream )
     {
-        if (!aName.isEmpty())
-            pStream = new SvFileStream(aName, eMode);
+        if ( !GetURL().isEmpty() )
+            pStream = UcbStreamHelper::CreateStream( aURL, eMode, true /* bFileExists */ );
         else
-            pStream = new SvMemoryStream(nullptr, 0, eMode);
+            pStream = new SvMemoryStream( eMode );
     }
 
     return pStream;
@@ -419,7 +390,7 @@ void TempFile::CloseStream()
     if ( pStream )
     {
         delete pStream;
-        pStream = nullptr;
+        pStream = NULL;
     }
 }
 
@@ -448,10 +419,12 @@ OUString TempFile::SetTempNameBaseDirectory( const OUString &rBaseName )
     if ( bRet )
     {
         // append own internal directory
+        bRet = true;
         OUString &rTempNameBase_Impl = TempNameBase_Impl::get();
-        rTempNameBase_Impl = rBaseName + "/";
+        rTempNameBase_Impl = rBaseName;
+        rTempNameBase_Impl += OUString('/');
 
-        TempFile aBase( nullptr, true );
+        TempFile aBase( NULL, true );
         if ( aBase.IsValid() )
             // use it in case of success
             rTempNameBase_Impl = aBase.aName;

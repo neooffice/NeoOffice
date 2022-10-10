@@ -45,8 +45,8 @@ using namespace com::sun::star::sdbcx;
 IMPLEMENT_SERVICE_INFO(MacabConnection, "com.sun.star.sdbc.drivers.MacabConnection", "com.sun.star.sdbc.Connection")
 
 MacabConnection::MacabConnection(MacabDriver*   _pDriver)
-         : OSubComponent<MacabConnection, MacabConnection_BASE>(static_cast<cppu::OWeakObject*>(_pDriver), this),
-         m_pAddressBook(nullptr),
+         : OSubComponent<MacabConnection, MacabConnection_BASE>((::cppu::OWeakObject*)_pDriver, this),
+         m_pAddressBook(NULL),
          m_pDriver(_pDriver)
 {
     m_pDriver->acquire();
@@ -58,15 +58,15 @@ MacabConnection::~MacabConnection()
         close();
 
     m_pDriver->release();
-    m_pDriver = nullptr;
+    m_pDriver = NULL;
 }
 
 void SAL_CALL MacabConnection::release() throw()
 {
-    release_ChildImpl();
+    relase_ChildImpl();
 }
 
-void MacabConnection::construct(const OUString&, const Sequence< PropertyValue >&)
+void MacabConnection::construct(const OUString&, const Sequence< PropertyValue >&) throw(SQLException)
 {
     osl_atomic_increment( &m_refCount );
 
@@ -80,14 +80,14 @@ void MacabConnection::construct(const OUString&, const Sequence< PropertyValue >
     if (!m_pAddressBook->isValid())
     {
         delete m_pAddressBook;
-        m_pAddressBook = nullptr;
+        m_pAddressBook = NULL;
         throw SQLException();
     }
 #endif	// USE_JAVA
 }
 // XServiceInfo
 
-Reference< XStatement > SAL_CALL MacabConnection::createStatement(  )
+Reference< XStatement > SAL_CALL MacabConnection::createStatement(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -99,7 +99,7 @@ Reference< XStatement > SAL_CALL MacabConnection::createStatement(  )
     return xReturn;
 }
 
-Reference< XPreparedStatement > SAL_CALL MacabConnection::prepareStatement( const OUString& _sSql )
+Reference< XPreparedStatement > SAL_CALL MacabConnection::prepareStatement( const OUString& _sSql ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -111,16 +111,16 @@ Reference< XPreparedStatement > SAL_CALL MacabConnection::prepareStatement( cons
     return xReturn;
 }
 
-Reference< XPreparedStatement > SAL_CALL MacabConnection::prepareCall( const OUString& )
+Reference< XPreparedStatement > SAL_CALL MacabConnection::prepareCall( const OUString& ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
 
     // not implemented yet :-) a task to do
-    return nullptr;
+    return NULL;
 }
 
-OUString SAL_CALL MacabConnection::nativeSQL( const OUString& _sSql )
+OUString SAL_CALL MacabConnection::nativeSQL( const OUString& _sSql ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     // when you need to transform SQL92 to you driver specific you can do it here
@@ -128,24 +128,24 @@ OUString SAL_CALL MacabConnection::nativeSQL( const OUString& _sSql )
     return _sSql;
 }
 
-void SAL_CALL MacabConnection::setAutoCommit( sal_Bool )
+void SAL_CALL MacabConnection::setAutoCommit( sal_Bool ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
     // here you  have to set your commit mode please have a look at the jdbc documentation to get a clear explanation
 }
 
-sal_Bool SAL_CALL MacabConnection::getAutoCommit(  )
+sal_Bool SAL_CALL MacabConnection::getAutoCommit(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
     // you have to distinguish which if you are in autocommit mode or not
     // at normal case true should be fine here
 
-    return true;
+    return sal_True;
 }
 
-void SAL_CALL MacabConnection::commit(  )
+void SAL_CALL MacabConnection::commit(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -153,7 +153,7 @@ void SAL_CALL MacabConnection::commit(  )
     // when you database does support transactions you should commit here
 }
 
-void SAL_CALL MacabConnection::rollback(  )
+void SAL_CALL MacabConnection::rollback(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -161,7 +161,7 @@ void SAL_CALL MacabConnection::rollback(  )
     // same as commit but for the other case
 }
 
-sal_Bool SAL_CALL MacabConnection::isClosed(  )
+sal_Bool SAL_CALL MacabConnection::isClosed(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -169,7 +169,7 @@ sal_Bool SAL_CALL MacabConnection::isClosed(  )
     return MacabConnection_BASE::rBHelper.bDisposed;
 }
 
-Reference< XDatabaseMetaData > SAL_CALL MacabConnection::getMetaData(  )
+Reference< XDatabaseMetaData > SAL_CALL MacabConnection::getMetaData(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -186,7 +186,7 @@ Reference< XDatabaseMetaData > SAL_CALL MacabConnection::getMetaData(  )
     return xMetaData;
 }
 
-void SAL_CALL MacabConnection::setReadOnly( sal_Bool )
+void SAL_CALL MacabConnection::setReadOnly( sal_Bool ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -194,16 +194,16 @@ void SAL_CALL MacabConnection::setReadOnly( sal_Bool )
     // set you connection to readonly
 }
 
-sal_Bool SAL_CALL MacabConnection::isReadOnly(  )
+sal_Bool SAL_CALL MacabConnection::isReadOnly(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
 
     // return if your connection to readonly
-    return false;
+    return sal_False;
 }
 
-void SAL_CALL MacabConnection::setCatalog( const OUString& )
+void SAL_CALL MacabConnection::setCatalog( const OUString& ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -211,7 +211,7 @@ void SAL_CALL MacabConnection::setCatalog( const OUString& )
     // if your database doesn't work with catalogs you go to next method otherwise you know what to do
 }
 
-OUString SAL_CALL MacabConnection::getCatalog(  )
+OUString SAL_CALL MacabConnection::getCatalog(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -221,7 +221,7 @@ OUString SAL_CALL MacabConnection::getCatalog(  )
     return OUString();
 }
 
-void SAL_CALL MacabConnection::setTransactionIsolation( sal_Int32 )
+void SAL_CALL MacabConnection::setTransactionIsolation( sal_Int32 ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -230,7 +230,7 @@ void SAL_CALL MacabConnection::setTransactionIsolation( sal_Int32 )
     // please have a look at @see com.sun.star.sdbc.TransactionIsolation
 }
 
-sal_Int32 SAL_CALL MacabConnection::getTransactionIsolation(  )
+sal_Int32 SAL_CALL MacabConnection::getTransactionIsolation(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
@@ -240,23 +240,23 @@ sal_Int32 SAL_CALL MacabConnection::getTransactionIsolation(  )
     return TransactionIsolation::NONE;
 }
 
-Reference< css::container::XNameAccess > SAL_CALL MacabConnection::getTypeMap(  )
+Reference< ::com::sun::star::container::XNameAccess > SAL_CALL MacabConnection::getTypeMap(  ) throw(SQLException, RuntimeException)
 {
     ::osl::MutexGuard aGuard( m_aMutex );
     checkDisposed(MacabConnection_BASE::rBHelper.bDisposed);
 
     // if your driver has special database types you can return it here
 
-    return nullptr;
+    return NULL;
 }
 
-void SAL_CALL MacabConnection::setTypeMap( const Reference< css::container::XNameAccess >& )
+void SAL_CALL MacabConnection::setTypeMap( const Reference< ::com::sun::star::container::XNameAccess >& ) throw(SQLException, RuntimeException)
 {
     // the other way around
 }
 
 // XCloseable
-void SAL_CALL MacabConnection::close(  )
+void SAL_CALL MacabConnection::close(  ) throw(SQLException, RuntimeException)
 {
     {
         ::osl::MutexGuard aGuard( m_aMutex );
@@ -266,20 +266,20 @@ void SAL_CALL MacabConnection::close(  )
 }
 
 // XWarningsSupplier
-Any SAL_CALL MacabConnection::getWarnings(  )
+Any SAL_CALL MacabConnection::getWarnings(  ) throw(SQLException, RuntimeException)
 {
     // when you collected some warnings -> return it
     return Any();
 }
 
-void SAL_CALL MacabConnection::clearWarnings(  )
+void SAL_CALL MacabConnection::clearWarnings(  ) throw(SQLException, RuntimeException)
 {
     // you should clear your collected warnings here
 }
 
 void MacabConnection::disposing()
 {
-    // we noticed that we should be destroyed in near future so we have to dispose our statements
+    // we noticed that we should be destroied in near future so we have to dispose our statements
     ::osl::MutexGuard aGuard(m_aMutex);
 
     for (OWeakRefArray::iterator i = m_aStatements.begin(); m_aStatements.end() != i; ++i)
@@ -290,13 +290,13 @@ void MacabConnection::disposing()
     }
     m_aStatements.clear();
 
-    if (m_pAddressBook != nullptr)
+    if (m_pAddressBook != NULL)
     {
         delete m_pAddressBook;
-        m_pAddressBook = nullptr;
+        m_pAddressBook = NULL;
     }
 
-    m_xMetaData = css::uno::WeakReference< css::sdbc::XDatabaseMetaData>();
+    m_xMetaData = ::com::sun::star::uno::WeakReference< ::com::sun::star::sdbc::XDatabaseMetaData>();
 
     dispose_ChildImpl();
     MacabConnection_BASE::disposing();

@@ -27,7 +27,12 @@
 #ifndef INCLUDED_LINGUCOMPONENT_SOURCE_SPELLCHECK_SPELL_SSPELLIMP_HXX
 #define INCLUDED_LINGUCOMPONENT_SOURCE_SPELLCHECK_SPELL_SSPELLIMP_HXX
 
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase1.hxx>
+#if defined USE_JAVA && defined MACOSX
+#include <cppuhelper/implbase7.hxx>
+#else	// USE_JAVA && MACOSX
+#include <cppuhelper/implbase6.hxx>
+#endif	// USE_JAVA && MACOSX
 #include <com/sun/star/lang/XComponent.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/lang/XServiceDisplayName.hpp>
@@ -60,7 +65,11 @@ using namespace ::com::sun::star::linguistic2;
 class Hunspell;
 
 class SpellChecker :
-    public cppu::WeakImplHelper
+#if defined USE_JAVA && defined MACOSX
+    public cppu::WeakImplHelper7
+#else	// USE_JAVA && MACOSX
+    public cppu::WeakImplHelper6
+#endif	// USE_JAVA && MACOSX
     <
         XSpellChecker,
         XLinguServiceEventBroadcaster,
@@ -73,32 +82,33 @@ class SpellChecker :
 #endif	// USE_JAVA && MACOSX
     >
 {
-    Sequence< Locale >                 m_aSuppLocales;
-    Hunspell **                        m_aDicts;
-    rtl_TextEncoding *                 m_aDEncs;
-    Locale *                           m_aDLocs;
-    OUString *                         m_aDNames;
-    sal_Int32                          m_nNumDict;
+    Sequence< Locale >                 aSuppLocales;
+    Hunspell **                        aDicts;
+    rtl_TextEncoding *                 aDEncs;
+    Locale *                           aDLocs;
+    OUString *                         aDNames;
+    sal_Int32                          numdict;
 
-    ::comphelper::OInterfaceContainerHelper2       m_aEvtListeners;
-    linguistic::PropertyHelper_Spelling*    m_pPropHelper;
-    bool                                    m_bDisposing;
+    ::cppu::OInterfaceContainerHelper       aEvtListeners;
+    linguistic::PropertyHelper_Spelling*    pPropHelper;
+    bool                                    bDisposing;
 #ifdef USE_JAVA
-    size_t                                  m_nLastNumDicts;
+    size_t                                  mnLastNumDics;
 #ifdef MACOSX
-    CFArrayRef                              m_aLocales;
-    ::std::map< OUString, CFStringRef >     m_aPrimaryNativeLocaleMap;
-    ::std::map< OUString, CFStringRef >     m_aSecondaryNativeLocaleMap;
+    CFArrayRef                              maLocales;
+    ::std::map< OUString, CFStringRef >     maPrimaryNativeLocaleMap;
+    ::std::map< OUString, CFStringRef >     maSecondaryNativeLocaleMap;
 #endif	// MACOSX
 #endif	// USE_JAVA
 
-    SpellChecker(const SpellChecker &) = delete;
-    SpellChecker & operator = (const SpellChecker &) = delete;
+    // disallow copy-constructor and assignment-operator for now
+    SpellChecker(const SpellChecker &);
+    SpellChecker & operator = (const SpellChecker &);
 
     linguistic::PropertyHelper_Spelling&  GetPropHelper_Impl();
     linguistic::PropertyHelper_Spelling&  GetPropHelper()
     {
-        return m_pPropHelper ? *m_pPropHelper : GetPropHelper_Impl();
+        return pPropHelper ? *pPropHelper : GetPropHelper_Impl();
     }
 
     sal_Int16   GetSpellFailure( const OUString &rWord, const Locale &rLocale );
@@ -106,42 +116,42 @@ class SpellChecker :
 
 public:
     SpellChecker();
-    virtual ~SpellChecker() override;
+    virtual ~SpellChecker();
 
     // XSupportedLocales (for XSpellChecker)
-    virtual Sequence< Locale > SAL_CALL getLocales() override;
-    virtual sal_Bool SAL_CALL hasLocale( const Locale& rLocale ) override;
+    virtual Sequence< Locale > SAL_CALL getLocales() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL hasLocale( const Locale& rLocale ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XSpellChecker
-    virtual sal_Bool SAL_CALL isValid( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) override;
-    virtual Reference< XSpellAlternatives > SAL_CALL spell( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) override;
+    virtual sal_Bool SAL_CALL isValid( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) throw(IllegalArgumentException, RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual Reference< XSpellAlternatives > SAL_CALL spell( const OUString& rWord, const Locale& rLocale, const PropertyValues& rProperties ) throw(IllegalArgumentException, RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XLinguServiceEventBroadcaster
-    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) override;
-    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) override;
+    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const Reference< XLinguServiceEventListener >& rxLstnr ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XServiceDisplayName
-    virtual OUString SAL_CALL getServiceDisplayName( const Locale& rLocale ) override;
+    virtual OUString SAL_CALL getServiceDisplayName( const Locale& rLocale ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XInitialization
-    virtual void SAL_CALL initialize( const Sequence< Any >& rArguments ) override;
+    virtual void SAL_CALL initialize( const Sequence< Any >& rArguments ) throw(Exception, RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XComponent
-    virtual void SAL_CALL dispose() override;
-    virtual void SAL_CALL addEventListener( const Reference< XEventListener >& rxListener ) override;
-    virtual void SAL_CALL removeEventListener( const Reference< XEventListener >& rxListener ) override;
+    virtual void SAL_CALL dispose() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL addEventListener( const Reference< XEventListener >& rxListener ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL removeEventListener( const Reference< XEventListener >& rxListener ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName() override;
-    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) override;
-    virtual Sequence< OUString > SAL_CALL getSupportedServiceNames() override;
+    virtual OUString SAL_CALL getImplementationName() throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& rServiceName ) throw(RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual Sequence< OUString > SAL_CALL getSupportedServiceNames() throw(RuntimeException, std::exception) SAL_OVERRIDE;
 
 #if defined USE_JAVA && defined MACOSX
     // XProofreader
-    virtual sal_Bool SAL_CALL isSpellChecker() override;
-    virtual ProofreadingResult SAL_CALL doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& aProperties ) override;
-    virtual void SAL_CALL ignoreRule( const OUString& aRuleIdentifier, const Locale& aLocale ) override;
-    virtual void SAL_CALL resetIgnoreRules() override;
+    virtual sal_Bool SAL_CALL isSpellChecker() throw(RuntimeException) SAL_OVERRIDE;
+    virtual ProofreadingResult SAL_CALL doProofreading( const OUString& aDocumentIdentifier, const OUString& aText, const Locale& aLocale, sal_Int32 nStartOfSentencePosition, sal_Int32 nSuggestedBehindEndOfSentencePosition, const Sequence< PropertyValue >& aProperties ) throw (IllegalArgumentException, RuntimeException) SAL_OVERRIDE;
+    virtual void SAL_CALL ignoreRule( const OUString& aRuleIdentifier, const Locale& aLocale ) throw (IllegalArgumentException, RuntimeException) SAL_OVERRIDE;
+    virtual void SAL_CALL resetIgnoreRules() throw(RuntimeException) SAL_OVERRIDE;
 #endif	// USE_JAVA && MACOSX
 
     static inline OUString  getImplementationName_Static() throw();
@@ -154,7 +164,8 @@ inline OUString SpellChecker::getImplementationName_Static() throw()
 }
 
 void * SAL_CALL SpellChecker_getFactory(
-    char const * pImplName, css::lang::XMultiServiceFactory * pServiceManager);
+    char const * pImplName, css::lang::XMultiServiceFactory * pServiceManager,
+    void *);
 
 #endif
 

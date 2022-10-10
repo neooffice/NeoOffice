@@ -34,11 +34,12 @@
  ************************************************************************/
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <objc/objc-runtime.h>
 #include <postmac.h>
 
-#import "unoexe_cocoa.h"
+#include <osl/objcutils.h>
+
+#include "unoexe_cocoa.h"
 
 static BOOL bNativeGUIDisabled = NO;
 
@@ -108,8 +109,7 @@ void UnoExe_disableNativeGUI()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	DisableNativeGUI *pDisableNativeGUI = [DisableNativeGUI create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pDisableNativeGUI performSelectorOnMainThread:@selector(disableNativeGUI:) withObject:pDisableNativeGUI waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pDisableNativeGUI, @selector(disableNativeGUI:), pDisableNativeGUI, YES );
 
 	[pPool release];
 }

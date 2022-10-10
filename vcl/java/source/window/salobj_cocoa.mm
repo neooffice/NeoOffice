@@ -33,11 +33,8 @@
  *
  ************************************************************************/
 
+#include <osl/objcutils.h>
 #include <tools/gen.hxx>
-
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
 
 #include "salobj_cocoa.h"
 
@@ -111,7 +108,7 @@
 			unsigned int i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSView *pSubview = static_cast< NSView* >( [pSubviews objectAtIndex:i] );
+				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
 				if ( pSubview )
 					[pSubview removeFromSuperview];
 			}
@@ -386,8 +383,7 @@ id VCLChildView_create()
 	if ( pRet )
 	{
 		InitVCLChildView *pInitVCLChildView = [InitVCLChildView childWithView:pRet];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pInitVCLChildView performSelectorOnMainThread:@selector(initialize:) withObject:pInitVCLChildView waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pInitVCLChildView, @selector(initialize:), pInitVCLChildView, YES );
 	}
 
 	[pPool release];
@@ -401,8 +397,7 @@ void VCLChildView_release( id pVCLChildView )
 
 	if ( pVCLChildView )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(destroy:) withObject:pVCLChildView waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( pVCLChildView, @selector(destroy:), pVCLChildView, NO );
 		[pVCLChildView release];
 	}
 
@@ -416,9 +411,8 @@ void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor )
 	if ( pVCLChildView )
 	{
 		// Always force the background to be opaque
-		NSColor *pColor = [NSColor colorWithDeviceRed:( static_cast< float >( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( static_cast< float >( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( static_cast< float >( nColor & 0x000000ff ) / (float)0xff ) alpha:1.0f];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:pColor waitUntilDone:NO modes:pModes];
+		NSColor *pColor = [NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:1.0f];
+		osl_performSelectorOnMainThread( pVCLChildView, @selector(setBackgroundColor:), pColor, NO );
 	}
 
 	[pPool release];
@@ -435,8 +429,7 @@ SAL_DLLPRIVATE void VCLChildView_setBounds( id pVCLChildView, NSRect aBounds )
 		if ( aBounds.size.height < 0 )
 			aBounds.size.height = 0;
 		NSValue *pValue = [NSValue valueWithRect:aBounds];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setBounds:) withObject:pValue waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( pVCLChildView, @selector(setBounds:), pValue, NO );
 	}
 
 	[pPool release];
@@ -453,8 +446,7 @@ SAL_DLLPRIVATE void VCLChildView_setClip( id pVCLChildView, NSRect aClipRect )
 		if ( aClipRect.size.height < 0 )
 			aClipRect.size.height = 0;
 		NSValue *pValue = [NSValue valueWithRect:aClipRect];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< VCLChildView* >( pVCLChildView ) performSelectorOnMainThread:@selector(setClip:) withObject:pValue waitUntilDone:NO modes:pModes];
+		osl_performSelectorOnMainThread( pVCLChildView, @selector(setClip:), pValue, NO );
 	}
 
 	[pPool release];
@@ -467,8 +459,7 @@ void VCLChildView_show( id pVCLChildView, id pParentNSWindow, sal_Bool bShow )
 	if ( pVCLChildView )
 	{
 		ShowVCLChildView *pShowVCLChildView = [ShowVCLChildView childWithView:pVCLChildView parentWindow:pParentNSWindow show:bShow];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pShowVCLChildView performSelectorOnMainThread:@selector(show:) withObject:pShowVCLChildView waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pShowVCLChildView, @selector(show:), pShowVCLChildView, YES );
 	}
 
 	[pPool release];

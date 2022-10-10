@@ -30,6 +30,7 @@
 #include <vcl/print.hxx>
 
 
+
 void ImplFillPrnDlgListBox( const Printer* pPrinter,
                             ListBox* pBox, PushButton* pPropBtn )
 {
@@ -45,8 +46,9 @@ void ImplFillPrnDlgListBox( const Printer* pPrinter,
     }
 
     pBox->Enable( nCount != 0 );
-    pPropBtn->Show( pPrinter->HasSupport( PrinterSupport::SetupDialog ) );
+    pPropBtn->Show( pPrinter->HasSupport( SUPPORT_SETUPDIALOG ) );
 }
+
 
 
 void ImplFreePrnDlgListBox( ListBox* pBox, bool bClear )
@@ -56,10 +58,10 @@ void ImplFreePrnDlgListBox( ListBox* pBox, bool bClear )
 }
 
 
+
 Printer* ImplPrnDlgListBoxSelect( ListBox* pBox, PushButton* pPropBtn,
-                                  Printer* pPrinter, Printer* pTempPrinterIn )
+                                  Printer* pPrinter, Printer* pTempPrinter )
 {
-    VclPtr<Printer> pTempPrinter( pTempPrinterIn );
     if ( pBox->GetSelectEntryPos() != LISTBOX_ENTRY_NOTFOUND )
     {
         const QueueInfo* pInfo = Printer::GetQueueInfo( pBox->GetSelectEntry(), true );
@@ -69,21 +71,21 @@ Printer* ImplPrnDlgListBoxSelect( ListBox* pBox, PushButton* pPropBtn,
             {
                 if ( (pPrinter->GetName() == pInfo->GetPrinterName()) &&
                      (pPrinter->GetDriverName() == pInfo->GetDriver()) )
-                    pTempPrinter = VclPtr<Printer>::Create( pPrinter->GetJobSetup() );
+                    pTempPrinter = new Printer( pPrinter->GetJobSetup() );
                 else
-                    pTempPrinter = VclPtr<Printer>::Create( *pInfo );
+                    pTempPrinter = new Printer( *pInfo );
             }
             else
             {
                 if ( (pTempPrinter->GetName() != pInfo->GetPrinterName()) ||
                      (pTempPrinter->GetDriverName() != pInfo->GetDriver()) )
                 {
-                    pTempPrinter.disposeAndClear();
-                    pTempPrinter = VclPtr<Printer>::Create( *pInfo );
+                    delete pTempPrinter;
+                    pTempPrinter = new Printer( *pInfo );
                 }
             }
 
-            pPropBtn->Enable( pTempPrinter->HasSupport( PrinterSupport::SetupDialog ) );
+            pPropBtn->Enable( pTempPrinter->HasSupport( SUPPORT_SETUPDIALOG ) );
         }
         else
             pPropBtn->Disable();
@@ -95,9 +97,9 @@ Printer* ImplPrnDlgListBoxSelect( ListBox* pBox, PushButton* pPropBtn,
 }
 
 
-Printer* ImplPrnDlgUpdatePrinter( Printer* pPrinter, Printer* pTempPrinterIn )
+
+Printer* ImplPrnDlgUpdatePrinter( Printer* pPrinter, Printer* pTempPrinter )
 {
-    VclPtr<Printer> pTempPrinter( pTempPrinterIn );
     OUString aPrnName;
     if ( pTempPrinter )
         aPrnName = pTempPrinter->GetName();
@@ -106,12 +108,14 @@ Printer* ImplPrnDlgUpdatePrinter( Printer* pPrinter, Printer* pTempPrinterIn )
 
     if ( ! Printer::GetQueueInfo( aPrnName, false ) )
     {
-        pTempPrinter.disposeAndClear();
-        pTempPrinter = VclPtr<Printer>::Create();
+        if ( pTempPrinter )
+            delete pTempPrinter;
+        pTempPrinter = new Printer;
     }
 
     return pTempPrinter;
 }
+
 
 
 void ImplPrnDlgUpdateQueueInfo( ListBox* pBox, QueueInfo& rInfo )
@@ -125,6 +129,7 @@ void ImplPrnDlgUpdateQueueInfo( ListBox* pBox, QueueInfo& rInfo )
 }
 
 
+
 static OUString ImplPrnDlgAddString(const OUString& rStr, const OUString& rAddStr)
 {
     OUString aStr(rStr);
@@ -134,16 +139,18 @@ static OUString ImplPrnDlgAddString(const OUString& rStr, const OUString& rAddSt
 }
 
 
+
 static OUString ImplPrnDlgAddResString(const OUString& rStr, sal_uInt16 nResId)
 {
-    return ImplPrnDlgAddString(rStr, SvtResId(nResId));
+    return ImplPrnDlgAddString(rStr, SVT_RESSTR(nResId));
 }
+
 
 
 OUString ImplPrnDlgGetStatusText( const QueueInfo& rInfo )
 {
     OUString aStr;
-    PrintQueueFlags nStatus = rInfo.GetStatus();
+    sal_uLong nStatus = rInfo.GetStatus();
 
     // Default-Printer
     if ( !rInfo.GetPrinterName().isEmpty() &&
@@ -151,68 +158,69 @@ OUString ImplPrnDlgGetStatusText( const QueueInfo& rInfo )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_DEFPRINTER );
 
     // Status
-    if ( nStatus & PrintQueueFlags::Ready )
+    if ( nStatus & QUEUE_STATUS_READY )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_READY );
-    if ( nStatus & PrintQueueFlags::Paused )
+    if ( nStatus & QUEUE_STATUS_PAUSED )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PAUSED );
-    if ( nStatus & PrintQueueFlags::PendingDeletion )
+    if ( nStatus & QUEUE_STATUS_PENDING_DELETION )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PENDING );
-    if ( nStatus & PrintQueueFlags::Busy )
+    if ( nStatus & QUEUE_STATUS_BUSY )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_BUSY );
-    if ( nStatus & PrintQueueFlags::Initializing )
+    if ( nStatus & QUEUE_STATUS_INITIALIZING )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_INITIALIZING );
-    if ( nStatus & PrintQueueFlags::Waiting )
+    if ( nStatus & QUEUE_STATUS_WAITING )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_WAITING );
-    if ( nStatus & PrintQueueFlags::WarmingUp )
+    if ( nStatus & QUEUE_STATUS_WARMING_UP )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_WARMING_UP );
-    if ( nStatus & PrintQueueFlags::Processing )
+    if ( nStatus & QUEUE_STATUS_PROCESSING )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PROCESSING );
-    if ( nStatus & PrintQueueFlags::Printing )
+    if ( nStatus & QUEUE_STATUS_PRINTING )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PRINTING );
-    if ( nStatus & PrintQueueFlags::Offline )
+    if ( nStatus & QUEUE_STATUS_OFFLINE )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_OFFLINE );
-    if ( nStatus & PrintQueueFlags::Error )
+    if ( nStatus & QUEUE_STATUS_ERROR )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_ERROR );
-    if ( nStatus & PrintQueueFlags::StatusUnknown )
+    if ( nStatus & QUEUE_STATUS_SERVER_UNKNOWN )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_SERVER_UNKNOWN );
-    if ( nStatus & PrintQueueFlags::PaperJam )
+    if ( nStatus & QUEUE_STATUS_PAPER_JAM )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PAPER_JAM );
-    if ( nStatus & PrintQueueFlags::PaperOut )
+    if ( nStatus & QUEUE_STATUS_PAPER_OUT )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PAPER_OUT );
-    if ( nStatus & PrintQueueFlags::ManualFeed )
+    if ( nStatus & QUEUE_STATUS_MANUAL_FEED )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_MANUAL_FEED );
-    if ( nStatus & PrintQueueFlags::PaperProblem )
+    if ( nStatus & QUEUE_STATUS_PAPER_PROBLEM )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PAPER_PROBLEM );
-    if ( nStatus & PrintQueueFlags::IOActive )
+    if ( nStatus & QUEUE_STATUS_IO_ACTIVE )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_IO_ACTIVE );
-    if ( nStatus & PrintQueueFlags::OutputBinFull )
+    if ( nStatus & QUEUE_STATUS_OUTPUT_BIN_FULL )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_OUTPUT_BIN_FULL );
-    if ( nStatus & PrintQueueFlags::TonerLow )
+    if ( nStatus & QUEUE_STATUS_TONER_LOW )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_TONER_LOW );
-    if ( nStatus & PrintQueueFlags::NoToner )
+    if ( nStatus & QUEUE_STATUS_NO_TONER )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_NO_TONER );
-    if ( nStatus & PrintQueueFlags::PagePunt )
+    if ( nStatus & QUEUE_STATUS_PAGE_PUNT )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_PAGE_PUNT );
-    if ( nStatus & PrintQueueFlags::UserIntervention )
+    if ( nStatus & QUEUE_STATUS_USER_INTERVENTION )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_USER_INTERVENTION );
-    if ( nStatus & PrintQueueFlags::OutOfMemory )
+    if ( nStatus & QUEUE_STATUS_OUT_OF_MEMORY )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_OUT_OF_MEMORY );
-    if ( nStatus & PrintQueueFlags::DoorOpen )
+    if ( nStatus & QUEUE_STATUS_DOOR_OPEN )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_DOOR_OPEN );
-    if ( nStatus & PrintQueueFlags::PowerSave )
+    if ( nStatus & QUEUE_STATUS_POWER_SAVE )
         aStr = ImplPrnDlgAddResString( aStr, STR_SVT_PRNDLG_POWER_SAVE );
 
     // Anzahl Jobs
     sal_uLong nJobs = rInfo.GetJobs();
     if ( nJobs && (nJobs != QUEUE_JOBS_DONTKNOW) )
     {
-        OUString aJobStr( SvtResId( STR_SVT_PRNDLG_JOBCOUNT ) );
+        OUString aJobStr( SVT_RESSTR( STR_SVT_PRNDLG_JOBCOUNT ) );
         OUString aJobs( OUString::number( nJobs ) );
         aStr = ImplPrnDlgAddString(aStr, aJobStr.replaceAll("%d", aJobs));
     }
 
     return aStr;
 }
+
 
 
 PrinterSetupDialog::PrinterSetupDialog(vcl::Window* pParent)
@@ -231,37 +239,26 @@ PrinterSetupDialog::PrinterSetupDialog(vcl::Window* pParent)
     // show options button only if link is set
     m_pBtnOptions->Hide();
 
-    mpPrinter       = nullptr;
-    mpTempPrinter   = nullptr;
+    mpPrinter       = NULL;
+    mpTempPrinter   = NULL;
 
     maStatusTimer.SetTimeout( IMPL_PRINTDLG_STATUS_UPDATE );
-    maStatusTimer.SetInvokeHandler( LINK( this, PrinterSetupDialog, ImplStatusHdl ) );
+    maStatusTimer.SetTimeoutHdl( LINK( this, PrinterSetupDialog, ImplStatusHdl ) );
     m_pBtnProperties->SetClickHdl( LINK( this, PrinterSetupDialog, ImplPropertiesHdl ) );
     m_pLbName->SetSelectHdl( LINK( this, PrinterSetupDialog, ImplChangePrinterHdl ) );
 }
 
 
+
 PrinterSetupDialog::~PrinterSetupDialog()
 {
-    disposeOnce();
-}
-
-void PrinterSetupDialog::dispose()
-{
     ImplFreePrnDlgListBox(m_pLbName, false);
-    m_pLbName.clear();
-    m_pBtnProperties.clear();
-    m_pBtnOptions.clear();
-    m_pFiStatus.clear();
-    m_pFiType.clear();
-    m_pFiLocation.clear();
-    m_pFiComment.clear();
-    mpTempPrinter.disposeAndClear();
-    mpPrinter.clear();
-    ModalDialog::dispose();
+    delete mpTempPrinter;
 }
 
-void PrinterSetupDialog::SetOptionsHdl( const Link<Button*,void>& rLink )
+
+
+void PrinterSetupDialog::SetOptionsHdl( const Link& rLink )
 {
     m_pBtnOptions->SetClickHdl( rLink );
     m_pBtnOptions->Show( rLink.IsSet() );
@@ -288,42 +285,52 @@ void PrinterSetupDialog::ImplSetInfo()
 }
 
 
-IMPL_LINK_NOARG(PrinterSetupDialog, ImplStatusHdl, Timer *, void)
+
+IMPL_LINK_NOARG(PrinterSetupDialog, ImplStatusHdl)
 {
     QueueInfo aInfo;
     ImplPrnDlgUpdateQueueInfo(m_pLbName, aInfo);
     m_pFiStatus->SetText( ImplPrnDlgGetStatusText( aInfo ) );
+
+    return 0;
 }
 
 
-IMPL_LINK_NOARG(PrinterSetupDialog, ImplPropertiesHdl, Button*, void)
+
+IMPL_LINK_NOARG(PrinterSetupDialog, ImplPropertiesHdl)
 {
     if ( !mpTempPrinter )
-        mpTempPrinter = VclPtr<Printer>::Create( mpPrinter->GetJobSetup() );
+        mpTempPrinter = new Printer( mpPrinter->GetJobSetup() );
     mpTempPrinter->Setup( this );
+
+    return 0;
 }
 
 
-IMPL_LINK_NOARG(PrinterSetupDialog, ImplChangePrinterHdl, ListBox&, void)
+
+IMPL_LINK_NOARG(PrinterSetupDialog, ImplChangePrinterHdl)
 {
     mpTempPrinter = ImplPrnDlgListBoxSelect(m_pLbName, m_pBtnProperties,
                                              mpPrinter, mpTempPrinter );
     ImplSetInfo();
+    return 0;
 }
 
 
-bool PrinterSetupDialog::EventNotify( NotifyEvent& rNEvt )
+
+bool PrinterSetupDialog::Notify( NotifyEvent& rNEvt )
 {
-    if ( (rNEvt.GetType() == MouseNotifyEvent::GETFOCUS) && IsReallyVisible() )
+    if ( (rNEvt.GetType() == EVENT_GETFOCUS) && IsReallyVisible() )
         ImplStatusHdl( &maStatusTimer );
 
-    return ModalDialog::EventNotify( rNEvt );
+    return ModalDialog::Notify( rNEvt );
 }
+
 
 
 void PrinterSetupDialog::DataChanged( const DataChangedEvent& rDCEvt )
 {
-    if ( rDCEvt.GetType() == DataChangedEventType::PRINTER )
+    if ( rDCEvt.GetType() == DATACHANGED_PRINTER )
     {
         mpTempPrinter = ImplPrnDlgUpdatePrinter( mpPrinter, mpTempPrinter );
         Printer* pPrn;
@@ -339,12 +346,13 @@ void PrinterSetupDialog::DataChanged( const DataChangedEvent& rDCEvt )
 }
 
 
+
 short PrinterSetupDialog::Execute()
 {
     if ( !mpPrinter || mpPrinter->IsPrinting() || mpPrinter->IsJobActive() )
     {
         SAL_WARN( "svtools.dialogs", "PrinterSetupDialog::Execute() - No Printer or printer is printing" );
-        return RET_CANCEL;
+        return sal_False;
     }
 
     Printer::updatePrinters();
@@ -372,7 +380,7 @@ short PrinterSetupDialog::Execute()
         }
 
         Printer *pPreOptionsPrinter = mpPrinter;
-        m_pBtnOptions->GetClickHdl().Call( m_pBtnOptions );
+        m_pBtnOptions->GetClickHdl().Call( this );
 
         // If the printer pointer has changes, the native page setup dialog
         // code in sfx2/source/view/printer.cxx has created a new printer
@@ -391,14 +399,14 @@ short PrinterSetupDialog::Execute()
         // Fix bug 3433 by forcing focus back to this dialog's parent window
         Window *pParent = GetParent();
         if ( pParent )
-            pParent->ToTop( ToTopFlags::ForegroundTask );
+            pParent->ToTop( TOTOP_FOREGROUNDTASK );
     }
     else
     {
         if ( mpTempPrinter )
-            nRet = mpTempPrinter->Setup( this );
+            nRet = mpTempPrinter->Setup();
         else
-            nRet = mpPrinter->Setup( this );
+            nRet = mpPrinter->Setup();
     }
 #else	// USE_JAVA && MACOSX
     // start dialog
@@ -406,7 +414,7 @@ short PrinterSetupDialog::Execute()
 #endif	// USE_JAVA && MACOSX
 
     // update data if the dialog was terminated with OK
-    if ( nRet == RET_OK )
+    if ( nRet == sal_True )
     {
         if ( mpTempPrinter )
             mpPrinter->SetPrinterProps( mpTempPrinter );

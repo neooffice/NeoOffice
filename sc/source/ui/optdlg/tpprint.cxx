@@ -48,38 +48,25 @@ ScTpPrintOptions::ScTpPrintOptions( vcl::Window*           pParent,
 
 ScTpPrintOptions::~ScTpPrintOptions()
 {
-    disposeOnce();
 }
 
-void ScTpPrintOptions::dispose()
-{
-    m_pSkipEmptyPagesCB.clear();
-    m_pSelectedSheetsCB.clear();
-    m_pForceBreaksCB.clear();
-    SfxTabPage::dispose();
-}
-
-#if defined USE_JAVA && defined MACOSX
-VclPtr<SfxTabPage> ScTpPrintOptions::Create( vcl::Window* /* pParent */, const SfxItemSet* /* rAttrSet */ )
-#else	// USE_JAVA && MACOSX
-VclPtr<SfxTabPage> ScTpPrintOptions::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
-#endif	// USE_JAVA && MACOSX
+SfxTabPage* ScTpPrintOptions::Create( vcl::Window* pParent, const SfxItemSet* rAttrSet )
 {
 #if defined USE_JAVA && defined MACOSX
-    // Do not display the printer settings dialog as the settings will not be
-    // used in print jobs
-    return nullptr;
+	// Do not display the printer settings dialog as the settings will not be
+	// used in print jobs
+	return NULL;
 #else	// USE_JAVA && MACOSX
-    return VclPtr<ScTpPrintOptions>::Create( pParent, *rAttrSet );
+    return new ScTpPrintOptions( pParent, *rAttrSet );
 #endif	// USE_JAVA && MACOSX
 }
 
-DeactivateRC ScTpPrintOptions::DeactivatePage( SfxItemSet* pSetP )
+int ScTpPrintOptions::DeactivatePage( SfxItemSet* pSetP )
 {
     if ( pSetP )
         FillItemSet( pSetP );
 
-    return DeactivateRC::LeavePage;
+    return LEAVE_PAGE;
 }
 
 void ScTpPrintOptions::Reset( const SfxItemSet* rCoreSet )
@@ -126,7 +113,7 @@ bool ScTpPrintOptions::FillItemSet( SfxItemSet* rCoreAttrs )
         aOpt.SetSkipEmpty( m_pSkipEmptyPagesCB->IsChecked() );
         aOpt.SetAllSheets( !m_pSelectedSheetsCB->IsChecked() );
         aOpt.SetForceBreaks( m_pForceBreaksCB->IsChecked() );
-        rCoreAttrs->Put( ScTpPrintItem( aOpt ) );
+        rCoreAttrs->Put( ScTpPrintItem( SID_SCPRINTOPTIONS, aOpt ) );
         if ( bSelectedSheetsChanged )
         {
             rCoreAttrs->Put( SfxBoolItem( SID_PRINT_SELECTEDSHEET, m_pSelectedSheetsCB->IsChecked() ) );

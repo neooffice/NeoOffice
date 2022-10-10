@@ -30,19 +30,16 @@
 #include <limits.h>
 #include <vector>
 #include <osl/endian.h>
-#include <osl/file.hxx>
 #include <tools/solar.h>
 #include <rtl/math.hxx>
 
 #include <comphelper/classids.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
-#include <unotools/configmgr.hxx>
 #include <unotools/streamwrap.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/string.hxx>
 #include <comphelper/seqstream.hxx>
 #include <comphelper/storagehelper.hxx>
-#include <comphelper/sequence.hxx>
 #include <sot/exchange.hxx>
 #include <sot/storinfo.hxx>
 #include <vcl/cvtgrf.hxx>
@@ -58,6 +55,7 @@
 #include <tools/debug.hxx>
 #include <tools/zcodec.hxx>
 #include <unotools/ucbstreamhelper.hxx>
+#include <unotools/localfilehelper.hxx>
 #include <filter/msfilter/escherex.hxx>
 #include <basegfx/range/b2drange.hxx>
 #include <com/sun/star/container/XIdentifierContainer.hpp>
@@ -71,7 +69,7 @@
 #include <vcl/graphicfilter.hxx>
 #include <tools/urlobj.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/bitmapaccess.hxx>
+#include <vcl/bmpacc.hxx>
 #include <sot/storage.hxx>
 #include <sfx2/docfac.hxx>
 #include <sfx2/docfilt.hxx>
@@ -110,11 +108,11 @@
 #include <editeng/colritem.hxx>
 #include <svx/sxekitm.hxx>
 #include <editeng/bulletitem.hxx>
+#include <svx/polysc3d.hxx>
 #include <svx/extrud3d.hxx>
 #include "svx/svditer.hxx"
 #include <svx/xpoly.hxx>
 #include "svx/xattr.hxx"
-#include <filter/msfilter/classids.hxx>
 #include <filter/msfilter/msdffimp.hxx>
 #include <editeng/outliner.hxx>
 #include <editeng/outlobj.hxx>
@@ -145,8 +143,8 @@
 #include <rtl/strbuf.hxx>
 #include <rtl/ustring.hxx>
 #include <svtools/embedhlp.hxx>
-#include <memory>
-#include <o3tl/make_unique.hxx>
+#include <boost/scoped_array.hpp>
+#include <boost/scoped_ptr.hpp>
 
 using namespace ::com::sun::star    ;
 using namespace ::com::sun::star::drawing;
@@ -159,23 +157,13 @@ using namespace container           ;
 static sal_uInt32 nMSOleObjCntr = 0;
 #define MSO_OLE_Obj "MSO_OLE_Obj"
 
-struct SvxMSDffBLIPInfo
-{
-    sal_uLong  nFilePos;    ///< offset of the BLIP in data strem
-    explicit SvxMSDffBLIPInfo(sal_uLong nFPos)
-        : nFilePos(nFPos)
-    {
-    }
-};
-
-/// the following will be sorted by the order of their appearance:
-struct SvxMSDffBLIPInfos : public std::vector<SvxMSDffBLIPInfo> {};
-
 /************************************************************************/
 void Impl_OlePres::Write( SvStream & rStm )
 {
-    WriteClipboardFormat( rStm, SotClipboardFormatId::GDIMETAFILE );
-    rStm.WriteInt32( 4 );       // a TargetDevice that's always empty
+    WriteClipboardFormat( rStm, FORMAT_GDIMETAFILE );
+    rStm.WriteInt32( (nJobLen +4) );       // a TargetDevice that's always empty
+    if( nJobLen )
+        rStm.Write( pJob, nJobLen );
     rStm.WriteUInt32( nAspect );
     rStm.WriteInt32( -1 );      //L-Index always -1
     rStm.WriteInt32( nAdvFlags );
@@ -185,7 +173,7 @@ void Impl_OlePres::Write( SvStream & rStm )
     sal_uLong nPos = rStm.Tell();
     rStm.WriteInt32( 0 );
 
-    if( nFormat == SotClipboardFormatId::GDIMETAFILE && pMtf )
+    if( GetFormat() == FORMAT_GDIMETAFILE && pMtf )
     {
         // Always to 1/100 mm, until Mtf-Solution found
         // Assumption (no scaling, no origin translation)
@@ -196,15 +184,15 @@ void Impl_OlePres::Write( SvStream & rStm )
         DBG_ASSERT( pMtf->GetPrefMapMode().GetOrigin() == Point(),
                     "Origin-Verschiebung im Mtf" );
         MapUnit nMU = pMtf->GetPrefMapMode().GetMapUnit();
-        if( MapUnit::Map100thMM != nMU )
+        if( MAP_100TH_MM != nMU )
         {
             Size aPrefS( pMtf->GetPrefSize() );
             Size aS( aPrefS );
-            aS = OutputDevice::LogicToLogic( aS, nMU, MapUnit::Map100thMM );
+            aS = OutputDevice::LogicToLogic( aS, nMU, MAP_100TH_MM );
 
             pMtf->Scale( Fraction( aS.Width(), aPrefS.Width() ),
                          Fraction( aS.Height(), aPrefS.Height() ) );
-            pMtf->SetPrefMapMode( MapUnit::Map100thMM );
+            pMtf->SetPrefMapMode( MAP_100TH_MM );
             pMtf->SetPrefSize( aS );
         }
         WriteWindowMetafileBits( rStm, *pMtf );
@@ -215,41 +203,31 @@ void Impl_OlePres::Write( SvStream & rStm )
     }
     sal_uLong nEndPos = rStm.Tell();
     rStm.Seek( nPos );
-    rStm.WriteUInt32( nEndPos - nPos - 4 );
+    rStm.WriteUInt32( (nEndPos - nPos - 4) );
     rStm.Seek( nEndPos );
 }
 
 DffPropertyReader::DffPropertyReader( const SvxMSDffManager& rMan )
     : rManager(rMan)
-    , pDefaultPropSet(nullptr)
+    , pDefaultPropSet(NULL)
     , mnFix16Angle(0)
     , mbRotateGranientFillWithAngle(false)
 {
     InitializePropSet( DFF_msofbtOPT );
 }
 
-namespace
-{
-    bool checkSeek(SvStream &rSt, sal_uInt32 nOffset)
-    {
-        const sal_uInt64 nMaxSeek(rSt.Tell() + rSt.remainingSize());
-        return (nOffset <= nMaxSeek && rSt.Seek(nOffset) == nOffset);
-    }
-}
-
 void DffPropertyReader::SetDefaultPropSet( SvStream& rStCtrl, sal_uInt32 nOffsDgg ) const
 {
-    const_cast<DffPropertyReader*>(this)->pDefaultPropSet.reset();
+    delete pDefaultPropSet;
     sal_uInt32 nMerk = rStCtrl.Tell();
-    bool bOk = checkSeek(rStCtrl, nOffsDgg);
+    rStCtrl.Seek( nOffsDgg );
     DffRecordHeader aRecHd;
-    if (bOk)
-        bOk = ReadDffRecordHeader( rStCtrl, aRecHd );
-    if (bOk && aRecHd.nRecType == DFF_msofbtDggContainer)
+    ReadDffRecordHeader( rStCtrl, aRecHd );
+    if ( aRecHd.nRecType == DFF_msofbtDggContainer )
     {
-        if ( SvxMSDffManager::SeekToRec( rStCtrl, DFF_msofbtOPT, aRecHd.GetRecEndFilePos() ) )
+        if ( rManager.SeekToRec( rStCtrl, DFF_msofbtOPT, aRecHd.GetRecEndFilePos() ) )
         {
-            const_cast<DffPropertyReader*>(this)->pDefaultPropSet.reset( new DffPropSet );
+            ( (DffPropertyReader*) this )->pDefaultPropSet = new DffPropSet;
             ReadDffPropSet( rStCtrl, *pDefaultPropSet );
         }
     }
@@ -267,36 +245,36 @@ void DffPropertyReader::ReadPropSet( SvStream& rIn, void* pClientData ) const
 
     if ( IsProperty( DFF_Prop_hspMaster ) )
     {
-        if ( rManager.SeekToShape( rIn, pClientData, GetPropertyValue( DFF_Prop_hspMaster, 0 ) ) )
+        if ( rManager.SeekToShape( rIn, pClientData, GetPropertyValue( DFF_Prop_hspMaster ) ) )
         {
             DffRecordHeader aRecHd;
-            bool bOk = ReadDffRecordHeader(rIn, aRecHd);
-            if (bOk && SvxMSDffManager::SeekToRec(rIn, DFF_msofbtOPT, aRecHd.GetRecEndFilePos()))
+            ReadDffRecordHeader( rIn, aRecHd );
+            if ( rManager.SeekToRec( rIn, DFF_msofbtOPT, aRecHd.GetRecEndFilePos() ) )
             {
                 rIn |= (DffPropertyReader&)*this;
             }
         }
     }
 
-    const_cast<DffPropertyReader*>(this)->mnFix16Angle = Fix16ToAngle( GetPropertyValue( DFF_Prop_Rotation, 0 ) );
+    ( (DffPropertyReader*) this )->mnFix16Angle = Fix16ToAngle( GetPropertyValue( DFF_Prop_Rotation, 0 ) );
 
 #ifdef DBG_CUSTOMSHAPE
 
     OUString aURLStr;
 
-    if( osl::FileBase::getFileURLFromSystemPath( OUString("d:\\ashape.dbg"), aURLStr ) == osl::FileBase::E_None )
+    if( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( OUString("d:\\ashape.dbg"), aURLStr ) )
     {
-        std::unique_ptr<SvStream> xOut(::utl::UcbStreamHelper::CreateStream( aURLStr, StreamMode::WRITE ));
+        boost::scoped_ptr<SvStream> pOut(::utl::UcbStreamHelper::CreateStream( aURLStr, STREAM_WRITE ));
 
-        if( xOut )
+        if( pOut )
         {
-            xOut->Seek( STREAM_SEEK_TO_END );
+            pOut->Seek( STREAM_SEEK_TO_END );
 
             if ( IsProperty( DFF_Prop_adjustValue ) || IsProperty( DFF_Prop_pVertices ) )
             {
-                xOut->WriteLine( "" );
+                pOut->WriteLine( "" );
                 OString aString("ShapeId: " + OString::number(nShapeId));
-                xOut->WriteLine(aString);
+                pOut->WriteLine(aString);
             }
             for ( sal_uInt32 i = DFF_Prop_adjustValue; i <= DFF_Prop_adjust10Value; i++ )
             {
@@ -304,7 +282,7 @@ void DffPropertyReader::ReadPropSet( SvStream& rIn, void* pClientData ) const
                 {
                     OString aString("Prop_adjustValue" + OString::number( ( i - DFF_Prop_adjustValue ) + 1 ) +
                                     ":" + OString::number(GetPropertyValue(i)) );
-                    xOut->WriteLine(aString);
+                    pOut->WriteLine(aString);
                 }
             }
             sal_Int32 i;
@@ -319,15 +297,15 @@ void DffPropertyReader::ReadPropSet( SvStream& rIn, void* pClientData ) const
                         sal_Int32 nLen = (sal_Int32)GetPropertyValue( i );
                         if ( nLen )
                         {
-                            xOut->WriteLine( "" );
+                            pOut->WriteLine( "" );
                             OStringBuffer aDesc("Property:" + OString::number(i) +
                                                 "  Size:" + OString::number(nLen));
-                            xOut->WriteLine(aDesc.makeStringAndClear());
+                            pOut->WriteLine(aDesc.makeStringAndClear());
                             sal_Int16   nNumElem, nNumElemMem, nNumSize;
                             rIn >> nNumElem >> nNumElemMem >> nNumSize;
                             aDesc.append("Entries: " + OString::number(nNumElem) +
                                          "  Size:" + OString::number(nNumSize));
-                            xOut->WriteLine(aDesc.makeStringAndClear());
+                            pOut->WriteLine(aDesc.makeStringAndClear());
                             if ( nNumSize < 0 )
                                 nNumSize = ( ( -nNumSize ) >> 2 );
                             if ( !nNumSize )
@@ -344,21 +322,21 @@ void DffPropertyReader::ReadPropSet( SvStream& rIn, void* pClientData ) const
                                             sal_uInt8 nVal;
                                             rIn >> nVal;
                                             if ( ( nVal >> 4 ) > 9 )
-                                                *xOut << (sal_uInt8)( ( nVal >> 4 ) + 'A' - 10 );
+                                                *pOut << (sal_uInt8)( ( nVal >> 4 ) + 'A' - 10 );
                                             else
-                                                *xOut << (sal_uInt8)( ( nVal >> 4 ) + '0' );
+                                                *pOut << (sal_uInt8)( ( nVal >> 4 ) + '0' );
 
                                             if ( ( nVal & 0xf ) > 9 )
-                                                *xOut << (sal_uInt8)( ( nVal & 0xf ) + 'A' - 10 );
+                                                *pOut << (sal_uInt8)( ( nVal & 0xf ) + 'A' - 10 );
                                             else
-                                                *xOut << (sal_uInt8)( ( nVal & 0xf ) + '0' );
+                                                *pOut << (sal_uInt8)( ( nVal & 0xf ) + '0' );
 
                                             nLen--;
                                         }
                                     }
-                                    *xOut << (char)( ' ' );
+                                    *pOut << (char)( ' ' );
                                 }
-                                xOut->WriteLine( OString() );
+                                pOut->WriteLine( OString() );
                             }
                         }
                     }
@@ -366,7 +344,7 @@ void DffPropertyReader::ReadPropSet( SvStream& rIn, void* pClientData ) const
                     {
                         OString aString("Property" + OString::number(i) +
                                         ":" + OString::number(GetPropertyValue(i)));
-                        xOut->WriteLine(aString);
+                        pOut->WriteLine(aString);
                     }
                 }
             }
@@ -379,7 +357,7 @@ void DffPropertyReader::ReadPropSet( SvStream& rIn, void* pClientData ) const
 }
 
 
-sal_Int32 DffPropertyReader::Fix16ToAngle( sal_Int32 nContent )
+sal_Int32 DffPropertyReader::Fix16ToAngle( sal_Int32 nContent ) const
 {
     sal_Int32 nAngle = 0;
     if ( nContent )
@@ -392,13 +370,14 @@ sal_Int32 DffPropertyReader::Fix16ToAngle( sal_Int32 nContent )
 
 DffPropertyReader::~DffPropertyReader()
 {
+    delete pDefaultPropSet;
 }
+
 
 
 SvStream& operator>>( SvStream& rIn, SvxMSDffConnectorRule& rRule )
 {
-    sal_uInt32 nRuleId;
-    rIn.ReadUInt32( nRuleId )
+    rIn.ReadUInt32( rRule.nRuleId )
        .ReadUInt32( rRule.nShapeA )
        .ReadUInt32( rRule.nShapeB )
        .ReadUInt32( rRule.nShapeC )
@@ -414,8 +393,8 @@ SvxMSDffSolverContainer::SvxMSDffSolverContainer()
 
 SvxMSDffSolverContainer::~SvxMSDffSolverContainer()
 {
-    for(SvxMSDffConnectorRule* i : aCList) {
-        delete i;
+    for( size_t i = 0, n = aCList.size(); i < n; ++i ) {
+        delete aCList[ i ];
     }
     aCList.clear();
 }
@@ -423,15 +402,14 @@ SvxMSDffSolverContainer::~SvxMSDffSolverContainer()
 SvStream& ReadSvxMSDffSolverContainer( SvStream& rIn, SvxMSDffSolverContainer& rContainer )
 {
     DffRecordHeader aHd;
-    bool bOk = ReadDffRecordHeader( rIn, aHd );
-    if (bOk && aHd.nRecType == DFF_msofbtSolverContainer)
+    ReadDffRecordHeader( rIn, aHd );
+    if ( aHd.nRecType == DFF_msofbtSolverContainer )
     {
         DffRecordHeader aCRule;
         auto nEndPos = DffPropSet::SanitizeEndPos(rIn, aHd.GetRecEndFilePos());
-        while ( rIn.good() && ( rIn.Tell() < nEndPos ) )
+        while ( ( rIn.GetError() == 0 ) && ( rIn.Tell() < nEndPos ) )
         {
-            if (!ReadDffRecordHeader(rIn, aCRule))
-                break;
+            ReadDffRecordHeader( rIn, aCRule );
             if ( aCRule.nRecType == DFF_msofbtConnectorRule )
             {
                 SvxMSDffConnectorRule* pRule = new SvxMSDffConnectorRule;
@@ -471,17 +449,18 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                 }
                 if ( pO )
                 {
+                    Any aAny;
                     SdrGluePoint aGluePoint;
                     Reference< XShape > aXShape( pO->getUnoShape(), UNO_QUERY );
                     Reference< XShape > aXConnector( pPtr->pCObj->getUnoShape(), UNO_QUERY );
                     SdrGluePointList* pList = pO->ForceGluePointList();
 
+                    bool bValidGluePoint = false;
                     sal_Int32 nId = nC;
-                    SdrInventor nInventor = pO->GetObjInventor();
+                    sal_uInt32 nInventor = pO->GetObjInventor();
 
-                    if( nInventor == SdrInventor::Default )
+                    if( nInventor == SdrInventor )
                     {
-                        bool bValidGluePoint = false;
                         sal_uInt32 nObjId = pO->GetObjIdentifier();
                         switch( nObjId )
                         {
@@ -491,6 +470,8 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                             case OBJ_TEXT :
                             case OBJ_PAGE :
                             case OBJ_TEXTEXT :
+                            case OBJ_wegFITTEXT :
+                            case OBJ_wegFITALLTEXT :
                             case OBJ_TITLETEXT :
                             case OBJ_OUTLINETEXT :
                             {
@@ -507,16 +488,16 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                 switch( nC )
                                 {
                                     case 0 :
-                                        nId = 0;    // SdrAlign::VERT_TOP;
+                                        nId = 0;    // SDRVERTALIGN_TOP;
                                     break;
                                     case 1 :
-                                        nId = 3;    // SdrAlign::HORZ_RIGHT;
+                                        nId = 3;    // SDRHORZALIGN_RIGHT;
                                     break;
                                     case 2 :
-                                        nId = 2;    // SdrAlign::VERT_BOTTOM;
+                                        nId = 2;    // SDRVERTALIGN_BOTTOM;
                                     break;
                                     case 3 :
-                                        nId = 1; // SdrAlign::HORZ_LEFT;
+                                        nId = 1; // SDRHORZALIGN_LEFT;
                                     break;
                                 }
                                 if ( nId <= 3 )
@@ -550,17 +531,17 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                         sal_uInt16 k, j, nPolySize = aPolyPoly.Count();
                                         if ( nPolySize )
                                         {
-                                            tools::Rectangle aBoundRect( aPolyPoly.GetBoundRect() );
+                                            Rectangle aBoundRect( aPolyPoly.GetBoundRect() );
                                             if ( aBoundRect.GetWidth() && aBoundRect.GetHeight() )
                                             {
                                                 sal_uInt32  nPointCount = 0;
                                                 for ( k = 0; bNotFound && ( k < nPolySize ); k++ )
                                                 {
-                                                    const tools::Polygon& rPolygon = aPolyPoly.GetObject( k );
+                                                    const Polygon& rPolygon = aPolyPoly.GetObject( k );
                                                     for ( j = 0; bNotFound && ( j < rPolygon.GetSize() ); j++ )
                                                     {
                                                         PolyFlags eFlags = rPolygon.GetFlags( j );
-                                                        if ( eFlags == PolyFlags::Normal )
+                                                        if ( eFlags == POLY_NORMAL )
                                                         {
                                                             if ( nC == nPointCount )
                                                             {
@@ -579,8 +560,8 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                                                 fYRel *= 10000;
                                                                 aGluePoint.SetPos( Point( (sal_Int32)fXRel, (sal_Int32)fYRel ) );
                                                                 aGluePoint.SetPercent( true );
-                                                                aGluePoint.SetAlign( SdrAlign::VERT_TOP | SdrAlign::HORZ_LEFT );
-                                                                aGluePoint.SetEscDir( SdrEscapeDirection::SMART );
+                                                                aGluePoint.SetAlign( SDRVERTALIGN_TOP | SDRHORZALIGN_LEFT );
+                                                                aGluePoint.SetEscDir( SDRESC_SMART );
                                                                 nId = (sal_Int32)((*pList)[ pList->Insert( aGluePoint ) ].GetId() + 3 );
                                                                 bNotFound = false;
                                                             }
@@ -606,7 +587,7 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                 const OUString sPath( "Path" );
                                 const OUString sGluePointType( "GluePointType" );
                                 sal_Int16 nGluePointType = EnhancedCustomShapeGluePointType::SEGMENTS;
-                                css::uno::Any* pAny = aGeometryItem.GetPropertyValueByName( sPath, sGluePointType );
+                                com::sun::star::uno::Any* pAny = aGeometryItem.GetPropertyValueByName( sPath, sGluePointType );
                                 if ( pAny )
                                     *pAny >>= nGluePointType;
                                 else
@@ -642,16 +623,16 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                     switch( nC )
                                     {
                                         case 0 :
-                                            nId = 0;    // SdrAlign::VERT_TOP;
+                                            nId = 0;    // SDRVERTALIGN_TOP;
                                         break;
                                         case 1 :
-                                            nId = 3;    // SdrAlign::HORZ_RIGHT;
+                                            nId = 3;    // SDRHORZALIGN_RIGHT;
                                         break;
                                         case 2 :
-                                            nId = 2;    // SdrAlign::VERT_BOTTOM;
+                                            nId = 2;    // SDRVERTALIGN_BOTTOM;
                                         break;
                                         case 3 :
-                                            nId = 1; // SdrAlign::HORZ_LEFT;
+                                            nId = 1; // SDRHORZALIGN_LEFT;
                                         break;
                                     }
                                     if ( nId <= 3 )
@@ -663,7 +644,7 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                     const OUString sCoordinates( "Coordinates" );
 
                                     sal_uInt32 k, nPt = nC;
-                                    css::uno::Sequence< css::drawing::EnhancedCustomShapeSegment > aSegments;
+                                    com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeSegment > aSegments;
                                     pAny = aGeometryItem.GetPropertyValueByName( sPath, sSegments );
                                     if ( pAny )
                                     {
@@ -723,17 +704,17 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                     pAny = aGeometryItem.GetPropertyValueByName( sPath, sCoordinates );
                                     if ( pAny )
                                     {
-                                        css::uno::Sequence< css::drawing::EnhancedCustomShapeParameterPair > aCoordinates;
+                                        com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair > aCoordinates;
                                         *pAny >>= aCoordinates;
                                         if ( nPt < (sal_uInt32)aCoordinates.getLength() )
                                         {
                                             nId = 4;
-                                            css::drawing::EnhancedCustomShapeParameterPair& rPara = aCoordinates[ nPt ];
+                                            com::sun::star::drawing::EnhancedCustomShapeParameterPair& rPara = aCoordinates[ nPt ];
                                             sal_Int32 nX = 0, nY = 0;
                                             if ( ( rPara.First.Value >>= nX ) && ( rPara.Second.Value >>= nY ) )
                                             {
                                                 const OUString sGluePoints( "GluePoints" );
-                                                css::uno::Sequence< css::drawing::EnhancedCustomShapeParameterPair > aGluePoints;
+                                                com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair > aGluePoints;
                                                 pAny = aGeometryItem.GetPropertyValueByName( sPath, sGluePoints );
                                                 if ( pAny )
                                                     *pAny >>= aGluePoints;
@@ -765,20 +746,24 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
                                 if ( nN )
                                 {
                                     OUString aPropName( "EndShape" );
-                                    SetPropValue( Any(aXShape), xPropSet, aPropName, true );
+                                    aAny <<= aXShape;
+                                    SetPropValue( aAny, xPropSet, aPropName, true );
                                     aPropName = "EndGluePointIndex";
-                                    SetPropValue( Any(nId), xPropSet, aPropName, true );
+                                    aAny <<= nId;
+                                    SetPropValue( aAny, xPropSet, aPropName, true );
                                 }
                                 else
                                 {
                                     OUString aPropName( "StartShape" );
-                                    SetPropValue( Any(aXShape), xPropSet, aPropName, true );
+                                    aAny <<= aXShape;
+                                    SetPropValue( aAny, xPropSet, aPropName, true );
                                     aPropName = "StartGluePointIndex";
-                                    SetPropValue( Any(nId), xPropSet, aPropName, true );
+                                    aAny <<= nId;
+                                    SetPropValue( aAny, xPropSet, aPropName, true );
                                 }
 
                                 // Not sure what this is good for, repaint or broadcast of object change.
-                                //( Thus I am adding repaint here
+                                //( Thus i am adding repaint here
                                 pO->SetChanged();
                                 pO->BroadcastObjectChange();
                             }
@@ -791,6 +776,7 @@ void SvxMSDffManager::SolveSolver( const SvxMSDffSolverContainer& rSolver )
 }
 
 
+
 static basegfx::B2DPolyPolygon GetLineArrow( const sal_Int32 nLineWidth, const MSO_LineEnd eLineEnd,
     const MSO_LineEndWidth eLineWidth, const MSO_LineEndLength eLineLength,
     sal_Int32& rnArrowWidth, bool& rbArrowCenter,
@@ -798,9 +784,9 @@ static basegfx::B2DPolyPolygon GetLineArrow( const sal_Int32 nLineWidth, const M
 {
     basegfx::B2DPolyPolygon aRetPolyPoly;
     // 70 100mm = 2pt = 40 twip. In MS, line width less than 2pt has the same size arrow as 2pt
-    //If the unit is twip. Make all use this unit especially the critical value 70/40.
+    //If the unit is twip. Make all use this unit especailly the critical value 70/40.
     sal_Int32   nLineWidthCritical = bScaleArrow ? 40 : 70;
-    double      fLineWidth = nLineWidth < nLineWidthCritical ? nLineWidthCritical : nLineWidth;
+    double      fLineWidth = nLineWidth < nLineWidthCritical ? nLineWidthCritical : nLineWidth;;
 
     double      fLengthMul, fWidthMul;
     sal_Int32   nLineNumber;
@@ -908,7 +894,7 @@ static basegfx::B2DPolyPolygon GetLineArrow( const sal_Int32 nLineWidth, const M
 
 void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eShapeType ) const // #i28269#
 {
-    sal_uInt32 nLineFlags(GetPropertyValue( DFF_Prop_fNoLineDrawDash, 0 ));
+    sal_uInt32 nLineFlags(GetPropertyValue( DFF_Prop_fNoLineDrawDash ));
 
     if(!IsHardAttribute( DFF_Prop_fLine ) && !IsCustomShapeStrokedByDefault( eShapeType ))
     {
@@ -928,27 +914,27 @@ void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eSh
             default: /* case mso_lineEndCapFlat */
             {
                 // no need to set, it is the default. If this changes, this needs to be activated
-                // rSet.Put(XLineCapItem(css::drawing::LineCap_BUTT));
+                // rSet.Put(XLineCapItem(com::sun::star::drawing::LineCap_BUTT));
                 break;
             }
             case mso_lineEndCapRound:
             {
-                rSet.Put(XLineCapItem(css::drawing::LineCap_ROUND));
+                rSet.Put(XLineCapItem(com::sun::star::drawing::LineCap_ROUND));
                 break;
             }
             case mso_lineEndCapSquare:
             {
-                rSet.Put(XLineCapItem(css::drawing::LineCap_SQUARE));
+                rSet.Put(XLineCapItem(com::sun::star::drawing::LineCap_SQUARE));
                 break;
             }
         }
 
         MSO_LineDashing eLineDashing = (MSO_LineDashing)GetPropertyValue( DFF_Prop_lineDashing, mso_lineSolid );
         if ( eLineDashing == mso_lineSolid )
-            rSet.Put(XLineStyleItem( drawing::LineStyle_SOLID ) );
+            rSet.Put(XLineStyleItem( XLINE_SOLID ) );
         else
         {
-            css::drawing::DashStyle  eDash = css::drawing::DashStyle_RECT;
+            XDashStyle  eDash = XDASH_RECT;
             sal_uInt16  nDots = 1;
             sal_uInt32  nDotLen = nLineWidth / 360;
             sal_uInt16  nDashes = 0;
@@ -1005,9 +991,9 @@ void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eSh
             }
 
             rSet.Put( XLineDashItem( OUString(), XDash( eDash, nDots, nDotLen, nDashes, nDashLen, nDistance ) ) );
-            rSet.Put( XLineStyleItem( drawing::LineStyle_DASH ) );
+            rSet.Put( XLineStyleItem( XLINE_DASH ) );
         }
-        rSet.Put( XLineColorItem( OUString(), rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_lineColor, 0 ) ) ) );
+        rSet.Put( XLineColorItem( OUString(), rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_lineColor ), DFF_Prop_lineColor ) ) );
         if ( IsProperty( DFF_Prop_lineOpacity ) )
         {
             double nTrans = GetPropertyValue(DFF_Prop_lineOpacity, 0x10000);
@@ -1024,22 +1010,22 @@ void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eSh
         if ( eShapeType == mso_sptMin )
             eLineJointDefault = mso_lineJoinRound;
         MSO_LineJoin eLineJoint = (MSO_LineJoin)GetPropertyValue( DFF_Prop_lineJoinStyle, eLineJointDefault );
-        css::drawing::LineJoint eXLineJoint( css::drawing::LineJoint_MITER );
+        com::sun::star::drawing::LineJoint eXLineJoint( com::sun::star::drawing::LineJoint_MITER );
         if ( eLineJoint == mso_lineJoinBevel )
-            eXLineJoint = css::drawing::LineJoint_BEVEL;
+            eXLineJoint = com::sun::star::drawing::LineJoint_BEVEL;
         else if ( eLineJoint == mso_lineJoinRound )
-            eXLineJoint = css::drawing::LineJoint_ROUND;
+            eXLineJoint = com::sun::star::drawing::LineJoint_ROUND;
         rSet.Put( XLineJointItem( eXLineJoint ) );
 
         if ( nLineFlags & 0x10 )
         {
-            bool bScaleArrows = rManager.pSdrModel->GetScaleUnit() == MapUnit::MapTwip;
+            bool bScaleArrows = rManager.pSdrModel->GetScaleUnit() == MAP_TWIP;
 
             // LineStart
 
             if ( IsProperty( DFF_Prop_lineStartArrowhead ) )
             {
-                MSO_LineEnd         eLineEnd = (MSO_LineEnd)GetPropertyValue( DFF_Prop_lineStartArrowhead, 0 );
+                MSO_LineEnd         eLineEnd = (MSO_LineEnd)GetPropertyValue( DFF_Prop_lineStartArrowhead );
                 MSO_LineEndWidth    eWidth = (MSO_LineEndWidth)GetPropertyValue( DFF_Prop_lineStartArrowWidth, mso_lineMediumWidthArrow );
                 MSO_LineEndLength   eLength = (MSO_LineEndLength)GetPropertyValue( DFF_Prop_lineStartArrowLength, mso_lineMediumLenArrow );
 
@@ -1057,7 +1043,7 @@ void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eSh
 
             if ( IsProperty( DFF_Prop_lineEndArrowhead ) )
             {
-                MSO_LineEnd         eLineEnd = (MSO_LineEnd)GetPropertyValue( DFF_Prop_lineEndArrowhead, 0 );
+                MSO_LineEnd         eLineEnd = (MSO_LineEnd)GetPropertyValue( DFF_Prop_lineEndArrowhead );
                 MSO_LineEndWidth    eWidth = (MSO_LineEndWidth)GetPropertyValue( DFF_Prop_lineEndArrowWidth, mso_lineMediumWidthArrow );
                 MSO_LineEndLength   eLength = (MSO_LineEndLength)GetPropertyValue( DFF_Prop_lineEndArrowLength, mso_lineMediumLenArrow );
 
@@ -1073,7 +1059,7 @@ void DffPropertyReader::ApplyLineAttributes( SfxItemSet& rSet, const MSO_SPT eSh
         }
     }
     else
-        rSet.Put( XLineStyleItem( drawing::LineStyle_NONE ) );
+        rSet.Put( XLineStyleItem( XLINE_NONE ) );
 }
 
 struct ShadeColor
@@ -1121,8 +1107,7 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
 {
     Size aBitmapSizePixel( static_cast< sal_Int32 >( ( rObjData.aBoundRect.GetWidth() / 2540.0 ) * 90.0 ),      // we will create a bitmap with 90 dpi
                            static_cast< sal_Int32 >( ( rObjData.aBoundRect.GetHeight() / 2540.0 ) * 90.0 ) );
-    if (aBitmapSizePixel.Width() > 0 && aBitmapSizePixel.Height() > 0 &&
-        aBitmapSizePixel.Width() <= 1024 && aBitmapSizePixel.Height() <= 1024)
+    if ( aBitmapSizePixel.Width() && aBitmapSizePixel.Height() && ( aBitmapSizePixel.Width() <= 1024 ) && ( aBitmapSizePixel.Height() <= 1024 ) )
     {
         double fFocusX = rManager.GetPropertyValue( DFF_Prop_fillToRight, 0 ) / 65536.0;
         double fFocusY = rManager.GetPropertyValue( DFF_Prop_fillToBottom, 0 ) / 65536.0;
@@ -1131,9 +1116,10 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
         BitmapWriteAccess* pAcc = aBitmap.AcquireWriteAccess();
         if ( pAcc )
         {
-            for ( long nY = 0; nY < aBitmapSizePixel.Height(); nY++ )
+            sal_Int32 nX, nY;
+            for ( nY = 0; nY < aBitmapSizePixel.Height(); nY++ )
             {
-                for ( long nX = 0; nX < aBitmapSizePixel.Width(); nX++ )
+                for ( nX = 0; nX < aBitmapSizePixel.Width(); nX++ )
                 {
                     double fX = static_cast< double >( nX ) / aBitmapSizePixel.Width();
                     double fY = static_cast< double >( nY ) / aBitmapSizePixel.Height();
@@ -1144,28 +1130,16 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
                         if ( fY < fFocusY )
                         {
                             if ( fX > fY )
-                            {
-                                fDist = fY;
-                                fD = fFocusY;
-                            }
+                                fDist = fY, fD = fFocusY;
                             else
-                            {
-                                fDist = fX;
-                                fD = fFocusX;
-                            }
+                                fDist = fX, fD = fFocusX;
                         }
                         else
                         {
                             if ( fX > ( 1 - fY ) )
-                            {
-                                fDist = 1 - fY;
-                                fD = 1 - fFocusY;
-                            }
+                                fDist = ( 1 - fY ), fD = 1 - fFocusY;
                             else
-                            {
-                                fDist = fX;
-                                fD = fFocusX;
-                            }
+                                fDist = fX, fD = fFocusX;
                         }
                     }
                     else
@@ -1173,28 +1147,16 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
                         if ( fY < fFocusY )
                         {
                             if ( ( 1 - fX ) > fY )
-                            {
-                                fDist = fY;
-                                fD = fFocusY;
-                            }
+                                fDist = fY, fD = fFocusY;
                             else
-                            {
-                                fDist = 1 - fX;
-                                fD = 1 - fFocusX;
-                            }
+                                fDist = ( 1 - fX ), fD = 1 - fFocusX;
                         }
                         else
                         {
                             if ( ( 1 - fX ) > ( 1 - fY ) )
-                            {
-                                fDist = 1 - fY;
-                                fD = 1 - fFocusY;
-                            }
+                                fDist = ( 1 - fY ), fD = 1 - fFocusY;
                             else
-                            {
-                                fDist = 1 - fX;
-                                fD = 1 - fFocusX;
-                            }
+                                fDist = ( 1 - fX ), fD = 1 - fFocusX;
                         }
                     }
                     if ( fD != 0.0 )
@@ -1252,7 +1214,7 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
                     pAcc->SetPixel( nY, nX, BitmapColor( static_cast< sal_Int8 >( nRed ), static_cast< sal_Int8 >( nGreen ), static_cast< sal_Int8 >( nBlue ) ) );
                 }
             }
-            Bitmap::ReleaseAccess( pAcc );
+            aBitmap.ReleaseAccess( pAcc );
 
             if ( nFix16Angle )
             {
@@ -1262,7 +1224,7 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
                 {
                     const_cast< SvxMSDffManager& >( rManager ).maShapeRecords.Current()->SeekToBegOfRecord( rIn );
                     DffPropertyReader aSecPropSet( rManager );
-                    aSecPropSet.ReadPropSet( rIn, nullptr );
+                    aSecPropSet.ReadPropSet( rIn, NULL );
                     sal_Int32 nSecFillProperties = aSecPropSet.GetPropertyValue( DFF_Prop_fNoFillHitTest, 0x200020 );
                     bRotateWithShape = ( nSecFillProperties & 0x0020 );
                 }
@@ -1271,12 +1233,12 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
                 {
                     aBitmap.Rotate( nFix16Angle / 10, rShadeColors[ 0 ].aColor );
 
-                    BmpMirrorFlags nMirrorFlags = BmpMirrorFlags::NONE;
+                    sal_uLong nMirrorFlags = BMP_MIRROR_NONE;
                     if ( rObjData.nSpFlags & SP_FFLIPV )
-                        nMirrorFlags |= BmpMirrorFlags::Vertical;
+                        nMirrorFlags |= BMP_MIRROR_VERT;
                     if ( rObjData.nSpFlags & SP_FFLIPH )
-                        nMirrorFlags |= BmpMirrorFlags::Horizontal;
-                    if ( nMirrorFlags != BmpMirrorFlags::NONE )
+                        nMirrorFlags |= BMP_MIRROR_HORZ;
+                    if ( nMirrorFlags != BMP_MIRROR_NONE )
                         aBitmap.Mirror( nMirrorFlags );
                 }
             }
@@ -1289,7 +1251,7 @@ void ApplyRectangularGradientAsBitmap( const SvxMSDffManager& rManager, SvStream
 
 void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, const DffObjData& rObjData ) const
 {
-    sal_uInt32 nFillFlags(GetPropertyValue( DFF_Prop_fNoFillHitTest, 0 ));
+    sal_uInt32 nFillFlags(GetPropertyValue( DFF_Prop_fNoFillHitTest ));
 
     std::vector< ShadeColor > aShadeColors;
     GetShadeColors( rManager, *this, rIn, aShadeColors );
@@ -1315,7 +1277,7 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
             break;
             case mso_fillShadeCenter :      // Shade from bounding rectangle to end point
             {
-                //If it is imported as a bitmap, it will not work well with transparency especially 100
+                //If it is imported as a bitmap, it will not work well with transparecy especially 100
                 //But the gradient look well comparing with imported as gradient. And rotate with shape
                 //also works better. So here just keep it.
                 if ( rObjData.aBoundRect.IsEmpty() )// size of object needed to be able
@@ -1339,7 +1301,7 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
         double dBackTrans = 1.0;
         if (IsProperty(DFF_Prop_fillOpacity))
         {
-            dTrans = GetPropertyValue(DFF_Prop_fillOpacity, 0) / 65536.0;
+            dTrans = GetPropertyValue(DFF_Prop_fillOpacity) / 65536.0;
             if ( eXFill != drawing::FillStyle_GRADIENT )
             {
                 dTrans = dTrans * 100;
@@ -1349,7 +1311,7 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
         }
 
         if ( IsProperty(DFF_Prop_fillBackOpacity) )
-            dBackTrans = GetPropertyValue(DFF_Prop_fillBackOpacity, 0) / 65536.0;
+            dBackTrans = GetPropertyValue(DFF_Prop_fillBackOpacity) / 65536.0;
 
         if ( ( eMSO_FillType == mso_fillShadeCenter ) && ( eXFill == drawing::FillStyle_BITMAP ) )
         {
@@ -1365,10 +1327,10 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
             {
                 Graphic aGraf;
                 // first try to get BLIP from cache
-                bool bOK = const_cast<SvxMSDffManager&>(rManager).GetBLIP( GetPropertyValue( DFF_Prop_fillBlip, 0 ), aGraf );
+                bool bOK = const_cast<SvxMSDffManager&>(rManager).GetBLIP( GetPropertyValue( DFF_Prop_fillBlip ), aGraf, NULL );
                 // then try directly from stream (i.e. Excel chart hatches/bitmaps)
                 if ( !bOK )
-                    bOK = SeekToContent( DFF_Prop_fillBlip, rIn ) && SvxMSDffManager::GetBLIPDirect( rIn, aGraf );
+                    bOK = SeekToContent( DFF_Prop_fillBlip, rIn ) && rManager.GetBLIPDirect( rIn, aGraf, NULL );
                 if ( bOK )
                 {
                     if ( eMSO_FillType == mso_fillPattern )
@@ -1379,35 +1341,29 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
                             Color aCol1( COL_WHITE ), aCol2( COL_WHITE );
 
                             if ( IsProperty( DFF_Prop_fillColor ) )
-                                aCol1 = rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_fillColor, 0 ), DFF_Prop_fillColor );
+                                aCol1 = rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_fillColor ), DFF_Prop_fillColor );
 
                             if ( IsProperty( DFF_Prop_fillBackColor ) )
-                                aCol2 = rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_fillBackColor, 0 ), DFF_Prop_fillBackColor );
+                                aCol2 = rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_fillBackColor ), DFF_Prop_fillBackColor );
 
-                            // Create a bitmap for the pattern with expected colors
-                            Bitmap aResult(Size(8, 8), 24);
+                            XOBitmap aXOBitmap( aBmp );
+                            aXOBitmap.Bitmap2Array();
+                            aXOBitmap.SetBitmapType( XBITMAP_8X8 );
+                            aXOBitmap.SetPixelSize( aBmp.GetSizePixel() );
+
+                            if( aXOBitmap.GetBackgroundColor() == COL_BLACK )
                             {
-                                Bitmap::ScopedReadAccess pRead(aBmp);
-                                Bitmap::ScopedWriteAccess pWrite(aResult);
-
-                                for (long y = 0; y < pWrite->Height(); ++y)
-                                {
-                                    for (long x = 0; x < pWrite->Width(); ++x)
-                                    {
-                                        Color aReadColor;
-                                        if (pRead->HasPalette())
-                                            aReadColor = pRead->GetPaletteColor(pRead->GetPixelIndex(y, x));
-                                        else
-                                            aReadColor = pRead->GetPixel(y, x);
-
-                                        if (aReadColor.GetColor() == 0)
-                                            pWrite->SetPixel(y, x, aCol2);
-                                        else
-                                            pWrite->SetPixel(y, x, aCol1);
-                                    }
-                                }
+                                aXOBitmap.SetPixelColor( aCol1 );
+                                aXOBitmap.SetBackgroundColor( aCol2 );
                             }
-                            aGraf = Graphic(aResult);
+                            else
+                            {
+                                aXOBitmap.SetPixelColor( aCol2 );
+                                aXOBitmap.SetBackgroundColor( aCol1 );
+                            }
+
+                            aXOBitmap.Array2Bitmap();
+                            aGraf = Graphic( aXOBitmap.GetBitmap()  );
                         }
 
                         rSet.Put(XFillBitmapItem(OUString(), aGraf));
@@ -1446,7 +1402,7 @@ void DffPropertyReader::ApplyCustomShapeTextAttributes( SfxItemSet& rSet ) const
 
     if ( IsProperty( DFF_Prop_txflTextFlow ) )
     {
-        MSO_TextFlow eTextFlow = (MSO_TextFlow)( GetPropertyValue( DFF_Prop_txflTextFlow, 0 ) & 0xFFFF );
+        MSO_TextFlow eTextFlow = (MSO_TextFlow)( GetPropertyValue( DFF_Prop_txflTextFlow ) & 0xFFFF );
         switch( eTextFlow )
         {
             case mso_txflTtoBA :    /* #68110# */   // Top to Bottom @-font, oben -> unten
@@ -1463,10 +1419,11 @@ void DffPropertyReader::ApplyCustomShapeTextAttributes( SfxItemSet& rSet ) const
 
     if ( bVerticalText )
     {
+        eTVA = SDRTEXTVERTADJUST_BLOCK;
         eTHA = SDRTEXTHORZADJUST_CENTER;
 
         // read text anchor
-        sal_uInt32 eTextAnchor = GetPropertyValue( DFF_Prop_anchorText, mso_anchorTop );
+        MSO_Anchor eTextAnchor = (MSO_Anchor)GetPropertyValue( DFF_Prop_anchorText, mso_anchorTop );
 
         switch( eTextAnchor )
         {
@@ -1508,9 +1465,10 @@ void DffPropertyReader::ApplyCustomShapeTextAttributes( SfxItemSet& rSet ) const
     else
     {
         eTVA = SDRTEXTVERTADJUST_CENTER;
+        eTHA = SDRTEXTHORZADJUST_BLOCK;
 
         // read text anchor
-        sal_uInt32 eTextAnchor = GetPropertyValue( DFF_Prop_anchorText, mso_anchorTop );
+        MSO_Anchor eTextAnchor = (MSO_Anchor)GetPropertyValue( DFF_Prop_anchorText, mso_anchorTop );
 
         switch( eTextAnchor )
         {
@@ -1549,7 +1507,7 @@ void DffPropertyReader::ApplyCustomShapeTextAttributes( SfxItemSet& rSet ) const
             break;
         }
     }
-    rSet.Put( SvxFrameDirectionItem( bVerticalText ? SvxFrameDirection::Vertical_RL_TB : SvxFrameDirection::Horizontal_LR_TB, EE_PARA_WRITINGDIR ) );
+    rSet.Put( SvxFrameDirectionItem( bVerticalText ? FRMDIR_VERT_TOP_RIGHT : FRMDIR_HORI_LEFT_TOP, EE_PARA_WRITINGDIR ) );
 
     rSet.Put( SdrTextVertAdjustItem( eTVA ) );
     rSet.Put( SdrTextHorzAdjustItem( eTHA ) );
@@ -1559,8 +1517,8 @@ void DffPropertyReader::ApplyCustomShapeTextAttributes( SfxItemSet& rSet ) const
     rSet.Put( makeSdrTextUpperDistItem( nTextTop ) );
     rSet.Put( makeSdrTextLowerDistItem( nTextBottom ) );
 
-    rSet.Put( makeSdrTextWordWrapItem( (MSO_WrapMode)GetPropertyValue( DFF_Prop_WrapText, mso_wrapSquare ) != mso_wrapNone ) );
-    rSet.Put( makeSdrTextAutoGrowHeightItem( ( GetPropertyValue( DFF_Prop_FitTextToShape, 0 ) & 2 ) != 0 ) );
+    rSet.Put( makeSdrTextWordWrapItem( (MSO_WrapMode)GetPropertyValue( DFF_Prop_WrapText, mso_wrapSquare ) != mso_wrapNone ? sal_True : sal_False ) );
+    rSet.Put( makeSdrTextAutoGrowHeightItem( ( GetPropertyValue( DFF_Prop_FitTextToShape ) & 2 ) != 0 ) );
 }
 
 void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxItemSet& rSet, const DffObjData& rObjData ) const
@@ -1571,7 +1529,12 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
 
     // creating SdrCustomShapeGeometryItem
 
+    typedef uno::Sequence< beans::PropertyValue > PropSeq;
     typedef std::vector< beans::PropertyValue > PropVec;
+    typedef PropVec::iterator PropVecIter;
+    PropVecIter aIter;
+    PropVecIter aEnd;
+
 
     // aPropVec will be filled with all PropertyValues
     PropVec aPropVec;
@@ -1593,7 +1556,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
     sal_Int32 nCoordHeight= 21600;
     if ( IsProperty( DFF_Prop_geoLeft ) || IsProperty( DFF_Prop_geoTop ) || IsProperty( DFF_Prop_geoRight ) || IsProperty( DFF_Prop_geoBottom ) )
     {
-        css::awt::Rectangle aViewBox;
+        com::sun::star::awt::Rectangle aViewBox;
         const OUString sViewBox( "ViewBox" );
         aViewBox.X = GetPropertyValue( DFF_Prop_geoLeft, 0 );
         aViewBox.Y = GetPropertyValue( DFF_Prop_geoTop, 0 );
@@ -1609,7 +1572,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
     if ( IsProperty( DFF_Prop_txflTextFlow ) || IsProperty( DFF_Prop_cdirFont ) )
     {
         sal_Int32 nTextRotateAngle = 0;
-        MSO_TextFlow eTextFlow = (MSO_TextFlow)( GetPropertyValue( DFF_Prop_txflTextFlow, 0 ) & 0xFFFF );
+        MSO_TextFlow eTextFlow = (MSO_TextFlow)( GetPropertyValue( DFF_Prop_txflTextFlow ) & 0xFFFF );
 
         if ( eTextFlow == mso_txflBtoT )    // Bottom to Top non-@
             nTextRotateAngle += 90;
@@ -1642,7 +1605,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
 
     // "Extrusion" PropertySequence element
 
-    bool bExtrusionOn = ( GetPropertyValue( DFF_Prop_fc3DLightFace, 0 ) & 8 ) != 0;
+    bool bExtrusionOn = ( GetPropertyValue( DFF_Prop_fc3DLightFace ) & 8 ) != 0;
     if ( bExtrusionOn )
     {
         PropVec aExtrusionPropVec;
@@ -1657,7 +1620,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DAmbientIntensity ) )
         {
             const OUString sExtrusionBrightness( "Brightness" );
-            double fBrightness = (sal_Int32)GetPropertyValue( DFF_Prop_c3DAmbientIntensity, 0 );
+            double fBrightness = (sal_Int32)GetPropertyValue( DFF_Prop_c3DAmbientIntensity );
             fBrightness /= 655.36;
             aProp.Name = sExtrusionBrightness;
             aProp.Value <<= fBrightness;
@@ -1684,7 +1647,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DDiffuseAmt ) )
         {
             const OUString sExtrusionDiffusion( "Diffusion" );
-            double fDiffusion = (sal_Int32)GetPropertyValue( DFF_Prop_c3DDiffuseAmt, 0 );
+            double fDiffusion = (sal_Int32)GetPropertyValue( DFF_Prop_c3DDiffuseAmt );
             fDiffusion /= 655.36;
             aProp.Name = sExtrusionDiffusion;
             aProp.Value <<= fDiffusion;
@@ -1695,24 +1658,24 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         {
             const OUString sExtrusionNumberOfLineSegments( "NumberOfLineSegments" );
             aProp.Name = sExtrusionNumberOfLineSegments;
-            aProp.Value <<= (sal_Int32)GetPropertyValue( DFF_Prop_c3DTolerance, 0 );
+            aProp.Value <<= (sal_Int32)GetPropertyValue( DFF_Prop_c3DTolerance );
             aExtrusionPropVec.push_back( aProp );
         }
         // "LightFace"
         const OUString sExtrusionLightFace( "LightFace" );
-        bool bExtrusionLightFace = ( GetPropertyValue( DFF_Prop_fc3DLightFace, 0 ) & 1 ) != 0;
+        bool bExtrusionLightFace = ( GetPropertyValue( DFF_Prop_fc3DLightFace ) & 1 ) != 0;
         aProp.Name = sExtrusionLightFace;
         aProp.Value <<= bExtrusionLightFace;
         aExtrusionPropVec.push_back( aProp );
         // "FirstLightHarsh"
         const OUString sExtrusionFirstLightHarsh( "FirstLightHarsh" );
-        bool bExtrusionFirstLightHarsh = ( GetPropertyValue( DFF_Prop_fc3DFillHarsh, 0 ) & 2 ) != 0;
+        bool bExtrusionFirstLightHarsh = ( GetPropertyValue( DFF_Prop_fc3DFillHarsh ) & 2 ) != 0;
         aProp.Name = sExtrusionFirstLightHarsh;
         aProp.Value <<= bExtrusionFirstLightHarsh;
         aExtrusionPropVec.push_back( aProp );
         // "SecondLightHarsh"
         const OUString sExtrusionSecondLightHarsh( "SecondLightHarsh" );
-        bool bExtrusionSecondLightHarsh = ( GetPropertyValue( DFF_Prop_fc3DFillHarsh, 0 ) & 1 ) != 0;
+        bool bExtrusionSecondLightHarsh = ( GetPropertyValue( DFF_Prop_fc3DFillHarsh ) & 1 ) != 0;
         aProp.Name = sExtrusionSecondLightHarsh;
         aProp.Value <<= bExtrusionSecondLightHarsh;
         aExtrusionPropVec.push_back( aProp );
@@ -1720,7 +1683,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DKeyIntensity ) )
         {
             const OUString sExtrusionFirstLightLevel( "FirstLightLevel" );
-            double fFirstLightLevel = (sal_Int32)GetPropertyValue( DFF_Prop_c3DKeyIntensity, 0 );
+            double fFirstLightLevel = (sal_Int32)GetPropertyValue( DFF_Prop_c3DKeyIntensity );
             fFirstLightLevel /= 655.36;
             aProp.Name = sExtrusionFirstLightLevel;
             aProp.Value <<= fFirstLightLevel;
@@ -1730,7 +1693,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DFillIntensity ) )
         {
             const OUString sExtrusionSecondLightLevel( "SecondLightLevel" );
-            double fSecondLightLevel = (sal_Int32)GetPropertyValue( DFF_Prop_c3DFillIntensity, 0 );
+            double fSecondLightLevel = (sal_Int32)GetPropertyValue( DFF_Prop_c3DFillIntensity );
             fSecondLightLevel /= 655.36;
             aProp.Name = sExtrusionSecondLightLevel;
             aProp.Value <<= fSecondLightLevel;
@@ -1742,7 +1705,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
             double fLightX = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DKeyX, 50000 ));
             double fLightY = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DKeyY, 0 ));
             double fLightZ = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DKeyZ, 10000 ));
-            css::drawing::Direction3D aExtrusionFirstLightDirection( fLightX, fLightY, fLightZ );
+            ::com::sun::star::drawing::Direction3D aExtrusionFirstLightDirection( fLightX, fLightY, fLightZ );
             const OUString sExtrusionFirstLightDirection( "FirstLightDirection" );
             aProp.Name = sExtrusionFirstLightDirection;
             aProp.Value <<= aExtrusionFirstLightDirection;
@@ -1754,7 +1717,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
             double fLight2X = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DFillX, (sal_uInt32)-50000 ));
             double fLight2Y = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DFillY, 0 ));
             double fLight2Z = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DFillZ, 10000 ));
-            css::drawing::Direction3D aExtrusionSecondLightDirection( fLight2X, fLight2Y, fLight2Z );
+            ::com::sun::star::drawing::Direction3D aExtrusionSecondLightDirection( fLight2X, fLight2Y, fLight2Z );
             const OUString sExtrusionSecondLightDirection( "SecondLightDirection" );
             aProp.Name = sExtrusionSecondLightDirection;
             aProp.Value <<= aExtrusionSecondLightDirection;
@@ -1763,7 +1726,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
 
         // "Metal"
         const OUString sExtrusionMetal( "Metal" );
-        bool bExtrusionMetal = ( GetPropertyValue( DFF_Prop_fc3DLightFace, 0 ) & 4 ) != 0;
+        bool bExtrusionMetal = ( GetPropertyValue( DFF_Prop_fc3DLightFace ) & 4 ) != 0;
         aProp.Name = sExtrusionMetal;
         aProp.Value <<= bExtrusionMetal;
         aExtrusionPropVec.push_back( aProp );
@@ -1771,10 +1734,10 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DRenderMode ) )
         {
             const OUString sExtrusionShadeMode( "ShadeMode" );
-            sal_uInt32 nExtrusionRenderMode = GetPropertyValue( DFF_Prop_c3DRenderMode, 0 );
-            css::drawing::ShadeMode eExtrusionShadeMode( css::drawing::ShadeMode_FLAT );
+            sal_uInt32 nExtrusionRenderMode = GetPropertyValue( DFF_Prop_c3DRenderMode );
+            com::sun::star::drawing::ShadeMode eExtrusionShadeMode( com::sun::star::drawing::ShadeMode_FLAT );
             if ( nExtrusionRenderMode == mso_Wireframe )
-                eExtrusionShadeMode = css::drawing::ShadeMode_DRAFT;
+                eExtrusionShadeMode = com::sun::star::drawing::ShadeMode_DRAFT;
 
             aProp.Name = sExtrusionShadeMode;
             aProp.Value <<= eExtrusionShadeMode;
@@ -1797,12 +1760,12 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         }
 
         // "AutoRotationCenter"
-        if ( ( GetPropertyValue( DFF_Prop_fc3DFillHarsh, 0 ) & 8 ) == 0 )
+        if ( ( GetPropertyValue( DFF_Prop_fc3DFillHarsh ) & 8 ) == 0 )
         {
             // "RotationCenter"
             if ( IsProperty( DFF_Prop_c3DRotationCenterX ) || IsProperty( DFF_Prop_c3DRotationCenterY ) || IsProperty( DFF_Prop_c3DRotationCenterZ ) )
             {
-                css::drawing::Direction3D aRotationCenter(
+                ::com::sun::star::drawing::Direction3D aRotationCenter(
                     (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DRotationCenterX, 0 )) / 360.0,
                     (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DRotationCenterY, 0 )) / 360.0,
                     (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DRotationCenterZ, 0 )) / 360.0 );
@@ -1817,7 +1780,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DShininess ) )
         {
             const OUString sExtrusionShininess( "Shininess" );
-            double fShininess = (sal_Int32)GetPropertyValue( DFF_Prop_c3DShininess, 0 );
+            double fShininess = (sal_Int32)GetPropertyValue( DFF_Prop_c3DShininess );
             fShininess /= 655.36;
             aProp.Name = sExtrusionShininess;
             aProp.Value <<= fShininess;
@@ -1843,7 +1806,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsProperty( DFF_Prop_c3DSpecularAmt ) )
         {
             const OUString sExtrusionSpecularity( "Specularity" );
-            double fSpecularity = (sal_Int32)GetPropertyValue( DFF_Prop_c3DSpecularAmt, 0 );
+            double fSpecularity = (sal_Int32)GetPropertyValue( DFF_Prop_c3DSpecularAmt );
             fSpecularity /= 1333;
             aProp.Name = sExtrusionSpecularity;
             aProp.Value <<= fSpecularity;
@@ -1851,7 +1814,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         }
         // "ProjectionMode"
         const OUString sExtrusionProjectionMode( "ProjectionMode" );
-        ProjectionMode eProjectionMode = (GetPropertyValue( DFF_Prop_fc3DFillHarsh, 0 ) & 4) ? ProjectionMode_PARALLEL : ProjectionMode_PERSPECTIVE;
+        ProjectionMode eProjectionMode = GetPropertyValue( DFF_Prop_fc3DFillHarsh ) & 4 ? ProjectionMode_PARALLEL : ProjectionMode_PERSPECTIVE;
         aProp.Name = sExtrusionProjectionMode;
         aProp.Value <<= eProjectionMode;
         aExtrusionPropVec.push_back( aProp );
@@ -1862,7 +1825,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
             double fViewX = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DXViewpoint, 1250000 )) / 360.0;
             double fViewY = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DYViewpoint, (sal_uInt32)-1250000 ))/ 360.0;
             double fViewZ = (double)((sal_Int32)GetPropertyValue( DFF_Prop_c3DZViewpoint, 9000000 )) / 360.0;
-            css::drawing::Position3D aExtrusionViewPoint( fViewX, fViewY, fViewZ );
+            ::com::sun::star::drawing::Position3D aExtrusionViewPoint( fViewX, fViewY, fViewZ );
             const OUString sExtrusionViewPoint( "ViewPoint" );
             aProp.Name = sExtrusionViewPoint;
             aProp.Value <<= aExtrusionViewPoint;
@@ -1893,10 +1856,17 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         aExtrusionPropVec.push_back( aProp );
         if ( IsProperty( DFF_Prop_c3DExtrusionColor ) )
             rSet.Put( XSecondaryFillColorItem( OUString(), rManager.MSO_CLR_ToColor(
-                GetPropertyValue( DFF_Prop_c3DExtrusionColor, 0 ), DFF_Prop_c3DExtrusionColor ) ) );
+                GetPropertyValue( DFF_Prop_c3DExtrusionColor ), DFF_Prop_c3DExtrusionColor ) ) );
         // pushing the whole Extrusion element
-        aProp.Name = "Extrusion";
-        aProp.Value <<= comphelper::containerToSequence(aExtrusionPropVec);
+        const OUString sExtrusion( "Extrusion" );
+        PropSeq aExtrusionPropSeq( aExtrusionPropVec.size() );
+        aIter = aExtrusionPropVec.begin();
+        aEnd = aExtrusionPropVec.end();
+        beans::PropertyValue* pExtrusionValues = aExtrusionPropSeq.getArray();
+        while ( aIter != aEnd )
+            *pExtrusionValues++ = *aIter++;
+        aProp.Name = sExtrusion;
+        aProp.Value <<= aExtrusionPropSeq;
         aPropVec.push_back( aProp );
     }
 
@@ -1956,9 +1926,9 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
             for ( sal_uInt16 i = 0; i < nNumElem; i++ )
             {
                 PropVec aHandlePropVec;
-                sal_uInt32 nFlagsTmp(0);
-                sal_Int32  nPositionX(0), nPositionY(0), nCenterX(0), nCenterY(0), nRangeXMin(0), nRangeXMax(0), nRangeYMin(0), nRangeYMax(0);
-                rIn.ReadUInt32( nFlagsTmp )
+                sal_uInt32  nFlags;
+                sal_Int32   nPositionX, nPositionY, nCenterX, nCenterY, nRangeXMin, nRangeXMax, nRangeYMin, nRangeYMax;
+                rIn.ReadUInt32( nFlags )
                    .ReadInt32( nPositionX )
                    .ReadInt32( nPositionY )
                    .ReadInt32( nCenterX )
@@ -1967,7 +1937,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                    .ReadInt32( nRangeXMax )
                    .ReadInt32( nRangeYMin )
                    .ReadInt32( nRangeYMax );
-                SvxMSDffHandleFlags nFlags = static_cast<SvxMSDffHandleFlags>(nFlagsTmp);
+
                 if ( nPositionX == 2 )  // replacing center position with absolute value
                     nPositionX = nCoordWidth / 2;
                 if ( nPositionY == 2 )
@@ -1980,7 +1950,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                 aProp.Value <<= aPosition;
                 aHandlePropVec.push_back( aProp );
 
-                if ( nFlags & SvxMSDffHandleFlags::MIRRORED_X )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_MIRRORED_X )
                 {
                     bool bMirroredX = true;
                     const OUString sHandleMirroredX( "MirroredX" );
@@ -1988,7 +1958,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                     aProp.Value <<= bMirroredX;
                     aHandlePropVec.push_back( aProp );
                 }
-                if ( nFlags & SvxMSDffHandleFlags::MIRRORED_Y )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_MIRRORED_Y )
                 {
                     bool bMirroredY = true;
                     const OUString sHandleMirroredY( "MirroredY" );
@@ -1996,7 +1966,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                     aProp.Value <<= bMirroredY;
                     aHandlePropVec.push_back( aProp );
                 }
-                if ( nFlags & SvxMSDffHandleFlags::SWITCHED )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_SWITCHED )
                 {
                     bool bSwitched = true;
                     const OUString sHandleSwitched( "Switched" );
@@ -2004,7 +1974,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                     aProp.Value <<= bSwitched;
                     aHandlePropVec.push_back( aProp );
                 }
-                if ( nFlags & SvxMSDffHandleFlags::POLAR )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_POLAR )
                 {
                     if ( nCenterX == 2 )
                         nCenterX = nCoordWidth / 2;
@@ -2013,28 +1983,28 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                     if ( ( nPositionY >= 0x256 ) || ( nPositionY <= 0x107 ) )   // position y
                         nAdjustmentsWhichNeedsToBeConverted |= ( 1 << i );
                     EnhancedCustomShapeParameterPair aPolar;
-                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aPolar.First,  nCenterX, bool( nFlags & SvxMSDffHandleFlags::CENTER_X_IS_SPECIAL ), true  );
-                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aPolar.Second, nCenterY, bool( nFlags & SvxMSDffHandleFlags::CENTER_Y_IS_SPECIAL ), false );
+                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aPolar.First,  nCenterX, ( nFlags & 0x800  ) != 0, true  );
+                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aPolar.Second, nCenterY, ( nFlags & 0x1000 ) != 0, false );
                     const OUString sHandlePolar( "Polar" );
                     aProp.Name = sHandlePolar;
                     aProp.Value <<= aPolar;
                     aHandlePropVec.push_back( aProp );
                 }
-                if ( nFlags & SvxMSDffHandleFlags::MAP )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_MAP )
                 {
                     if ( nCenterX == 2 )
                         nCenterX = nCoordWidth / 2;
                     if ( nCenterY == 2 )
                         nCenterY = nCoordHeight / 2;
                     EnhancedCustomShapeParameterPair aMap;
-                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aMap.First,  nCenterX, bool( nFlags & SvxMSDffHandleFlags::CENTER_X_IS_SPECIAL ), true  );
-                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aMap.Second, nCenterY, bool( nFlags & SvxMSDffHandleFlags::CENTER_Y_IS_SPECIAL ), false );
+                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aMap.First,  nCenterX, ( nFlags & 0x800  ) != 0, true  );
+                    EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aMap.Second, nCenterY, ( nFlags & 0x1000 ) != 0, false );
                     const OUString sHandleMap( "Map" );
                     aProp.Name = sHandleMap;
                     aProp.Value <<= aMap;
                     aHandlePropVec.push_back( aProp );
                 }
-                if ( nFlags & SvxMSDffHandleFlags::RANGE )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_RANGE )
                 {
                     if ( (sal_uInt32)nRangeXMin != 0x80000000 )
                     {
@@ -2042,7 +2012,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                             nRangeXMin = nCoordWidth / 2;
                         EnhancedCustomShapeParameter aRangeXMinimum;
                         EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aRangeXMinimum,  nRangeXMin,
-                            bool( nFlags & SvxMSDffHandleFlags::RANGE_X_MIN_IS_SPECIAL ), true  );
+                            ( nFlags & MSDFF_HANDLE_FLAGS_RANGE_X_MIN_IS_SPECIAL ) != 0, true  );
                         const OUString sHandleRangeXMinimum( "RangeXMinimum" );
                         aProp.Name = sHandleRangeXMinimum;
                         aProp.Value <<= aRangeXMinimum;
@@ -2054,7 +2024,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                             nRangeXMax = nCoordWidth / 2;
                         EnhancedCustomShapeParameter aRangeXMaximum;
                         EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aRangeXMaximum, nRangeXMax,
-                            bool( nFlags & SvxMSDffHandleFlags::RANGE_X_MAX_IS_SPECIAL ), false );
+                            ( nFlags & MSDFF_HANDLE_FLAGS_RANGE_X_MAX_IS_SPECIAL ) != 0, false );
                         const OUString sHandleRangeXMaximum( "RangeXMaximum" );
                         aProp.Name = sHandleRangeXMaximum;
                         aProp.Value <<= aRangeXMaximum;
@@ -2066,7 +2036,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                             nRangeYMin = nCoordHeight / 2;
                         EnhancedCustomShapeParameter aRangeYMinimum;
                         EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aRangeYMinimum, nRangeYMin,
-                            bool( nFlags & SvxMSDffHandleFlags::RANGE_Y_MIN_IS_SPECIAL ), true );
+                            ( nFlags & MSDFF_HANDLE_FLAGS_RANGE_Y_MIN_IS_SPECIAL ) != 0, true );
                         const OUString sHandleRangeYMinimum( "RangeYMinimum" );
                         aProp.Name = sHandleRangeYMinimum;
                         aProp.Value <<= aRangeYMinimum;
@@ -2078,14 +2048,14 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                             nRangeYMax = nCoordHeight / 2;
                         EnhancedCustomShapeParameter aRangeYMaximum;
                         EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aRangeYMaximum, nRangeYMax,
-                            bool( nFlags & SvxMSDffHandleFlags::RANGE_Y_MAX_IS_SPECIAL ), false );
+                            ( nFlags & MSDFF_HANDLE_FLAGS_RANGE_Y_MAX_IS_SPECIAL ) != 0, false );
                         const OUString sHandleRangeYMaximum( "RangeYMaximum" );
                         aProp.Name = sHandleRangeYMaximum;
                         aProp.Value <<= aRangeYMaximum;
                         aHandlePropVec.push_back( aProp );
                     }
                 }
-                if ( nFlags & SvxMSDffHandleFlags::RADIUS_RANGE )
+                if ( nFlags & MSDFF_HANDLE_FLAGS_RADIUS_RANGE )
                 {
                     if ( (sal_uInt32)nRangeXMin != 0x7fffffff )
                     {
@@ -2093,7 +2063,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                             nRangeXMin = nCoordWidth / 2;
                         EnhancedCustomShapeParameter aRadiusRangeMinimum;
                         EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aRadiusRangeMinimum, nRangeXMin,
-                            bool( nFlags & SvxMSDffHandleFlags::RANGE_X_MIN_IS_SPECIAL ), true  );
+                            ( nFlags & MSDFF_HANDLE_FLAGS_RANGE_X_MIN_IS_SPECIAL ) != 0, true  );
                         const OUString sHandleRadiusRangeMinimum( "RadiusRangeMinimum" );
                         aProp.Name = sHandleRadiusRangeMinimum;
                         aProp.Value <<= aRadiusRangeMinimum;
@@ -2105,7 +2075,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                             nRangeXMax = nCoordWidth / 2;
                         EnhancedCustomShapeParameter aRadiusRangeMaximum;
                         EnhancedCustomShape2d::SetEnhancedCustomShapeHandleParameter( aRadiusRangeMaximum, nRangeXMax,
-                            bool( nFlags & SvxMSDffHandleFlags::RANGE_X_MAX_IS_SPECIAL ), false );
+                            ( nFlags & MSDFF_HANDLE_FLAGS_RANGE_X_MAX_IS_SPECIAL ) != 0, false );
                         const OUString sHandleRadiusRangeMaximum( "RadiusRangeMaximum" );
                         aProp.Name = sHandleRadiusRangeMaximum;
                         aProp.Value <<= aRadiusRangeMaximum;
@@ -2114,11 +2084,18 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                 }
                 if ( !aHandlePropVec.empty() )
                 {
-                    aHandles[ i ] = comphelper::containerToSequence(aHandlePropVec);
+                    PropSeq aHandlePropSeq( aHandlePropVec.size() );
+                    aIter = aHandlePropVec.begin();
+                    aEnd = aHandlePropVec.end();
+                    beans::PropertyValue* pHandleValues = aHandlePropSeq.getArray();
+                    while ( aIter != aEnd )
+                        *pHandleValues++ = *aIter++;
+                    aHandles[ i ] = aHandlePropSeq;
                 }
             }
             // pushing the whole Handles element
-            aProp.Name = "Handles";
+            const OUString sHandles( "Handles" );
+            aProp.Name = sHandles;
             aProp.Value <<= aHandles;
             aPropVec.push_back( aProp );
         }
@@ -2132,7 +2109,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
             const SvxMSDffHandle* pData = pDefCustomShape->pHandles;
             for ( i = 0; i < nCnt; i++, pData++ )
             {
-                if ( pData->nFlags & SvxMSDffHandleFlags::POLAR )
+                if ( pData->nFlags & MSDFF_HANDLE_FLAGS_POLAR )
                 {
                     if ( ( pData->nPositionY >= 0x256 ) || ( pData->nPositionY <= 0x107 ) )
                         nAdjustmentsWhichNeedsToBeConverted |= ( 1 << i );
@@ -2150,7 +2127,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsHardAttribute( DFF_Prop_f3DOK ) )
         {
             const OUString sExtrusionAllowed( "ExtrusionAllowed" );
-            bool bExtrusionAllowed = ( GetPropertyValue( DFF_Prop_fFillOK, 0 ) & 16 ) != 0;
+            bool bExtrusionAllowed = ( GetPropertyValue( DFF_Prop_fFillOK ) & 16 ) != 0;
             aProp.Name = sExtrusionAllowed;
             aProp.Value <<= bExtrusionAllowed;
             aPathPropVec.push_back( aProp );
@@ -2159,7 +2136,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsHardAttribute( DFF_Prop_fFillShadeShapeOK ) )
         {
             const OUString sConcentricGradientFillAllowed( "ConcentricGradientFillAllowed" );
-            bool bConcentricGradientFillAllowed = ( GetPropertyValue( DFF_Prop_fFillOK, 0 ) & 2 ) != 0;
+            bool bConcentricGradientFillAllowed = ( GetPropertyValue( DFF_Prop_fFillOK ) & 2 ) != 0;
             aProp.Name = sConcentricGradientFillAllowed;
             aProp.Value <<= bConcentricGradientFillAllowed;
             aPathPropVec.push_back( aProp );
@@ -2168,7 +2145,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         if ( IsHardAttribute( DFF_Prop_fGtextOK ) || ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x4000 ) )
         {
             const OUString sTextPathAllowed( "TextPathAllowed" );
-            bool bTextPathAllowed = ( GetPropertyValue( DFF_Prop_fFillOK, 0 ) & 4 ) != 0;
+            bool bTextPathAllowed = ( GetPropertyValue( DFF_Prop_fFillOK ) & 4 ) != 0;
             aProp.Name = sTextPathAllowed;
             aProp.Value <<= bTextPathAllowed;
             aPathPropVec.push_back( aProp );
@@ -2176,7 +2153,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         // Path/Coordinates
         if ( IsProperty( DFF_Prop_pVertices ) )
         {
-            css::uno::Sequence< css::drawing::EnhancedCustomShapeParameterPair > aCoordinates;
+            com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair > aCoordinates;
             sal_uInt16 nNumElemVert = 0;
             sal_uInt16 nElemSizeVert = 8;
 
@@ -2185,17 +2162,13 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                 sal_uInt16 nNumElemMemVert = 0;
                 rIn.ReadUInt16( nNumElemVert ).ReadUInt16( nNumElemMemVert ).ReadUInt16( nElemSizeVert );
             }
-            if (nElemSizeVert != 8)
-                nElemSizeVert = 4;
-            //sanity check that the stream is long enough to fulfill nNumElem * nElemSize;
-            bool bImport = rIn.remainingSize() / nElemSizeVert >= nNumElemVert;
-            if (bImport)
+            if ( nNumElemVert )
             {
+                sal_Int32 nX, nY;
+                sal_Int16 nTmpA, nTmpB;
                 aCoordinates.realloc( nNumElemVert );
-                for (sal_uInt16 i = 0; i < nNumElemVert; ++i)
+                for ( sal_uInt16 i = 0; i < nNumElemVert; i++ )
                 {
-                    sal_Int32 nX(0), nY(0);
-
                     if ( nElemSizeVert == 8 )
                     {
                         rIn.ReadInt32( nX )
@@ -2203,7 +2176,6 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                     }
                     else
                     {
-                        sal_Int16 nTmpA(0), nTmpB(0);
                         rIn.ReadInt16( nTmpA )
                            .ReadInt16( nTmpB );
 
@@ -2222,8 +2194,9 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         // Path/Segments
         if ( IsProperty( DFF_Prop_pSegmentInfo ) )
         {
-            css::uno::Sequence< css::drawing::EnhancedCustomShapeSegment > aSegments;
+            com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeSegment > aSegments;
 
+            sal_uInt16 i, nTmp;
             sal_uInt16 nNumElemSeg = 0;
 
             if ( SeekToContent( DFF_Prop_pSegmentInfo, rIn ) )
@@ -2232,43 +2205,23 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                 sal_uInt16 nElemSizeSeg = 2;
                 rIn.ReadUInt16( nNumElemSeg ).ReadUInt16( nNumElemMemSeg ).ReadUInt16( nElemSizeSeg );
             }
-            std::size_t nMaxEntriesPossible = rIn.remainingSize() / sizeof(sal_uInt16);
-            if (nNumElemSeg > nMaxEntriesPossible)
-            {
-                SAL_WARN("filter.ms", "NumElem list is longer than remaining bytes, ppt or parser is wrong");
-                nNumElemSeg = nMaxEntriesPossible;
-            }
             if ( nNumElemSeg )
             {
+                sal_Int16 nCommand;
+                sal_Int16 nCnt;
                 aSegments.realloc( nNumElemSeg );
-                for (sal_uInt16 i = 0; i < nNumElemSeg; ++i)
+                for ( i = 0; i < nNumElemSeg; i++ )
                 {
-                    sal_uInt16 nTmp(0);
                     rIn.ReadUInt16( nTmp );
-                    sal_Int16 nCommand = EnhancedCustomShapeSegmentCommand::UNKNOWN;
-                    sal_Int16 nCnt = (sal_Int16)( nTmp & 0x1fff );//Last 13 bits for segment points number
+                    nCommand = EnhancedCustomShapeSegmentCommand::UNKNOWN;
+                    nCnt = (sal_Int16)( nTmp & 0x1fff );//Last 13 bits for segment points number
                     switch( nTmp >> 13 )//First 3 bits for command type
                     {
-                        case 0x0:
-                            nCommand = EnhancedCustomShapeSegmentCommand::LINETO;
-                            if ( !nCnt ) nCnt = 1;
-                            break;
-                        case 0x1:
-                            nCommand = EnhancedCustomShapeSegmentCommand::CURVETO;
-                            if ( !nCnt ) nCnt = 1;
-                            break;
-                        case 0x2:
-                            nCommand = EnhancedCustomShapeSegmentCommand::MOVETO;
-                            if ( !nCnt ) nCnt = 1;
-                            break;
-                        case 0x3:
-                            nCommand = EnhancedCustomShapeSegmentCommand::CLOSESUBPATH;
-                            nCnt = 0;
-                            break;
-                        case 0x4:
-                            nCommand = EnhancedCustomShapeSegmentCommand::ENDSUBPATH;
-                            nCnt = 0;
-                            break;
+                        case 0x0: nCommand = EnhancedCustomShapeSegmentCommand::LINETO; if ( !nCnt ) nCnt = 1; break;
+                        case 0x1: nCommand = EnhancedCustomShapeSegmentCommand::CURVETO; if ( !nCnt ) nCnt = 1; break;
+                        case 0x2: nCommand = EnhancedCustomShapeSegmentCommand::MOVETO; if ( !nCnt ) nCnt = 1; break;
+                        case 0x3: nCommand = EnhancedCustomShapeSegmentCommand::CLOSESUBPATH; nCnt = 0; break;
+                        case 0x4: nCommand = EnhancedCustomShapeSegmentCommand::ENDSUBPATH; nCnt = 0; break;
                         case 0x5:
                         case 0x6:
                         {
@@ -2277,7 +2230,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                                 case 0x0:
                                 {
                                     //It is msopathEscapeExtension which is transformed into LINETO.
-                                    //If issue happens, I think this part can be comment so that it will be taken as unknown command.
+                                    //If issue happens, I think this part can be comment so that it will be taken as unknow command.
                                     //When export, origin data will be export without any change.
                                     nCommand = EnhancedCustomShapeSegmentCommand::LINETO;
                                     if ( !nCnt )
@@ -2387,7 +2340,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
             }
             if (bImport)
             {
-                css::uno::Sequence< css::drawing::EnhancedCustomShapeTextFrame > aTextFrames( nNumElem );
+                com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeTextFrame > aTextFrames( nNumElem );
                 for (sal_uInt16 i = 0; i < nNumElem; ++i)
                 {
                     sal_Int32 nLeft(0), nTop(0), nRight(0), nBottom(0);
@@ -2411,7 +2364,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         //Path/GluePoints
         if ( IsProperty( DFF_Prop_connectorPoints ) )
         {
-            css::uno::Sequence< css::drawing::EnhancedCustomShapeParameterPair > aGluePoints;
+            com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair > aGluePoints;
             sal_uInt16 nNumElemVert = 0;
             sal_uInt16 nNumElemMemVert = 0;
             sal_uInt16 nElemSizeVert = 8;
@@ -2420,7 +2373,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                 rIn.ReadUInt16( nNumElemVert ).ReadUInt16( nNumElemMemVert ).ReadUInt16( nElemSizeVert );
 
             bool bImport = false;
-            if (nNumElemVert && nElemSizeVert)
+            if (nNumElemVert)
             {
                 //sanity check that the stream is long enough to fulfill nNumElemVert * nElemSizeVert;
                 bImport = rIn.remainingSize() / nElemSizeVert >= nNumElemVert;
@@ -2458,7 +2411,7 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         }
         if ( IsProperty( DFF_Prop_connectorType ) )
         {
-            sal_Int16 nGluePointType = (sal_uInt16)GetPropertyValue( DFF_Prop_connectorType, 0 );
+            sal_Int16 nGluePointType = (sal_uInt16)GetPropertyValue( DFF_Prop_connectorType );
             const OUString sGluePointType( "GluePointType" );
             aProp.Name = sGluePointType;
             aProp.Value <<= nGluePointType;
@@ -2467,15 +2420,22 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
         // pushing the whole Path element
         if ( !aPathPropVec.empty() )
         {
-            aProp.Name = "Path";
-            aProp.Value <<= comphelper::containerToSequence(aPathPropVec);
+            const OUString sPath( "Path" );
+            PropSeq aPathPropSeq( aPathPropVec.size() );
+            aIter = aPathPropVec.begin();
+            aEnd = aPathPropVec.end();
+            beans::PropertyValue* pPathValues = aPathPropSeq.getArray();
+            while ( aIter != aEnd )
+                *pPathValues++ = *aIter++;
+            aProp.Name = sPath;
+            aProp.Value <<= aPathPropSeq;
             aPropVec.push_back( aProp );
         }
     }
 
     // "TextPath" PropertySequence element
 
-    bool bTextPathOn = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x4000 ) != 0;
+    bool bTextPathOn = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough ) & 0x4000 ) != 0;
     if ( bTextPathOn )
     {
         PropVec aTextPathPropVec;
@@ -2488,11 +2448,11 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
 
         // TextPathMode
         const OUString sTextPathMode( "TextPathMode" );
-        bool bTextPathFitPath = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x100 ) != 0;
+        bool bTextPathFitPath = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough ) & 0x100 ) != 0;
 
         bool bTextPathFitShape;
         if ( IsHardAttribute( DFF_Prop_gtextFStretch ) )
-            bTextPathFitShape = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x400 ) != 0;
+            bTextPathFitShape = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough ) & 0x400 ) != 0;
         else
         {
             bTextPathFitShape = true;
@@ -2503,7 +2463,6 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
                 case mso_sptTextCircleCurve :
                 case mso_sptTextButtonCurve :
                     bTextPathFitShape = false;
-                    break;
                 default : break;
             }
         }
@@ -2518,20 +2477,27 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
 
         // ScaleX
         const OUString sTextPathScaleX( "ScaleX" );
-        bool bTextPathScaleX = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x40 ) != 0;
+        bool bTextPathScaleX = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough ) & 0x40 ) != 0;
         aProp.Name = sTextPathScaleX;
         aProp.Value <<= bTextPathScaleX;
         aTextPathPropVec.push_back( aProp );
         // SameLetterHeights
         const OUString sSameLetterHeight( "SameLetterHeights" );
-        bool bSameLetterHeight = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x80 ) != 0;
+        bool bSameLetterHeight = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough ) & 0x80 ) != 0;
         aProp.Name = sSameLetterHeight;
         aProp.Value <<= bSameLetterHeight;
         aTextPathPropVec.push_back( aProp );
 
         // pushing the whole TextPath element
-        aProp.Name = "TextPath";
-        aProp.Value <<= comphelper::containerToSequence(aTextPathPropVec);
+        const OUString sTextPath( "TextPath" );
+        PropSeq aTextPathPropSeq( aTextPathPropVec.size() );
+        aIter = aTextPathPropVec.begin();
+        aEnd = aTextPathPropVec.end();
+        beans::PropertyValue* pTextPathValues = aTextPathPropSeq.getArray();
+        while ( aIter != aEnd )
+            *pTextPathValues++ = *aIter++;
+        aProp.Name = sTextPath;
+        aProp.Value <<= aTextPathPropSeq;
         aPropVec.push_back( aProp );
     }
 
@@ -2539,20 +2505,20 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
     //////////////////////// handle (POLAR) we will convert the adjustment value from a fixed float to double
 
     // checking the last used adjustment handle, so we can determine how many handles are to allocate
-    sal_uInt32 i = DFF_Prop_adjust10Value;
+    sal_Int32 i = DFF_Prop_adjust10Value;
     while ( ( i >= DFF_Prop_adjustValue ) && !IsProperty( i ) )
         i--;
     sal_Int32 nAdjustmentValues = ( i - DFF_Prop_adjustValue ) + 1;
     if ( nAdjustmentValues )
     {
-        uno::Sequence< css::drawing::EnhancedCustomShapeAdjustmentValue > aAdjustmentSeq( nAdjustmentValues );
+        uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeAdjustmentValue > aAdjustmentSeq( nAdjustmentValues );
         while( --nAdjustmentValues >= 0 )
         {
             sal_Int32 nValue = 0;
             beans::PropertyState ePropertyState = beans::PropertyState_DEFAULT_VALUE;
             if ( IsProperty( i ) )
             {
-                nValue = GetPropertyValue( i, 0 );
+                nValue = GetPropertyValue( i );
                 ePropertyState = beans::PropertyState_DIRECT_VALUE;
             }
             if ( nAdjustmentsWhichNeedsToBeConverted & ( 1 << ( i - DFF_Prop_adjustValue ) ) )
@@ -2573,12 +2539,18 @@ void DffPropertyReader::ApplyCustomShapeGeometryAttributes( SvStream& rIn, SfxIt
     }
 
     // creating the whole property set
-    rSet.Put( SdrCustomShapeGeometryItem( comphelper::containerToSequence(aPropVec) ) );
+    PropSeq aSeq( aPropVec.size() );
+    beans::PropertyValue* pValues = aSeq.getArray();
+    aIter = aPropVec.begin();
+    aEnd = aPropVec.end();
+    while ( aIter != aEnd )
+        *pValues++ = *aIter++;
+    rSet.Put( SdrCustomShapeGeometryItem( aSeq ) );
 }
 
 void DffPropertyReader::ApplyAttributes( SvStream& rIn, SfxItemSet& rSet ) const
 {
-    tools::Rectangle aEmptyRect;
+    Rectangle aEmptyRect;
     DffRecordHeader aHdTemp;
     DffObjData aDffObjTemp( aHdTemp, aEmptyRect, 0 );
     ApplyAttributes( rIn, rSet, aDffObjTemp );
@@ -2590,48 +2562,48 @@ void DffPropertyReader::ApplyAttributes( SvStream& rIn, SfxItemSet& rSet, DffObj
     bool bNonZeroShadowOffset = false;
 
     if ( IsProperty( DFF_Prop_gtextSize ) )
-        rSet.Put( SvxFontHeightItem( rManager.ScalePt( GetPropertyValue( DFF_Prop_gtextSize, 0 ) ), 100, EE_CHAR_FONTHEIGHT ) );
-    sal_uInt32 nFontAttributes = GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 );
+        rSet.Put( SvxFontHeightItem( rManager.ScalePt( GetPropertyValue( DFF_Prop_gtextSize ) ), 100, EE_CHAR_FONTHEIGHT ) );
+    sal_uInt32 nFontAttributes = GetPropertyValue( DFF_Prop_gtextFStrikethrough );
     if ( nFontAttributes & 0x20 )
-        rSet.Put( SvxWeightItem( (nFontAttributes & 0x20) ? WEIGHT_BOLD : WEIGHT_NORMAL, EE_CHAR_WEIGHT ) );
+        rSet.Put( SvxWeightItem( nFontAttributes & 0x20 ? WEIGHT_BOLD : WEIGHT_NORMAL, EE_CHAR_WEIGHT ) );
     if ( nFontAttributes & 0x10 )
-        rSet.Put( SvxPostureItem( (nFontAttributes & 0x10) ? ITALIC_NORMAL : ITALIC_NONE, EE_CHAR_ITALIC ) );
+        rSet.Put( SvxPostureItem( nFontAttributes & 0x10 ? ITALIC_NORMAL : ITALIC_NONE, EE_CHAR_ITALIC ) );
     if ( nFontAttributes & 0x08 )
-        rSet.Put( SvxUnderlineItem( (nFontAttributes & 0x08) ? LINESTYLE_SINGLE : LINESTYLE_NONE, EE_CHAR_UNDERLINE ) );
+        rSet.Put( SvxUnderlineItem( nFontAttributes & 0x08 ? UNDERLINE_SINGLE : UNDERLINE_NONE, EE_CHAR_UNDERLINE ) );
     if ( nFontAttributes & 0x40 )
         rSet.Put( SvxShadowedItem( (nFontAttributes & 0x40) != 0, EE_CHAR_SHADOW ) );
 //    if ( nFontAttributes & 0x02 )
-//        rSet.Put( SvxCaseMapItem( nFontAttributes & 0x02 ? SvxCaseMap::SmallCaps : SvxCaseMap::NotMapped ) );
+//        rSet.Put( SvxCaseMapItem( nFontAttributes & 0x02 ? SVX_CASEMAP_KAPITAELCHEN : SVX_CASEMAP_NOT_MAPPED ) );
     if ( nFontAttributes & 0x01 )
-        rSet.Put( SvxCrossedOutItem( (nFontAttributes & 0x01) ? STRIKEOUT_SINGLE : STRIKEOUT_NONE, EE_CHAR_STRIKEOUT ) );
+        rSet.Put( SvxCrossedOutItem( nFontAttributes & 0x01 ? STRIKEOUT_SINGLE : STRIKEOUT_NONE, EE_CHAR_STRIKEOUT ) );
     if ( IsProperty( DFF_Prop_fillColor ) )
-        rSet.Put( XFillColorItem( OUString(), rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_fillColor, 0 ), DFF_Prop_fillColor ) ) );
+        rSet.Put( XFillColorItem( OUString(), rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_fillColor ), DFF_Prop_fillColor ) ) );
     if ( IsProperty( DFF_Prop_shadowColor ) )
-        rSet.Put( makeSdrShadowColorItem( rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_shadowColor, 0 ), DFF_Prop_shadowColor ) ) );
+        rSet.Put( makeSdrShadowColorItem( rManager.MSO_CLR_ToColor( GetPropertyValue( DFF_Prop_shadowColor ), DFF_Prop_shadowColor ) ) );
     else
     {
         //The default value for this property is 0x00808080
         rSet.Put( makeSdrShadowColorItem( rManager.MSO_CLR_ToColor( 0x00808080, DFF_Prop_shadowColor ) ) );
     }
     if ( IsProperty( DFF_Prop_shadowOpacity ) )
-        rSet.Put( makeSdrShadowTransparenceItem( (sal_uInt16)( ( 0x10000 - GetPropertyValue( DFF_Prop_shadowOpacity, 0 ) ) / 655 ) ) );
+        rSet.Put( makeSdrShadowTransparenceItem( (sal_uInt16)( ( 0x10000 - GetPropertyValue( DFF_Prop_shadowOpacity ) ) / 655 ) ) );
     if ( IsProperty( DFF_Prop_shadowOffsetX ) )
     {
-        sal_Int32 nVal = static_cast< sal_Int32 >( GetPropertyValue( DFF_Prop_shadowOffsetX, 0 ) );
+        sal_Int32 nVal = static_cast< sal_Int32 >( GetPropertyValue( DFF_Prop_shadowOffsetX ) );
         rManager.ScaleEmu( nVal );
         rSet.Put( makeSdrShadowXDistItem( nVal ) );
         bNonZeroShadowOffset = ( nVal > 0 );
     }
     if ( IsProperty( DFF_Prop_shadowOffsetY ) )
     {
-        sal_Int32 nVal = static_cast< sal_Int32 >( GetPropertyValue( DFF_Prop_shadowOffsetY, 0 ) );
+        sal_Int32 nVal = static_cast< sal_Int32 >( GetPropertyValue( DFF_Prop_shadowOffsetY ) );
         rManager.ScaleEmu( nVal );
         rSet.Put( makeSdrShadowYDistItem( nVal ) );
         bNonZeroShadowOffset = ( nVal > 0 );
     }
     if ( IsProperty( DFF_Prop_fshadowObscured ) )
     {
-        bHasShadow = ( GetPropertyValue( DFF_Prop_fshadowObscured, 0 ) & 2 ) != 0;
+        bHasShadow = ( GetPropertyValue( DFF_Prop_fshadowObscured ) & 2 ) != 0;
         if ( bHasShadow )
         {
             if ( !IsProperty( DFF_Prop_shadowOffsetX ) )
@@ -2642,11 +2614,11 @@ void DffPropertyReader::ApplyAttributes( SvStream& rIn, SfxItemSet& rSet, DffObj
     }
     if ( IsProperty( DFF_Prop_shadowType ) )
     {
-        MSO_ShadowType eShadowType = static_cast< MSO_ShadowType >( GetPropertyValue( DFF_Prop_shadowType, 0 ) );
+        MSO_ShadowType eShadowType = static_cast< MSO_ShadowType >( GetPropertyValue( DFF_Prop_shadowType ) );
         if( eShadowType != mso_shadowOffset && !bNonZeroShadowOffset )
         {
             //0.12" == 173 twip == 302 100mm
-            sal_uInt32 nDist = rManager.pSdrModel->GetScaleUnit() == MapUnit::MapTwip ? 173: 302;
+            sal_uInt32 nDist = rManager.pSdrModel->GetScaleUnit() == MAP_TWIP ? 173: 302;
             rSet.Put( makeSdrShadowXDistItem( nDist ) );
             rSet.Put( makeSdrShadowYDistItem( nDist ) );
         }
@@ -2656,8 +2628,8 @@ void DffPropertyReader::ApplyAttributes( SvStream& rIn, SfxItemSet& rSet, DffObj
         static bool bCheckShadow(false);
 
         // #i124477# Found no reason not to set shadow, esp. since it is applied to evtl. existing text
-        // and will lead to an error if in PPT someone used text and added the object shadow to the
-        // object carrying that text. I found no cases where this leads to problems (the old bugtracker
+        // and will lead to an error of in PPT someone used text and added the object shadow to the
+        // object carryintg that text. I found no cases where this leads to problems (the old bugtracker
         // task #160376# from sj is unfortunately no longer available). Keeping the code for now
         // to allow easy fallback when this shows problems in the future
         if(bCheckShadow)
@@ -2665,10 +2637,10 @@ void DffPropertyReader::ApplyAttributes( SvStream& rIn, SfxItemSet& rSet, DffObj
             // #160376# sj: activating shadow only if fill and or linestyle is used
             // this is required because of the latest drawing layer core changes.
             // #i104085# is related to this.
-            sal_uInt32 nLineFlags(GetPropertyValue( DFF_Prop_fNoLineDrawDash, 0 ));
+            sal_uInt32 nLineFlags(GetPropertyValue( DFF_Prop_fNoLineDrawDash ));
             if(!IsHardAttribute( DFF_Prop_fLine ) && !IsCustomShapeStrokedByDefault( rObjData.eShapeType ))
                 nLineFlags &= ~0x08;
-            sal_uInt32 nFillFlags(GetPropertyValue( DFF_Prop_fNoFillHitTest, 0 ));
+            sal_uInt32 nFillFlags(GetPropertyValue( DFF_Prop_fNoFillHitTest ));
             if(!IsHardAttribute( DFF_Prop_fFilled ) && !IsCustomShapeFilledByDefault( rObjData.eShapeType ))
                 nFillFlags &= ~0x10;
             if ( nFillFlags & 0x10 )
@@ -2720,34 +2692,34 @@ void DffPropertyReader::CheckAndCorrectExcelTextRotation( SvStream& rIn, SfxItem
                                 // (upright property of the textbox)
         if ( rManager.pSecPropSet->SeekToContent( DFF_Prop_metroBlob, rIn ) )
         {
-            sal_uInt32 nLen = rManager.pSecPropSet->GetPropertyValue( DFF_Prop_metroBlob, 0 );
+            sal_uInt32 nLen = rManager.pSecPropSet->GetPropertyValue( DFF_Prop_metroBlob );
             if ( nLen )
             {
-                css::uno::Sequence< sal_Int8 > aXMLDataSeq( nLen );
-                rIn.ReadBytes(aXMLDataSeq.getArray(), nLen);
-                css::uno::Reference< css::io::XInputStream > xInputStream
+                ::com::sun::star::uno::Sequence< sal_Int8 > aXMLDataSeq( nLen );
+                rIn.Read( aXMLDataSeq.getArray(), nLen );
+                ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > xInputStream
                     ( new ::comphelper::SequenceInputStream( aXMLDataSeq ) );
                 try
                 {
-                    css::uno::Reference< css::uno::XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
-                    css::uno::Reference< css::embed::XStorage > xStorage
+                    ::com::sun::star::uno::Reference< ::com::sun::star::uno::XComponentContext > xContext( ::comphelper::getProcessComponentContext() );
+                    ::com::sun::star::uno::Reference< com::sun::star::embed::XStorage > xStorage
                         ( ::comphelper::OStorageHelper::GetStorageOfFormatFromInputStream(
                             OFOPXML_STORAGE_FORMAT_STRING, xInputStream, xContext, true ) );
                     if ( xStorage.is() )
                     {
                         const OUString sDRS( "drs" );
-                        css::uno::Reference< css::embed::XStorage >
-                            xStorageDRS( xStorage->openStorageElement( sDRS, css::embed::ElementModes::SEEKABLEREAD ) );
+                        ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage >
+                            xStorageDRS( xStorage->openStorageElement( sDRS, ::com::sun::star::embed::ElementModes::SEEKABLEREAD ) );
                         if ( xStorageDRS.is() )
                         {
                             const OUString sShapeXML( "shapexml.xml" );
-                            css::uno::Reference< css::io::XStream > xShapeXMLStream( xStorageDRS->openStreamElement( sShapeXML, css::embed::ElementModes::SEEKABLEREAD ) );
+                            ::com::sun::star::uno::Reference< ::com::sun::star::io::XStream > xShapeXMLStream( xStorageDRS->openStreamElement( sShapeXML, ::com::sun::star::embed::ElementModes::SEEKABLEREAD ) );
                             if ( xShapeXMLStream.is() )
                             {
-                                css::uno::Reference< css::io::XInputStream > xShapeXMLInputStream( xShapeXMLStream->getInputStream() );
+                                ::com::sun::star::uno::Reference< ::com::sun::star::io::XInputStream > xShapeXMLInputStream( xShapeXMLStream->getInputStream() );
                                 if ( xShapeXMLInputStream.is() )
                                 {
-                                    css::uno::Sequence< sal_Int8 > aSeq;
+                                    ::com::sun::star::uno::Sequence< sal_Int8 > aSeq;
                                     sal_Int32 nBytesRead = xShapeXMLInputStream->readBytes( aSeq, 0x7fffffff );
                                     if ( nBytesRead )
                                     {    // for only one property I spare to use a XML parser at this point, this
@@ -2755,7 +2727,7 @@ void DffPropertyReader::CheckAndCorrectExcelTextRotation( SvStream& rIn, SfxItem
 
                                         bRotateTextWithShape = true;    // using the correct xml default
                                         const char* pArry = reinterpret_cast< char* >( aSeq.getArray() );
-                                        const char* const pUpright = "upright=";
+                                        const char* pUpright = "upright=";
                                         const char* pEnd = pArry + nBytesRead;
                                         const char* pPtr = pArry;
                                         while( ( pPtr + 12 ) < pEnd )
@@ -2774,7 +2746,7 @@ void DffPropertyReader::CheckAndCorrectExcelTextRotation( SvStream& rIn, SfxItem
                         }
                     }
                 }
-                catch( css::uno::Exception& )
+                catch( com::sun::star::uno::Exception& )
                 {
                 }
             }
@@ -2782,7 +2754,7 @@ void DffPropertyReader::CheckAndCorrectExcelTextRotation( SvStream& rIn, SfxItem
     }
     if ( !bRotateTextWithShape )
     {
-        const css::uno::Any* pAny;
+        const com::sun::star::uno::Any* pAny;
         SdrCustomShapeGeometryItem aGeometryItem(static_cast<const SdrCustomShapeGeometryItem&>(rSet.Get( SDRATTR_CUSTOMSHAPE_GEOMETRY )));
         const OUString sTextRotateAngle( "TextRotateAngle" );
         pAny = aGeometryItem.GetPropertyValueByName( sTextRotateAngle );
@@ -2795,7 +2767,7 @@ void DffPropertyReader::CheckAndCorrectExcelTextRotation( SvStream& rIn, SfxItem
         if ( rObjData.nSpFlags & SP_FFLIPV )
             fExtraTextRotateAngle -= 180.0;
 
-        css::beans::PropertyValue aTextRotateAngle;
+        com::sun::star::beans::PropertyValue aTextRotateAngle;
         aTextRotateAngle.Name = sTextRotateAngle;
         aTextRotateAngle.Value <<= fExtraTextRotateAngle;
         aGeometryItem.SetPropertyValue( aTextRotateAngle );
@@ -2835,7 +2807,7 @@ void DffPropertyReader::ImportGradientColor( SfxItemSet& aSet,MSO_FillType eMSO_
     while ( nAngle >= 3600 ) nAngle -= 3600;
     while ( nAngle < 0 ) nAngle += 3600;
 
-    css::awt::GradientStyle eGrad = css::awt::GradientStyle_LINEAR;
+    XGradientStyle eGrad = XGRAD_LINEAR;
 
     sal_Int32 nFocus = GetPropertyValue( DFF_Prop_fillFocus, 0 );
     if ( !nFocus )
@@ -2848,7 +2820,7 @@ void DffPropertyReader::ImportGradientColor( SfxItemSet& aSet,MSO_FillType eMSO_
 
     if( nFocus > 40 && nFocus < 60 )
     {
-        eGrad = css::awt::GradientStyle_AXIAL;//A axial gradient other than linear
+        eGrad = XGRAD_AXIAL;//A axial gradient other than linear
         nChgColors ^= 1;
     }
     //if the type is linear or axial, just save focus to nFocusX and nFocusY for export
@@ -2860,14 +2832,14 @@ void DffPropertyReader::ImportGradientColor( SfxItemSet& aSet,MSO_FillType eMSO_
     {
     case mso_fillShadeShape :
         {
-            eGrad = css::awt::GradientStyle_RECT;
+            eGrad = XGRAD_RECT;
             nFocusY = nFocusX = 50;
             nChgColors ^= 1;
         }
         break;
     case mso_fillShadeCenter :
         {
-            eGrad = css::awt::GradientStyle_RECT;
+            eGrad = XGRAD_RECT;
             //A MS fillTo prop specifies the relative position of the left boundary
             //of the center rectangle in a concentric shaded fill. Use 100 or 0 to keep fidelity
             nFocusX=(GetPropertyValue( DFF_Prop_fillToRight, 0 )==0x10000) ? 100 : 0;
@@ -2898,7 +2870,7 @@ void DffPropertyReader::ImportGradientColor( SfxItemSet& aSet,MSO_FillType eMSO_
     aGrad.SetStartIntens( 100 );
     aGrad.SetEndIntens( 100 );
     aSet.Put( XFillGradientItem( OUString(), aGrad ) );
-    //Construct tranparency item. This item can coordinate with both solid and gradient.
+    //Construct tranparency item. This item can coodinate with both solid and gradient.
     if ( dTrans < 1.0 || dBackTrans < 1.0 )
     {
         sal_uInt8 nStartCol = (sal_uInt8)( (1 - dTrans )* 255 );
@@ -2919,51 +2891,52 @@ DffRecordList::DffRecordList( DffRecordList* pList ) :
     nCount                  ( 0 ),
     nCurrent                ( 0 ),
     pPrev                   ( pList ),
-    pNext                   ( nullptr )
+    pNext                   ( NULL )
 {
     if ( pList )
-        pList->pNext.reset( this );
+        pList->pNext = this;
 }
 
 DffRecordList::~DffRecordList()
 {
+    delete pNext;
 }
 
 DffRecordManager::DffRecordManager() :
-    DffRecordList   ( nullptr ),
-    pCList          ( static_cast<DffRecordList*>(this) )
+    DffRecordList   ( NULL ),
+    pCList          ( (DffRecordList*)this )
 {
 }
 
 DffRecordManager::DffRecordManager( SvStream& rIn ) :
-    DffRecordList   ( nullptr ),
-    pCList          ( static_cast<DffRecordList*>(this) )
+    DffRecordList   ( NULL ),
+    pCList          ( (DffRecordList*)this )
 {
     Consume( rIn );
 }
 
-void DffRecordManager::Consume( SvStream& rIn, sal_uInt32 nStOfs )
+void DffRecordManager::Consume( SvStream& rIn, bool bAppend, sal_uInt32 nStOfs )
 {
-    Clear();
+    if ( !bAppend )
+        Clear();
     sal_uInt32 nOldPos = rIn.Tell();
     if ( !nStOfs )
     {
         DffRecordHeader aHd;
-        bool bOk = ReadDffRecordHeader( rIn, aHd );
-        if (bOk && aHd.nRecVer == DFF_PSFLAG_CONTAINER)
+        ReadDffRecordHeader( rIn, aHd );
+        if ( aHd.nRecVer == DFF_PSFLAG_CONTAINER )
             nStOfs = aHd.GetRecEndFilePos();
     }
     if ( nStOfs )
     {
-        pCList = static_cast<DffRecordList*>(this);
+        pCList = (DffRecordList*)this;
         while ( pCList->pNext )
-            pCList = pCList->pNext.get();
-        while (rIn.good() && ( ( rIn.Tell() + 8 ) <=  nStOfs ))
+            pCList = pCList->pNext;
+        while ( ( rIn.GetError() == 0 ) && ( ( rIn.Tell() + 8 ) <=  nStOfs ) )
         {
             if ( pCList->nCount == DFF_RECORD_MANAGER_BUF_SIZE )
                 pCList = new DffRecordList( pCList );
-            if (!ReadDffRecordHeader(rIn, pCList->mHd[ pCList->nCount ]))
-                break;
+            ReadDffRecordHeader( rIn, pCList->mHd[ pCList->nCount ] );
             bool bSeekSucceeded = pCList->mHd[ pCList->nCount++ ].SeekToEndOfRecord(rIn);
             if (!bSeekSucceeded)
                 break;
@@ -2974,15 +2947,15 @@ void DffRecordManager::Consume( SvStream& rIn, sal_uInt32 nStOfs )
 
 void DffRecordManager::Clear()
 {
-    pCList = static_cast<DffRecordList*>(this);
-    pNext.reset();
+    pCList = (DffRecordList*)this;
+    delete pNext, pNext = NULL;
     nCurrent = 0;
     nCount = 0;
 }
 
 DffRecordHeader* DffRecordManager::Current()
 {
-    DffRecordHeader* pRet = nullptr;
+    DffRecordHeader* pRet = NULL;
     if ( pCList->nCurrent < pCList->nCount )
         pRet = &pCList->mHd[ pCList->nCurrent ];
     return pRet;
@@ -2990,8 +2963,8 @@ DffRecordHeader* DffRecordManager::Current()
 
 DffRecordHeader* DffRecordManager::First()
 {
-    DffRecordHeader* pRet = nullptr;
-    pCList = static_cast<DffRecordList*>(this);
+    DffRecordHeader* pRet = NULL;
+    pCList = (DffRecordList*)this;
     if ( pCList->nCount )
     {
         pCList->nCurrent = 0;
@@ -3002,7 +2975,7 @@ DffRecordHeader* DffRecordManager::First()
 
 DffRecordHeader* DffRecordManager::Next()
 {
-    DffRecordHeader* pRet = nullptr;
+    DffRecordHeader* pRet = NULL;
     sal_uInt32 nC = pCList->nCurrent + 1;
     if ( nC < pCList->nCount )
     {
@@ -3011,7 +2984,7 @@ DffRecordHeader* DffRecordManager::Next()
     }
     else if ( pCList->pNext )
     {
-        pCList = pCList->pNext.get();
+        pCList = pCList->pNext;
         pCList->nCurrent = 0;
         pRet = &pCList->mHd[ 0 ];
     }
@@ -3020,7 +2993,7 @@ DffRecordHeader* DffRecordManager::Next()
 
 DffRecordHeader* DffRecordManager::Prev()
 {
-    DffRecordHeader* pRet = nullptr;
+    DffRecordHeader* pRet = NULL;
     sal_uInt32 nCur = pCList->nCurrent;
     if ( !nCur && pCList->pPrev )
     {
@@ -3037,9 +3010,9 @@ DffRecordHeader* DffRecordManager::Prev()
 
 DffRecordHeader* DffRecordManager::Last()
 {
-    DffRecordHeader* pRet = nullptr;
+    DffRecordHeader* pRet = NULL;
     while ( pCList->pNext )
-        pCList = pCList->pNext.get();
+        pCList = pCList->pNext;
     sal_uInt32 nCnt = pCList->nCount;
     if ( nCnt-- )
     {
@@ -3091,7 +3064,7 @@ DffRecordHeader* DffRecordManager::GetRecordHeader( sal_uInt16 nRecId, DffSeekTo
                 pHd = Next();
             }
             if ( pHd->nRecType != nRecId )
-                pHd = nullptr;
+                pHd = NULL;
         }
     }
     if ( !pHd )
@@ -3107,15 +3080,15 @@ DffRecordHeader* DffRecordManager::GetRecordHeader( sal_uInt16 nRecId, DffSeekTo
 
 
 bool CompareSvxMSDffShapeInfoById::operator() (
-    std::shared_ptr<SvxMSDffShapeInfo> const& lhs,
-    std::shared_ptr<SvxMSDffShapeInfo> const& rhs) const
+    ::boost::shared_ptr<SvxMSDffShapeInfo> const& lhs,
+    ::boost::shared_ptr<SvxMSDffShapeInfo> const& rhs) const
 {
     return lhs->nShapeId < rhs->nShapeId;
 }
 
 bool CompareSvxMSDffShapeInfoByTxBxComp::operator() (
-    std::shared_ptr<SvxMSDffShapeInfo> const& lhs,
-    std::shared_ptr<SvxMSDffShapeInfo> const& rhs) const
+    ::boost::shared_ptr<SvxMSDffShapeInfo> const& lhs,
+    ::boost::shared_ptr<SvxMSDffShapeInfo> const& rhs) const
 {
     return lhs->nTxBxComp < rhs->nTxBxComp;
 }
@@ -3154,7 +3127,7 @@ void SvxMSDffManager::ScaleEmu( sal_Int32& rVal ) const
 sal_uInt32 SvxMSDffManager::ScalePt( sal_uInt32 nVal ) const
 {
     MapUnit eMap = pSdrModel->GetScaleUnit();
-    Fraction aFact( GetMapFactor( MapUnit::MapPoint, eMap ).X() );
+    Fraction aFact( GetMapFactor( MAP_POINT, eMap ).X() );
     long aMul = aFact.GetNumerator();
     long aDiv = aFact.GetDenominator() * 65536;
     aFact = Fraction( aMul, aDiv ); // try again to shorten it
@@ -3174,7 +3147,7 @@ void SvxMSDffManager::SetModel(SdrModel* pModel, long nApplicationScale)
         // PPT works in units of 576DPI
         // WW on the other side uses twips, i.e. 1440DPI.
         MapUnit eMap = pSdrModel->GetScaleUnit();
-        Fraction aFact( GetMapFactor(MapUnit::MapInch, eMap).X() );
+        Fraction aFact( GetMapFactor(MAP_INCH, eMap).X() );
         long nMul=aFact.GetNumerator();
         long nDiv=aFact.GetDenominator()*nApplicationScale;
         aFact=Fraction(nMul,nDiv); // try again to shorten it
@@ -3186,7 +3159,7 @@ void SvxMSDffManager::SetModel(SdrModel* pModel, long nApplicationScale)
 
         // MS-DFF-Properties are mostly given in EMU (English Metric Units)
         // 1mm=36000emu, 1twip=635emu
-        aFact=GetMapFactor(MapUnit::Map100thMM,eMap).X();
+        aFact=GetMapFactor(MAP_100TH_MM,eMap).X();
         nMul=aFact.GetNumerator();
         nDiv=aFact.GetDenominator()*360;
         aFact=Fraction(nMul,nDiv); // try again to shorten it
@@ -3196,13 +3169,13 @@ void SvxMSDffManager::SetModel(SdrModel* pModel, long nApplicationScale)
         nEmuDiv=aFact.GetDenominator();
 
         // And something for typographic Points
-        aFact=GetMapFactor(MapUnit::MapPoint,eMap).X();
+        aFact=GetMapFactor(MAP_POINT,eMap).X();
         nPntMul=aFact.GetNumerator();
         nPntDiv=aFact.GetDenominator();
     }
     else
     {
-        pModel = nullptr;
+        pModel = 0;
         nMapMul = nMapDiv = nMapXOfs = nMapYOfs = nEmuMul = nEmuDiv = nPntMul = nPntDiv = 0;
         bNeedMap = false;
     }
@@ -3214,7 +3187,7 @@ bool SvxMSDffManager::SeekToShape( SvStream& rSt, void* /* pClientData */, sal_u
     if ( !maFidcls.empty() )
     {
         sal_uInt32 nMerk = rSt.Tell();
-        sal_uInt32 nSec = ( nId >> 10 ) - 1;
+        sal_uInt32 nShapeId, nSec = ( nId >> 10 ) - 1;
         if ( nSec < mnIdClusters )
         {
             OffsetMap::const_iterator it = maDgOffsetTable.find( maFidcls[ nSec ].dgid );
@@ -3223,13 +3196,12 @@ bool SvxMSDffManager::SeekToShape( SvStream& rSt, void* /* pClientData */, sal_u
                 sal_IntPtr nOfs = it->second;
                 rSt.Seek( nOfs );
                 DffRecordHeader aEscherF002Hd;
-                bool bOk = ReadDffRecordHeader( rSt, aEscherF002Hd );
-                sal_uLong nEscherF002End = bOk ? aEscherF002Hd.GetRecEndFilePos() : 0;
+                ReadDffRecordHeader( rSt, aEscherF002Hd );
+                sal_uLong nEscherF002End = aEscherF002Hd.GetRecEndFilePos();
+                DffRecordHeader aEscherObjListHd;
                 while (rSt.good() && rSt.Tell() < nEscherF002End)
                 {
-                    DffRecordHeader aEscherObjListHd;
-                    if (!ReadDffRecordHeader(rSt, aEscherObjListHd))
-                        break;
+                    ReadDffRecordHeader( rSt, aEscherObjListHd );
                     if ( aEscherObjListHd.nRecVer != 0xf )
                         aEscherObjListHd.SeekToEndOfRecord( rSt );
                     else if ( aEscherObjListHd.nRecType == DFF_msofbtSpContainer )
@@ -3237,7 +3209,6 @@ bool SvxMSDffManager::SeekToShape( SvStream& rSt, void* /* pClientData */, sal_u
                         DffRecordHeader aShapeHd;
                         if ( SeekToRec( rSt, DFF_msofbtSp, aEscherObjListHd.GetRecEndFilePos(), &aShapeHd ) )
                         {
-                            sal_uInt32 nShapeId(0);
                             rSt.ReadUInt32( nShapeId );
                             if ( nId == nShapeId )
                             {
@@ -3257,14 +3228,15 @@ bool SvxMSDffManager::SeekToShape( SvStream& rSt, void* /* pClientData */, sal_u
     return bRet;
 }
 
-bool SvxMSDffManager::SeekToRec( SvStream& rSt, sal_uInt16 nRecId, sal_uLong nMaxFilePos, DffRecordHeader* pRecHd, sal_uLong nSkipCount )
+bool SvxMSDffManager::SeekToRec( SvStream& rSt, sal_uInt16 nRecId, sal_uLong nMaxFilePos, DffRecordHeader* pRecHd, sal_uLong nSkipCount ) const
 {
     bool bRet = false;
     sal_uLong nFPosMerk = rSt.Tell(); // store FilePos to restore it later if necessary
+    DffRecordHeader aHd;
     do
     {
-        DffRecordHeader aHd;
-        if (!ReadDffRecordHeader(rSt, aHd))
+        ReadDffRecordHeader( rSt, aHd );
+        if (!rSt.good())
             break;
         if (aHd.nRecLen > nMaxLegalDffRecordLength)
             break;
@@ -3275,7 +3247,7 @@ bool SvxMSDffManager::SeekToRec( SvStream& rSt, sal_uInt16 nRecId, sal_uLong nMa
             else
             {
                 bRet = true;
-                if ( pRecHd != nullptr )
+                if ( pRecHd != NULL )
                     *pRecHd = aHd;
                 else
                 {
@@ -3301,23 +3273,32 @@ bool SvxMSDffManager::SeekToRec( SvStream& rSt, sal_uInt16 nRecId, sal_uLong nMa
     return bRet;
 }
 
-bool SvxMSDffManager::SeekToRec2( sal_uInt16 nRecId1, sal_uInt16 nRecId2, sal_uLong nMaxFilePos ) const
+bool SvxMSDffManager::SeekToRec2( sal_uInt16 nRecId1, sal_uInt16 nRecId2, sal_uLong nMaxFilePos, DffRecordHeader* pRecHd, sal_uLong nSkipCount ) const
 {
     bool bRet = false;
     sal_uLong nFPosMerk = rStCtrl.Tell();   // remember FilePos for conditionally later restoration
+    DffRecordHeader aHd;
     do
     {
-        DffRecordHeader aHd;
-        if (!ReadDffRecordHeader(rStCtrl, aHd))
-            break;
+        ReadDffRecordHeader( rStCtrl, aHd );
         if ( aHd.nRecType == nRecId1 || aHd.nRecType == nRecId2 )
         {
-            bRet = true;
-            bool bSeekSuccess = aHd.SeekToBegOfRecord(rStCtrl);
-            if (!bSeekSuccess)
+            if ( nSkipCount )
+                nSkipCount--;
+            else
             {
-                bRet = false;
-                break;
+                bRet = true;
+                if ( pRecHd )
+                    *pRecHd = aHd;
+                else
+                {
+                    bool bSeekSuccess = aHd.SeekToBegOfRecord(rStCtrl);
+                    if (!bSeekSuccess)
+                    {
+                        bRet = false;
+                        break;
+                    }
+                }
             }
         }
         if ( !bRet )
@@ -3431,7 +3412,7 @@ Color SvxMSDffManager::MSO_CLR_ToColor( sal_uInt32 nColorCode, sal_uInt16 nConte
                 case mso_syscolorInactiveCaption :      aColor = rStyleSettings.GetDeactiveColor(); break;
                 case mso_syscolorInactiveCaptionText :  aColor = rStyleSettings.GetDeactiveColor(); break;
                 case mso_syscolorInfoBackground :       aColor = rStyleSettings.GetFaceColor(); break;
-                case mso_syscolorInfoText :             aColor = rStyleSettings.GetLabelTextColor(); break;
+                case mso_syscolorInfoText :             aColor = rStyleSettings.GetInfoTextColor(); break;
                 case mso_syscolorMenuText :             aColor = rStyleSettings.GetMenuTextColor(); break;
                 case mso_syscolorScrollbar :            aColor = rStyleSettings.GetFaceColor(); break;
                 case mso_syscolorWindow :               aColor = rStyleSettings.GetWindowColor(); break;
@@ -3445,7 +3426,7 @@ Color SvxMSDffManager::MSO_CLR_ToColor( sal_uInt32 nColorCode, sal_uInt16 nConte
                 break;
                 case mso_colorLineOrFillColor :     // ( use the line color only if there is a line )
                 {
-                    if ( GetPropertyValue( DFF_Prop_fNoLineDrawDash, 0 ) & 8 )
+                    if ( GetPropertyValue( DFF_Prop_fNoLineDrawDash ) & 8 )
                     {
                         nPropColor = GetPropertyValue( DFF_Prop_lineColor, 0 );
                         nCProp = DFF_Prop_lineColor;
@@ -3594,15 +3575,13 @@ Color SvxMSDffManager::MSO_CLR_ToColor( sal_uInt32 nColorCode, sal_uInt16 nConte
 void SvxMSDffManager::ReadObjText( SvStream& rStream, SdrObject* pObj )
 {
     DffRecordHeader aRecHd;
-    if (!ReadDffRecordHeader(rStream, aRecHd))
-        return;
+    ReadDffRecordHeader( rStream, aRecHd );
     if( aRecHd.nRecType == DFF_msofbtClientTextbox || aRecHd.nRecType == 0x1022 )
     {
-        while (rStream.good() && rStream.Tell() < aRecHd.GetRecEndFilePos())
+        while( rStream.GetError() == 0 && rStream.Tell() < aRecHd.GetRecEndFilePos() )
         {
             DffRecordHeader aHd;
-            if (!ReadDffRecordHeader(rStream, aHd))
-                break;
+            ReadDffRecordHeader( rStream, aHd );
             switch( aHd.nRecType )
             {
                 case DFF_PST_TextBytesAtom:
@@ -3627,11 +3606,11 @@ void SvxMSDffManager::ReadObjText( SvStream& rStream, SdrObject* pObj )
 // our outliner is too complicate to be used properly,
 void SvxMSDffManager::ReadObjText( const OUString& rText, SdrObject* pObj )
 {
-    SdrTextObj* pText = dynamic_cast<SdrTextObj*>( pObj  );
+    SdrTextObj* pText = PTR_CAST( SdrTextObj, pObj );
     if ( pText )
     {
         SdrOutliner& rOutliner = pText->ImpGetDrawOutliner();
-        rOutliner.Init( OutlinerMode::TextObject );
+        rOutliner.Init( OUTLINERMODE_TEXTOBJECT );
 
         bool bOldUpdateMode = rOutliner.GetUpdateMode();
         rOutliner.SetUpdateMode( false );
@@ -3639,12 +3618,12 @@ void SvxMSDffManager::ReadObjText( const OUString& rText, SdrObject* pObj )
 
         sal_Int32 nParaIndex = 0;
         sal_Int32 nParaSize;
-        const sal_Unicode* pBuf = rText.getStr();
+        const sal_Unicode* pCurrent, *pBuf = rText.getStr();
         const sal_Unicode* pEnd = rText.getStr() + rText.getLength();
 
         while( pBuf < pEnd )
         {
-            const sal_Unicode* pCurrent = pBuf;
+            pCurrent = pBuf;
 
             for ( nParaSize = 0; pBuf < pEnd; )
             {
@@ -3668,7 +3647,7 @@ void SvxMSDffManager::ReadObjText( const OUString& rText, SdrObject* pObj )
             OUString aParagraph( pCurrent, nParaSize );
             if ( !nParaIndex && aParagraph.isEmpty() )              // SJ: we are crashing if the first paragraph is empty ?
                 aParagraph += " ";                   // otherwise these two lines can be removed.
-            rOutliner.Insert( aParagraph, nParaIndex );
+            rOutliner.Insert( aParagraph, nParaIndex, 0 );
             rOutliner.SetParaAttribs( nParaIndex, rOutliner.GetEmptyItemSet() );
 
             SfxItemSet aParagraphAttribs( rOutliner.GetEmptyItemSet() );
@@ -3702,13 +3681,13 @@ OUString SvxMSDffManager::MSDFFReadZString(SvStream& rIn,
     return comphelper::string::stripEnd(sBuf, 0);
 }
 
-static Size lcl_GetPrefSize(const Graphic& rGraf, const MapMode& aWanted)
+static Size lcl_GetPrefSize(const Graphic& rGraf, MapMode aWanted)
 {
     MapMode aPrefMapMode(rGraf.GetPrefMapMode());
     if (aPrefMapMode == aWanted)
         return rGraf.GetPrefSize();
     Size aRetSize;
-    if (aPrefMapMode == MapUnit::MapPixel)
+    if (aPrefMapMode == MAP_PIXEL)
     {
         aRetSize = Application::GetDefaultDevice()->PixelToLogic(
             rGraf.GetPrefSize(), aWanted);
@@ -3738,7 +3717,7 @@ static void lcl_ApplyCropping( const DffPropSet& rPropSet, SfxItemSet* pSet, Gra
         sal_uInt32  nTop( 0 ),  nBottom( 0 ), nLeft( 0 ), nRight( 0 );
 
         if ( pSet ) // use crop attributes ?
-            aCropSize = lcl_GetPrefSize( rGraf, MapUnit::Map100thMM );
+            aCropSize = lcl_GetPrefSize( rGraf, MAP_100TH_MM );
         else
         {
             aCropBitmap = rGraf.GetBitmapEx();
@@ -3768,7 +3747,7 @@ static void lcl_ApplyCropping( const DffPropSet& rPropSet, SfxItemSet* pSet, Gra
             pSet->Put( SdrGrafCropItem( nLeft, nTop, nRight, nBottom ) );
         else
         {
-            tools::Rectangle aCropRect( nLeft, nTop, aCropSize.Width() - nRight, aCropSize.Height() - nBottom );
+            Rectangle aCropRect( nLeft, nTop, aCropSize.Width() - nRight, aCropSize.Height() - nBottom );
             aCropBitmap.Crop( aCropRect );
             rGraf = aCropBitmap;
         }
@@ -3777,10 +3756,10 @@ static void lcl_ApplyCropping( const DffPropSet& rPropSet, SfxItemSet* pSet, Gra
 
 SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, const DffObjData& rObjData )
 {
-    SdrObject*  pRet = nullptr;
+    SdrObject*  pRet = NULL;
     OUString    aFileName;
     OUString    aLinkFileName, aLinkFilterName;
-    tools::Rectangle   aVisArea;
+    Rectangle   aVisArea;
 
     MSO_BlipFlags eFlags = (MSO_BlipFlags)GetPropertyValue( DFF_Prop_pibFlags, mso_blipflagDefault );
     sal_uInt32 nBlipId = GetPropertyValue( DFF_Prop_pib, 0 );
@@ -3791,7 +3770,7 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
     {
         Graphic aGraf;  // be sure this graphic is deleted before swapping out
         if( SeekToContent( DFF_Prop_pibName, rSt ) )
-            aFileName = MSDFFReadZString( rSt, GetPropertyValue( DFF_Prop_pibName, 0 ), true );
+            aFileName = MSDFFReadZString( rSt, GetPropertyValue( DFF_Prop_pibName ), true );
 
         //   AND, OR the following:
         if( !( eFlags & mso_blipflagDoNotSave ) ) // Graphic embedded
@@ -3805,8 +3784,8 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
                 */
                 rObjData.rSpHd.SeekToEndOfRecord( rSt );
                 DffRecordHeader aHd;
-                bool bOk = ReadDffRecordHeader(rSt, aHd);
-                if (bOk && DFF_msofbtBSE == aHd.nRecType)
+                ReadDffRecordHeader( rSt, aHd );
+                if( DFF_msofbtBSE == aHd.nRecType )
                 {
                     const sal_uLong nSkipBLIPLen = 20;
                     const sal_uLong nSkipShapePos = 4;
@@ -3828,19 +3807,19 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
             // the writer is doing its own cropping, so this part affects only impress and calc,
             // unless we're inside a group, in which case writer doesn't crop either
             if (( GetSvxMSDffSettings() & SVXMSDFF_SETTINGS_CROP_BITMAPS ) || rObjData.nCalledByGroup != 0 )
-                lcl_ApplyCropping( *this, ( rObjData.nSpFlags & SP_FOLESHAPE ) == 0 ? &rSet : nullptr, aGraf );
+                lcl_ApplyCropping( *this, ( rObjData.nSpFlags & SP_FOLESHAPE ) == 0 ? &rSet : NULL, aGraf );
 
             if ( IsProperty( DFF_Prop_pictureTransparent ) )
             {
                 sal_uInt32 nTransColor = GetPropertyValue( DFF_Prop_pictureTransparent, 0 );
 
-                if ( aGraf.GetType() == GraphicType::Bitmap )
+                if ( aGraf.GetType() == GRAPHIC_BITMAP )
                 {
                     BitmapEx    aBitmapEx( aGraf.GetBitmapEx() );
                     Bitmap      aBitmap( aBitmapEx.GetBitmap() );
                     Bitmap      aMask( aBitmap.CreateMask( MSO_CLR_ToColor( nTransColor, DFF_Prop_pictureTransparent ), 9 ) );
                     if ( aBitmapEx.IsTransparent() )
-                        aMask.CombineSimple( aBitmapEx.GetMask(), BmpCombine::Or );
+                        aMask.CombineSimple( aBitmapEx.GetMask(), BMP_COMBINE_OR );
                     aGraf = BitmapEx( aBitmap, aMask );
                 }
             }
@@ -3876,11 +3855,11 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
             }
             sal_Int16   nBrightness     = (sal_Int16)( (sal_Int32)GetPropertyValue( DFF_Prop_pictureBrightness, 0 ) / 327 );
             sal_Int32   nGamma          = GetPropertyValue( DFF_Prop_pictureGamma, 0x10000 );
-            GraphicDrawMode eDrawMode   = GraphicDrawMode::Standard;
-            switch ( GetPropertyValue( DFF_Prop_pictureActive, 0 ) & 6 )
+            GraphicDrawMode eDrawMode   = GRAPHICDRAWMODE_STANDARD;
+            switch ( GetPropertyValue( DFF_Prop_pictureActive ) & 6 )
             {
-                case 4 : eDrawMode = GraphicDrawMode::Greys; break;
-                case 6 : eDrawMode = GraphicDrawMode::Mono; break;
+                case 4 : eDrawMode = GRAPHICDRAWMODE_GREYS; break;
+                case 6 : eDrawMode = GRAPHICDRAWMODE_MONO; break;
                 case 0 :
                 {
                     //office considers the converted values of (in OOo) 70 to be the
@@ -3890,13 +3869,13 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
                     {
                         nContrast = 0;
                         nBrightness = 0;
-                        eDrawMode = GraphicDrawMode::Watermark;
+                        eDrawMode = GRAPHICDRAWMODE_WATERMARK;
                     };
                 }
                 break;
             }
 
-            if ( nContrast || nBrightness || ( nGamma != 0x10000 ) || ( eDrawMode != GraphicDrawMode::Standard ) )
+            if ( nContrast || nBrightness || ( nGamma != 0x10000 ) || ( eDrawMode != GRAPHICDRAWMODE_STANDARD ) )
             {
                 // MSO uses a different algorithm for contrast+brightness, LO applies contrast before brightness,
                 // while MSO apparently applies half of brightness before contrast and half after. So if only
@@ -3911,42 +3890,42 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
                         rSet.Put( SdrGrafContrastItem( (sal_Int16)nContrast ) );
                     if ( nGamma != 0x10000 )
                         rSet.Put( SdrGrafGamma100Item( nGamma / 655 ) );
-                    if ( eDrawMode != GraphicDrawMode::Standard )
+                    if ( eDrawMode != GRAPHICDRAWMODE_STANDARD )
                         rSet.Put( SdrGrafModeItem( eDrawMode ) );
                 }
                 else
                 {
-                    if ( eDrawMode == GraphicDrawMode::Watermark )
+                    if ( eDrawMode == GRAPHICDRAWMODE_WATERMARK )
                     {
                         nContrast = 60;
                         nBrightness = 70;
-                        eDrawMode = GraphicDrawMode::Standard;
+                        eDrawMode = GRAPHICDRAWMODE_STANDARD;
                     }
                     switch ( aGraf.GetType() )
                     {
-                        case GraphicType::Bitmap :
+                        case GRAPHIC_BITMAP :
                         {
                             BitmapEx    aBitmapEx( aGraf.GetBitmapEx() );
                             if ( nBrightness || nContrast || ( nGamma != 0x10000 ) )
                                 aBitmapEx.Adjust( nBrightness, (sal_Int16)nContrast, 0, 0, 0, (double)nGamma / 0x10000, false, true );
-                            if ( eDrawMode == GraphicDrawMode::Greys )
-                                aBitmapEx.Convert( BmpConversion::N8BitGreys );
-                            else if ( eDrawMode == GraphicDrawMode::Mono )
-                                aBitmapEx.Convert( BmpConversion::N1BitThreshold );
+                            if ( eDrawMode == GRAPHICDRAWMODE_GREYS )
+                                aBitmapEx.Convert( BMP_CONVERSION_8BIT_GREYS );
+                            else if ( eDrawMode == GRAPHICDRAWMODE_MONO )
+                                aBitmapEx.Convert( BMP_CONVERSION_1BIT_THRESHOLD );
                             aGraf = aBitmapEx;
 
                         }
                         break;
 
-                        case GraphicType::GdiMetafile :
+                        case GRAPHIC_GDIMETAFILE :
                         {
                             GDIMetaFile aGdiMetaFile( aGraf.GetGDIMetaFile() );
                             if ( nBrightness || nContrast || ( nGamma != 0x10000 ) )
                                 aGdiMetaFile.Adjust( nBrightness, (sal_Int16)nContrast, 0, 0, 0, (double)nGamma / 0x10000, false, true );
-                            if ( eDrawMode == GraphicDrawMode::Greys )
-                                aGdiMetaFile.Convert( MtfConversion::N8BitGreys );
-                            else if ( eDrawMode == GraphicDrawMode::Mono )
-                                aGdiMetaFile.Convert( MtfConversion::N1BitThreshold );
+                            if ( eDrawMode == GRAPHICDRAWMODE_GREYS )
+                                aGdiMetaFile.Convert( MTF_CONVERSION_8BIT_GREYS );
+                            else if ( eDrawMode == GRAPHICDRAWMODE_MONO )
+                                aGdiMetaFile.Convert( MTF_CONVERSION_1BIT_THRESHOLD );
                             aGraf = aGdiMetaFile;
                         }
                         break;
@@ -3962,7 +3941,7 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
             // TODO/LATER: in future probably the correct aspect should be provided here
             sal_Int64 nAspect = embed::Aspects::MSOLE_CONTENT;
             // #i32596# - pass <nCalledByGroup> to method
-            pRet = ImportOLE( GetPropertyValue( DFF_Prop_pictureId, 0 ), aGraf, rObjData.aBoundRect, aVisArea, rObjData.nCalledByGroup, nAspect );
+            pRet = ImportOLE( GetPropertyValue( DFF_Prop_pictureId ), aGraf, rObjData.aBoundRect, aVisArea, rObjData.nCalledByGroup, nAspect );
         }
         if( !pRet )
         {
@@ -3976,15 +3955,15 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
                 if ( !INetURLObject( maBaseURL ).GetNewAbsURL( aFileName, &aAbsURL ) )
                 {
                     OUString aValidURL;
-                    if( osl::FileBase::getFileURLFromSystemPath( aFileName, aValidURL ) == osl::FileBase::E_None )
+                    if( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( aFileName, aValidURL ) )
                         aAbsURL = INetURLObject( aValidURL );
                 }
-                if( aAbsURL.GetProtocol() != INetProtocol::NotValid )
+                if( aAbsURL.GetProtocol() != INET_PROT_NOT_VALID )
                 {
                     GraphicFilter &rGrfFilter = GraphicFilter::GetGraphicFilter();
                     aLinkFilterName = rGrfFilter.GetImportFormatName(
                         rGrfFilter.GetImportFormatNumberForShortName( aAbsURL.getExtension() ) );
-                    aLinkFileName = aAbsURL.GetMainURL( INetURLObject::DecodeMechanism::ToIUri );
+                    aLinkFileName = aAbsURL.GetMainURL( INetURLObject::DECODE_TO_IURI );
                 }
                 else
                     aLinkFileName = aFileName;
@@ -4011,7 +3990,7 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
     pRet->SetModel( pSdrModel ); // required for GraphicLink
     pRet->SetLogicRect( rObjData.aBoundRect );
 
-    if ( dynamic_cast<const SdrGrafObj* >(pRet) !=  nullptr )
+    if ( pRet->ISA( SdrGrafObj ) )
     {
         if( aLinkFileName.getLength() )
             static_cast<SdrGrafObj*>(pRet)->SetGraphicLink( aLinkFileName, ""/*TODO?*/, aLinkFilterName );
@@ -4028,16 +4007,16 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, cons
 
 // PptSlidePersistEntry& rPersistEntry, SdPage* pPage
 SdrObject* SvxMSDffManager::ImportObj( SvStream& rSt, void* pClientData,
-    tools::Rectangle& rClientRect, const tools::Rectangle& rGlobalChildRect, int nCalledByGroup, sal_Int32* pShapeId )
+    Rectangle& rClientRect, const Rectangle& rGlobalChildRect, int nCalledByGroup, sal_Int32* pShapeId )
 {
-    SdrObject* pRet = nullptr;
+    SdrObject* pRet = NULL;
     DffRecordHeader aObjHd;
-    bool bOk = ReadDffRecordHeader(rSt, aObjHd);
-    if (bOk && aObjHd.nRecType == DFF_msofbtSpgrContainer)
+    ReadDffRecordHeader( rSt, aObjHd );
+    if ( aObjHd.nRecType == DFF_msofbtSpgrContainer )
     {
         pRet = ImportGroup( aObjHd, rSt, pClientData, rClientRect, rGlobalChildRect, nCalledByGroup, pShapeId );
     }
-    else if (bOk && aObjHd.nRecType == DFF_msofbtSpContainer)
+    else if ( aObjHd.nRecType == DFF_msofbtSpContainer )
     {
         pRet = ImportShape( aObjHd, rSt, pClientData, rClientRect, rGlobalChildRect, nCalledByGroup, pShapeId );
     }
@@ -4046,10 +4025,10 @@ SdrObject* SvxMSDffManager::ImportObj( SvStream& rSt, void* pClientData,
 }
 
 SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& rSt, void* pClientData,
-                                            tools::Rectangle& rClientRect, const tools::Rectangle& rGlobalChildRect,
+                                            Rectangle& rClientRect, const Rectangle& rGlobalChildRect,
                                                 int nCalledByGroup, sal_Int32* pShapeId )
 {
-    SdrObject* pRet = nullptr;
+    SdrObject* pRet = NULL;
 
     if( pShapeId )
         *pShapeId = 0;
@@ -4058,8 +4037,8 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
         return pRet;
 
     DffRecordHeader aRecHd;     // the first atom has to be the SpContainer for the GroupObject
-    bool bOk = ReadDffRecordHeader(rSt, aRecHd);
-    if (bOk && aRecHd.nRecType == DFF_msofbtSpContainer)
+    ReadDffRecordHeader( rSt, aRecHd );
+    if ( aRecHd.nRecType == DFF_msofbtSpContainer )
     {
         mnFix16Angle = 0;
         if (!aRecHd.SeekToBegOfRecord(rSt))
@@ -4071,9 +4050,9 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
             sal_Int32 nSpFlags = nGroupShapeFlags;
             nGroupRotateAngle = mnFix16Angle;
 
-            tools::Rectangle aClientRect( rClientRect );
+            Rectangle aClientRect( rClientRect );
 
-            tools::Rectangle aGlobalChildRect;
+            Rectangle aGlobalChildRect;
             if ( !nCalledByGroup || rGlobalChildRect.IsEmpty() )
                 aGlobalChildRect = GetGlobalChildAnchor( rHd, rSt, aClientRect );
             else
@@ -4089,7 +4068,7 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
                 const long nRotatedWidth = aClientRect.GetHeight();
                 const long nRotatedHeight = aClientRect.GetWidth();
                 Size aNewSize(nRotatedWidth, nRotatedHeight);
-                tools::Rectangle aNewRect( aTopLeft, aNewSize );
+                Rectangle aNewRect( aTopLeft, aNewSize );
                 aClientRect = aNewRect;
             }
 
@@ -4097,33 +4076,28 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
             if (!aRecHd.SeekToEndOfRecord(rSt))
                 return pRet;
 
-            while (rSt.good() && ( rSt.Tell() < rHd.GetRecEndFilePos()))
+            while ( ( rSt.GetError() == 0 ) && ( rSt.Tell() < rHd.GetRecEndFilePos() ) )
             {
                 DffRecordHeader aRecHd2;
-                if (!ReadDffRecordHeader(rSt, aRecHd2))
-                    break;
+                ReadDffRecordHeader( rSt, aRecHd2 );
                 if ( aRecHd2.nRecType == DFF_msofbtSpgrContainer )
                 {
-                    tools::Rectangle aGroupClientAnchor, aGroupChildAnchor;
+                    Rectangle aGroupClientAnchor, aGroupChildAnchor;
                     GetGroupAnchors( aRecHd2, rSt, aGroupClientAnchor, aGroupChildAnchor, aClientRect, aGlobalChildRect );
                     if (!aRecHd2.SeekToBegOfRecord(rSt))
                         return pRet;
                     sal_Int32 nShapeId;
                     SdrObject* pTmp = ImportGroup( aRecHd2, rSt, pClientData, aGroupClientAnchor, aGroupChildAnchor, nCalledByGroup + 1, &nShapeId );
-                    if (pTmp)
+                    if ( pTmp && pRet && static_cast<SdrObjGroup*>(pRet)->GetSubList() )
                     {
-                        SdrObjGroup* pGroup = dynamic_cast<SdrObjGroup*>(pRet);
-                        if (pGroup && pGroup->GetSubList())
-                        {
-                            pGroup->GetSubList()->NbcInsertObject(pTmp);
-                            if (nShapeId)
-                                insertShapeId(nShapeId, pTmp);
-                        }
-#ifndef NO_LIBO_SHAPE_LEAK_FIX
-                        else if (pTmp)
-                            SdrObject::Free(pTmp);
-#endif	// !NO_LIBO_SHAPE_LEAK_FIX
+                        static_cast<SdrObjGroup*>(pRet)->GetSubList()->NbcInsertObject( pTmp );
+                        if( nShapeId )
+                            insertShapeId( nShapeId, pTmp );
                     }
+#ifndef NO_LIBO_SHAPE_LEAK_FIX
+                    else if (pTmp)
+                        SdrObject::Free(pTmp);
+#endif	// !NO_LIBO_SHAPE_LEAK_FIX
                 }
                 else if ( aRecHd2.nRecType == DFF_msofbtSpContainer )
                 {
@@ -4131,20 +4105,16 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
                         return pRet;
                     sal_Int32 nShapeId;
                     SdrObject* pTmp = ImportShape( aRecHd2, rSt, pClientData, aClientRect, aGlobalChildRect, nCalledByGroup + 1, &nShapeId );
-                    if (pTmp)
+                    if ( pTmp && pRet && static_cast<SdrObjGroup*>(pRet)->GetSubList())
                     {
-                        SdrObjGroup* pGroup = dynamic_cast<SdrObjGroup*>(pRet);
-                        if (pGroup && pGroup->GetSubList())
-                        {
-                            pGroup->GetSubList()->NbcInsertObject(pTmp);
-                            if (nShapeId)
-                                insertShapeId(nShapeId, pTmp);
-                        }
-#ifndef NO_LIBO_SHAPE_LEAK_FIX
-                        else
-                            SdrObject::Free(pTmp);
-#endif	// !NO_LIBO_SHAPE_LEAK_FIX
+                        static_cast<SdrObjGroup*>(pRet)->GetSubList()->NbcInsertObject( pTmp );
+                        if( nShapeId )
+                            insertShapeId( nShapeId, pTmp );
                     }
+#ifndef NO_LIBO_SHAPE_LEAK_FIX
+                    else if (pTmp)
+                        SdrObject::Free(pTmp);
+#endif	// !NO_LIBO_SHAPE_LEAK_FIX
                 }
                 if (!aRecHd2.SeekToEndOfRecord(rSt))
                     return pRet;
@@ -4169,20 +4139,14 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
             }
         }
     }
-    if (size_t(nCalledByGroup) < maPendingGroupData.size())
-    {
-        // finalization for this group is pending, do it now
-        pRet = FinalizeObj(maPendingGroupData.back().first, pRet);
-        maPendingGroupData.pop_back();
-    }
     return pRet;
 }
 
 SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& rSt, void* pClientData,
-                                            tools::Rectangle& rClientRect, const tools::Rectangle& rGlobalChildRect,
+                                            Rectangle& rClientRect, const Rectangle& rGlobalChildRect,
                                             int nCalledByGroup, sal_Int32* pShapeId )
 {
-    SdrObject* pRet = nullptr;
+    SdrObject* pRet = NULL;
 
     if( pShapeId )
         *pShapeId = 0;
@@ -4191,11 +4155,11 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
         return pRet;
 
     DffObjData aObjData( rHd, rClientRect, nCalledByGroup );
-
     aObjData.bRotateTextWithShape = ( GetSvxMSDffSettings() & SVXMSDFF_SETTINGS_IMPORT_EXCEL ) == 0;
-    maShapeRecords.Consume( rSt );
+    maShapeRecords.Consume( rSt, false );
     if( maShapeRecords.SeekToContent( rSt,
-        DFF_msofbtUDefProp ) )
+        DFF_msofbtUDefProp,
+        SEEK_FROM_BEGINNING ) )
     {
         sal_uInt32  nBytesLeft = maShapeRecords.Current()->nRecLen;
         while( 5 < nBytesLeft )
@@ -4216,7 +4180,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
             nBytesLeft  -= 6;
         }
     }
-    aObjData.bShapeType = maShapeRecords.SeekToContent( rSt, DFF_msofbtSp );
+    aObjData.bShapeType = maShapeRecords.SeekToContent( rSt, DFF_msofbtSp, SEEK_FROM_BEGINNING );
     if ( aObjData.bShapeType )
     {
         rSt.ReadUInt32( aObjData.nShapeId )
@@ -4247,7 +4211,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
     else
     {
         InitializePropSet( DFF_msofbtOPT ); // get the default PropSet
-        static_cast<DffPropertyReader*>(this)->mnFix16Angle = 0;
+        ( (DffPropertyReader*) this )->mnFix16Angle = 0;
     }
 
     aObjData.bOpt2 = maShapeRecords.SeekToContent( rSt, DFF_msofbtUDefProp, SEEK_FROM_CURRENT_AND_RESTART );
@@ -4256,19 +4220,19 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
         maShapeRecords.Current()->SeekToBegOfRecord( rSt );
         delete pSecPropSet;
         pSecPropSet = new DffPropertyReader( *this );
-        pSecPropSet->ReadPropSet( rSt, nullptr );
+        pSecPropSet->ReadPropSet( rSt, NULL );
     }
 
     aObjData.bChildAnchor = maShapeRecords.SeekToContent( rSt, DFF_msofbtChildAnchor, SEEK_FROM_CURRENT_AND_RESTART );
     if ( aObjData.bChildAnchor )
     {
-        sal_Int32 l(0), o(0), r(0), u(0);
+        sal_Int32 l, o, r, u;
         rSt.ReadInt32( l ).ReadInt32( o ).ReadInt32( r ).ReadInt32( u );
         Scale( l );
         Scale( o );
         Scale( r );
         Scale( u );
-        aObjData.aChildAnchor = tools::Rectangle( l, o, r, u );
+        aObjData.aChildAnchor = Rectangle( l, o, r, u );
         if ( !rGlobalChildRect.IsEmpty() && !rClientRect.IsEmpty() && rGlobalChildRect.GetWidth() && rGlobalChildRect.GetHeight() )
         {
             double fWidth = r - l;
@@ -4279,7 +4243,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
             double fo = ( ( o - rGlobalChildRect.Top()  ) * fYScale ) + rClientRect.Top();
             fWidth *= fXScale;
             fHeight *= fYScale;
-            aObjData.aChildAnchor = tools::Rectangle( Point( (sal_Int32)fl, (sal_Int32)fo ), Size( (sal_Int32)( fWidth + 1 ), (sal_Int32)( fHeight + 1 ) ) );
+            aObjData.aChildAnchor = Rectangle( Point( (sal_Int32)fl, (sal_Int32)fo ), Size( (sal_Int32)( fWidth + 1 ), (sal_Int32)( fHeight + 1 ) ) );
         }
     }
 
@@ -4291,9 +4255,9 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
         aObjData.aBoundRect = aObjData.aChildAnchor;
 
     if ( aObjData.nSpFlags & SP_FBACKGROUND )
-        aObjData.aBoundRect = tools::Rectangle( Point(), Size( 1, 1 ) );
+        aObjData.aBoundRect = Rectangle( Point(), Size( 1, 1 ) );
 
-    tools::Rectangle aTextRect;
+    Rectangle aTextRect;
     if ( !aObjData.aBoundRect.IsEmpty() )
     {   // apply rotation to the BoundingBox BEFORE an object has been generated
         if( mnFix16Angle )
@@ -4306,7 +4270,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                 Point aTopLeft( aObjData.aBoundRect.Left() + nHalfWidth - nHalfHeight,
                                 aObjData.aBoundRect.Top() + nHalfHeight - nHalfWidth );
                 Size aNewSize( aObjData.aBoundRect.GetHeight(), aObjData.aBoundRect.GetWidth() );
-                tools::Rectangle aNewRect( aTopLeft, aNewSize );
+                Rectangle aNewRect( aTopLeft, aNewSize );
                 aObjData.aBoundRect = aNewRect;
             }
         }
@@ -4324,7 +4288,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                 caller has not passed an own bounding ractangle. */
             if ( rClientRect.IsEmpty() )
                  rClientRect = aObjData.aBoundRect;
-            nGroupShapeFlags = aObjData.nSpFlags;
+            nGroupShapeFlags = aObjData.nSpFlags;       // #73013#
         }
         else if ( ( aObjData.eShapeType != mso_sptNil ) || IsProperty( DFF_Prop_pVertices ) || bGraphic )
         {
@@ -4336,13 +4300,11 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 
             if ( bGraphic )
             {
-                if (!mbSkipImages) {
-                    pRet = ImportGraphic( rSt, aSet, aObjData );        // SJ: #68396# is no longer true (fixed in ppt2000)
-                    ApplyAttributes( rSt, aSet, aObjData );
-                    pRet->SetMergedItemSet(aSet);
-                }
+                pRet = ImportGraphic( rSt, aSet, aObjData );        // SJ: #68396# is no longer true (fixed in ppt2000)
+                ApplyAttributes( rSt, aSet, aObjData );
+                pRet->SetMergedItemSet(aSet);
             }
-            else if ( aObjData.eShapeType == mso_sptLine && !( GetPropertyValue( DFF_Prop_fc3DLightFace, 0 ) & 8 ) )
+            else if ( aObjData.eShapeType == mso_sptLine && !( GetPropertyValue( DFF_Prop_fc3DLightFace ) & 8 ) )
             {
                 basegfx::B2DPolygon aPoly;
                 aPoly.append(basegfx::B2DPoint(aObjData.aBoundRect.Left(), aObjData.aBoundRect.Top()));
@@ -4362,8 +4324,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                     pRet = new SdrObjCustomShape();
                     pRet->SetModel( pSdrModel );
 
-                    sal_uInt32 ngtextFStrikethrough = GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 );
-                    bool bIsFontwork = ( ngtextFStrikethrough & 0x4000 ) != 0;
+                    bool bIsFontwork = ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x4000 ) != 0;
 
                     // in case of a FontWork, the text is set by the escher import
                     if ( bIsFontwork )
@@ -4377,7 +4338,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                             SvxFontItem aLatin(EE_CHAR_FONTINFO), aAsian(EE_CHAR_FONTINFO_CJK), aComplex(EE_CHAR_FONTINFO_CTL);
                             GetDefaultFonts( aLatin, aAsian, aComplex );
 
-                            aFontName = MSDFFReadZString( rSt, GetPropertyValue( DFF_Prop_gtextFont, 0 ), true );
+                            aFontName = MSDFFReadZString( rSt, GetPropertyValue( DFF_Prop_gtextFont ), true );
                             aSet.Put( SvxFontItem( aLatin.GetFamily(), aFontName, aLatin.GetStyleName(),
                                         PITCH_DONTKNOW, RTL_TEXTENCODING_DONTKNOW, EE_CHAR_FONTINFO ));
                             aSet.Put( SvxFontItem( aLatin.GetFamily(), aFontName, aLatin.GetStyleName(),
@@ -4388,20 +4349,20 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 
                         // SJ: applying fontattributes for Fontwork :
                         if ( IsHardAttribute( DFF_Prop_gtextFItalic ) )
-                            aSet.Put( SvxPostureItem( ( ngtextFStrikethrough & 0x0010 ) != 0 ? ITALIC_NORMAL : ITALIC_NONE, EE_CHAR_ITALIC ) );
+                            aSet.Put( SvxPostureItem( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x0010 ) != 0 ? ITALIC_NORMAL : ITALIC_NONE, EE_CHAR_ITALIC ) );
 
                         if ( IsHardAttribute( DFF_Prop_gtextFBold ) )
-                            aSet.Put( SvxWeightItem( ( ngtextFStrikethrough & 0x0020 ) != 0 ? WEIGHT_BOLD : WEIGHT_NORMAL, EE_CHAR_WEIGHT ) );
+                            aSet.Put( SvxWeightItem( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x0020 ) != 0 ? WEIGHT_BOLD : WEIGHT_NORMAL, EE_CHAR_WEIGHT ) );
 
                         // SJ TODO: Vertical Writing is not correct, instead
                         // this should be replaced through "CharacterRotation"
                         // by 90 degrees, therefore a new Item has to be
                         // supported by svx core, api and xml file format
-                        static_cast<SdrObjCustomShape*>(pRet)->SetVerticalWriting( ( ngtextFStrikethrough & 0x2000 ) != 0 );
+                        static_cast<SdrObjCustomShape*>(pRet)->SetVerticalWriting( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x2000 ) != 0 );
 
                         if ( SeekToContent( DFF_Prop_gtextUNICODE, rSt ) )
                         {
-                            aObjectText = MSDFFReadZString( rSt, GetPropertyValue( DFF_Prop_gtextUNICODE, 0 ), true );
+                            aObjectText = MSDFFReadZString( rSt, GetPropertyValue( DFF_Prop_gtextUNICODE ), true );
                             ReadObjText( aObjectText, pRet );
                         }
 
@@ -4421,9 +4382,9 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                             }
                             aSet.Put( SdrTextHorzAdjustItem( eHorzAdjust ) );
 
-                            SdrFitToSizeType eFTS = SdrFitToSizeType::NONE;
+                            SdrFitToSizeType eFTS = SDRTEXTFIT_NONE;
                             if ( eGeoTextAlign == mso_alignTextStretch )
-                                eFTS = SdrFitToSizeType::AllLines;
+                                eFTS = SDRTEXTFIT_ALLLINES;
                             aSet.Put( SdrTextFitToSizeTypeItem( eFTS ) );
                         }
                         if ( IsProperty( DFF_Prop_gtextSpacing ) )
@@ -4432,35 +4393,12 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                             if ( nTextWidth != 100 )
                                 aSet.Put( SvxCharScaleWidthItem( (sal_uInt16)nTextWidth, EE_CHAR_FONTWIDTH ) );
                         }
-                        if ( ngtextFStrikethrough & 0x1000 ) // SJ: Font Kerning On ?
+                        if ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x1000 ) // SJ: Font Kerning On ?
                             aSet.Put( SvxKerningItem( 1, EE_CHAR_KERNING ) );
 
                         // #i119496# the resize autoshape to fit text attr of word art in MS PPT is always false
                         aSet.Put(makeSdrTextAutoGrowHeightItem(false));
                         aSet.Put(makeSdrTextAutoGrowWidthItem(false));
-
-                        double fRatio = 0;
-                        OutputDevice* pOut = Application::GetDefaultDevice();
-                        vcl::Font aFont( pOut->GetFont() );
-                        aFont.SetFamilyName( aFontName );
-                        auto nTextWidth = pOut->GetTextWidth( aObjectText );
-
-                        if ( nTextWidth && aObjData.eShapeType == mso_sptTextPlainText )
-                        {
-                            fRatio = aFont.GetFontSize().Height();
-                            fRatio /= nTextWidth;
-                            sal_Int32 nNewHeight = fRatio * aObjData.aBoundRect.getWidth();
-                            sal_Int32 nPaddingY = aObjData.aBoundRect.getHeight() - nNewHeight;
-
-                            if ( nPaddingY > 0 )
-                            {
-                                // Remember that value because original size have to be exported
-                                aSet.Put( SdrMetricItem( SDRATTR_TEXT_UPPERDIST, nPaddingY ) );
-                                aObjData.aBoundRect.setHeight( nNewHeight );
-                            }
-                            else
-                                aSet.Put( SdrMetricItem( SDRATTR_TEXT_UPPERDIST, 0 ) );
-                        }
                     }
                     pRet->SetMergedItemSet( aSet );
 
@@ -4479,8 +4417,8 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                                 rOutliner.SetStyleSheetPool( static_cast<SfxStyleSheetPool*>(pModel->GetStyleSheetPool()) );
                             rOutliner.SetUpdateMode( false );
                             rOutliner.SetText( *pParaObj );
-                            ScopedVclPtrInstance< VirtualDevice > pVirDev(DeviceFormat::BITMASK);
-                            pVirDev->SetMapMode( MapUnit::Map100thMM );
+                            VirtualDevice aVirDev( 1 );
+                            aVirDev.SetMapMode( MAP_100TH_MM );
                             sal_Int32 i, nParagraphs = rOutliner.GetParagraphCount();
                             if ( nParagraphs )
                             {
@@ -4488,11 +4426,11 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                                 for ( i = 0; i < nParagraphs; i++ )
                                 {
                                     OUString aString(rOutliner.GetText(rOutliner.GetParagraph(i)));
-                                    bool bIsRTL = pVirDev->GetTextIsRTL(aString, 0, aString.getLength());
+                                    bool bIsRTL = aVirDev.GetTextIsRTL(aString, 0, aString.getLength());
                                     if ( bIsRTL )
                                     {
                                         SfxItemSet aSet2( rOutliner.GetParaAttribs( i ) );
-                                        aSet2.Put( SvxFrameDirectionItem( SvxFrameDirection::Horizontal_RL_TB, EE_PARA_WRITINGDIR ) );
+                                        aSet2.Put( SvxFrameDirectionItem( FRMDIR_HORI_RIGHT_TOP, EE_PARA_WRITINGDIR ) );
                                         rOutliner.SetParaAttribs( i, aSet2 );
                                         bCreateNewParaObject = true;
                                     }
@@ -4500,7 +4438,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                                 if  ( bCreateNewParaObject )
                                 {
                                     OutlinerParaObject* pNewText = rOutliner.CreateParaObject();
-                                    rOutliner.Init( OutlinerMode::TextObject );
+                                    rOutliner.Init( OUTLINERMODE_TEXTOBJECT );
                                     static_cast<SdrObjCustomShape*>(pRet)->NbcSetOutlinerParaObject( pNewText );
                                 }
                             }
@@ -4512,7 +4450,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                     // mso_sptArc special treating:
                     // sj: since we actually can't render the arc because of its weird SnapRect settings,
                     // we will create a new CustomShape, that can be saved/loaded without problems.
-                    // We will change the shape type, so this code applies only if importing arcs from msoffice.
+                    // We will change the shape type, so this code applys only if importing arcs from msoffice.
                     if ( aObjData.eShapeType == mso_sptArc )
                     {
                         const OUString sAdjustmentValues( "AdjustmentValues" );
@@ -4523,12 +4461,12 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         const OUString sPath( "Path" );
                         const OUString sTextFrames( "TextFrames" );
                         SdrCustomShapeGeometryItem aGeometryItem( static_cast<const SdrCustomShapeGeometryItem&>(static_cast<SdrObjCustomShape*>(pRet)->GetMergedItem( SDRATTR_CUSTOMSHAPE_GEOMETRY ) ) );
-                        css::uno::Sequence< css::drawing::EnhancedCustomShapeParameterPair> seqCoordinates;
-                        css::uno::Sequence< css::drawing::EnhancedCustomShapeAdjustmentValue > seqAdjustmentValues;
+                        com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeParameterPair> seqCoordinates;
+                        com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeAdjustmentValue > seqAdjustmentValues;
 
                         // before clearing the GeometryItem we have to store the current Coordinates
                         const uno::Any* pAny = ((SdrCustomShapeGeometryItem&)aGeometryItem).GetPropertyValueByName( sPath, sCoordinates );
-                        tools::Rectangle aPolyBoundRect;
+                        Rectangle aPolyBoundRect;
                         Point aStartPt( 0,0 );
                         if ( pAny && ( *pAny >>= seqCoordinates ) && ( seqCoordinates.getLength() >= 4 ) )
                         {
@@ -4544,7 +4482,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                                 aP.Y() = nY;
                                 aXP[ (sal_uInt16)nPtNum ] = aP;
                             }
-                            aPolyBoundRect = tools::Rectangle( aXP.GetBoundRect() );
+                            aPolyBoundRect = Rectangle( aXP.GetBoundRect() );
                             if ( nNumElemVert >= 3 )
                             { // arc first command is always wr -- clockwise arc
                                 // the parameters are : (left,top),(right,bottom),start(x,y),end(x,y)
@@ -4552,7 +4490,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                             }
                         }
                         else
-                            aPolyBoundRect = tools::Rectangle( -21600, 0, 21600, 43200 );  // defaulting
+                            aPolyBoundRect = Rectangle( -21600, 0, 21600, 43200 );  // defaulting
 
                         // clearing items, so MergeDefaultAttributes will set the corresponding defaults from EnhancedCustomShapeGeometry
                         aGeometryItem.ClearPropertyValue( sHandles );
@@ -4565,17 +4503,17 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         pAny = ((SdrCustomShapeGeometryItem&)aGeometryItem).GetPropertyValueByName( sAdjustmentValues );
                         if ( pAny && ( *pAny >>= seqAdjustmentValues ) && seqAdjustmentValues.getLength() > 1 )
                         {
-                            if ( seqAdjustmentValues[ 0 ].State == css::beans::PropertyState_DIRECT_VALUE )
+                            double fNumber;
+                            if ( seqAdjustmentValues[ 0 ].State == com::sun::star::beans::PropertyState_DIRECT_VALUE )
                             {
-                                double fNumber;
                                 seqAdjustmentValues[ 0 ].Value >>= fNumber;
                                 nEndAngle = NormAngle360( - (sal_Int32)fNumber * 100 );
                             }
                             else
                             {
+                                fNumber = 270.0;
                                 //normal situation:if endAngle != 90,there will be a direct_value,but for damaged curve,the endAngle need to recalculate.
                                 Point cent = aPolyBoundRect.Center();
-                                double fNumber;
                                 if ( aStartPt.Y() == cent.Y() )
                                     fNumber = ( aStartPt.X() >= cent.X() ) ? 0:180.0;
                                 else if ( aStartPt.X() == cent.X() )
@@ -4587,19 +4525,19 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                                 }
                                 nEndAngle = NormAngle360( - (sal_Int32)fNumber * 100 );
                                 seqAdjustmentValues[ 0 ].Value <<= fNumber;
-                                seqAdjustmentValues[ 0 ].State = css::beans::PropertyState_DIRECT_VALUE;     // so this value will properly be stored
+                                seqAdjustmentValues[ 0 ].State = com::sun::star::beans::PropertyState_DIRECT_VALUE;     // so this value will properly be stored
                             }
 
-                            if ( seqAdjustmentValues[ 1 ].State == css::beans::PropertyState_DIRECT_VALUE )
+                            if ( seqAdjustmentValues[ 1 ].State == com::sun::star::beans::PropertyState_DIRECT_VALUE )
                             {
-                                double fNumber;
                                 seqAdjustmentValues[ 1 ].Value >>= fNumber;
                                 nStartAngle = NormAngle360( - (sal_Int32)fNumber * 100 );
                             }
                             else
                             {
-                                seqAdjustmentValues[ 1 ].Value <<= 0.0;
-                                seqAdjustmentValues[ 1 ].State = css::beans::PropertyState_DIRECT_VALUE;
+                                fNumber = 0.0;
+                                seqAdjustmentValues[ 1 ].Value <<= fNumber;
+                                seqAdjustmentValues[ 1 ].State = com::sun::star::beans::PropertyState_DIRECT_VALUE;
                             }
 
                             PropertyValue aPropVal;
@@ -4611,7 +4549,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         {
                             XPolygon aXPoly( aPolyBoundRect.Center(), aPolyBoundRect.GetWidth() / 2, aPolyBoundRect.GetHeight() / 2,
                                 (sal_uInt16)nStartAngle / 10, (sal_uInt16)nEndAngle / 10, true );
-                            tools::Rectangle aPolyPieRect( aXPoly.GetBoundRect() );
+                            Rectangle aPolyPieRect( aXPoly.GetBoundRect() );
 
                             double  fYScale = 0.0, fXScale = 0.0;
                             double  fYOfs, fXOfs;
@@ -4620,7 +4558,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                             Size aS( aObjData.aBoundRect.GetSize() );
                             aP.X() -= aS.Width() / 2;
                             aP.Y() -= aS.Height() / 2;
-                            tools::Rectangle aLogicRect( aP, aS );
+                            Rectangle aLogicRect( aP, aS );
 
                             fYOfs = fXOfs = 0.0;
 
@@ -4646,23 +4584,18 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                             if ( aPolyPieRect.GetHeight() )
                                 fYScale = (double)aPolyBoundRect.GetHeight() / (double)aPolyPieRect.GetHeight();
 
-                            tools::Rectangle aOldBoundRect( aObjData.aBoundRect );
-                            aObjData.aBoundRect = tools::Rectangle( Point( aLogicRect.Left() + (sal_Int32)fXOfs, aLogicRect.Top() + (sal_Int32)fYOfs ),
+                            Rectangle aOldBoundRect( aObjData.aBoundRect );
+                            aObjData.aBoundRect = Rectangle( Point( aLogicRect.Left() + (sal_Int32)fXOfs, aLogicRect.Top() + (sal_Int32)fYOfs ),
                                  Size( (sal_Int32)( aLogicRect.GetWidth() * fXScale ), (sal_Int32)( aLogicRect.GetHeight() * fYScale ) ) );
 
                             // creating the text frame -> scaling into (0,0),(21600,21600) destination coordinate system
-                            double fTextFrameScaleX = 0.0;
-                            double fTextFrameScaleY = 0.0;
-                            if (aPolyBoundRect.GetWidth())
-                                fTextFrameScaleX = (double)21600 / (double)aPolyBoundRect.GetWidth();
-                            if (aPolyBoundRect.GetHeight())
-                                fTextFrameScaleY = (double)21600 / (double)aPolyBoundRect.GetHeight();
-
+                            double fTextFrameScaleX = (double)21600 / (double)aPolyBoundRect.GetWidth();
+                            double fTextFrameScaleY = (double)21600 / (double)aPolyBoundRect.GetHeight();
                             sal_Int32 nLeft  = (sal_Int32)(( aPolyPieRect.Left()  - aPolyBoundRect.Left() ) * fTextFrameScaleX );
                             sal_Int32 nTop   = (sal_Int32)(( aPolyPieRect.Top()   - aPolyBoundRect.Top() )  * fTextFrameScaleY );
                             sal_Int32 nRight = (sal_Int32)(( aPolyPieRect.Right() - aPolyBoundRect.Left() ) * fTextFrameScaleX );
                             sal_Int32 nBottom= (sal_Int32)(( aPolyPieRect.Bottom()- aPolyBoundRect.Top() )  * fTextFrameScaleY );
-                            css::uno::Sequence< css::drawing::EnhancedCustomShapeTextFrame > aTextFrame( 1 );
+                            com::sun::star::uno::Sequence< com::sun::star::drawing::EnhancedCustomShapeTextFrame > aTextFrame( 1 );
                             EnhancedCustomShape2d::SetEnhancedCustomShapeParameter( aTextFrame[ 0 ].TopLeft.First,     nLeft );
                             EnhancedCustomShape2d::SetEnhancedCustomShapeParameter( aTextFrame[ 0 ].TopLeft.Second,    nTop );
                             EnhancedCustomShape2d::SetEnhancedCustomShapeParameter( aTextFrame[ 0 ].BottomRight.First, nRight );
@@ -4722,7 +4655,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         // mirrored horizontally?
                         if ( nSpFlags & SP_FFLIPH )
                         {
-                            tools::Rectangle aBndRect( pRet->GetSnapRect() );
+                            Rectangle aBndRect( pRet->GetSnapRect() );
                             Point aTop( ( aBndRect.Left() + aBndRect.Right() ) >> 1, aBndRect.Top() );
                             Point aBottom( aTop.X(), aTop.Y() + 1000 );
                             pRet->NbcMirror( aTop, aBottom );
@@ -4730,7 +4663,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         // mirrored vertically?
                         if ( nSpFlags & SP_FFLIPV )
                         {
-                            tools::Rectangle aBndRect( pRet->GetSnapRect() );
+                            Rectangle aBndRect( pRet->GetSnapRect() );
                             Point aLeft( aBndRect.Left(), ( aBndRect.Top() + aBndRect.Bottom() ) >> 1 );
                             Point aRight( aLeft.X() + 1000, aLeft.Y() );
                             pRet->NbcMirror( aLeft, aRight );
@@ -4746,8 +4679,8 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         // connectors
                         MSO_ConnectorStyle eConnectorStyle = (MSO_ConnectorStyle)GetPropertyValue( DFF_Prop_cxstyle, mso_cxstyleStraight );
 
-                        static_cast<SdrEdgeObj*>(pRet)->ConnectToNode(true, nullptr);
-                        static_cast<SdrEdgeObj*>(pRet)->ConnectToNode(false, nullptr);
+                        static_cast<SdrEdgeObj*>(pRet)->ConnectToNode(true, NULL);
+                        static_cast<SdrEdgeObj*>(pRet)->ConnectToNode(false, NULL);
 
                         Point aPoint1( aObjData.aBoundRect.TopLeft() );
                         Point aPoint2( aObjData.aBoundRect.BottomRight() );
@@ -4796,15 +4729,15 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                         {
                             case mso_cxstyleBent:
                             {
-                                aSet.Put( SdrEdgeKindItem( SdrEdgeKind::OrthoLines ) );
+                                aSet.Put( SdrEdgeKindItem( SDREDGE_ORTHOLINES ) );
                                 n1HorzDist = n1VertDist = n2HorzDist = n2VertDist = 630;
                             }
                             break;
                             case mso_cxstyleCurved:
-                                aSet.Put( SdrEdgeKindItem( SdrEdgeKind::Bezier ) );
+                                aSet.Put( SdrEdgeKindItem( SDREDGE_BEZIER ) );
                             break;
                             default: // mso_cxstyleStraight || mso_cxstyleNone
-                                aSet.Put( SdrEdgeKindItem( SdrEdgeKind::OneLine ) );
+                                aSet.Put( SdrEdgeKindItem( SDREDGE_ONELINE ) );
                             break;
                         }
                         aSet.Put( SdrEdgeNode1HorzDistItem( n1HorzDist ) );
@@ -4833,7 +4766,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                 // mirrored horizontally?
                 if ( nSpFlags & SP_FFLIPH )
                 {
-                    tools::Rectangle aBndRect( pRet->GetSnapRect() );
+                    Rectangle aBndRect( pRet->GetSnapRect() );
                     Point aTop( ( aBndRect.Left() + aBndRect.Right() ) >> 1, aBndRect.Top() );
                     Point aBottom( aTop.X(), aTop.Y() + 1000 );
                     pRet->NbcMirror( aTop, aBottom );
@@ -4841,7 +4774,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
                 // mirrored vertically?
                 if ( nSpFlags & SP_FFLIPV )
                 {
-                    tools::Rectangle aBndRect( pRet->GetSnapRect() );
+                    Rectangle aBndRect( pRet->GetSnapRect() );
                     Point aLeft( aBndRect.Left(), ( aBndRect.Top() + aBndRect.Bottom() ) >> 1 );
                     Point aRight( aLeft.X() + 1000, aLeft.Y() );
                     pRet->NbcMirror( aLeft, aRight );
@@ -4863,7 +4796,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 
     if ( pRet )
     {
-        sal_Int32 nGroupProperties( GetPropertyValue( DFF_Prop_fPrint, 0 ) );
+        sal_Int32 nGroupProperties( GetPropertyValue( DFF_Prop_fPrint ) );
         pRet->SetVisible( ( nGroupProperties & 2 ) == 0 );
         pRet->SetPrintable( ( nGroupProperties & 1 ) != 0 );
     }
@@ -4871,28 +4804,16 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
     //Import alt text as description
     if ( pRet && SeekToContent( DFF_Prop_wzDescription, rSt ) )
     {
-        OUString aAltText = MSDFFReadZString(rSt, GetPropertyValue(DFF_Prop_wzDescription, 0), true);
+        OUString aAltText = MSDFFReadZString(rSt, GetPropertyValue(DFF_Prop_wzDescription), true);
         pRet->SetDescription( aAltText );
     }
 
-    // If this shape opens a new group, push back its object data because
-    // finalization will be called when nested objects have been imported;
-    // otherwise, just finalize here
-    if (size_t(nCalledByGroup) > maPendingGroupData.size())
-    {
-        std::shared_ptr<DffRecordHeader> rHdClone(new DffRecordHeader(aObjData.rSpHd));
-        maPendingGroupData.push_back( make_pair(DffObjData(rHdClone, aObjData), rHdClone) );
-    }
-    else
-    {
-        pRet = FinalizeObj(aObjData, pRet);
-    }
     return pRet;
 }
 
-tools::Rectangle SvxMSDffManager::GetGlobalChildAnchor( const DffRecordHeader& rHd, SvStream& rSt, tools::Rectangle& aClientRect )
+Rectangle SvxMSDffManager::GetGlobalChildAnchor( const DffRecordHeader& rHd, SvStream& rSt, Rectangle& aClientRect )
 {
-    tools::Rectangle aChildAnchor;
+    Rectangle aChildAnchor;
     if (!rHd.SeekToContent(rSt))
         return aChildAnchor;
 
@@ -4900,37 +4821,32 @@ tools::Rectangle SvxMSDffManager::GetGlobalChildAnchor( const DffRecordHeader& r
     while ( ( rSt.GetError() == 0 ) && ( rSt.Tell() < rHd.GetRecEndFilePos() ) )
     {
         DffRecordHeader aShapeHd;
-        if (!ReadDffRecordHeader(rSt, aShapeHd))
-            break;
+        ReadDffRecordHeader( rSt, aShapeHd );
         if ( ( aShapeHd.nRecType == DFF_msofbtSpContainer ) ||
                 ( aShapeHd.nRecType == DFF_msofbtSpgrContainer ) )
         {
             DffRecordHeader aShapeHd2( aShapeHd );
             if ( aShapeHd.nRecType == DFF_msofbtSpgrContainer )
                 ReadDffRecordHeader( rSt, aShapeHd2 );
-            while (rSt.good() && rSt.Tell() < aShapeHd2.GetRecEndFilePos())
+            while( ( rSt.GetError() == 0 ) && ( rSt.Tell() < aShapeHd2.GetRecEndFilePos() ) )
             {
                 DffRecordHeader aShapeAtom;
-                if (!ReadDffRecordHeader(rSt, aShapeAtom))
-                    break;
+                ReadDffRecordHeader( rSt, aShapeAtom );
 
                 if ( aShapeAtom.nRecType == DFF_msofbtClientAnchor )
                 {
                     if ( GetSvxMSDffSettings() & SVXMSDFF_SETTINGS_IMPORT_PPT )
                     {
-                        sal_Int32 l(0), t(0), r(0), b(0);
+                        sal_Int32 l, t, r, b;
                         if ( aShapeAtom.nRecLen == 16 )
                         {
                             rSt.ReadInt32( l ).ReadInt32( t ).ReadInt32( r ).ReadInt32( b );
                         }
                         else
                         {
-                            sal_Int16 ls(0), ts(0), rs(0), bs(0);
+                            sal_Int16 ls, ts, rs, bs;
                             rSt.ReadInt16( ts ).ReadInt16( ls ).ReadInt16( rs ).ReadInt16( bs ); // the order of coordinates is a bit strange...
-                            l = ls;
-                            t = ts;
-                            r = rs;
-                            b = bs;
+                            l = ls, t = ts, r = rs, b = bs;
                         }
                         Scale( l );
                         Scale( t );
@@ -4938,12 +4854,12 @@ tools::Rectangle SvxMSDffManager::GetGlobalChildAnchor( const DffRecordHeader& r
                         Scale( b );
                         if ( bIsClientRectRead )
                         {
-                            tools::Rectangle aChild( l, t, r, b );
+                            Rectangle aChild( l, t, r, b );
                             aChildAnchor.Union( aChild );
                         }
                         else
                         {
-                            aClientRect = tools::Rectangle( l, t, r, b );
+                            aClientRect = Rectangle( l, t, r, b );
                             bIsClientRectRead = true;
                         }
                     }
@@ -4951,13 +4867,13 @@ tools::Rectangle SvxMSDffManager::GetGlobalChildAnchor( const DffRecordHeader& r
                 }
                 else if ( aShapeAtom.nRecType == DFF_msofbtChildAnchor )
                 {
-                    sal_Int32 l(0), o(0), r(0), u(0);
+                    sal_Int32 l, o, r, u;
                     rSt.ReadInt32( l ).ReadInt32( o ).ReadInt32( r ).ReadInt32( u );
                     Scale( l );
                     Scale( o );
                     Scale( r );
                     Scale( u );
-                    tools::Rectangle aChild( l, o, r, u );
+                    Rectangle aChild( l, o, r, u );
                     aChildAnchor.Union( aChild );
                     break;
                 }
@@ -4972,38 +4888,36 @@ tools::Rectangle SvxMSDffManager::GetGlobalChildAnchor( const DffRecordHeader& r
 }
 
 void SvxMSDffManager::GetGroupAnchors( const DffRecordHeader& rHd, SvStream& rSt,
-                            tools::Rectangle& rGroupClientAnchor, tools::Rectangle& rGroupChildAnchor,
-                                const tools::Rectangle& rClientRect, const tools::Rectangle& rGlobalChildRect )
+                            Rectangle& rGroupClientAnchor, Rectangle& rGroupChildAnchor,
+                                const Rectangle& rClientRect, const Rectangle& rGlobalChildRect )
 {
     if (!rHd.SeekToContent(rSt))
         return;
 
     bool bFirst = true;
     DffRecordHeader aShapeHd;
-    while (rSt.good() && rSt.Tell() < rHd.GetRecEndFilePos())
+    while ( ( rSt.GetError() == 0 ) && ( rSt.Tell() < rHd.GetRecEndFilePos() ) )
     {
-        if (!ReadDffRecordHeader(rSt, aShapeHd))
-            break;
+        ReadDffRecordHeader( rSt, aShapeHd );
         if ( ( aShapeHd.nRecType == DFF_msofbtSpContainer ) ||
                 ( aShapeHd.nRecType == DFF_msofbtSpgrContainer ) )
         {
             DffRecordHeader aShapeHd2( aShapeHd );
             if ( aShapeHd.nRecType == DFF_msofbtSpgrContainer )
                 ReadDffRecordHeader( rSt, aShapeHd2 );
-            while (rSt.good() && rSt.Tell() < aShapeHd2.GetRecEndFilePos())
+            while( ( rSt.GetError() == 0 ) && ( rSt.Tell() < aShapeHd2.GetRecEndFilePos() ) )
             {
                 DffRecordHeader aShapeAtom;
-                if (!ReadDffRecordHeader(rSt, aShapeAtom))
-                    break;
+                ReadDffRecordHeader( rSt, aShapeAtom );
                 if ( aShapeAtom.nRecType == DFF_msofbtChildAnchor )
                 {
-                    sal_Int32 l(0), o(0), r(0), u(0);
+                    sal_Int32 l, o, r, u;
                     rSt.ReadInt32( l ).ReadInt32( o ).ReadInt32( r ).ReadInt32( u );
                     Scale( l );
                     Scale( o );
                     Scale( r );
                     Scale( u );
-                    tools::Rectangle aChild( l, o, r, u );
+                    Rectangle aChild( l, o, r, u );
 
                     if ( bFirst )
                     {
@@ -5017,7 +4931,7 @@ void SvxMSDffManager::GetGroupAnchors( const DffRecordHeader& rHd, SvStream& rSt
                             double fo = ( ( o - rGlobalChildRect.Top()  ) * fYScale ) + rClientRect.Top();
                             fWidth *= fXScale;
                             fHeight *= fYScale;
-                            rGroupClientAnchor = tools::Rectangle( Point( (sal_Int32)fl, (sal_Int32)fo ), Size( (sal_Int32)( fWidth + 1 ), (sal_Int32)( fHeight + 1 ) ) );
+                            rGroupClientAnchor = Rectangle( Point( (sal_Int32)fl, (sal_Int32)fo ), Size( (sal_Int32)( fWidth + 1 ), (sal_Int32)( fHeight + 1 ) ) );
                         }
                         bFirst = false;
                     }
@@ -5037,13 +4951,13 @@ void SvxMSDffManager::GetGroupAnchors( const DffRecordHeader& rHd, SvStream& rSt
 SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
                                        DffObjData& rObjData,
                                        void* pData,
-                                       tools::Rectangle& rTextRect,
+                                       Rectangle& rTextRect,
                                        SdrObject* pObj
                                        )
 {
     if( !rTextRect.IsEmpty() )
     {
-        SvxMSDffImportData& rImportData = *static_cast<SvxMSDffImportData*>(pData);
+        SvxMSDffImportData& rImportData = *(SvxMSDffImportData*)pData;
         SvxMSDffImportRec* pImpRec = new SvxMSDffImportRec;
         bool bDeleteImpRec = true;
         SvxMSDffImportRec* pTextImpRec = pImpRec;
@@ -5092,13 +5006,15 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
                 {
                     case 0x038F: pImpRec->nXAlign = nUDData; break;
                     case 0x0390:
-                        delete pImpRec->pXRelTo;
+                        if (pImpRec->pXRelTo)
+                            delete pImpRec->pXRelTo;
                         pImpRec->pXRelTo = new sal_uInt32;
                         *(pImpRec->pXRelTo) = nUDData;
                         break;
                     case 0x0391: pImpRec->nYAlign = nUDData; break;
                     case 0x0392:
-                        delete pImpRec->pYRelTo;
+                        if (pImpRec->pYRelTo)
+                            delete pImpRec->pYRelTo;
                         pImpRec->pYRelTo = new sal_uInt32;
                         *(pImpRec->pYRelTo) = nUDData;
                         break;
@@ -5124,7 +5040,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
 
         //  text frame, also Title or Outline
         SdrObject*  pOrgObj  = pObj;
-        SdrRectObj* pTextObj = nullptr;
+        SdrRectObj* pTextObj = 0;
         sal_uInt32 nTextId = GetPropertyValue( DFF_Prop_lTxid, 0 );
         if( nTextId )
         {
@@ -5154,10 +5070,10 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             if (bTextFrame)
             {
                 SdrObject::Free( pObj );
-                pObj = pOrgObj = nullptr;
+                pObj = pOrgObj = 0;
             }
 
-            // Distance of Textbox to its surrounding Customshape
+            // Distance of Textbox to it's surrounding Customshape
             sal_Int32 nTextLeft = GetPropertyValue( DFF_Prop_dxTextLeft, 91440L);
             sal_Int32 nTextRight = GetPropertyValue( DFF_Prop_dxTextRight, 91440L );
             sal_Int32 nTextTop = GetPropertyValue( DFF_Prop_dyTextTop, 45720L  );
@@ -5173,7 +5089,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             if ( IsProperty( DFF_Prop_txflTextFlow ) )
             {
                 MSO_TextFlow eTextFlow = (MSO_TextFlow)(GetPropertyValue(
-                    DFF_Prop_txflTextFlow, 0) & 0xFFFF);
+                    DFF_Prop_txflTextFlow) & 0xFFFF);
                 switch( eTextFlow )
                 {
                     case mso_txflBtoT:
@@ -5189,7 +5105,6 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
                     case mso_txflHorzA:
                         bVerticalText = true;
                         nTextRotationAngle = 9000;
-                    break;
                     case mso_txflHorzN:
                     default :
                         break;
@@ -5198,6 +5113,8 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
 
             if (nTextRotationAngle)
             {
+                while (nTextRotationAngle > 360000)
+                    nTextRotationAngle-=9000;
                 switch (nTextRotationAngle)
                 {
                     case 9000:
@@ -5243,7 +5160,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
 
             // the vertical paragraph indents are part of the BoundRect,
             // here we 'remove' them by calculating
-            tools::Rectangle aNewRect(rTextRect);
+            Rectangle aNewRect(rTextRect);
             aNewRect.Bottom() -= nTextTop + nTextBottom;
             aNewRect.Right() -= nTextLeft + nTextRight;
 
@@ -5251,12 +5168,12 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             // the object with a frame, otherwise
             if( bTextFrame )
             {
-                std::shared_ptr<SvxMSDffShapeInfo> const pTmpRec(
+                ::boost::shared_ptr<SvxMSDffShapeInfo> const pTmpRec(
                     new SvxMSDffShapeInfo(0, pImpRec->nShapeId));
 
                 SvxMSDffShapeInfos_ById::const_iterator const it =
-                    m_xShapeInfosById->find(pTmpRec);
-                if (it != m_xShapeInfosById->end())
+                    m_pShapeInfosById->find(pTmpRec);
+                if (it != m_pShapeInfosById->end())
                 {
                     SvxMSDffShapeInfo& rInfo = **it;
                     pTextImpRec->bReplaceByFly   = rInfo.bReplaceByFly;
@@ -5267,7 +5184,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
                 ApplyAttributes( rSt, aSet, rObjData );
 
             bool bFitText = false;
-            if (GetPropertyValue(DFF_Prop_FitTextToShape, 0) & 2)
+            if (GetPropertyValue(DFF_Prop_FitTextToShape) & 2)
             {
                 aSet.Put( makeSdrTextAutoGrowHeightItem( true ) );
                 aSet.Put( makeSdrTextMinFrameHeightItem(
@@ -5313,7 +5230,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             if ( IsProperty( DFF_Prop_anchorText ) )
             {
                 MSO_Anchor eTextAnchor =
-                    (MSO_Anchor)GetPropertyValue( DFF_Prop_anchorText, 0 );
+                    (MSO_Anchor)GetPropertyValue( DFF_Prop_anchorText );
 
                 SdrTextVertAdjust eTVA = SDRTEXTVERTADJUST_CENTER;
                 bool bTVASet(false);
@@ -5423,7 +5340,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             SfxItemSet aSet( pSdrModel->GetItemPool() );
             ApplyAttributes( rSt, aSet, rObjData );
 
-            const SfxPoolItem* pPoolItem=nullptr;
+            const SfxPoolItem* pPoolItem=NULL;
             SfxItemState eState = aSet.GetItemState( XATTR_FILLCOLOR,
                                                      false, &pPoolItem );
             if( SfxItemState::DEFAULT == eState )
@@ -5433,11 +5350,11 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
         }
 
         //Means that fBehindDocument is set
-        if (GetPropertyValue(DFF_Prop_fPrint, 0) & 0x20)
+        if (GetPropertyValue(DFF_Prop_fPrint) & 0x20)
             pImpRec->bDrawHell = true;
         else
             pImpRec->bDrawHell = false;
-        if (GetPropertyValue(DFF_Prop_fPrint, 0) & 0x02)
+        if (GetPropertyValue(DFF_Prop_fPrint) & 0x02)
             pImpRec->bHidden = true;
         pTextImpRec->bDrawHell  = pImpRec->bDrawHell;
         pTextImpRec->bHidden = pImpRec->bHidden;
@@ -5463,7 +5380,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
         if (SeekToContent(DFF_Prop_pWrapPolygonVertices, rSt))
         {
             delete pTextImpRec->pWrapPolygon;
-            pTextImpRec->pWrapPolygon = nullptr;
+            pTextImpRec->pWrapPolygon = NULL;
             sal_uInt16 nNumElemVert(0), nNumElemMemVert(0), nElemSizeVert(0);
             rSt.ReadUInt16( nNumElemVert ).ReadUInt16( nNumElemMemVert ).ReadUInt16( nElemSizeVert );
             bool bOk = false;
@@ -5473,7 +5390,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             }
             if (bOk)
             {
-                pTextImpRec->pWrapPolygon = new tools::Polygon(nNumElemVert);
+                pTextImpRec->pWrapPolygon = new Polygon(nNumElemVert);
                 for (sal_uInt16 i = 0; i < nNumElemVert; ++i)
                 {
                     sal_Int32 nX(0), nY(0);
@@ -5501,10 +5418,10 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
         pImpRec->nCropFromRight = GetPropertyValue(
                                     DFF_Prop_cropFromRight, 0 );
 
-        pImpRec->bVFlip = (rObjData.nSpFlags & SP_FFLIPV) != 0;
-        pImpRec->bHFlip = (rObjData.nSpFlags & SP_FFLIPH) != 0;
+        pImpRec->bVFlip = (rObjData.nSpFlags & SP_FFLIPV) ? true : false;
+        pImpRec->bHFlip = (rObjData.nSpFlags & SP_FFLIPH) ? true : false;
 
-        sal_uInt32 nLineFlags = GetPropertyValue( DFF_Prop_fNoLineDrawDash, 0 );
+        sal_uInt32 nLineFlags = GetPropertyValue( DFF_Prop_fNoLineDrawDash );
         pImpRec->eLineStyle = (nLineFlags & 8)
                             ? (MSO_LineStyle)GetPropertyValue(
                                                 DFF_Prop_lineStyle,
@@ -5522,7 +5439,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
             if( pOrgObj )
             {
                 pImpRec->pObj = pOrgObj;
-                rImportData.m_Records.insert(std::unique_ptr<SvxMSDffImportRec>(pImpRec));
+                rImportData.aRecords.insert( pImpRec );
                 bDeleteImpRec = false;
                 if (pImpRec == pTextImpRec)
                     bDeleteTextImpRec = false;
@@ -5533,7 +5450,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
                 // Modify ShapeId (must be unique)
                 pImpRec->nShapeId |= 0x8000000;
                 pTextImpRec->pObj = pTextObj;
-                rImportData.m_Records.insert(std::unique_ptr<SvxMSDffImportRec>(pTextImpRec));
+                rImportData.aRecords.insert( pTextImpRec );
                 bDeleteTextImpRec = false;
                 if (pTextImpRec == pImpRec)
                     bDeleteImpRec = false;
@@ -5561,44 +5478,41 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
     return pObj;
 };
 
-SdrObject* SvxMSDffManager::FinalizeObj(DffObjData& /* rObjData */, SdrObject* pObj)
-{
-    return pObj;
-}
-
-
 void SvxMSDffManager::StoreShapeOrder(sal_uLong         nId,
                                       sal_uLong         nTxBx,
                                       SdrObject*    pObject,
-                                      SwFlyFrameFormat*  pFly) const
+                                      SwFlyFrmFmt*  pFly,
+                                      short         nHdFtSection) const
 {
-    sal_uInt16 nShpCnt = m_aShapeOrders.size();
+    sal_uInt16 nShpCnt = pShapeOrders->size();
     for (sal_uInt16 nShapeNum=0; nShapeNum < nShpCnt; nShapeNum++)
     {
-        SvxMSDffShapeOrder& rOrder = *m_aShapeOrders[ nShapeNum ];
+        SvxMSDffShapeOrder& rOrder = (*pShapeOrders)[ nShapeNum ];
 
         if( rOrder.nShapeId == nId )
         {
             rOrder.nTxBxComp = nTxBx;
             rOrder.pObj      = pObject;
             rOrder.pFly      = pFly;
+            rOrder.nHdFtSection = nHdFtSection;
         }
     }
 }
 
 
 void SvxMSDffManager::ExchangeInShapeOrder( SdrObject*   pOldObject,
-                                            sal_uLong    nTxBx,
+                                            sal_uLong        nTxBx,
+                                            SwFlyFrmFmt* pFly,
                                             SdrObject*   pObject) const
 {
-    sal_uInt16 nShpCnt = m_aShapeOrders.size();
+    sal_uInt16 nShpCnt = pShapeOrders->size();
     for (sal_uInt16 nShapeNum=0; nShapeNum < nShpCnt; nShapeNum++)
     {
-        SvxMSDffShapeOrder& rOrder = *m_aShapeOrders[ nShapeNum ];
+        SvxMSDffShapeOrder& rOrder = (*pShapeOrders)[ nShapeNum ];
 
         if( rOrder.pObj == pOldObject )
         {
-            rOrder.pFly      = nullptr;
+            rOrder.pFly      = pFly;
             rOrder.pObj      = pObject;
             rOrder.nTxBxComp = nTxBx;
         }
@@ -5608,22 +5522,26 @@ void SvxMSDffManager::ExchangeInShapeOrder( SdrObject*   pOldObject,
 
 void SvxMSDffManager::RemoveFromShapeOrder( SdrObject* pObject ) const
 {
-    sal_uInt16 nShpCnt = m_aShapeOrders.size();
+    sal_uInt16 nShpCnt = pShapeOrders->size();
     for (sal_uInt16 nShapeNum=0; nShapeNum < nShpCnt; nShapeNum++)
     {
-        SvxMSDffShapeOrder& rOrder = *m_aShapeOrders[ nShapeNum ];
+        SvxMSDffShapeOrder& rOrder = (*pShapeOrders)[ nShapeNum ];
 
         if( rOrder.pObj == pObject )
         {
-            rOrder.pObj      = nullptr;
-            rOrder.pFly      = nullptr;
+            rOrder.pObj      = 0;
+            rOrder.pFly      = 0;
             rOrder.nTxBxComp = 0;
         }
     }
 }
 
 
+
+
+
 //  exported class: Public Methods
+
 
 SvxMSDffManager::SvxMSDffManager(SvStream& rStCtrl_,
                                  const OUString& rBaseURL,
@@ -5632,26 +5550,28 @@ SvxMSDffManager::SvxMSDffManager(SvStream& rStCtrl_,
                                  SdrModel* pSdrModel_,// see SetModel() below
                                  long      nApplicationScale,
                                  ColorData mnDefaultColor_,
-                                 SvStream* pStData2_,
-                                 bool bSkipImages )
+                                 sal_uLong     nDefaultFontHeight_,
+                                 SvStream* pStData2_ )
     :DffPropertyReader( *this ),
-     m_pBLIPInfos( new SvxMSDffBLIPInfos ),
-     m_xShapeInfosByTxBxComp( new SvxMSDffShapeInfos_ByTxBxComp ),
+     pFormModel( NULL ),
+     pBLIPInfos( new SvxMSDffBLIPInfos  ),
+     m_pShapeInfosByTxBxComp( new SvxMSDffShapeInfos_ByTxBxComp ),
+     pShapeOrders( new SvxMSDffShapeOrders ),
+     nDefaultFontHeight( nDefaultFontHeight_),
      nOffsDgg( nOffsDgg_ ),
      nBLIPCount(  USHRT_MAX ),              // initialize with error, since we fist check if the
+     nShapeCount( USHRT_MAX ),              // control stream has correct data
      nGroupShapeFlags(0),                   // ensure initialization here, as some corrupted
-                                            // files may yield to this being uninitialized
+                                            // files may yield to this being unitialized
      maBaseURL( rBaseURL ),
-     mnCurMaxShapeId(0),
-     mnIdClusters(0),
      rStCtrl(  rStCtrl_  ),
      pStData(  pStData_  ),
      pStData2( pStData2_ ),
      nSvxMSDffSettings( 0 ),
      nSvxMSDffOLEConvFlags( 0 ),
-     pSecPropSet( nullptr ),
+     pSecPropSet( NULL ),
      mnDefaultColor( mnDefaultColor_),
-     mbSkipImages (bSkipImages)
+     mbTracing( false )
 {
     SetModel( pSdrModel_, nApplicationScale );
 
@@ -5680,30 +5600,37 @@ SvxMSDffManager::SvxMSDffManager(SvStream& rStCtrl_,
 
 SvxMSDffManager::SvxMSDffManager( SvStream& rStCtrl_, const OUString& rBaseURL )
     :DffPropertyReader( *this ),
-     m_pBLIPInfos( new SvxMSDffBLIPInfos ),
-     m_xShapeInfosByTxBxComp( new SvxMSDffShapeInfos_ByTxBxComp ),
+     pFormModel( NULL ),
+     pBLIPInfos(   new SvxMSDffBLIPInfos  ),
+     m_pShapeInfosByTxBxComp( new SvxMSDffShapeInfos_ByTxBxComp ),
+     pShapeOrders( new SvxMSDffShapeOrders ),
+     nDefaultFontHeight( 24 ),
      nOffsDgg( 0 ),
      nBLIPCount(  USHRT_MAX ),              // initialize with error, since we first have to check
+     nShapeCount( USHRT_MAX ),              // whether the control stream contains the correct data
      nGroupShapeFlags(0),
      maBaseURL( rBaseURL ),
      mnCurMaxShapeId(0),
+     mnDrawingsSaved(0),
      mnIdClusters(0),
      rStCtrl(  rStCtrl_  ),
-     pStData( nullptr ),
-     pStData2( nullptr ),
+     pStData( 0 ),
+     pStData2( 0 ),
      nSvxMSDffSettings( 0 ),
      nSvxMSDffOLEConvFlags( 0 ),
-     pSecPropSet( nullptr ),
+     pSecPropSet( NULL ),
      mnDefaultColor( COL_DEFAULT ),
-     mbSkipImages(false)
+     mbTracing( false )
 {
-    SetModel( nullptr, 0 );
+    SetModel( NULL, 0 );
 }
 
 SvxMSDffManager::~SvxMSDffManager()
 {
     delete pSecPropSet;
-    delete m_pBLIPInfos;
+    delete pBLIPInfos;
+    delete pShapeOrders;
+    delete pFormModel;
 }
 
 void SvxMSDffManager::InitSvxMSDffManager( sal_uInt32 nOffsDgg_, SvStream* pStData_, sal_uInt32 nOleConvFlags )
@@ -5734,18 +5661,16 @@ void SvxMSDffManager::SetDgContainer( SvStream& rSt )
 {
     sal_uInt32 nFilePos = rSt.Tell();
     DffRecordHeader aDgContHd;
-    bool bOk = ReadDffRecordHeader(rSt, aDgContHd);
-    // insert this container only if there is also a DggAtom
-    if (bOk && SeekToRec(rSt, DFF_msofbtDg, aDgContHd.GetRecEndFilePos()))
+    ReadDffRecordHeader( rSt, aDgContHd );
+    // insert this container only if there is also a DgAtom
+    if ( SeekToRec( rSt, DFF_msofbtDg, aDgContHd.GetRecEndFilePos() ) )
     {
         DffRecordHeader aRecHd;
-        if (ReadDffRecordHeader(rSt, aRecHd))
-        {
-            sal_uInt32 nDrawingId = aRecHd.nRecInstance;
-            maDgOffsetTable[nDrawingId] = nFilePos;
-        }
+        ReadDffRecordHeader( rSt, aRecHd );
+        sal_uInt32 nDrawingId = aRecHd.nRecInstance;
+        maDgOffsetTable[ nDrawingId ] = nFilePos;
+        rSt.Seek( nFilePos );
     }
-    rSt.Seek(nFilePos);
 }
 
 void SvxMSDffManager::GetFidclData( sal_uInt32 nOffsDggL )
@@ -5758,33 +5683,32 @@ void SvxMSDffManager::GetFidclData( sal_uInt32 nOffsDggL )
     if (nOffsDggL == rStCtrl.Seek(nOffsDggL))
     {
         DffRecordHeader aRecHd;
-        bool bOk = ReadDffRecordHeader(rStCtrl, aRecHd);
+        ReadDffRecordHeader( rStCtrl, aRecHd );
 
         DffRecordHeader aDggAtomHd;
-        if (bOk && SeekToRec(rStCtrl, DFF_msofbtDgg, aRecHd.GetRecEndFilePos(), &aDggAtomHd))
+        if ( SeekToRec( rStCtrl, DFF_msofbtDgg, aRecHd.GetRecEndFilePos(), &aDggAtomHd ) )
         {
             aDggAtomHd.SeekToContent( rStCtrl );
             rStCtrl.ReadUInt32( mnCurMaxShapeId )
                    .ReadUInt32( mnIdClusters )
                    .ReadUInt32( nDummy )
-                   .ReadUInt32( nDummy ); // nDrawingsSaved
+                   .ReadUInt32( mnDrawingsSaved );
 
             if ( mnIdClusters-- > 2 )
             {
-                const std::size_t nFIDCLsize = sizeof(sal_uInt32) * 2;
+                const sal_Size nFIDCLsize = sizeof(sal_uInt32) * 2;
                 if ( aDggAtomHd.nRecLen == ( mnIdClusters * nFIDCLsize + 16 ) )
                 {
-                    std::size_t nMaxEntriesPossible = rStCtrl.remainingSize() / nFIDCLsize;
+                    sal_Size nMaxEntriesPossible = rStCtrl.remainingSize() / nFIDCLsize;
                     SAL_WARN_IF(nMaxEntriesPossible < mnIdClusters,
                         "filter.ms", "FIDCL list longer than remaining bytes, ppt or parser is wrong");
-                    mnIdClusters = std::min(nMaxEntriesPossible, static_cast<std::size_t>(mnIdClusters));
+                    mnIdClusters = std::min(nMaxEntriesPossible, static_cast<sal_Size>(mnIdClusters));
 
                     maFidcls.resize(mnIdClusters);
                     for (sal_uInt32 i = 0; i < mnIdClusters; ++i)
                     {
-                        sal_uInt32  cspidCur;   ///< number of SPIDs used so far
                         rStCtrl.ReadUInt32( maFidcls[ i ].dgid )
-                               .ReadUInt32( cspidCur );
+                               .ReadUInt32( maFidcls[ i ].cspidCur );
                     }
                 }
             }
@@ -5795,19 +5719,20 @@ void SvxMSDffManager::GetFidclData( sal_uInt32 nOffsDggL )
 
 void SvxMSDffManager::CheckTxBxStoryChain()
 {
-    m_xShapeInfosById.reset(new SvxMSDffShapeInfos_ById);
+    m_pShapeInfosById.reset(new SvxMSDffShapeInfos_ById);
     // mangle old Info array, sorted by nTxBxComp
     sal_uLong nChain    = ULONG_MAX;
     bool bSetReplaceFALSE = false;
     for (SvxMSDffShapeInfos_ByTxBxComp::iterator iter =
-                m_xShapeInfosByTxBxComp->begin(),
-            mark = m_xShapeInfosByTxBxComp->begin();
-         iter != m_xShapeInfosByTxBxComp->end(); ++iter)
+                m_pShapeInfosByTxBxComp->begin(),
+            mark = m_pShapeInfosByTxBxComp->begin();
+         iter != m_pShapeInfosByTxBxComp->end(); ++iter)
     {
-        std::shared_ptr<SvxMSDffShapeInfo> const pObj = *iter;
+        boost::shared_ptr<SvxMSDffShapeInfo> const pObj = *iter;
         if( pObj->nTxBxComp )
         {
             // group change?
+            // #156763#
             // the text id also contains an internal drawing container id
             // to distinguish between text id of drawing objects in different
             // drawing containers.
@@ -5835,12 +5760,12 @@ void SvxMSDffManager::CheckTxBxStoryChain()
                 pObj->bReplaceByFly = false;
             }
         }
-        // copy all Shape Info objects to m_xShapeInfosById, sorted by nShapeId
+        // copy all Shape Info objects to m_pShapeInfosById, sorted by nShapeId
         pObj->nTxBxComp = pObj->nTxBxComp & 0xFFFF0000;
-        m_xShapeInfosById->insert( pObj );
+        m_pShapeInfosById->insert( pObj );
     }
     // free original array but don't free its elements
-    m_xShapeInfosByTxBxComp.reset();
+    m_pShapeInfosByTxBxComp.reset();
 }
 
 
@@ -5848,15 +5773,18 @@ void SvxMSDffManager::CheckTxBxStoryChain()
 
     Reading the Shape-Infos in the Ctor:
     ---------------------------------
-    remembering the Shape-Ids and the associated Blip-Numbers and TextBox-Infos
+    remembering the Shape-Ids and the associated Blip-Numbers und TextBox-Infos
                     =========                    ============     =============
     and remembering the File-Offsets for each Blip
                        ============
 ******************************************************************************/
-void SvxMSDffManager::GetCtrlData(sal_uInt32 nOffsDggL)
+void SvxMSDffManager::GetCtrlData( sal_uInt32 nOffsDgg_ )
 {
+    // absolutely remember Start Offset, in case we have to position again
+    sal_uInt32 nOffsDggL = nOffsDgg_;
+
     // position control stream
-    if (!checkSeek(rStCtrl, nOffsDggL))
+    if (nOffsDggL != rStCtrl.Seek(nOffsDggL))
         return;
 
     sal_uInt8   nVer;
@@ -5865,12 +5793,12 @@ void SvxMSDffManager::GetCtrlData(sal_uInt32 nOffsDggL)
     sal_uInt32  nLength;
     if( !ReadCommonRecordHeader( rStCtrl, nVer, nInst, nFbt, nLength ) ) return;
 
+    bool bOk;
     sal_uLong nPos = nOffsDggL + DFF_COMMON_RECORD_HEADER_SIZE;
 
     // case A: first Drawing Group Container, then n times Drawing Container
     if( DFF_msofbtDggContainer == nFbt )
     {
-        bool bOk;
         GetDrawingGroupContainerData( rStCtrl, nLength );
 
         rStCtrl.Seek( STREAM_SEEK_TO_END );
@@ -5970,13 +5898,17 @@ void SvxMSDffManager::GetDrawingGroupContainerData( SvStream& rSt, sal_uLong nLe
                 if( (!nBLIPPos) && (nBLIPLen < nLenFBSE) )
                     nBLIPPos = rSt.Tell() + 4;
 
+                // That worked great!
+                // We store, that we do have one FBSE more in the pointer array.
+                nBLIPPos = Calc_nBLIPPos(nBLIPPos, rSt.Tell());
+
                 if( USHRT_MAX == nBLIPCount )
                     nBLIPCount = 1;
                 else
                     nBLIPCount++;
 
                 // now save the info for later access
-                m_pBLIPInfos->push_back(SvxMSDffBLIPInfo(nBLIPPos));
+                pBLIPInfos->push_back( new SvxMSDffBLIPInfo( nInst, nBLIPPos, nBLIPLen ) );
             }
             rSt.SeekRel( nLength );
         }
@@ -6026,7 +5958,7 @@ bool SvxMSDffManager::GetShapeGroupContainerData( SvStream& rSt,
 {
     sal_uInt8 nVer;sal_uInt16 nInst;sal_uInt16 nFbt;sal_uInt32 nLength;
     long nStartShapeGroupCont = rSt.Tell();
-    // We are now in a shape group container (conditionally multiple per page)
+    // We are now in a shape group container (conditionally mulitple per page)
     // an we now have to iterate through all contained shape containers
     bool  bFirst = !bPatriarch;
     sal_uLong nReadSpGrCont = 0;
@@ -6054,10 +5986,7 @@ bool SvxMSDffManager::GetShapeGroupContainerData( SvStream& rSt,
                 return false;
         }
         else
-        {
-            if (!checkSeek(rSt, rSt.Tell() + nLength))
-                return false;
-        }
+            rSt.SeekRel( nLength );
         nReadSpGrCont += nLength;
     }
     while( nReadSpGrCont < nLenShapeGroupCont );
@@ -6087,7 +6016,7 @@ bool SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
 
     // Can the shape be replaced with a frame?
     // (provided that it is a TextBox and the text is not rotated)
-    bool bCanBeReplaced = nPosGroup >= ULONG_MAX;
+    bool bCanBeReplaced = (ULONG_MAX > nPosGroup) ? sal_False : sal_True;
 
     // we don't know yet whether it's a TextBox
     MSO_SPT         eShapeType      = mso_sptNil;
@@ -6101,7 +6030,7 @@ bool SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
         // FSP ?
         if( ( DFF_msofbtSp == nFbt ) && ( 4 <= nLength ) )
         {
-            // we've found the FSP: note Shape Type and Id!
+            // we've found the FSP gefunden: note Shape Type and Id!
             eShapeType = (MSO_SPT)nInst;
             rSt.ReadUInt32( aInfo.nShapeId );
             rSt.SeekRel( nLength - 4 );
@@ -6112,13 +6041,12 @@ bool SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
             // We've found the Property Table:
             // search for the Blip Property!
             sal_uLong  nPropRead = 0;
+            sal_uInt16 nPropId;
+            sal_uInt32  nPropVal;
             nLenShapePropTbl = nLength;
             long nStartShapePropTbl = rSt.Tell();
             do
             {
-                sal_uInt16 nPropId(0);
-                sal_uInt32 nPropVal(0);
-
                 rSt.ReadUInt16( nPropId )
                    .ReadUInt32( nPropVal );
                 nPropRead += 6;
@@ -6237,16 +6165,16 @@ bool SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
         {
             aInfo.bReplaceByFly = true;
         }
-        m_xShapeInfosByTxBxComp->insert(std::make_shared<SvxMSDffShapeInfo>(
-                    aInfo));
-        m_aShapeOrders.push_back(o3tl::make_unique<SvxMSDffShapeOrder>(
-                    aInfo.nShapeId ));
+        m_pShapeInfosByTxBxComp->insert(::boost::shared_ptr<SvxMSDffShapeInfo>(
+                    new SvxMSDffShapeInfo(aInfo)));
+        pShapeOrders->push_back( new SvxMSDffShapeOrder( aInfo.nShapeId ) );
     }
 
     // and position the Stream correctly again
     rSt.Seek( nStartShapeCont + nLenShapeCont );
     return true;
 }
+
 
 
 /*****************************************************************************
@@ -6257,12 +6185,12 @@ bool SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
 bool SvxMSDffManager::GetShape(sal_uLong nId, SdrObject*&         rpShape,
                                           SvxMSDffImportData& rData)
 {
-    std::shared_ptr<SvxMSDffShapeInfo> const pTmpRec(
+    ::boost::shared_ptr<SvxMSDffShapeInfo> const pTmpRec(
         new SvxMSDffShapeInfo(0, nId));
 
     SvxMSDffShapeInfos_ById::const_iterator const it =
-        m_xShapeInfosById->find(pTmpRec);
-    if (it != m_xShapeInfosById->end())
+        m_pShapeInfosById->find(pTmpRec);
+    if (it != m_pShapeInfosById->end())
     {
         // Possibly delete old error flag.
         if( rStCtrl.GetError() )
@@ -6280,20 +6208,21 @@ bool SvxMSDffManager::GetShape(sal_uLong nId, SdrObject*&         rpShape,
         else
             rpShape = ImportObj( rStCtrl, &rData, rData.aParentRect, rData.aParentRect );
 
-        // restore old FilePos of the stream(s)
+        // restore old alte FilePos of the stream(s)
         rStCtrl.Seek( nOldPosCtrl );
         if( &rStCtrl != pStData && pStData )
             pStData->Seek( nOldPosData );
-        return ( nullptr != rpShape );
+        return ( 0 != rpShape );
     }
     return false;
 }
 
 
+
 /*      access to a BLIP at runtime (if the Blip-Number is already known)
         ---------------------------
 ******************************************************************************/
-bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, tools::Rectangle* pVisArea )
+bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, Rectangle* pVisArea )
 {
     if (!pStData)
         return false;
@@ -6311,7 +6240,7 @@ bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, tools::Rectangle
             to get the Graphic via GraphicObject */
             GraphicObject aGraphicObject( iter->second );
             rData = aGraphicObject.GetGraphic();
-            if ( rData.GetType() != GraphicType::NONE )
+            if ( rData.GetType() != GRAPHIC_NONE )
                 bOk = true;
             else
                 aEscherBlipCache.erase(iter);
@@ -6321,7 +6250,7 @@ bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, tools::Rectangle
     if ( !bOk )
     {
         sal_uInt16 nIdx = sal_uInt16( nIdx_ );
-        if (!nIdx || (m_pBLIPInfos->size() < nIdx))
+        if( !nIdx || (pBLIPInfos->size() < nIdx) )
             return false;
 
         // possibly delete old error flag(s)
@@ -6336,7 +6265,7 @@ bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, tools::Rectangle
         sal_uLong nOldPosData = pStData ? pStData->Tell() : nOldPosCtrl;
 
         // fetch matching info struct out of the pointer array
-        SvxMSDffBLIPInfo& rInfo = (*m_pBLIPInfos)[ nIdx-1 ];
+        SvxMSDffBLIPInfo& rInfo = (*pBLIPInfos)[ nIdx-1 ];
         // jump to the BLIP atom in the data stream
         pStData->Seek( rInfo.nFilePos );
         // possibly reset error status
@@ -6358,7 +6287,7 @@ bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, tools::Rectangle
                 pStData2->ResetError();
             else
                 bOk = GetBLIPDirect( *pStData2, rData, pVisArea );
-            // restore of FilePos of the second data stream
+            // restore olf FilePos of the second data stream
             pStData2->Seek( nOldPosData2 );
         }
         // restore old FilePos of the stream(s)
@@ -6380,7 +6309,7 @@ bool SvxMSDffManager::GetBLIP( sal_uLong nIdx_, Graphic& rData, tools::Rectangle
 /*      access to a BLIP at runtime (with correctly positioned stream)
     ---------------------------------
 ******************************************************************************/
-bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tools::Rectangle* pVisArea )
+bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, Rectangle* pVisArea ) const
 {
     sal_uLong nOldPos = rBLIPStream.Tell();
 
@@ -6395,7 +6324,7 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
         Size        aMtfSize100;
         bool        bMtfBLIP = false;
         bool        bZCodecCompression = false;
-        // now position it exactly at the beginning of the embedded graphic
+        // now position it exactly at the beinning of the embedded graphic
         sal_uLong nSkip = ( nInst & 0x0001 ) ? 32 : 16;
 
         switch( nInst & 0xFFFE )
@@ -6407,17 +6336,16 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
                 rBLIPStream.SeekRel( nSkip + 20 );
 
                 // read in size of metafile in EMUS
-                sal_Int32 width(0), height(0);
+                sal_Int32 width, height;
                 rBLIPStream.ReadInt32( width ).ReadInt32( height );
                 aMtfSize100.Width() = width;
                 aMtfSize100.Height() = height;
 
                 // scale to 1/100mm
-                aMtfSize100.Width() /= 360;
-                aMtfSize100.Height() /= 360;
+                aMtfSize100.Width() /= 360, aMtfSize100.Height() /= 360;
 
                 if ( pVisArea )     // seem that we currently are skipping the visarea position
-                    *pVisArea = tools::Rectangle( Point(), aMtfSize100 );
+                    *pVisArea = Rectangle( Point(), aMtfSize100 );
 
                 // skip rest of header
                 nSkip = 6;
@@ -6434,21 +6362,21 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
         rBLIPStream.SeekRel( nSkip );
 
         SvStream* pGrStream = &rBLIPStream;
-        std::unique_ptr<SvMemoryStream> xOut;
+        boost::scoped_ptr<SvMemoryStream> pOut;
         if( bZCodecCompression )
         {
-            xOut.reset(new SvMemoryStream( 0x8000, 0x4000 ));
+            pOut.reset(new SvMemoryStream( 0x8000, 0x4000 ));
             ZCodec aZCodec( 0x8000, 0x8000 );
             aZCodec.BeginCompression();
-            aZCodec.Decompress( rBLIPStream, *xOut );
+            aZCodec.Decompress( rBLIPStream, *pOut );
             aZCodec.EndCompression();
-            xOut->Seek( STREAM_SEEK_TO_BEGIN );
-            xOut->SetResizeOffset( 0 ); // sj: #i102257# setting ResizeOffset of 0 prevents from seeking
+            pOut->Seek( STREAM_SEEK_TO_BEGIN );
+            pOut->SetResizeOffset( 0 ); // sj: #i102257# setting ResizeOffset of 0 prevents from seeking
                                         // behind the stream end (allocating too much memory)
-            pGrStream = xOut.get();
+            pGrStream = pOut.get();
         }
 
-#ifdef DEBUG_FILTER_MSDFFIMP
+#if OSL_DEBUG_LEVEL > 2
         // extract graphics from ole storage into "dbggfxNNN.*"
         static sal_Int32 nGrfCount;
 
@@ -6465,7 +6393,7 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
         }
 
         OUString aURLStr;
-        if( osl::FileBase::getFileURLFromSystemPath( Application::GetAppFileName(), aURLStr ) == osl::FileBase::E_None )
+        if( ::utl::LocalFileHelper::ConvertPhysicalNameToURL( Application::GetAppFileName(), aURLStr ) )
         {
             INetURLObject aURL( aURLStr );
 
@@ -6473,28 +6401,28 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
             aURL.removeFinalSlash();
             aURL.Append( aFileName );
 
-            aURLStr = aURL.GetMainURL( INetURLObject::DecodeMechanism::NONE );
+            aURLStr = aURL.GetMainURL( INetURLObject::NO_DECODE );
 
             SAL_INFO("filter.ms", "dumping " << aURLStr);
 
-            std::unique_ptr<SvStream> pDbgOut(::utl::UcbStreamHelper::CreateStream(aURLStr, StreamMode::TRUNC | StreamMode::WRITE));
+            boost::scoped_ptr<SvStream> pDbgOut(::utl::UcbStreamHelper::CreateStream(aURLStr, STREAM_TRUNC | STREAM_WRITE));
 
             if( pDbgOut )
             {
                 if ( bZCodecCompression )
                 {
-                    xOut->Seek( STREAM_SEEK_TO_END );
-                    pDbgOut->Write( xOut->GetData(), xOut->Tell() );
-                    xOut->Seek( STREAM_SEEK_TO_BEGIN );
+                    pOut->Seek( STREAM_SEEK_TO_END );
+                    pDbgOut->Write( pOut->GetData(), pOut->Tell() );
+                    pOut->Seek( STREAM_SEEK_TO_BEGIN );
                 }
                 else
                 {
                     sal_Int32 nDbgLen = nLength - nSkip;
                     if ( nDbgLen )
                     {
-                        std::unique_ptr<sal_Char[]> xDat(new sal_Char[ nDbgLen ]);
-                        pGrStream->Read( xDat.get(), nDbgLen );
-                        pDbgOut->Write( xDat.get(), nDbgLen );
+                        boost::scoped_array<sal_Char> pDat(new sal_Char[ nDbgLen ]);
+                        pGrStream->Read( pDat.get(), nDbgLen );
+                        pDbgOut->Write( pDat.get(), nDbgLen );
                         pGrStream->SeekRel( -nDbgLen );
                     }
                 }
@@ -6514,7 +6442,8 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
         else
         {   // and unleash our filter
             GraphicFilter& rGF = GraphicFilter::GetGraphicFilter();
-            nRes = rGF.ImportGraphic( rData, "", *pGrStream );
+            OUString aEmptyStr;
+            nRes = rGF.ImportGraphic( rData, aEmptyStr, *pGrStream, GRFILTER_FORMAT_DONTKNOW );
 
             // SJ: I40472, sometimes the aspect ratio (aMtfSize100) does not match and we get scaling problems,
             // then it is better to use the prefsize that is stored within the metafile. Bug #72846# for what the
@@ -6522,7 +6451,7 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
             //
             // For pict graphics we will furthermore scale the metafile, because font scaling leads to error if the
             // dxarray is empty (this has been solved in wmf/emf but not for pict)
-            if( bMtfBLIP && ( GRFILTER_OK == nRes ) && ( rData.GetType() == GraphicType::GdiMetafile ) && ( ( nInst & 0xFFFE ) == 0x542 ) )
+            if( bMtfBLIP && ( GRFILTER_OK == nRes ) && ( rData.GetType() == GRAPHIC_GDIMETAFILE ) && ( ( nInst & 0xFFFE ) == 0x542 ) )
             {
                 if ( ( aMtfSize100.Width() >= 1000 ) && ( aMtfSize100.Height() >= 1000 ) )
                 {   // #75956#, scaling does not work properly, if the graphic is less than 1cm
@@ -6535,7 +6464,7 @@ bool SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, tool
                         aMtf.Scale( (double) aMtfSize100.Width() / aOldSize.Width(),
                                     (double) aMtfSize100.Height() / aOldSize.Height() );
                         aMtf.SetPrefSize( aMtfSize100 );
-                        aMtf.SetPrefMapMode( MapUnit::Map100thMM );
+                        aMtf.SetPrefMapMode( MAP_100TH_MM );
                         rData = aMtf;
                     }
                 }
@@ -6566,25 +6495,25 @@ bool SvxMSDffManager::ReadCommonRecordHeader(SvStream& rSt,
 }
 
 bool SvxMSDffManager::ProcessClientAnchor(SvStream& rStData, sal_uInt32 nDatLen,
-                                          char*& rpBuff, sal_uInt32& rBuffLen )
+                                          char*& rpBuff, sal_uInt32& rBuffLen ) const
 {
     if( nDatLen )
     {
         rBuffLen = std::min(rStData.remainingSize(), static_cast<sal_uInt64>(nDatLen));
         rpBuff = new char[rBuffLen];
-        rBuffLen = rStData.ReadBytes(rpBuff, rBuffLen);
+        rBuffLen = rStData.Read(rpBuff, rBuffLen);
     }
     return true;
 }
 
 bool SvxMSDffManager::ProcessClientData(SvStream& rStData, sal_uInt32 nDatLen,
-                                        char*& rpBuff, sal_uInt32& rBuffLen )
+                                        char*& rpBuff, sal_uInt32& rBuffLen ) const
 {
     if( nDatLen )
     {
         rBuffLen = std::min(rStData.remainingSize(), static_cast<sal_uInt64>(nDatLen));
         rpBuff = new char[rBuffLen];
-        rBuffLen = rStData.ReadBytes(rpBuff, rBuffLen);
+        rBuffLen = rStData.Read(rpBuff, rBuffLen);
     }
     return true;
 }
@@ -6592,10 +6521,15 @@ bool SvxMSDffManager::ProcessClientData(SvStream& rStData, sal_uInt32 nDatLen,
 
 void SvxMSDffManager::ProcessClientAnchor2( SvStream& /* rSt */, DffRecordHeader& /* rHd */ , void* /* pData */, DffObjData& /* rObj */ )
 {
-    return;  // will be overridden by SJ in Draw
+    return;  // will be overloaded by SJ in Draw
 }
 
-bool SvxMSDffManager::GetOLEStorageName( sal_uInt32, OUString&, tools::SvRef<SotStorage>&, uno::Reference < embed::XStorage >& ) const
+sal_uLong SvxMSDffManager::Calc_nBLIPPos( sal_uLong nOrgVal, sal_uLong /* nStreamPos */ ) const
+{
+    return nOrgVal;
+}
+
+bool SvxMSDffManager::GetOLEStorageName( long /* nOLEId */, OUString&, SvStorageRef&, uno::Reference < embed::XStorage >& ) const
 {
     return false;
 }
@@ -6606,44 +6540,44 @@ bool SvxMSDffManager::ShapeHasText( sal_uLong /* nShapeId */, sal_uLong /* nFile
 }
 
 // #i32596# - add new parameter <_nCalledByGroup>
-SdrObject* SvxMSDffManager::ImportOLE( sal_uInt32 nOLEId,
+SdrObject* SvxMSDffManager::ImportOLE( long nOLEId,
                                        const Graphic& rGrf,
-                                       const tools::Rectangle& rBoundRect,
-                                       const tools::Rectangle& rVisArea,
+                                       const Rectangle& rBoundRect,
+                                       const Rectangle& rVisArea,
                                        const int /* _nCalledByGroup */,
                                        sal_Int64 nAspect ) const
 {
-    SdrObject* pRet = nullptr;
+    SdrObject* pRet = 0;
     OUString sStorageName;
-    tools::SvRef<SotStorage> xSrcStg;
+    SvStorageRef xSrcStg;
     ErrCode nError = ERRCODE_NONE;
     uno::Reference < embed::XStorage > xDstStg;
     if( GetOLEStorageName( nOLEId, sStorageName, xSrcStg, xDstStg ))
         pRet = CreateSdrOLEFromStorage( sStorageName, xSrcStg, xDstStg,
                                         rGrf, rBoundRect, rVisArea, pStData, nError,
-                                        nSvxMSDffOLEConvFlags, nAspect, maBaseURL);
+                                        nSvxMSDffOLEConvFlags, nAspect );
     return pRet;
 }
 
 bool SvxMSDffManager::MakeContentStream( SotStorage * pStor, const GDIMetaFile & rMtf )
 {
-    tools::SvRef<SotStorageStream> xStm = pStor->OpenSotStream(SVEXT_PERSIST_STREAM);
+    SotStorageStreamRef xStm = pStor->OpenSotStream(OUString(SVEXT_PERSIST_STREAM));
     xStm->SetVersion( pStor->GetVersion() );
     xStm->SetBufferSize( 8192 );
 
     sal_uInt16 nAspect = ASPECT_CONTENT;
     sal_uLong nAdviseModes = 2;
 
-    Impl_OlePres aEle;
+    Impl_OlePres aEle( FORMAT_GDIMETAFILE );
     // Convert the size in 1/100 mm
     // If a not applicable MapUnit (device dependent) is used,
     // SV tries to guess a best match for the right value
     Size aSize = rMtf.GetPrefSize();
-    const MapMode& aMMSrc = rMtf.GetPrefMapMode();
-    MapMode aMMDst( MapUnit::Map100thMM );
+    MapMode aMMSrc = rMtf.GetPrefMapMode();
+    MapMode aMMDst( MAP_100TH_MM );
     aSize = OutputDevice::LogicToLogic( aSize, aMMSrc, aMMDst );
     aEle.SetSize( aSize );
-    aEle.SetAspect( nAspect );
+     aEle.SetAspect( nAspect );
     aEle.SetAdviseFlags( nAdviseModes );
     aEle.SetMtf( rMtf );
     aEle.Write( *xStm );
@@ -6765,24 +6699,24 @@ static const ClsIDs aClsIDs[] = {
 
 
 bool SvxMSDffManager::ConvertToOle2( SvStream& rStm, sal_uInt32 nReadLen,
-                    const GDIMetaFile * pMtf, const tools::SvRef<SotStorage>& rDest )
+                    const GDIMetaFile * pMtf, const SotStorageRef& rDest )
 {
     bool bMtfRead = false;
-    tools::SvRef<SotStorageStream> xOle10Stm = rDest->OpenSotStream( "\1Ole10Native",
-                                                    StreamMode::WRITE| StreamMode::SHARE_DENYALL );
+    SotStorageStreamRef xOle10Stm = rDest->OpenSotStream( OUString("\1Ole10Native"),
+                                                    STREAM_WRITE| STREAM_SHARE_DENYALL );
     if( xOle10Stm->GetError() )
         return false;
 
+    sal_uInt32 nType;
+    sal_uInt32 nRecType;
+    sal_uInt32 nStrLen;
     OUString   aSvrName;
     sal_uInt32 nDummy0;
     sal_uInt32 nDummy1;
+    sal_uInt32 nDataLen;
     sal_uInt32 nBytesRead = 0;
     do
     {
-        sal_uInt32 nType(0);
-        sal_uInt32 nRecType(0);
-        sal_uInt32 nStrLen(0);
-
         rStm.ReadUInt32( nType );
         rStm.ReadUInt32( nRecType );
         rStm.ReadUInt32( nStrLen );
@@ -6790,8 +6724,8 @@ bool SvxMSDffManager::ConvertToOle2( SvStream& rStm, sal_uInt32 nReadLen,
         {
             if( 0x10000L > nStrLen )
             {
-                std::unique_ptr<sal_Char[]> pBuf(new sal_Char[ nStrLen ]);
-                rStm.ReadBytes(pBuf.get(), nStrLen);
+                boost::scoped_array<sal_Char> pBuf(new sal_Char[ nStrLen ]);
+                rStm.Read( pBuf.get(), nStrLen );
                 aSvrName = OUString( pBuf.get(), (sal_uInt16) nStrLen-1, osl_getThreadTextEncoding() );
             }
             else
@@ -6799,25 +6733,24 @@ bool SvxMSDffManager::ConvertToOle2( SvStream& rStm, sal_uInt32 nReadLen,
         }
         rStm.ReadUInt32( nDummy0 );
         rStm.ReadUInt32( nDummy1 );
-        sal_uInt32 nDataLen(0);
         rStm.ReadUInt32( nDataLen );
 
         nBytesRead += 6 * sizeof( sal_uInt32 ) + nStrLen + nDataLen;
 
         if( !rStm.IsEof() && nReadLen > nBytesRead && nDataLen )
         {
-            if( xOle10Stm.is() )
+            if( xOle10Stm.Is() )
             {
-                std::unique_ptr<sal_uInt8[]> pData(new sal_uInt8[ nDataLen ]);
+                boost::scoped_array<sal_uInt8> pData(new sal_uInt8[ nDataLen ]);
                 if( !pData )
                     return false;
 
-                rStm.ReadBytes(pData.get(), nDataLen);
+                rStm.Read( pData.get(), nDataLen );
 
                 // write to ole10 stream
                 xOle10Stm->WriteUInt32( nDataLen );
-                xOle10Stm->WriteBytes(pData.get(), nDataLen);
-                xOle10Stm = tools::SvRef<SotStorageStream>();
+                xOle10Stm->Write( pData.get(), nDataLen );
+                xOle10Stm = SotStorageStreamRef();
 
                 // set the compobj stream
                 const ClsIDs* pIds;
@@ -6830,13 +6763,13 @@ bool SvxMSDffManager::ConvertToOle2( SvStream& rStm, sal_uInt32 nReadLen,
                 if( pIds->nId )
                 {
                     // found!
-                    SotClipboardFormatId nCbFmt = SotExchange::RegisterFormatName( aSvrName );
+                    sal_uLong nCbFmt = SotExchange::RegisterFormatName( aSvrName );
                     rDest->SetClass( SvGlobalName( pIds->nId, 0, 0, 0xc0,0,0,0,0,0,0,0x46 ), nCbFmt,
                                     OUString::createFromAscii( pIds->pDspName ) );
                 }
                 else
                 {
-                    SotClipboardFormatId nCbFmt = SotExchange::RegisterFormatName( aSvrName );
+                    sal_uLong nCbFmt = SotExchange::RegisterFormatName( aSvrName );
                     rDest->SetClass( SvGlobalName(), nCbFmt, aSvrName );
                 }
             }
@@ -6844,12 +6777,12 @@ bool SvxMSDffManager::ConvertToOle2( SvStream& rStm, sal_uInt32 nReadLen,
             {
                 sal_uLong nPos = rStm.Tell();
                 sal_uInt16 sz[4];
-                rStm.ReadBytes( sz, 8 );
+                rStm.Read( sz, 8 );
                 Graphic aGraphic;
-                if( ERRCODE_NONE == GraphicConverter::Import( rStm, aGraphic ) && aGraphic.GetType() != GraphicType::NONE )
+                if( ERRCODE_NONE == GraphicConverter::Import( rStm, aGraphic ) && aGraphic.GetType() )
                 {
                     const GDIMetaFile& rMtf = aGraphic.GetGDIMetaFile();
-                    MakeContentStream( rDest.get(), rMtf );
+                    MakeContentStream( rDest, rMtf );
                     bMtfRead = true;
                 }
                 // set behind the data
@@ -6862,7 +6795,7 @@ bool SvxMSDffManager::ConvertToOle2( SvStream& rStm, sal_uInt32 nReadLen,
 
     if( !bMtfRead && pMtf )
     {
-        MakeContentStream( rDest.get(), *pMtf );
+        MakeContentStream( rDest, *pMtf );
         return true;
     }
 
@@ -6889,7 +6822,7 @@ const char* GetInternalServerName_Impl( const SvGlobalName& aGlobName )
     else if ( aGlobName == SvGlobalName( SO3_SCH_OLE_EMBED_CLASSID_60 )
       || aGlobName == SvGlobalName( SO3_SCH_OLE_EMBED_CLASSID_8 ) )
         return "schart";
-    return nullptr;
+    return 0;
 }
 
 OUString GetFilterNameFromClassID_Impl( const SvGlobalName& aGlobName )
@@ -6933,10 +6866,10 @@ OUString GetFilterNameFromClassID_Impl( const SvGlobalName& aGlobName )
     return OUString();
 }
 
-css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForConvertToSOObj( sal_uInt32 nConvertFlags,
+com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >  SvxMSDffManager::CheckForConvertToSOObj( sal_uInt32 nConvertFlags,
                         SotStorage& rSrcStg, const uno::Reference < embed::XStorage >& rDestStorage,
                         const Graphic& rGrf,
-                        const tools::Rectangle& rVisArea, OUString const& rBaseURL)
+                        const Rectangle& rVisArea )
 {
     uno::Reference < embed::XEmbeddedObject > xObj;
     SvGlobalName aStgNm = rSrcStg.GetClassName();
@@ -6946,7 +6879,7 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
         sStarName = OUString::createFromAscii( pName );
     else if ( nConvertFlags )
     {
-        static struct ObjImpType
+        static struct _ObjImpType
         {
             sal_uInt32 nFlag;
             const char* pFactoryNm;
@@ -6955,24 +6888,37 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
             sal_uInt16 n2, n3;
             sal_uInt8 b8, b9, b10, b11, b12, b13, b14, b15;
         } aArr[] = {
-            { OLE_MATHTYPE_2_STARMATH, "smath", MSO_EQUATION3_CLASSID },
-            { OLE_MATHTYPE_2_STARMATH, "smath", MSO_EQUATION2_CLASSID },
-            { OLE_WINWORD_2_STARWRITER, "swriter", MSO_WW8_CLASSID },
-            // Excel table
-            { OLE_EXCEL_2_STARCALC, "scalc", MSO_EXCEL5_CLASSID },
-            { OLE_EXCEL_2_STARCALC, "scalc", MSO_EXCEL8_CLASSID },
+            { OLE_MATHTYPE_2_STARMATH, "smath",
+                0x0002ce02L, 0x0000, 0x0000,
+                0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x46 },
+            { OLE_MATHTYPE_2_STARMATH, "smath",
+                0x00021700L, 0x0000, 0x0000,
+                0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x46 },
+            { OLE_WINWORD_2_STARWRITER, "swriter",
+                0x00020906L, 0x0000, 0x0000,
+                0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x46 },
+            { OLE_EXCEL_2_STARCALC, "scalc",                // Excel table
+                0x00020810L, 0x0000, 0x0000,
+                0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x46 },
+            { OLE_EXCEL_2_STARCALC, "scalc",                // Excel chart
+                0x00020820L, 0x0000, 0x0000,
+                0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x46 },
             // 114465: additional Excel OLE chart classId to above.
-            { OLE_EXCEL_2_STARCALC, "scalc", MSO_EXCEL8_CHART_CLASSID },
-            // PowerPoint presentation
-            { OLE_POWERPOINT_2_STARIMPRESS, "simpress", MSO_PPT8_CLASSID },
-            // PowerPoint slide
-            { OLE_POWERPOINT_2_STARIMPRESS, "simpress", MSO_PPT8_SLIDE_CLASSID },
-            { 0, nullptr,
+            { OLE_EXCEL_2_STARCALC, "scalc",
+                0x00020821L, 0x0000, 0x0000,
+                0xc0,0x00,0x00,0x00,0x00,0x00,0x00,0x46 },
+            { OLE_POWERPOINT_2_STARIMPRESS, "simpress",     // PowerPoint presentation
+                0x64818d10L, 0x4f9b, 0x11cf,
+                0x86,0xea,0x00,0xaa,0x00,0xb9,0x29,0xe8 },
+            { OLE_POWERPOINT_2_STARIMPRESS, "simpress",     // PowerPoint slide
+                0x64818d11L, 0x4f9b, 0x11cf,
+                0x86,0xea,0x00,0xaa,0x00,0xb9,0x29,0xe8 },
+            { 0, 0,
               0, 0, 0,
               0, 0, 0, 0, 0, 0, 0, 0 }
         };
 
-        for( const ObjImpType* pArr = aArr; pArr->nFlag; ++pArr )
+        for( const _ObjImpType* pArr = aArr; pArr->nFlag; ++pArr )
         {
             if( nConvertFlags & pArr->nFlag )
             {
@@ -6992,33 +6938,33 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
     if ( sStarName.getLength() )
     {
         //TODO/MBA: check if (and when) storage and stream will be destroyed!
-        std::shared_ptr<const SfxFilter> pFilter;
-        std::unique_ptr<SvMemoryStream> xMemStream (new SvMemoryStream);
+        const SfxFilter* pFilter = 0;
+        ::boost::scoped_ptr<SvMemoryStream> xMemStream (new SvMemoryStream);
         if ( pName )
         {
             // TODO/LATER: perhaps we need to retrieve VisArea and Metafile from the storage also
-            tools::SvRef<SotStorageStream> xStr = rSrcStg.OpenSotStream( "package_stream", StreamMode::STD_READ );
+            SotStorageStreamRef xStr = rSrcStg.OpenSotStream( OUString( "package_stream" ), STREAM_STD_READ );
             xStr->ReadStream( *xMemStream );
         }
         else
         {
             SfxFilterMatcher aMatch( sStarName );
-            tools::SvRef<SotStorage> xStorage = new SotStorage( false, *xMemStream );
-            rSrcStg.CopyTo( xStorage.get() );
+            SotStorageRef xStorage = new SotStorage( false, *xMemStream );
+            rSrcStg.CopyTo( xStorage );
             xStorage->Commit();
-            xStorage.clear();
+            xStorage.Clear();
             OUString aType = SfxFilter::GetTypeFromStorage( rSrcStg );
-            if (aType.getLength() && !utl::ConfigManager::IsAvoidConfig())
+            if ( aType.getLength() )
                 pFilter = aMatch.GetFilter4EA( aType );
         }
 
-#ifdef DEBUG_FILTER_MSFILTER
+#if OSL_DEBUG_LEVEL > 2
         // extract embedded ole streams into "/tmp/embedded_stream_NNN"
         static sal_Int32 nOleCount(0);
         OUString aTmpName("/tmp/embedded_stream_");
         aTmpName += OUString::number(nOleCount++);
         aTmpName += ".bin";
-        SvFileStream aTmpStream(aTmpName,StreamMode::READ|StreamMode::WRITE|StreamMode::TRUNC);
+        SvFileStream aTmpStream(aTmpName,STREAM_READ|STREAM_WRITE|STREAM_TRUNC);
         xMemStream->Seek(0);
         *xMemStream >> aTmpStream;
         aTmpStream.Close();
@@ -7035,24 +6981,22 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
             else
                 aFilterName = GetFilterNameFromClassID_Impl( aStgNm );
 
-            uno::Sequence<beans::PropertyValue> aMedium(aFilterName.isEmpty() ? 3 : 4);
+            uno::Sequence < beans::PropertyValue > aMedium( aFilterName.isEmpty() ? 2 : 3);
             aMedium[0].Name = "InputStream";
             uno::Reference < io::XInputStream > xStream = new ::utl::OSeekableInputStreamWrapper( *xMemStream );
             aMedium[0].Value <<= xStream;
             aMedium[1].Name = "URL";
             aMedium[1].Value <<= OUString( "private:stream" );
-            aMedium[2].Name = "DocumentBaseURL";
-            aMedium[2].Value <<= rBaseURL;
 
             if ( !aFilterName.isEmpty() )
             {
-                aMedium[3].Name = "FilterName";
-                aMedium[3].Value <<= aFilterName;
+                aMedium[2].Name = "FilterName";
+                aMedium[2].Value <<= aFilterName;
             }
 
             OUString aName( aDstStgName );
             comphelper::EmbeddedObjectContainer aCnt( rDestStorage );
-            xObj = aCnt.InsertEmbeddedObject(aMedium, aName, &rBaseURL);
+            xObj = aCnt.InsertEmbeddedObject( aMedium, aName );
 
             if ( !xObj.is() )
             {
@@ -7060,7 +7004,7 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
                 {
                     // throw the filter parameter away as workaround
                     aMedium.realloc( 2 );
-                    xObj = aCnt.InsertEmbeddedObject(aMedium, aName, &rBaseURL);
+                    xObj = aCnt.InsertEmbeddedObject( aMedium, aName );
                 }
 
                 if ( !xObj.is() )
@@ -7088,7 +7032,7 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
                 else
                 {
                     aSz = rVisArea.GetSize();
-                    aSz = OutputDevice::LogicToLogic( aSz, MapMode( MapUnit::Map100thMM ), aMapMode );
+                    aSz = OutputDevice::LogicToLogic( aSz, MapMode( MAP_100TH_MM ), aMapMode );
                 }
 
                 // don't modify the object
@@ -7114,20 +7058,19 @@ css::uno::Reference < css::embed::XEmbeddedObject >  SvxMSDffManager::CheckForCo
 // TODO/MBA: code review and testing!
 SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                 const OUString& rStorageName,
-                tools::SvRef<SotStorage>& rSrcStorage,
+                SotStorageRef& rSrcStorage,
                 const uno::Reference < embed::XStorage >& xDestStorage,
                 const Graphic& rGrf,
-                const tools::Rectangle& rBoundRect,
-                const tools::Rectangle& rVisArea,
+                const Rectangle& rBoundRect,
+                const Rectangle& rVisArea,
                 SvStream* pDataStrm,
                 ErrCode& rError,
                 sal_uInt32 nConvertFlags,
-                sal_Int64 nRecommendedAspect,
-                OUString const& rBaseURL)
+                sal_Int64 nRecommendedAspect )
 {
     sal_Int64 nAspect = nRecommendedAspect;
-    SdrOle2Obj* pRet = nullptr;
-    if( rSrcStorage.is() && xDestStorage.is() && rStorageName.getLength() )
+    SdrOle2Obj* pRet = 0;
+    if( rSrcStorage.Is() && xDestStorage.is() && rStorageName.getLength() )
     {
         comphelper::EmbeddedObjectContainer aCnt( xDestStorage );
         // does the 01Ole-Stream exist at all?
@@ -7139,20 +7082,21 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
         aDstStgName += OUString::number( ++nMSOleObjCntr );
 
         {
-            tools::SvRef<SotStorage> xObjStg = rSrcStorage->OpenSotStorage( rStorageName );
-            if( xObjStg.is()  )
+            SvStorageRef xObjStg = rSrcStorage->OpenSotStorage( rStorageName,
+                                STREAM_READWRITE| STREAM_SHARE_DENYALL );
+            if( xObjStg.Is()  )
             {
                 {
                     sal_uInt8 aTestA[10];   // exist the \1CompObj-Stream ?
-                    tools::SvRef<SotStorageStream> xSrcTst = xObjStg->OpenSotStream( "\1CompObj" );
-                    bValidStorage = xSrcTst.is() && sizeof( aTestA ) ==
-                                    xSrcTst->ReadBytes(aTestA, sizeof(aTestA));
+                    SvStorageStreamRef xSrcTst = xObjStg->OpenSotStream( OUString( "\1CompObj" ) );
+                    bValidStorage = xSrcTst.Is() && sizeof( aTestA ) ==
+                                    xSrcTst->Read( aTestA, sizeof( aTestA ) );
                     if( !bValidStorage )
                     {
                         // or the \1Ole-Stream ?
-                        xSrcTst = xObjStg->OpenSotStream( "\1Ole" );
-                        bValidStorage = xSrcTst.is() && sizeof(aTestA) ==
-                                    xSrcTst->ReadBytes(aTestA, sizeof(aTestA));
+                        xSrcTst = xObjStg->OpenSotStream( OUString( "\1Ole" ) );
+                        bValidStorage = xSrcTst.Is() && sizeof(aTestA) ==
+                                        xSrcTst->Read(aTestA, sizeof(aTestA));
                     }
                 }
 
@@ -7165,9 +7109,9 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                         // is a kind of embedded objects in Word documents
                         // TODO/LATER: should the caller be notified if the aspect changes in future?
 
-                        tools::SvRef<SotStorageStream> xObjInfoSrc = xObjStg->OpenSotStream(
-                            "\3ObjInfo", StreamMode::STD_READ );
-                        if ( xObjInfoSrc.is() && !xObjInfoSrc->GetError() )
+                        SvStorageStreamRef xObjInfoSrc = xObjStg->OpenSotStream(
+                            OUString( "\3ObjInfo" ), STREAM_STD_READ | STREAM_NOCREATE );
+                        if ( xObjInfoSrc.Is() && !xObjInfoSrc->GetError() )
                         {
                             sal_uInt8 nByte = 0;
                             xObjInfoSrc->ReadUChar( nByte );
@@ -7177,8 +7121,7 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                     }
 
                     uno::Reference < embed::XEmbeddedObject > xObj( CheckForConvertToSOObj(
-                            nConvertFlags, *xObjStg, xDestStorage, rGrf,
-                            rVisArea, rBaseURL));
+                                nConvertFlags, *xObjStg, xDestStorage, rGrf, rVisArea ));
                     if ( xObj.is() )
                     {
                         svt::EmbeddedObjectRef aObj( xObj, nAspect );
@@ -7187,7 +7130,7 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                         aObj.SetGraphic( rGrf, OUString() );
 
                         // TODO/MBA: check setting of PersistName
-                        pRet = new SdrOle2Obj( aObj, OUString(), rBoundRect);
+                        pRet = new SdrOle2Obj( aObj, OUString(), rBoundRect, false);
                         // we have the Object, don't create another
                         bValidStorage = false;
                     }
@@ -7198,12 +7141,12 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
         if( bValidStorage )
         {
             // object is not an own object
-            tools::SvRef<SotStorage> xObjStor = SotStorage::OpenOLEStorage( xDestStorage, aDstStgName, StreamMode::READWRITE );
+            SotStorageRef xObjStor = SotStorage::OpenOLEStorage( xDestStorage, aDstStgName, STREAM_READWRITE );
 
-            if ( xObjStor.is() )
+            if ( xObjStor.Is() )
             {
-                tools::SvRef<SotStorage> xSrcStor = rSrcStorage->OpenSotStorage( rStorageName, StreamMode::READ );
-                xSrcStor->CopyTo( xObjStor.get() );
+                SotStorageRef xSrcStor = rSrcStorage->OpenSotStorage( rStorageName, STREAM_READ );
+                xSrcStor->CopyTo( xObjStor );
 
                 if( !xObjStor->GetError() )
                     xObjStor->Commit();
@@ -7213,13 +7156,13 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                     rError = xObjStor->GetError();
                     bValidStorage = false;
                 }
-                else if( !xObjStor.is() )
+                else if( !xObjStor.Is() )
                     bValidStorage = false;
             }
         }
         else if( pDataStrm )
         {
-            sal_uInt32 nLen(0), nDummy(0);
+            sal_uInt32 nLen, nDummy;
             pDataStrm->ReadUInt32( nLen ).ReadUInt32( nDummy );
             if( SVSTREAM_OK != pDataStrm->GetError() ||
                 // Id in BugDoc - exist there other Ids?
@@ -7229,7 +7172,7 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
             else
             {
                 // or is it an OLE-1 Stream in the DataStream?
-                tools::SvRef<SotStorage> xObjStor = SotStorage::OpenOLEStorage( xDestStorage, aDstStgName );
+                SvStorageRef xObjStor = SotStorage::OpenOLEStorage( xDestStorage, aDstStgName );
                 //TODO/MBA: remove metafile conversion from ConvertToOle2
                 //when is this code used?!
                 GDIMetaFile aMtf;
@@ -7270,7 +7213,7 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                     }
                     catch( const uno::Exception& )
                     {
-                        OSL_FAIL( "Could not set visual area of the object!" );
+                        OSL_FAIL( "Could not set visual area of the object!\n" );
                     }
                 }
 
@@ -7279,7 +7222,7 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
                 // TODO/LATER: need MediaType
                 aObj.SetGraphic( rGrf, OUString() );
 
-                pRet = new SdrOle2Obj( aObj, aDstStgName, rBoundRect);
+                pRet = new SdrOle2Obj( aObj, aDstStgName, rBoundRect, false);
             }
         }
     }
@@ -7287,7 +7230,7 @@ SdrOle2Obj* SvxMSDffManager::CreateSdrOLEFromStorage(
     return pRet;
 }
 
-bool SvxMSDffManager::SetPropValue( const uno::Any& rAny, const uno::Reference< css::beans::XPropertySet > & rXPropSet,
+bool SvxMSDffManager::SetPropValue( const uno::Any& rAny, const uno::Reference< ::com::sun::star::beans::XPropertySet > & rXPropSet,
             const OUString& rPropName, bool bTestPropertyAvailability )
 {
     bool bRetValue = true;
@@ -7322,18 +7265,19 @@ bool SvxMSDffManager::SetPropValue( const uno::Any& rAny, const uno::Reference< 
 }
 
 SvxMSDffImportRec::SvxMSDffImportRec()
-    : pObj( nullptr ),
-      pWrapPolygon(nullptr),
-      pClientAnchorBuffer( nullptr ),
+    : pObj( 0 ),
+      pWrapPolygon(0),
+      pClientAnchorBuffer( 0 ),
       nClientAnchorLen(  0 ),
-      pClientDataBuffer( nullptr ),
+      pClientDataBuffer( 0 ),
       nClientDataLen(    0 ),
       nXAlign( 0 ), // position n cm from left
-      pXRelTo( nullptr ), //   relative to column
+      pXRelTo( NULL ), //   relative to column
       nYAlign( 0 ), // position n cm below
-      pYRelTo( nullptr ), //   relative to paragraph
+      pYRelTo( NULL ), //   relative to paragraph
       nLayoutInTableCell( 0 ), // element is laid out in table cell
       nFlags( 0 ),
+      nTextRotationAngle( 0 ),
       nDxTextLeft( 144 ),
       nDyTextTop( 72 ),
       nDxTextRight( 144 ),
@@ -7346,7 +7290,7 @@ SvxMSDffImportRec::SvxMSDffImportRec()
       nCropFromBottom( 0 ),
       nCropFromLeft( 0 ),
       nCropFromRight( 0 ),
-      aTextId(),
+      aTextId( 0, 0 ),
       nNextShapeId( 0 ),
       nShapeId( 0 ),
       eShapeType( mso_sptNil ),
@@ -7367,11 +7311,12 @@ SvxMSDffImportRec::SvxMSDffImportRec()
 SvxMSDffImportRec::SvxMSDffImportRec(const SvxMSDffImportRec& rCopy)
     : pObj( rCopy.pObj ),
       nXAlign( rCopy.nXAlign ),
-      pXRelTo( nullptr ),
+      pXRelTo( NULL ),
       nYAlign( rCopy.nYAlign ),
-      pYRelTo( nullptr ),
+      pYRelTo( NULL ),
       nLayoutInTableCell( rCopy.nLayoutInTableCell ),
       nFlags( rCopy.nFlags ),
+      nTextRotationAngle( rCopy.nTextRotationAngle ),
       nDxTextLeft( rCopy.nDxTextLeft    ),
       nDyTextTop( rCopy.nDyTextTop ),
       nDxTextRight( rCopy.nDxTextRight ),
@@ -7418,7 +7363,7 @@ SvxMSDffImportRec::SvxMSDffImportRec(const SvxMSDffImportRec& rCopy)
                 nClientAnchorLen );
     }
     else
-        pClientAnchorBuffer = nullptr;
+        pClientAnchorBuffer = 0;
 
     nClientDataLen = rCopy.nClientDataLen;
     if( rCopy.nClientDataLen )
@@ -7429,12 +7374,12 @@ SvxMSDffImportRec::SvxMSDffImportRec(const SvxMSDffImportRec& rCopy)
                 nClientDataLen );
     }
     else
-        pClientDataBuffer = nullptr;
+        pClientDataBuffer = 0;
 
     if (rCopy.pWrapPolygon)
-        pWrapPolygon = new tools::Polygon(*rCopy.pWrapPolygon);
+        pWrapPolygon = new Polygon(*rCopy.pWrapPolygon);
     else
-        pWrapPolygon = nullptr;
+        pWrapPolygon = 0;
 }
 
 SvxMSDffImportRec::~SvxMSDffImportRec()
@@ -7469,7 +7414,7 @@ void SvxMSDffManager::removeShapeId( SdrObject* pShape )
 SdrObject* SvxMSDffManager::getShapeForId( sal_Int32 nShapeId )
 {
     SvxMSDffShapeIdContainer::iterator aIter( maShapeIdContainer.find(nShapeId) );
-    return aIter != maShapeIdContainer.end() ? (*aIter).second : nullptr;
+    return aIter != maShapeIdContainer.end() ? (*aIter).second : 0;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

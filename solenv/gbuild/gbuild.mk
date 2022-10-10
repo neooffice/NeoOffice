@@ -51,6 +51,25 @@ GBUILDDIR:=$(SRCDIR)/solenv/gbuild
 MAKEFLAGS += r
 .SUFFIXES:
 
+# by default gbuild use /bin/sh
+# if you want to use a particular shell
+# you can export gb_SHELL=<path_to_shell>
+#
+
+ifdef gb_SHELL
+SHELL := $(gb_SHELL)
+else
+ifeq ($(OS_FOR_BUILD),WNT)
+ifeq ($(GNUMAKE_WIN_NATIVE),TRUE)
+SHELL := $(shell cygpath -m /bin/sh)
+else
+SHELL := /bin/sh
+endif
+else
+SHELL := /bin/sh
+endif
+endif
+
 true := T
 false :=
 define NEWLINE
@@ -64,10 +83,7 @@ endef
 
 COMMA :=,
 
-OPEN_PAREN :=(
 CLOSE_PAREN :=)
-
-gb_VERBOSE := $(verbose)
 
 include $(GBUILDDIR)/Helper.mk
 
@@ -95,14 +111,12 @@ gb_DEBUGLEVEL := 1
 # make DEBUG=true should force -g
 ifeq ($(origin DEBUG),command line)
 ENABLE_DEBUGINFO_FOR := all
-ENABLE_SYMBOLS := TRUE
 endif
 endif
 ifneq ($(strip $(debug)),)
 gb_DEBUGLEVEL := 1
 ifeq ($(origin debug),command line)
 ENABLE_DEBUGINFO_FOR := all
-ENABLE_SYMBOLS := TRUE
 endif
 endif
 ifeq ($(gb_ENABLE_DBGUTIL),$(true))
@@ -122,11 +136,16 @@ ENABLE_DEBUGINFO_FOR := all
 endif
 endif
 
-# note: ENABLE_CRASHDUMP turns on gb_SYMBOL
-ifneq ($(strip $(ENABLE_SYMBOLS)$(enable_symbols)$(ENABLE_CRASHDUMP)),)
-gb_SYMBOL := $(true)
-else
+ifeq ($(HARDLINKDELIVER),TRUE)
+gb_Deliver_HARDLINK := $(true)
+endif
+
+ifeq ($(or $(ENABLE_SYMBOLS),$(enable_symbols)),FALSE)
 gb_SYMBOL := $(false)
+else
+ifneq ($(strip $(ENABLE_SYMBOLS)$(enable_symbols)),)
+gb_SYMBOL := $(true)
+endif
 endif
 
 ifneq ($(strip $(ENABLE_PCH)),)
@@ -198,6 +217,13 @@ gb_GLOBALDEFS := \
 	$(gb_COMPILERDEFS) \
 	$(gb_CPUDEFS) \
 
+# This is used to detect whether LibreOffice is being built (as opposed to building
+# 3rd-party code). Used for tag deprecation for API we want to
+# ensure is not used at all externally while we clean
+# out our internal usage, for code in sal/ that should be used only internally, etc.
+gb_GLOBALDEFS += \
+	-DLIBO_INTERNAL_ONLY \
+
 ifeq ($(gb_ENABLE_DBGUTIL),$(true))
 gb_GLOBALDEFS += -DDBG_UTIL
 
@@ -212,6 +238,7 @@ gb_GLOBALDEFS += -DTIMELOG \
 endif
 
 ifeq ($(gb_DEBUGLEVEL),0)
+gb_GLOBALDEFS += -DOPTIMIZE \
 
 ifeq ($(strip $(ASSERT_ALWAYS_ABORT)),FALSE)
 gb_GLOBALDEFS += -DNDEBUG \
@@ -242,6 +269,7 @@ endif
 gb_GLOBALDEFS += \
 	$(call gb_Helper_define_if_set,\
 		DISABLE_DYNLOADING \
+		DISABLE_EXPORT \
 		ENABLE_LTO \
 	)
 
@@ -250,13 +278,6 @@ gb_GLOBALDEFS += -DUSE_JAVA
 endif	# PRODUCT_BUILD_TYPE == java
 
 gb_GLOBALDEFS := $(sort $(gb_GLOBALDEFS))
-
-# This is used to detect whether LibreOffice is being built (as opposed to building
-# 3rd-party code). Used for tag deprecation for API we want to
-# ensure is not used at all externally while we clean
-# out our internal usage, for code in sal/ that should be used only internally, etc.
-gb_DEFS_INTERNAL := \
-	-DLIBO_INTERNAL_ONLY \
 
 include $(GBUILDDIR)/Deliver.mk
 
@@ -267,11 +288,11 @@ $(eval $(call gb_Deliver_init))
 # TODO: to what extent is the following still true?
 # It is important to include them in the right order as that is
 # -- at least in part -- defining precedence. This is not an issue in the
-# WORKDIR as there are no naming collisions there, but INSTDIR is a mess
+# WORKDIR as there are no nameing collisions there, but INSTDIR is a mess
 # and precedence is important there. This is also platform dependent.
 #
 # This is less of an issue with GNU Make versions > 3.82 which matches for
-# shortest stem instead of first match. However, upon introduction this version
+# shortest stem instead of first match. However, upon intoduction this version
 # is not available everywhere by default.
 
 include $(foreach class, \
@@ -293,7 +314,6 @@ include $(foreach class, \
 	PrecompiledHeaders \
 	Pyuno \
 	PythonTest \
-	UITest \
 	Rdb \
 	CppunitTest \
 	Jar \
@@ -323,7 +343,6 @@ include $(foreach class, \
 	AutoInstall \
 	PackageSet \
 	GeneratedPackage \
-	CompilerTest \
 ,$(GBUILDDIR)/$(class).mk)
 
 $(eval $(call gb_Helper_process_executable_registrations))

@@ -33,14 +33,7 @@
  *
  ************************************************************************/
 
-#include <tools/color.hxx>
-#include <tools/gen.hxx>
-#include <tools/stream.hxx>
-#include <vcl/fntstyle.hxx>
-
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "java/saldata.hxx"
 #include "java/salgdi.h"
@@ -76,7 +69,7 @@ using namespace vcl;
 {
 	[super init];
 
-	maLayer = nullptr;
+	maLayer = NULL;
 	mnDX = nDX;
 	if ( mnDX < 1 )
 		mnDX = 1;
@@ -102,12 +95,12 @@ using namespace vcl;
 	if ( maLayer )
 	{
 		CGLayerRelease( maLayer );
-		maLayer = nullptr;
+		maLayer = NULL;
 	}
 
 	CGContextRef aContext = NSWindow_cachedCGContext();
 	if ( aContext )
-		maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( mnDX, mnDY ), nullptr );
+		maLayer = CGLayerCreateWithContext( aContext, CGSizeMake( mnDX, mnDY ), NULL );
 }
 
 - (CGLayerRef)layer
@@ -122,12 +115,12 @@ using namespace vcl;
 JavaSalVirtualDevice::JavaSalVirtualDevice() :
 	mnWidth( 0 ),
 	mnHeight( 0 ),
-	maVirDevLayer( nullptr ),
+	maVirDevLayer( NULL ),
 	mpGraphics( new JavaSalGraphics() ),
 	mbGraphics( sal_False )
 {
 	// By default no mirroring for VirtualDevices
-	mpGraphics->SetLayout( SalLayoutFlags::NONE );
+	mpGraphics->SetLayout( 0 );
 	mpGraphics->mpVirDev = this;
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
@@ -162,7 +155,7 @@ bool JavaSalVirtualDevice::ScreenParamsChanged()
 		bRet = true;
 
 		CGLayerRelease( maVirDevLayer );
-		maVirDevLayer = nullptr;
+		maVirDevLayer = NULL;
 
 		SetSize( mnWidth, mnHeight );
 	}
@@ -175,7 +168,7 @@ bool JavaSalVirtualDevice::ScreenParamsChanged()
 SalGraphics* JavaSalVirtualDevice::AcquireGraphics()
 {
 	if ( mbGraphics )
-		return nullptr;
+		return NULL;
 
 	mbGraphics = sal_True;
 
@@ -209,17 +202,16 @@ bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( maVirDevLayer )
 	{
 		CGLayerRelease( maVirDevLayer );
-		maVirDevLayer = nullptr;
+		maVirDevLayer = NULL;
 	}
 
 	mpGraphics->maNativeBounds = CGRectNull;
-	mpGraphics->setLayer( nullptr );
+	mpGraphics->setLayer( NULL );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	VCLVirtualDeviceGetGraphicsLayer *pVCLVirtualDeviceGetGraphicsLayer = [VCLVirtualDeviceGetGraphicsLayer createWithWidth:nDX height:nDY];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pVCLVirtualDeviceGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLVirtualDeviceGetGraphicsLayer waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pVCLVirtualDeviceGetGraphicsLayer, @selector(getGraphicsLayer:), pVCLVirtualDeviceGetGraphicsLayer, YES );
 	maVirDevLayer = [pVCLVirtualDeviceGetGraphicsLayer layer];
 	if ( maVirDevLayer )
 	{
@@ -235,7 +227,7 @@ bool JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 			CGContextRef aBitmapContext = CGBitmapContextCreate( &nBit, 1, 1, 8, sizeof( nBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 			if ( aBitmapContext )
 			{
-				maVirDevLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( nDX, nDY ), nullptr );
+				maVirDevLayer = CGLayerCreateWithContext( aBitmapContext, CGSizeMake( nDX, nDY ), NULL );
 				CGContextRelease( aBitmapContext );
 			}
 

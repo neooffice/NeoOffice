@@ -47,12 +47,19 @@
 #include <sfx2/frame.hxx>
 #include <macroloader.hxx>
 
+
+
+#define MACRO_PRFIX         "macro://"
+#define MACRO_POSTFIX       "()"
+
 using namespace css;
 
 
     //  --- XNameReplace ---
 
 void SAL_CALL SfxEvents_Impl::replaceByName( const OUString & aName, const uno::Any & rElement )
+                                throw( lang::IllegalArgumentException, container::NoSuchElementException,
+                                       lang::WrappedTargetException, uno::RuntimeException, std::exception )
 {
     ::osl::MutexGuard aGuard( maMutex );
 
@@ -70,7 +77,7 @@ void SAL_CALL SfxEvents_Impl::replaceByName( const OUString & aName, const uno::
             // create Configuration at first, creation might call this method also and that would overwrite everything
             // we might have stored before!
             if ( mpObjShell && !mpObjShell->IsLoading() )
-                mpObjShell->SetModified();
+                mpObjShell->SetModified( true );
 
             ::comphelper::NamedValueCollection aNormalizedDescriptor;
             NormalizeMacro( aEventDescriptor, aNormalizedDescriptor, mpObjShell );
@@ -109,6 +116,8 @@ void SAL_CALL SfxEvents_Impl::replaceByName( const OUString & aName, const uno::
 //  --- XNameAccess ---
 
 uno::Any SAL_CALL SfxEvents_Impl::getByName( const OUString& aName )
+                                throw( container::NoSuchElementException, lang::WrappedTargetException,
+                                       uno::RuntimeException, std::exception )
 {
     ::osl::MutexGuard aGuard( maMutex );
 
@@ -126,13 +135,13 @@ uno::Any SAL_CALL SfxEvents_Impl::getByName( const OUString& aName )
 }
 
 
-uno::Sequence< OUString > SAL_CALL SfxEvents_Impl::getElementNames()
+uno::Sequence< OUString > SAL_CALL SfxEvents_Impl::getElementNames() throw ( uno::RuntimeException, std::exception )
 {
     return maEventNames;
 }
 
 
-sal_Bool SAL_CALL SfxEvents_Impl::hasByName( const OUString& aName )
+sal_Bool SAL_CALL SfxEvents_Impl::hasByName( const OUString& aName ) throw ( uno::RuntimeException, std::exception )
 {
     ::osl::MutexGuard aGuard( maMutex );
 
@@ -143,30 +152,30 @@ sal_Bool SAL_CALL SfxEvents_Impl::hasByName( const OUString& aName )
     for ( long i=0; i<nCount; i++ )
     {
         if ( maEventNames[i] == aName )
-            return true;
+            return sal_True;
     }
 
-    return false;
+    return sal_False;
 }
 
 
 //  --- XElementAccess ( parent of XNameAccess ) ---
 
-uno::Type SAL_CALL SfxEvents_Impl::getElementType()
+uno::Type SAL_CALL SfxEvents_Impl::getElementType() throw ( uno::RuntimeException, std::exception )
 {
-    uno::Type aElementType = cppu::UnoType<uno::Sequence < beans::PropertyValue >>::get();
+    uno::Type aElementType = ::getCppuType( (const uno::Sequence < beans::PropertyValue > *)0 );
     return aElementType;
 }
 
 
-sal_Bool SAL_CALL SfxEvents_Impl::hasElements()
+sal_Bool SAL_CALL SfxEvents_Impl::hasElements() throw ( uno::RuntimeException, std::exception )
 {
     ::osl::MutexGuard aGuard( maMutex );
 
     if ( maEventNames.getLength() )
-        return true;
+        return sal_True;
     else
-        return false;
+        return sal_False;
 }
 
 void SfxEvents_Impl::Execute( uno::Any& aEventData, const document::DocumentEvent& aTrigger, SfxObjectShell* pDoc )
@@ -245,7 +254,7 @@ void SfxEvents_Impl::Execute( uno::Any& aEventData, const document::DocumentEven
                 uno::Reference
                     < frame::XDispatchProvider > xProv;
 
-                if ( pView != nullptr )
+                if ( pView != NULL )
                 {
                     xProv = uno::Reference
                         < frame::XDispatchProvider > (
@@ -253,8 +262,9 @@ void SfxEvents_Impl::Execute( uno::Any& aEventData, const document::DocumentEven
                 }
                 else
                 {
-                    xProv.set( frame::Desktop::create( ::comphelper::getProcessComponentContext() ),
-                               uno::UNO_QUERY );
+                    xProv = uno::Reference< frame::XDispatchProvider > (
+                                frame::Desktop::create( ::comphelper::getProcessComponentContext() ),
+                                uno::UNO_QUERY );
                 }
 
                 uno::Reference < frame::XDispatch > xDisp;
@@ -285,7 +295,7 @@ void SfxEvents_Impl::Execute( uno::Any& aEventData, const document::DocumentEven
 
 // --- ::document::XEventListener ---
 
-void SAL_CALL SfxEvents_Impl::notifyEvent( const document::EventObject& aEvent )
+void SAL_CALL SfxEvents_Impl::notifyEvent( const document::EventObject& aEvent ) throw( uno::RuntimeException, std::exception )
 {
     ::osl::ClearableMutexGuard aGuard( maMutex );
 
@@ -309,32 +319,33 @@ void SAL_CALL SfxEvents_Impl::notifyEvent( const document::EventObject& aEvent )
 
     uno::Any aEventData = maEventData[ nIndex ];
     aGuard.clear();
-    Execute( aEventData, document::DocumentEvent(aEvent.Source, aEvent.EventName, nullptr, uno::Any()), mpObjShell );
+    Execute( aEventData, document::DocumentEvent(aEvent.Source, aEvent.EventName, NULL, uno::Any()), mpObjShell );
 }
 
 
 // --- ::lang::XEventListener ---
 
-void SAL_CALL SfxEvents_Impl::disposing( const lang::EventObject& /*Source*/ )
+void SAL_CALL SfxEvents_Impl::disposing( const lang::EventObject& /*Source*/ ) throw( uno::RuntimeException, std::exception )
 {
     ::osl::MutexGuard aGuard( maMutex );
 
     if ( mxBroadcaster.is() )
     {
         mxBroadcaster->removeEventListener( this );
-        mxBroadcaster = nullptr;
+        mxBroadcaster = NULL;
     }
 }
 
 
+
 SfxEvents_Impl::SfxEvents_Impl( SfxObjectShell* pShell,
-                                uno::Reference< document::XEventBroadcaster > const & xBroadcaster )
+                                uno::Reference< document::XEventBroadcaster > xBroadcaster )
 {
     // get the list of supported events and store it
     if ( pShell )
         maEventNames = pShell->GetEventNames();
     else
-        maEventNames = rtl::Reference<GlobalEventConfig>(new GlobalEventConfig)->getElementNames();
+        maEventNames = GlobalEventConfig().getElementNames();
 
     maEventData = uno::Sequence < uno::Any > ( maEventNames.getLength() );
 
@@ -353,7 +364,7 @@ SfxEvents_Impl::~SfxEvents_Impl()
 
 SvxMacro* SfxEvents_Impl::ConvertToMacro( const uno::Any& rElement, SfxObjectShell* pObjShell, bool bNormalizeMacro )
 {
-    SvxMacro* pMacro = nullptr;
+    SvxMacro* pMacro = NULL;
     uno::Sequence < beans::PropertyValue > aProperties;
     uno::Any aAny;
     if ( bNormalizeMacro )
@@ -385,7 +396,7 @@ SvxMacro* SfxEvents_Impl::ConvertToMacro( const uno::Any& rElement, SfxObjectShe
             else if ( aProperties[ nIndex ].Name == PROP_MACRO_NAME )
                 aProperties[ nIndex ].Value >>= aMacroName;
             else {
-                OSL_FAIL("Unknown property value!");
+                OSL_FAIL("Unknown propery value!");
             }
             nIndex += 1;
         }
@@ -407,7 +418,7 @@ SvxMacro* SfxEvents_Impl::ConvertToMacro( const uno::Any& rElement, SfxObjectShe
             if ( aLibrary == "application" )
                 aLibrary = SfxGetpApp()->GetName();
             else
-                aLibrary.clear();
+                aLibrary = "";
             pMacro = new SvxMacro( aMacroName, aLibrary, eType );
         }
         else if ( eType == EXTENDED_STYPE )
@@ -454,7 +465,7 @@ void SfxEvents_Impl::NormalizeMacro( const ::comphelper::NamedValueCollection& i
                 sal_Int32 nArgsPos = aScript.indexOf( '(' );
                 if ( ( nHashPos != -1 ) && ( nArgsPos == -1 || nHashPos < nArgsPos ) )
                 {
-                    OUString aBasMgrName( INetURLObject::decode( aScript.copy( 8, nHashPos-8 ), INetURLObject::DecodeMechanism::WithCharset ) );
+                    OUString aBasMgrName( INetURLObject::decode( aScript.copy( 8, nHashPos-8 ), '%', INetURLObject::DECODE_WITH_CHARSET ) );
                     if ( aBasMgrName == "." )
                         aLibrary = pDoc->GetTitle();
                     else
@@ -471,10 +482,13 @@ void SfxEvents_Impl::NormalizeMacro( const ::comphelper::NamedValueCollection& i
         }
         else if ( !aMacroName.isEmpty() )
         {
-            aScript = "macro://";
+            aScript = OUString( MACRO_PRFIX  );
             if ( aLibrary != SfxGetpApp()->GetName() && aLibrary != "StarDesktop" && aLibrary != "application" )
-                aScript += ".";
-            aScript += "/" + aMacroName + "()";
+                aScript += OUString('.');
+
+            aScript += OUString('/');
+            aScript += aMacroName;
+            aScript += OUString( MACRO_POSTFIX  );
         }
         else
             // wrong properties

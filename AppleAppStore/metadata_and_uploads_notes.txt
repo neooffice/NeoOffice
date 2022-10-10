@@ -21,6 +21,9 @@ NeoOffice is an office suite for Mac that is based on OpenOffice and LibreOffice
 Two engineers created NeoOffice in 2003 when they made OpenOffice run natively on OS X for the first time. Since then, the NeoOffice engineers have continually added improvements to NeoOffice that you will not find in OpenOffice or LibreOffice such as:
 
 • Native Dark Mode
+• Native accents menu by holding down a key on the keyboard
+• Native tabs by enabling the "Prefer tabs" system preference
+• Native full screen mode
 • NeoOffice > Open at Launch menu to open Calc or Impress instead of Writer at launch
 • File > Browse All Versions menu to restore previous versions of your documents
 • Native file locking to safely edit files in iCloud Drive, Dropbox, or network drives
@@ -31,28 +34,27 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 
 
 What's New in this Version:
-Before you buy NeoOffice, please click on the "Support" link and read the installation notes.
+Before you download NeoOffice, please click on the "Support" link and read the installation notes.
 
-This version of NeoOffice fixes the following bugs:
-• When running on macOS Big Sur, NeoOffice would freeze for several seconds when switching to a different document window
-• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
-• When running on macOS Big Sur, NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
+This version of NeoOffice fixes the following bug:
+• Command-clicking on a hyperlink in a document would display a "fatal error" dialog and then crash if the hyperlink does not point to a local file. This bug was caused by our fix for LibreOffice bug 150873 that was added in the previous release to resolve any macOS aliases in a file path.
 
 
 Promotional Text:
-NeoOffice includes native Dark Mode!
-
-macOS Big Sur users: follow us on Twitter @NeoOffice to download the latest bug fixes.
+NeoOffice now supports VoiceOver.
 
 
 Keywords:
 neo,office,document,spreadsheet,text,presentation,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+https://www.neooffice.org/neojava/macappstore.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+https://www.neooffice.org/neojava/features.php
+
+Privacy Policy URL:
+https://www.neooffice.org/neojava/faq.php?fragment=privacy
 
 App Screenshots:
 Upload ScreenSnapshotWriterAndCalc.png file. Note: the ScreenSnapshotWriterAndCalc.png was created using the document files in the ScreenSnapshotWriterAndCalc subdirectory.

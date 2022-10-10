@@ -49,7 +49,6 @@
 #include <ApplicationServices/ApplicationServices.h>
 #include <Cocoa/Cocoa.h>
 #include <postmac.h>
-#undef check
 
 #include "window.h"
 #include "java/saldata.hxx"
@@ -75,23 +74,19 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 	if ( pTextSelection && *pTextSelection )
 	{
 		CFRelease( *pTextSelection );
-		*pTextSelection = nullptr;
+		*pTextSelection = NULL;
 	}
 
 	if ( pRTFSelection && *pRTFSelection )
 	{
 		CFRelease( *pRTFSelection );
-		*pRTFSelection = nullptr;
+		*pRTFSelection = NULL;
 	}
 
 	if ( pNSWindow && !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
-			JavaSalFrame *pFrame = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaSalFrame *pFrame = NULL;
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
@@ -161,13 +156,9 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 							}
 
 							// If an edit window has focus, use its text
-							vcl::Window *pFocusWindow = pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin;
-							if ( pFocusWindow )
-							{
-								Edit *pEditWindow = dynamic_cast< Edit* >( pFocusWindow );
-								if ( pEditWindow )
-									pEditWindow->Copy();
-							}
+							Edit *pEditWindow = dynamic_cast< Edit* >( pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin );
+							if ( pEditWindow )
+								pEditWindow->Copy();
 
 							uno::Reference< datatransfer::XTransferable > xTransferable = xClipboard->getContents();
 							if ( xTransferable.is() )
@@ -177,17 +168,18 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								// Handle string selection
 								if ( pTextSelection )
 								{
+									uno::Type aType( getCppuType( ( OUString* )0 ) );
 									aFlavor.MimeType = "text/plain;charset=utf-16";
-									aFlavor.DataType = cppu::UnoType< OUString >::get();
+									aFlavor.DataType = aType;
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
 										uno::Any aValue = xTransferable->getTransferData( aFlavor );
-										if ( aValue.getValueType().equals( aFlavor.DataType ) )
+										if ( aValue.getValueType().equals( aType ) )
 										{
 											OUString aText;
 											aValue >>= aText;
 											if ( aText.getLength() )
-												*pTextSelection = CFStringCreateWithCharacters( nullptr, reinterpret_cast< const UniChar* >( aText.getStr() ), aText.getLength() );
+												*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
 										}
 									}
 								}
@@ -195,17 +187,18 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 								// Handle RTF selection
 								if ( pRTFSelection )
 								{
+									uno::Type aType( getCppuType( ( uno::Sequence< sal_Int8 >* )0 ) );
 									aFlavor.MimeType = "text/richtext";
-									aFlavor.DataType = cppu::UnoType< uno::Sequence< sal_Int8 > >::get();
+									aFlavor.DataType = aType;
 									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
 										uno::Any aValue = xTransferable->getTransferData( aFlavor );
-										if ( aValue.getValueType().equals( aFlavor.DataType ) )
+										if ( aValue.getValueType().equals( aType ) )
 										{
 											uno::Sequence< sal_Int8 > aData;
 											aValue >>= aData;
 											if ( aData.getLength() )
-												*pRTFSelection = CFDataCreate( nullptr, reinterpret_cast< const UInt8* >( aData.getArray() ), aData.getLength() );
+												*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
 										}
 									}
 								}
@@ -220,9 +213,7 @@ void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelectio
 					}
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -234,12 +225,8 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		if ( !Application::IsShutDown() )
-		{
-			JavaSalFrame *pFrame = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaSalFrame *pFrame = NULL;
 			SalData *pSalData = GetSalData();
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
@@ -300,9 +287,7 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 					}
 				}
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return bRet;
@@ -312,13 +297,12 @@ sal_Bool VCLEventQueue_paste( void *pNSWindow )
 
 void VCLEventQueue_removeCachedEvents()
 {
-	if ( !Application::IsShutDown() )
+	// If no application mutex exists yet, ignore event as we are likely to
+	// crash
+	if ( ImplApplicationIsRunning() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
+			ACQUIRE_SOLARMUTEX
 
-		if ( !Application::IsShutDown() )
-		{
 			// Yield to give Java event dispatch thread a chance to finish
 			Thread::yield();
 
@@ -328,8 +312,6 @@ void VCLEventQueue_removeCachedEvents()
 				if ( (*it)->mbVisible )
 					JavaSalEventQueue::removeCachedEvents( *it );
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }

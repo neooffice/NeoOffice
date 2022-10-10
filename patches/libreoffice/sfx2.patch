@@ -1,0 +1,43 @@
+--- source/appl/shutdowniconaqua.mm	2015-11-25 07:55:38.000000000 -0500
++++ source/appl/shutdowniconaqua.mm	2020-12-18 05:03:40.000000000 -0500
+@@ -360,7 +360,7 @@
+     // confused. Anyway, to avoid warnings, instead of this:
+     // [pRecentMenu setDelegate: pRecentDelegate];
+     // do this:
+-    objc_msgSend(pRecentMenu, @selector(setDelegate:), pRecentDelegate);
++    [pRecentMenu setDelegate: pRecentDelegate];
+ 
+     [pRecentMenu setAutoenablesItems: NO];
+     [pItem setSubmenu: pRecentMenu];
+@@ -376,8 +376,7 @@
+         pRecentMenu = [[NSMenu alloc] initWithTitle: getAutoreleasedString( i_rTitle ) ];
+ 
+         // See above
+-        // [pRecentMenu setDelegate: pRecentDelegate];
+-        objc_msgSend(pRecentMenu, @selector(setDelegate:), pRecentDelegate);
++        [pRecentMenu setDelegate: pRecentDelegate];
+ 
+         [pRecentMenu setAutoenablesItems: NO];
+         [pItem setSubmenu: pRecentMenu];
+--- source/appl/shutdownicon.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/appl/shutdownicon.cxx	2020-12-18 18:50:14.000000000 -0500
+@@ -177,7 +177,7 @@
+ #endif // ENABLE_QUICKSTART_APPLET
+     }
+     assert(!boost::logic::indeterminate(loaded));
+-    return loaded;
++    return bool(loaded);
+ }
+ 
+ }
+--- source/doc/sfxbasemodel.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/doc/sfxbasemodel.cxx	2021-05-12 12:52:26.000000000 -0400
+@@ -575,7 +575,7 @@
+             io_rTypes.getConstArray(),
+             io_rTypes.getConstArray() + io_rTypes.getLength(),
+             aStrippedTypes.getArray(),
+-            ::std::bind2nd( ::std::equal_to< uno::Type >(), i_rTypeToStrip )
++            [&i_rTypeToStrip](const uno::Type& aType) { return aType == i_rTypeToStrip; }
+         );
+         io_rTypes = aStrippedTypes;
+     }

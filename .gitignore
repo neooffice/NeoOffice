@@ -1,6 +1,5 @@
-build*
-certs.mk
-custom.mk
-source*
-install*
-patch_install*
+/build*
+/certs.mk
+/custom.mk
+/patch.rej
+**/.DS_Store

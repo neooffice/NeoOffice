@@ -17,7 +17,6 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <memory>
 #include "hintids.hxx"
 #include <comphelper/string.hxx>
 #include <vcl/svapp.hxx>
@@ -41,6 +40,9 @@
 #include <svtools/htmltokn.h>
 #include <svtools/htmlkywd.hxx>
 #include <unotools/eventcfg.hxx>
+#ifndef NO_LIBO_LOAD_HTML_IMAGES_FIX
+#include <unotools/securityoptions.hxx>
+#endif	// !NO_LIBO_LOAD_HTML_IMAGES_FIX
 
 #include <fmtornt.hxx>
 #include <fmturl.hxx>
@@ -66,20 +68,21 @@
 #include <swcss1.hxx>
 #include <swhtml.hxx>
 #include <numrule.hxx>
+#include <boost/shared_ptr.hpp>
 
 #include <vcl/graphicfilter.hxx>
 #include <tools/urlobj.hxx>
 
 using namespace ::com::sun::star;
 
-HTMLOptionEnum<sal_Int16> aHTMLImgHAlignTable[] =
+HTMLOptionEnum aHTMLImgHAlignTable[] =
 {
     { OOO_STRING_SVTOOLS_HTML_AL_left,    text::HoriOrientation::LEFT       },
     { OOO_STRING_SVTOOLS_HTML_AL_right,   text::HoriOrientation::RIGHT      },
-    { nullptr,                            0               }
+    { 0,                0               }
 };
 
-HTMLOptionEnum<sal_Int16> aHTMLImgVAlignTable[] =
+HTMLOptionEnum aHTMLImgVAlignTable[] =
 {
     { OOO_STRING_SVTOOLS_HTML_VA_top,         text::VertOrientation::LINE_TOP       },
     { OOO_STRING_SVTOOLS_HTML_VA_texttop,     text::VertOrientation::CHAR_TOP       },
@@ -89,193 +92,217 @@ HTMLOptionEnum<sal_Int16> aHTMLImgVAlignTable[] =
     { OOO_STRING_SVTOOLS_HTML_VA_bottom,      text::VertOrientation::TOP            },
     { OOO_STRING_SVTOOLS_HTML_VA_baseline,    text::VertOrientation::TOP            },
     { OOO_STRING_SVTOOLS_HTML_VA_absbottom,   text::VertOrientation::LINE_BOTTOM    },
-    { nullptr,                                0                   }
+    { 0,                    0                   }
 };
 
 ImageMap *SwHTMLParser::FindImageMap( const OUString& rName ) const
 {
-    OSL_ENSURE( rName[0] != '#', "FindImageMap: name begins with '#'!" );
+    ImageMap *pMap = 0;
 
-    if (m_pImageMaps)
+    OSL_ENSURE( rName[0] != '#', "FindImageName: Name beginnt mit #!" );
+
+    if( pImageMaps )
     {
-        for (auto &rpIMap : *m_pImageMaps)
+        for( sal_uInt16 i=0; i<pImageMaps->size(); i++ )
         {
-            if (rName.equalsIgnoreAsciiCase(rpIMap->GetName()))
+            ImageMap *pIMap = &(*pImageMaps)[i];
+            if( rName.equalsIgnoreAsciiCase( pIMap->GetName() ) )
             {
-                return rpIMap.get();
+                pMap = pIMap;
+                break;
             }
         }
     }
-    return nullptr;
+    return pMap;
 }
 
 void SwHTMLParser::ConnectImageMaps()
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwNodes& rNds = pDoc->GetNodes();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwNodes& rNds = m_xDoc->GetNodes();
-    // on the first node of section #1
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    // auf den Start-Node der 1. Section
     sal_uLong nIdx = rNds.GetEndOfAutotext().StartOfSectionIndex() + 1;
     sal_uLong nEndIdx = rNds.GetEndOfAutotext().GetIndex();
 
     SwGrfNode* pGrfNd;
-    while( m_nMissingImgMaps > 0 && nIdx < nEndIdx )
+    while( nMissingImgMaps > 0 && nIdx < nEndIdx )
     {
         SwNode *pNd = rNds[nIdx + 1];
-        if( nullptr != (pGrfNd = pNd->GetGrfNode()) )
+        if( 0 != (pGrfNd = pNd->GetGrfNode()) )
         {
-            SwFrameFormat *pFormat = pGrfNd->GetFlyFormat();
-            SwFormatURL aURL( pFormat->GetURL() );
+            SwFrmFmt *pFmt = pGrfNd->GetFlyFmt();
+            SwFmtURL aURL( pFmt->GetURL() );
             const ImageMap *pIMap = aURL.GetMap();
             if( pIMap && pIMap->GetIMapObjectCount()==0 )
             {
-                // The (empty) image map of the node will be either
-                // replaced with found image map or deleted.
+                // Die (leere) Image-Map des Nodes wird entweder
+                // durch die jetzt gefundene Image-Map ersetzt
+                // oder geloescht.
                 ImageMap *pNewIMap =
                     FindImageMap( pIMap->GetName() );
                 aURL.SetMap( pNewIMap );
-                pFormat->SetFormatAttr( aURL );
+                pFmt->SetFmtAttr( aURL );
                 if( !pGrfNd->IsScaleImageMap() )
                 {
-                    // meanwhile the graphic size is known or the
-                    // graphic don't need scaling
+                    // die Grafikgroesse ist mitlerweile da oder dir
+                    // Grafik muss nicht skaliert werden
                     pGrfNd->ScaleImageMap();
                 }
-                m_nMissingImgMaps--;  // search a map less
+                nMissingImgMaps--;  // eine Map weniger suchen
             }
         }
         nIdx = rNds[nIdx]->EndOfSectionIndex() + 1;
     }
 }
 
+/*  */
+
 void SwHTMLParser::SetAnchorAndAdjustment( sal_Int16 eVertOri,
                                            sal_Int16 eHoriOri,
+                                           const SfxItemSet &rCSS1ItemSet,
                                            const SvxCSS1PropertyInfo &rCSS1PropInfo,
-                                           SfxItemSet& rFrameItemSet )
+                                           SfxItemSet& rFrmItemSet )
 {
-    const SfxItemSet *pCntnrItemSet = nullptr;
-    auto i = m_aContexts.size();
-    while( !pCntnrItemSet && i > m_nContextStMin )
-        pCntnrItemSet = m_aContexts[--i]->GetFrameItemSet();
+    const SfxItemSet *pCntnrItemSet = 0;
+    sal_uInt16 i = aContexts.size();
+    while( !pCntnrItemSet && i > nContextStMin )
+        pCntnrItemSet = aContexts[--i]->GetFrmItemSet();
 
     if( pCntnrItemSet )
     {
-        // If we are in a container then the anchoring of the container is used.
-        rFrameItemSet.Put( *pCntnrItemSet );
+        // Wenn wir und in einem Container befinden wird die Verankerung
+        // des Containers uebernommen.
+        rFrmItemSet.Put( *pCntnrItemSet );
     }
     else if( SwCSS1Parser::MayBePositioned( rCSS1PropInfo, true ) )
     {
-        // If the alignment can be set via CSS1 options we use them.
-        SetAnchorAndAdjustment( rCSS1PropInfo, rFrameItemSet );
+        // Wenn die Ausrichtung anhand der CSS1-Optionen gesetzt werden kann
+        // werden die benutzt.
+        SetAnchorAndAdjustment( rCSS1ItemSet, rCSS1PropInfo, rFrmItemSet );
     }
     else
     {
-        // Otherwise the alignment is set correspondingly the normal HTML options.
-        SetAnchorAndAdjustment( eVertOri, eHoriOri, rFrameItemSet );
+        // Sonst wird die Ausrichtung entsprechend der normalen HTML-Optionen
+        // gesetzt.
+        SetAnchorAndAdjustment( eVertOri, eHoriOri, rFrmItemSet );
     }
 }
 
 void SwHTMLParser::SetAnchorAndAdjustment( sal_Int16 eVertOri,
                                            sal_Int16 eHoriOri,
-                                           SfxItemSet& rFrameSet,
+                                           SfxItemSet& rFrmSet,
                                            bool bDontAppend )
 {
     bool bMoveBackward = false;
-    SwFormatAnchor aAnchor( RndStdIds::FLY_AS_CHAR );
+    SwFmtAnchor aAnchor( FLY_AS_CHAR );
     sal_Int16 eVertRel = text::RelOrientation::FRAME;
 
     if( text::HoriOrientation::NONE != eHoriOri )
     {
-        // determine paragraph indent
+        // den Absatz-Einzug bestimmen
         sal_uInt16 nLeftSpace = 0, nRightSpace = 0;
         short nIndent = 0;
         GetMarginsFromContextWithNumBul( nLeftSpace, nRightSpace, nIndent );
 
-        // determine horizontal alignment and wrapping
+        // Horizonale Ausrichtung und Umlauf bestimmen.
         sal_Int16 eHoriRel;
-        css::text::WrapTextMode eSurround;
+        SwSurround eSurround;
         switch( eHoriOri )
         {
         case text::HoriOrientation::LEFT:
             eHoriRel = nLeftSpace ? text::RelOrientation::PRINT_AREA : text::RelOrientation::FRAME;
-            eSurround = css::text::WrapTextMode_RIGHT;
+            eSurround = SURROUND_RIGHT;
             break;
         case text::HoriOrientation::RIGHT:
             eHoriRel = nRightSpace ? text::RelOrientation::PRINT_AREA : text::RelOrientation::FRAME;
-            eSurround = css::text::WrapTextMode_LEFT;
+            eSurround = SURROUND_LEFT;
             break;
-        case text::HoriOrientation::CENTER:   // for tables
+        case text::HoriOrientation::CENTER:   // fuer Tabellen
             eHoriRel = text::RelOrientation::FRAME;
-            eSurround = css::text::WrapTextMode_NONE;
+            eSurround = SURROUND_NONE;
             break;
         default:
             eHoriRel = text::RelOrientation::FRAME;
-            eSurround = css::text::WrapTextMode_PARALLEL;
+            eSurround = SURROUND_PARALLEL;
             break;
         }
 
-        // Create a new paragraph, if the current one has frames
-        // anchored at paragraph/at char without wrapping.
+        // Einen neuen Absatz aufmachen, wenn der aktuelle
+        // absatzgebundene Rahmen ohne Umlauf enthaelt.
         if( !bDontAppend && HasCurrentParaFlys( true ) )
         {
-            // When the paragraph only contains graphics then there
-            // is no need for bottom margin. Since here also with use of
-            // styles no margin should be created, set attributes to
-            // override!
+            // Wenn der Absatz nur Grafiken enthaelt, braucht er
+            // auch keinen unteren Absatz-Abstand. Da hier auch bei
+            // Verwendung von Styles kein Abstand enstehen soll, wird
+            // hier auch geweohnlich attributiert !!!
             sal_uInt16 nUpper=0, nLower=0;
             GetULSpaceFromContext( nUpper, nLower );
-            InsertAttr( SvxULSpaceItem( nUpper, 0, RES_UL_SPACE ), true );
+            InsertAttr( SvxULSpaceItem( nUpper, 0, RES_UL_SPACE ), false, true );
 
-            AppendTextNode( AM_NOSPACE );
+            AppendTxtNode( AM_NOSPACE );
 
             if( nUpper )
             {
-                NewAttr( &m_aAttrTab.pULSpace, SvxULSpaceItem( 0, nLower, RES_UL_SPACE ) );
-                m_aParaAttrs.push_back( m_aAttrTab.pULSpace );
-                EndAttr( m_aAttrTab.pULSpace, false );
+                NewAttr( &aAttrTab.pULSpace, SvxULSpaceItem( 0, nLower, RES_UL_SPACE ) );
+                aParaAttrs.push_back( aAttrTab.pULSpace );
+                EndAttr( aAttrTab.pULSpace, 0, false );
             }
         }
 
-        // determine vertical alignment and anchoring
-        const sal_Int32 nContent = m_pPam->GetPoint()->nContent.GetIndex();
-        if( nContent )
+        // Vertikale Ausrichtung und Verankerung bestimmen.
+        const sal_Int32 nCntnt = pPam->GetPoint()->nContent.GetIndex();
+        if( nCntnt )
         {
-            aAnchor.SetType( RndStdIds::FLY_AT_CHAR );
+            aAnchor.SetType( FLY_AT_CHAR );
             bMoveBackward = true;
             eVertOri = text::VertOrientation::CHAR_BOTTOM;
             eVertRel = text::RelOrientation::CHAR;
         }
         else
         {
-            aAnchor.SetType( RndStdIds::FLY_AT_PARA );
+            aAnchor.SetType( FLY_AT_PARA );
             eVertOri = text::VertOrientation::TOP;
             eVertRel = text::RelOrientation::PRINT_AREA;
         }
 
-        rFrameSet.Put( SwFormatHoriOrient( 0, eHoriOri, eHoriRel) );
+        rFrmSet.Put( SwFmtHoriOrient( 0, eHoriOri, eHoriRel) );
 
-        rFrameSet.Put( SwFormatSurround( eSurround ) );
+        rFrmSet.Put( SwFmtSurround( eSurround ) );
     }
-    rFrameSet.Put( SwFormatVertOrient( 0, eVertOri, eVertRel) );
+    rFrmSet.Put( SwFmtVertOrient( 0, eVertOri, eVertRel) );
 
     if( bMoveBackward )
-        m_pPam->Move( fnMoveBackward );
+        pPam->Move( fnMoveBackward );
 
-    aAnchor.SetAnchor( m_pPam->GetPoint() );
+#ifndef NO_LIBO_NULL_TABLE_NODE_FIX
+    if (aAnchor.GetAnchorId() == RndStdIds::FLY_AS_CHAR && !pPam->GetNode().GetTxtNode())
+    {
+        eState = SVPAR_ERROR;
+        return;
+    }
+#endif	// !NO_LIBO_NULL_TABLE_NODE_FIX
+
+    aAnchor.SetAnchor( pPam->GetPoint() );
 
     if( bMoveBackward )
-        m_pPam->Move( fnMoveForward );
+        pPam->Move( fnMoveForward );
 
-    rFrameSet.Put( aAnchor );
+    rFrmSet.Put( aAnchor );
 }
 
-void SwHTMLParser::RegisterFlyFrame( SwFrameFormat *pFlyFormat )
+void SwHTMLParser::RegisterFlyFrm( SwFrmFmt *pFlyFmt )
 {
-    // automatically anchored frames must be moved forward by one position
-    if( RES_DRAWFRMFMT != pFlyFormat->Which() &&
-        (RndStdIds::FLY_AT_PARA == pFlyFormat->GetAnchor().GetAnchorId()) &&
-        css::text::WrapTextMode_THROUGH == pFlyFormat->GetSurround().GetSurround() )
+    // automatisch verankerte Rahmen muessen noch um eine Position
+    // nach vorne verschoben werden.
+    if( RES_DRAWFRMFMT != pFlyFmt->Which() &&
+        (FLY_AT_PARA == pFlyFmt->GetAnchor().GetAnchorId()) &&
+        SURROUND_THROUGHT == pFlyFmt->GetSurround().GetSurround() )
     {
-        m_aMoveFlyFrames.push_back( pFlyFormat );
-        m_aMoveFlyCnts.push_back( m_pPam->GetPoint()->nContent.GetIndex() );
+        aMoveFlyFrms.push_back( pFlyFmt );
+        aMoveFlyCnts.push_back( pPam->GetPoint()->nContent.GetIndex() );
     }
 }
 
@@ -284,18 +311,40 @@ void SwHTMLParser::RegisterFlyFrame( SwFrameFormat *pFlyFormat )
 void SwHTMLParser::GetDefaultScriptType( ScriptType& rType,
                                          OUString& rTypeStr ) const
 {
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwDocShell *pDocSh = pDoc->GetDocShell();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SwDocShell *pDocSh = m_xDoc->GetDocShell();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvKeyValueIterator* pHeaderAttrs = pDocSh ? pDocSh->GetHeaderAttributes()
-                                              : nullptr;
+                                              : 0;
     rType = GetScriptType( pHeaderAttrs );
     rTypeStr = GetScriptTypeString( pHeaderAttrs );
 }
+
+#ifndef NO_LIBO_LOAD_HTML_IMAGES_FIX
+
+namespace
+{
+    bool allowAccessLink(SwDoc& rDoc)
+    {
+        OUString sReferer;
+        SfxObjectShell * sh = rDoc.GetPersist();
+        if (sh != nullptr && sh->HasName())
+        {
+            sReferer = sh->GetMedium()->GetName();
+        }
+        return !SvtSecurityOptions().isUntrustedReferer(sReferer);
+    }
+}
+
+#endif	// !NO_LIBO_LOAD_HTML_IMAGES_FIX
 
 /*  */
 
 void SwHTMLParser::InsertImage()
 {
-    // and now analyze
+    // und jetzt auswerten
     OUString sAltNm, aId, aClass, aStyle, aMap, sHTMLGrfName;
     OUString sGrfNm;
     sal_Int16 eVertOri = text::VertOrientation::TOP;
@@ -304,7 +353,7 @@ void SwHTMLParser::InsertImage()
     long nWidth=0, nHeight=0;
     long nVSpace=0, nHSpace=0;
 
-    sal_uInt16 nBorder = (m_aAttrTab.pINetFormat ? 1 : 0);
+    sal_uInt16 nBorder = (aAttrTab.pINetFmt ? 1 : 0);
     bool bIsMap = false;
     bool bPrcWidth = false;
     bool bPrcHeight = false;
@@ -322,83 +371,84 @@ void SwHTMLParser::InsertImage()
         const HTMLOption& rOption = rHTMLOptions[--i];
         switch( rOption.GetToken() )
         {
-            case HtmlOptionId::ID:
+            case HTML_O_ID:
                 aId = rOption.GetString();
                 break;
-            case HtmlOptionId::STYLE:
+            case HTML_O_STYLE:
                 aStyle = rOption.GetString();
                 break;
-            case HtmlOptionId::CLASS:
+            case HTML_O_CLASS:
                 aClass = rOption.GetString();
                 break;
-            case HtmlOptionId::SRC:
+            case HTML_O_SRC:
                 sGrfNm = rOption.GetString();
                 if( !InternalImgToPrivateURL(sGrfNm) )
-                    sGrfNm = INetURLObject::GetAbsURL( m_sBaseURL, sGrfNm );
+                    sGrfNm = INetURLObject::GetAbsURL( sBaseURL, sGrfNm );
                 break;
-            case HtmlOptionId::ALIGN:
+            case HTML_O_ALIGN:
                 eVertOri =
                     rOption.GetEnum( aHTMLImgVAlignTable,
                                                     text::VertOrientation::TOP );
                 eHoriOri =
-                    rOption.GetEnum( aHTMLImgHAlignTable );
+                    rOption.GetEnum( aHTMLImgHAlignTable,
+                                                    text::HoriOrientation::NONE );
                 break;
-            case HtmlOptionId::WIDTH:
-                // for now only store as pixel value!
+            case HTML_O_WIDTH:
+                // erstmal nur als Pixelwerte merken!
                 nWidth = rOption.GetNumber();
                 bPrcWidth = (rOption.GetString().indexOf('%') != -1);
                 if( bPrcWidth && nWidth>100 )
                     nWidth = 100;
                 bWidthProvided = true;
                 break;
-            case HtmlOptionId::HEIGHT:
-                // for now only store as pixel value!
+            case HTML_O_HEIGHT:
+                // erstmal nur als Pixelwerte merken!
                 nHeight = rOption.GetNumber();
                 bPrcHeight = (rOption.GetString().indexOf('%') != -1);
                 if( bPrcHeight && nHeight>100 )
                     nHeight = 100;
                 bHeightProvided = true;
                 break;
-            case HtmlOptionId::VSPACE:
+            case HTML_O_VSPACE:
                 nVSpace = rOption.GetNumber();
                 break;
-            case HtmlOptionId::HSPACE:
+            case HTML_O_HSPACE:
                 nHSpace = rOption.GetNumber();
                 break;
-            case HtmlOptionId::ALT:
+            case HTML_O_ALT:
                 sAltNm = rOption.GetString();
                 break;
-            case HtmlOptionId::BORDER:
+            case HTML_O_BORDER:
                 nBorder = (sal_uInt16)rOption.GetNumber();
                 break;
-            case HtmlOptionId::ISMAP:
+            case HTML_O_ISMAP:
                 bIsMap = true;
                 break;
-            case HtmlOptionId::USEMAP:
+            case HTML_O_USEMAP:
                 aMap = rOption.GetString();
                 break;
-            case HtmlOptionId::NAME:
+            case HTML_O_NAME:
                 sHTMLGrfName = rOption.GetString();
                 break;
 
-            case HtmlOptionId::SDONLOAD:
+            case HTML_O_SDONLOAD:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONLOAD:
+                //fallthrough
+            case HTML_O_ONLOAD:
                 nEvent = SVX_EVENT_IMAGE_LOAD;
                 goto IMAGE_SETEVENT;
 
-            case HtmlOptionId::SDONABORT:
+            case HTML_O_SDONABORT:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONABORT:
+                //fallthrough
+            case HTML_O_ONABORT:
                 nEvent = SVX_EVENT_IMAGE_ABORT;
                 goto IMAGE_SETEVENT;
 
-            case HtmlOptionId::SDONERROR:
+            case HTML_O_SDONERROR:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONERROR:
+                //fallthrough
+            case HTML_O_ONERROR:
                 nEvent = SVX_EVENT_IMAGE_ERROR;
                 goto IMAGE_SETEVENT;
 IMAGE_SETEVENT:
@@ -415,36 +465,37 @@ IMAGE_SETEVENT:
                     }
                 }
                 break;
-            default: break;
         }
     }
 
     if( sGrfNm.isEmpty() )
         return;
 
-    // When we are in a ordered list and the paragraph is still empty and not
-    // numbered, it may be a graphic for a bullet list.
-    if( !m_pPam->GetPoint()->nContent.GetIndex() &&
+    // Wenn wir in einer Numerierung stehen und der Absatz noch leer und
+    // nicht numeriert ist, handelt es sich vielleicht um die Grafik
+    // einer Bullet-Liste
+    if( !pPam->GetPoint()->nContent.GetIndex() &&
         GetNumInfo().GetDepth() > 0 && GetNumInfo().GetDepth() <= MAXLEVEL &&
-        !m_aBulletGrfs[GetNumInfo().GetDepth()-1].isEmpty() &&
-        m_aBulletGrfs[GetNumInfo().GetDepth()-1]==sGrfNm )
+        !aBulletGrfs[GetNumInfo().GetDepth()-1].isEmpty() &&
+        aBulletGrfs[GetNumInfo().GetDepth()-1]==sGrfNm )
     {
-        SwTextNode* pTextNode = m_pPam->GetNode().GetTextNode();
+        SwTxtNode* pTxtNode = pPam->GetNode().GetTxtNode();
 
-        if( pTextNode && ! pTextNode->IsCountedInList())
+        if( pTxtNode && ! pTxtNode->IsCountedInList())
         {
-            OSL_ENSURE( pTextNode->GetActualListLevel() == GetNumInfo().GetLevel(),
-                    "Numbering level is wrong" );
+            OSL_ENSURE( pTxtNode->GetActualListLevel() == GetNumInfo().GetLevel(),
+                    "Numerierungs-Ebene stimmt nicht" );
 
-            pTextNode->SetCountedInList( true );
+            pTxtNode->SetCountedInList( true );
 
-            // It's necessary to invalide the rule, because between the reading
-            // of LI and the graphic an EndAction could be called.
+            // Rule invalisieren ist noetig, weil zwischem dem einlesen
+            // des LI und der Grafik ein EndAction gerufen worden sein kann.
             if( GetNumInfo().GetNumRule() )
                 GetNumInfo().GetNumRule()->SetInvalidRule( true );
 
-            // Set the style again, so that indent of the first line is correct.
-            SetTextCollAttrs();
+            // Die Vorlage novh mal setzen. Ist noetig, damit der
+            // Erstzeilen-Einzug stimmt.
+            SetTxtCollAttrs();
 
             return;
         }
@@ -452,19 +503,20 @@ IMAGE_SETEVENT:
 
     Graphic aGraphic;
     INetURLObject aGraphicURL( sGrfNm );
-    if( aGraphicURL.GetProtocol() == INetProtocol::Data )
+    if( aGraphicURL.GetProtocol() == INET_PROT_DATA )
     {
         std::unique_ptr<SvMemoryStream> const pStream(aGraphicURL.getData());
         if (pStream)
         {
             if (GRFILTER_OK == GraphicFilter::GetGraphicFilter().ImportGraphic(aGraphic, "", *pStream))
-                sGrfNm.clear();
+                sGrfNm = "";
         }
     }
-    else if (m_sBaseURL.isEmpty()) // sBaseURL is empty if the source is clipboard
+    // sBaseURL is empty if the source is clipboard
+    else if (sBaseURL.isEmpty())
     {
         if (GRFILTER_OK == GraphicFilter::GetGraphicFilter().ImportGraphic(aGraphic, aGraphicURL))
-            sGrfNm.clear();
+            sGrfNm = "";
     }
 
     if (!sGrfNm.isEmpty())
@@ -481,15 +533,23 @@ IMAGE_SETEVENT:
             nHeight = aPixelSize.Height();
     }
 
-    SfxItemSet aItemSet( m_xDoc->GetAttrPool(), m_pCSS1Parser->GetWhichMap() );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     SvxCSS1PropertyInfo aPropInfo;
     if( HasStyleOptions( aStyle, aId, aClass ) )
         ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo );
 
-    SfxItemSet aFrameSet( m_xDoc->GetAttrPool(),
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aFrmSet( pDoc->GetAttrPool(),
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SfxItemSet aFrmSet( m_xDoc->GetAttrPool(),
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                         RES_FRMATR_BEGIN, RES_FRMATR_END-1 );
     if( !IsNewDoc() )
-        Reader::ResetFrameFormatAttrs( aFrameSet );
+        Reader::ResetFrmFmtAttrs( aFrmSet );
 
     // Umrandung setzen
     long nHBorderWidth = 0, nVBorderWidth = 0;
@@ -499,79 +559,89 @@ IMAGE_SETEVENT:
         nVBorderWidth = (long)nBorder;
         SvxCSS1Parser::PixelToTwip( nVBorderWidth, nHBorderWidth );
 
-        ::editeng::SvxBorderLine aHBorderLine( nullptr, nHBorderWidth );
-        ::editeng::SvxBorderLine aVBorderLine( nullptr, nVBorderWidth );
+        ::editeng::SvxBorderLine aHBorderLine( NULL, nHBorderWidth );
+        ::editeng::SvxBorderLine aVBorderLine( NULL, nVBorderWidth );
 
-        if( m_aAttrTab.pINetFormat )
+        if( aAttrTab.pINetFmt )
         {
             const OUString& rURL =
-                static_cast<const SwFormatINetFormat&>(m_aAttrTab.pINetFormat->GetItem()).GetValue();
+                ((const SwFmtINetFmt&)aAttrTab.pINetFmt->GetItem()).GetValue();
 
-            m_pCSS1Parser->SetATagStyles();
+            pCSS1Parser->SetATagStyles();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            sal_uInt16 nPoolId =  static_cast< sal_uInt16 >(pDoc->IsVisitedURL( rURL )
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             sal_uInt16 nPoolId =  static_cast< sal_uInt16 >(m_xDoc->IsVisitedURL( rURL )
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                     ? RES_POOLCHR_INET_VISIT
                                     : RES_POOLCHR_INET_NORMAL);
-            const SwCharFormat *pCharFormat = m_pCSS1Parser->GetCharFormatFromPool( nPoolId );
-            aHBorderLine.SetColor( pCharFormat->GetColor().GetValue() );
+            const SwCharFmt *pCharFmt = pCSS1Parser->GetCharFmtFromPool( nPoolId );
+            aHBorderLine.SetColor( pCharFmt->GetColor().GetValue() );
             aVBorderLine.SetColor( aHBorderLine.GetColor() );
         }
         else
         {
-            const SvxColorItem& rColorItem = m_aAttrTab.pFontColor ?
-              static_cast<const SvxColorItem &>(m_aAttrTab.pFontColor->GetItem()) :
-              static_cast<const SvxColorItem &>(m_xDoc->GetDefault(RES_CHRATR_COLOR));
+            const SvxColorItem& rColorItem = aAttrTab.pFontColor ?
+              (const SvxColorItem &)aAttrTab.pFontColor->GetItem() :
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+              (const SvxColorItem &)pDoc->GetDefault(RES_CHRATR_COLOR);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+              (const SvxColorItem &)m_xDoc->GetDefault(RES_CHRATR_COLOR);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             aHBorderLine.SetColor( rColorItem.GetValue() );
             aVBorderLine.SetColor( aHBorderLine.GetColor() );
         }
 
         SvxBoxItem aBoxItem( RES_BOX );
-        aBoxItem.SetLine( &aHBorderLine, SvxBoxItemLine::TOP );
-        aBoxItem.SetLine( &aHBorderLine, SvxBoxItemLine::BOTTOM );
-        aBoxItem.SetLine( &aVBorderLine, SvxBoxItemLine::LEFT );
-        aBoxItem.SetLine( &aVBorderLine, SvxBoxItemLine::RIGHT );
-        aFrameSet.Put( aBoxItem );
+        aBoxItem.SetLine( &aHBorderLine, BOX_LINE_TOP );
+        aBoxItem.SetLine( &aHBorderLine, BOX_LINE_BOTTOM );
+        aBoxItem.SetLine( &aVBorderLine, BOX_LINE_LEFT );
+        aBoxItem.SetLine( &aVBorderLine, BOX_LINE_RIGHT );
+        aFrmSet.Put( aBoxItem );
     }
 
-    SetAnchorAndAdjustment( eVertOri, eHoriOri, aPropInfo, aFrameSet );
+    // Ausrichtung setzen
+    SetAnchorAndAdjustment( eVertOri, eHoriOri, aItemSet, aPropInfo, aFrmSet );
 
-    SetSpace( Size( nHSpace, nVSpace), aItemSet, aPropInfo, aFrameSet );
+    // Abstaende setzen
+    SetSpace( Size( nHSpace, nVSpace), aItemSet, aPropInfo, aFrmSet );
 
-    // set other CSS1 attributes
-    SetFrameFormatAttrs( aItemSet, HtmlFrameFormatFlags::Box, aFrameSet );
+    // Sonstige CSS1-Attribute Setzen
+    SetFrmFmtAttrs( aItemSet, aPropInfo, HTML_FF_BOX, aFrmSet );
 
     Size aTwipSz( bPrcWidth ? 0 : nWidth, bPrcHeight ? 0 : nHeight );
     if( (aTwipSz.Width() || aTwipSz.Height()) && Application::GetDefaultDevice() )
     {
         aTwipSz = Application::GetDefaultDevice()
-                    ->PixelToLogic( aTwipSz, MapMode( MapUnit::MapTwip ) );
+                    ->PixelToLogic( aTwipSz, MapMode( MAP_TWIP ) );
     }
 
-    // convert CSS1 size to "normal" size
-    switch( aPropInfo.m_eWidthType )
+    // CSS1-Groesse auf "normale" Groesse umrechnen
+    switch( aPropInfo.eWidthType )
     {
         case SVX_CSS1_LTYPE_TWIP:
-            aTwipSz.Width() = aPropInfo.m_nWidth;
+            aTwipSz.Width() = aPropInfo.nWidth;
             nWidth = 1; // != 0
             bPrcWidth = false;
             break;
         case SVX_CSS1_LTYPE_PERCENTAGE:
             aTwipSz.Width() = 0;
-            nWidth = aPropInfo.m_nWidth;
+            nWidth = aPropInfo.nWidth;
             bPrcWidth = true;
             break;
         default:
             ;
     }
-    switch( aPropInfo.m_eHeightType )
+    switch( aPropInfo.eHeightType )
     {
         case SVX_CSS1_LTYPE_TWIP:
-            aTwipSz.Height() = aPropInfo.m_nHeight;
+            aTwipSz.Height() = aPropInfo.nHeight;
             nHeight = 1;    // != 0
             bPrcHeight = false;
             break;
         case SVX_CSS1_LTYPE_PERCENTAGE:
             aTwipSz.Height() = 0;
-            nHeight = aPropInfo.m_nHeight;
+            nHeight = aPropInfo.nHeight;
             bPrcHeight = true;
             break;
         default:
@@ -579,18 +649,24 @@ IMAGE_SETEVENT:
     }
 
     Size aGrfSz( 0, 0 );
-    bool bSetTwipSize = true;       // Set Twip-Size on Node?
-    bool bChangeFrameSize = false;    // Change frame format later?
+    bool bSetTwipSize = true;       // Twip-Size am Node setzen?
+    bool bChangeFrmSize = false;    // Frame-Format nachtraeglich anpassen?
     bool bRequestGrfNow = false;
     bool bSetScaleImageMap = false;
     sal_uInt8 nPrcWidth = 0, nPrcHeight = 0;
 
+#ifdef NO_LIBO_LOAD_HTML_IMAGES_FIX
     if( !nWidth || !nHeight )
+#else	// NO_LIBO_LOAD_HTML_IMAGES_FIX
+    if ((!nWidth || !nHeight) && allowAccessLink(*m_xDoc))
+#endif	// NO_LIBO_LOAD_HTML_IMAGES_FIX
     {
-        // When the graphic is in a table, it will be requested immediately,
-        // so that it is available before the table is layouted.
+        // Es fehlt die Breite oder die Hoehe
+        // Wenn die Grfik in einer Tabelle steht, wird sie gleich
+        // angefordert, damit sie eventuell schon da ist, bevor die
+        // Tabelle layoutet wird.
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
-        if( m_pTable!=nullptr && !nWidth )
+        if( pTable!=0 && !nWidth )
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
         if (m_xTable && !nWidth)
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
@@ -599,8 +675,8 @@ IMAGE_SETEVENT:
             IncGrfsThatResizeTable();
         }
 
-        // The frame size is set later
-        bChangeFrameSize = true;
+        // Die Groesse des Rahmens wird nachtraeglich gesetzt
+        bChangeFrmSize = true;
         aGrfSz = aTwipSz;
         if( !nWidth && !nHeight )
         {
@@ -609,7 +685,7 @@ IMAGE_SETEVENT:
         }
         else if( nWidth )
         {
-            // a percentage value
+            // eine %-Angabe
             if( bPrcWidth )
             {
                 nPrcWidth = (sal_uInt8)nWidth;
@@ -635,7 +711,8 @@ IMAGE_SETEVENT:
     }
     else
     {
-        // Width and height were given and don't need to be set
+        // Breite und Hoehe wurden angegeben und brauchen nicht gesetzt
+        // zu werden
         bSetTwipSize = false;
 
         if( bPrcWidth )
@@ -645,12 +722,12 @@ IMAGE_SETEVENT:
             nPrcHeight = (sal_uInt8)nHeight;
     }
 
-    // set image map
+    // Image-Map setzen
     aMap = comphelper::string::stripEnd(aMap, ' ');
     if( !aMap.isEmpty() )
     {
-        // Since we only know local image maps we just use everything
-        // after # as name
+        // Da wir nur lokale Image-Maps kennen nehmen wireinfach alles
+        // hinter dem # als Namen
         sal_Int32 nPos = aMap.indexOf( '#' );
         OUString aName;
         if ( -1 == nPos )
@@ -661,29 +738,30 @@ IMAGE_SETEVENT:
         ImageMap *pImgMap = FindImageMap( aName );
         if( pImgMap )
         {
-            SwFormatURL aURL; aURL.SetMap( pImgMap );// is copied
+            SwFmtURL aURL; aURL.SetMap( pImgMap );//wird kopieiert
 
             bSetScaleImageMap = !nPrcWidth || !nPrcHeight;
-            aFrameSet.Put( aURL );
+            aFrmSet.Put( aURL );
         }
         else
         {
             ImageMap aEmptyImgMap( aName );
-            SwFormatURL aURL; aURL.SetMap( &aEmptyImgMap );// is copied
-            aFrameSet.Put( aURL );
-            m_nMissingImgMaps++;          // image maps are missing
+            SwFmtURL aURL; aURL.SetMap( &aEmptyImgMap );//wird kopieiert
+            aFrmSet.Put( aURL );
+            nMissingImgMaps++;          // es fehlen noch Image-Maps
 
-            // the graphic has to scaled during SetTwipSize, if we didn't
-            // set a size on the node or the size doesn't match the graphic size.
+            // die Grafik muss beim SetTwipSize skaliert werden, wenn
+            // wir keine Groesse am Node gesetzt haben oder die Groesse
+            // nicht der Grafikgroesse entsprach.
             bSetScaleImageMap = true;
         }
     }
 
-    // observe minimum values !!
+    // min. Werte einhalten !!
     if( nPrcWidth )
     {
         OSL_ENSURE( !aTwipSz.Width(),
-                "Why is a width set if we already have percentage value?" );
+                "Wieso ist da trotz %-Angabe eine Breite gesetzt?" );
         aTwipSz.Width() = aGrfSz.Width() ? aGrfSz.Width()
                                          : HTML_DFLT_IMG_WIDTH;
     }
@@ -696,7 +774,7 @@ IMAGE_SETEVENT:
     if( nPrcHeight )
     {
         OSL_ENSURE( !aTwipSz.Height(),
-                "Why is a height set if we already have percentage value?" );
+                "Wieso ist da trotz %-Angabe eine Hoehe gesetzt?" );
         aTwipSz.Height() = aGrfSz.Height() ? aGrfSz.Height()
                                            : HTML_DFLT_IMG_HEIGHT;
     }
@@ -707,28 +785,34 @@ IMAGE_SETEVENT:
             aTwipSz.Height() = MINFLY;
     }
 
-    SwFormatFrameSize aFrameSize( ATT_FIX_SIZE, aTwipSz.Width(), aTwipSz.Height() );
-    aFrameSize.SetWidthPercent( nPrcWidth );
-    aFrameSize.SetHeightPercent( nPrcHeight );
-    aFrameSet.Put( aFrameSize );
+    SwFmtFrmSize aFrmSize( ATT_FIX_SIZE, aTwipSz.Width(), aTwipSz.Height() );
+    aFrmSize.SetWidthPercent( nPrcWidth );
+    aFrmSize.SetHeightPercent( nPrcHeight );
+    aFrmSet.Put( aFrmSize );
 
     // passing empty sGrfNm here, means we don't want the graphic to be linked
-    SwFrameFormat *const pFlyFormat =
-        m_xDoc->getIDocumentContentOperations().InsertGraphic(
-            *m_pPam, sGrfNm, aEmptyOUStr, &aGraphic,
-            &aFrameSet, nullptr, nullptr);
-    SwGrfNode *pGrfNd = m_xDoc->GetNodes()[ pFlyFormat->GetContent().GetContentIdx()
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFrmFmt *pFlyFmt = pDoc->getIDocumentContentOperations().Insert( *pPam, sGrfNm, aEmptyOUStr, &aGraphic,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwFrmFmt *pFlyFmt = m_xDoc->getIDocumentContentOperations().Insert( *pPam, sGrfNm, aEmptyOUStr, &aGraphic,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                                      &aFrmSet, NULL, NULL );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwGrfNode *pGrfNd = pDoc->GetNodes()[ pFlyFmt->GetCntnt().GetCntntIdx()
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    SwGrfNode *pGrfNd = m_xDoc->GetNodes()[ pFlyFmt->GetCntnt().GetCntntIdx()
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                                   ->GetIndex()+1 ]->GetGrfNode();
 
     if( !sHTMLGrfName.isEmpty() )
     {
-        pFlyFormat->SetName( sHTMLGrfName );
+        pFlyFmt->SetName( sHTMLGrfName );
 
-        // maybe jump to graphic
-        if( JUMPTO_GRAPHIC == m_eJumpTo && sHTMLGrfName == m_sJmpMark )
+        // ggfs. eine Grafik anspringen
+        if( JUMPTO_GRAPHIC == eJumpTo && sHTMLGrfName == sJmpMark )
         {
-            m_bChkJumpMark = true;
-            m_eJumpTo = JUMPTO_NONE;
+            bChkJumpMark = true;
+            eJumpTo = JUMPTO_NONE;
         }
     }
 
@@ -740,64 +824,62 @@ IMAGE_SETEVENT:
         if( bSetTwipSize )
             pGrfNd->SetTwipSize( aGrfSz );
 
-        pGrfNd->SetChgTwipSize( bChangeFrameSize );
+        pGrfNd->SetChgTwipSize( bChangeFrmSize, bChangeFrmSize );
 
         if( bSetScaleImageMap )
             pGrfNd->SetScaleImageMap( true );
     }
 
-    if( m_aAttrTab.pINetFormat )
+    if( aAttrTab.pINetFmt )
     {
-        const SwFormatINetFormat &rINetFormat =
-            static_cast<const SwFormatINetFormat&>(m_aAttrTab.pINetFormat->GetItem());
+        const SwFmtINetFmt &rINetFmt =
+            (const SwFmtINetFmt&)aAttrTab.pINetFmt->GetItem();
 
-        SwFormatURL aURL( pFlyFormat->GetURL() );
+        SwFmtURL aURL( pFlyFmt->GetURL() );
 
-        aURL.SetURL( rINetFormat.GetValue(), bIsMap );
-        aURL.SetTargetFrameName( rINetFormat.GetTargetFrame() );
-        aURL.SetName( rINetFormat.GetName() );
-        pFlyFormat->SetFormatAttr( aURL );
+        aURL.SetURL( rINetFmt.GetValue(), bIsMap );
+        aURL.SetTargetFrameName( rINetFmt.GetTargetFrame() );
+        aURL.SetName( rINetFmt.GetName() );
+        pFlyFmt->SetFmtAttr( aURL );
 
         {
+            const SvxMacro *pMacro;
             static const sal_uInt16 aEvents[] = {
                 SFX_EVENT_MOUSEOVER_OBJECT,
                 SFX_EVENT_MOUSECLICK_OBJECT,
                 SFX_EVENT_MOUSEOUT_OBJECT,
                 0 };
 
-            for( int n = 0; aEvents[ n ]; ++n )
-            {
-                const SvxMacro *pMacro = rINetFormat.GetMacro( aEvents[ n ] );
-                if( nullptr != pMacro )
+            for( sal_uInt16 n = 0; aEvents[ n ]; ++n )
+                if( 0 != ( pMacro = rINetFmt.GetMacro( aEvents[ n ] ) ))
                     aMacroItem.SetMacro( aEvents[ n ], *pMacro );
-            }
         }
 
-        if ((RndStdIds::FLY_AS_CHAR == pFlyFormat->GetAnchor().GetAnchorId()) &&
-            m_aAttrTab.pINetFormat->GetSttPara() ==
-                        m_pPam->GetPoint()->nNode &&
-            m_aAttrTab.pINetFormat->GetSttCnt() ==
-                        m_pPam->GetPoint()->nContent.GetIndex() - 1 )
+        if ((FLY_AS_CHAR == pFlyFmt->GetAnchor().GetAnchorId()) &&
+            aAttrTab.pINetFmt->GetSttPara() ==
+                        pPam->GetPoint()->nNode &&
+            aAttrTab.pINetFmt->GetSttCnt() ==
+                        pPam->GetPoint()->nContent.GetIndex() - 1 )
         {
-            // the attribute was insert right before as-character anchored
-            // graphic, therefore we move it
-            m_aAttrTab.pINetFormat->SetStart( *m_pPam->GetPoint() );
+            // das Attribut wurde unmitellbar vor einer zeichengeb.
+            // Grafik eingefuegt, also verschieben wir es
+            aAttrTab.pINetFmt->SetStart( *pPam->GetPoint() );
 
-            // When the attribute is also an anchor, we'll insert
-            // a bookmark before the graphic, because SwFormatURL
-            // isn't an anchor.
-            if( !rINetFormat.GetName().isEmpty() )
+            // Wenn das Attribut auch ein Sprungziel ist, fuegen
+            // wir noch eine Bookmark vor der Grafik ein, weil das
+            // SwFmtURL kein Sprungziel ist.
+            if( !rINetFmt.GetName().isEmpty() )
             {
-                m_pPam->Move( fnMoveBackward );
-                InsertBookmark( rINetFormat.GetName() );
-                m_pPam->Move( fnMoveForward );
+                pPam->Move( fnMoveBackward );
+                InsertBookmark( rINetFmt.GetName() );
+                pPam->Move( fnMoveForward );
             }
         }
 
     }
 
     if( !aMacroItem.GetMacroTable().empty() )
-        pFlyFormat->SetFormatAttr( aMacroItem );
+        pFlyFmt->SetFmtAttr( aMacroItem );
 
     // tdf#87083 If the graphic has not been loaded yet, then load it now.
     // Otherwise it may be loaded during the first paint of the object and it
@@ -805,11 +887,11 @@ IMAGE_SETEVENT:
     if (bRequestGrfNow && pGrfNd)
     {
         Size aUpdatedSize = pGrfNd->GetTwipSize();  //trigger a swap-in
-        SAL_WARN_IF(!aUpdatedSize.Width() || !aUpdatedSize.Height(), "sw.html", "html image with no width or height");
+        SAL_WARN_IF(!aUpdatedSize.Width() || !aUpdatedSize.Width(), "sw.html", "html image with no width or height");
     }
 
-    // maybe create frames and register auto bound frames
-    RegisterFlyFrame( pFlyFormat );
+    // Ggf. Frames anlegen und Auto-gebundenen Rahmen registrieren
+    RegisterFlyFrm( pFlyFmt );
 
     if( !aId.isEmpty() )
         InsertBookmark( aId );
@@ -819,8 +901,12 @@ IMAGE_SETEVENT:
 
 void SwHTMLParser::InsertBodyOptions()
 {
-    m_xDoc->SetTextFormatColl( *m_pPam,
-                         m_pCSS1Parser->GetTextCollFromPool( RES_POOLCOLL_TEXT ) );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    pDoc->SetTxtFmtColl( *pPam,
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+    m_xDoc->SetTxtFmtColl( *pPam,
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                         pCSS1Parser->GetTxtCollFromPool( RES_POOLCOLL_TEXT ) );
 
     OUString aBackGround, aId, aStyle, aLang, aDir;
     Color aBGColor, aTextColor, aLinkColor, aVLinkColor;
@@ -841,75 +927,74 @@ void SwHTMLParser::InsertBodyOptions()
 
         switch( rOption.GetToken() )
         {
-            case HtmlOptionId::ID:
+            case HTML_O_ID:
                 aId = rOption.GetString();
                 break;
-            case HtmlOptionId::BACKGROUND:
+            case HTML_O_BACKGROUND:
                 aBackGround = rOption.GetString();
                 break;
-            case HtmlOptionId::BGCOLOR:
+            case HTML_O_BGCOLOR:
                 rOption.GetColor( aBGColor );
                 bBGColor = true;
                 break;
-            case HtmlOptionId::TEXT:
+            case HTML_O_TEXT:
                 rOption.GetColor( aTextColor );
                 bTextColor = true;
                 break;
-            case HtmlOptionId::LINK:
+            case HTML_O_LINK:
                 rOption.GetColor( aLinkColor );
                 bLinkColor = true;
                 break;
-            case HtmlOptionId::VLINK:
+            case HTML_O_VLINK:
                 rOption.GetColor( aVLinkColor );
                 bVLinkColor = true;
                 break;
 
-            case HtmlOptionId::SDONLOAD:
+            case HTML_O_SDONLOAD:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONLOAD:
-                aEvent = GlobalEventConfig::GetEventName( GlobalEventId::OPENDOC );
+                //fallthrough
+            case HTML_O_ONLOAD:
+                aEvent = GlobalEventConfig::GetEventName( STR_EVENT_OPENDOC );
                 bSetEvent = true;
                 break;
 
-            case HtmlOptionId::SDONUNLOAD:
+            case HTML_O_SDONUNLOAD:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONUNLOAD:
-                aEvent = GlobalEventConfig::GetEventName( GlobalEventId::PREPARECLOSEDOC );
+                //fallthrough
+            case HTML_O_ONUNLOAD:
+                aEvent = GlobalEventConfig::GetEventName( STR_EVENT_PREPARECLOSEDOC );
                 bSetEvent = true;
                 break;
 
-            case HtmlOptionId::SDONFOCUS:
+            case HTML_O_SDONFOCUS:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONFOCUS:
-                aEvent = GlobalEventConfig::GetEventName( GlobalEventId::ACTIVATEDOC );
+                //fallthrough
+            case HTML_O_ONFOCUS:
+                aEvent = GlobalEventConfig::GetEventName( STR_EVENT_ACTIVATEDOC );
                 bSetEvent = true;
                 break;
 
-            case HtmlOptionId::SDONBLUR:
+            case HTML_O_SDONBLUR:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONBLUR:
-                aEvent = GlobalEventConfig::GetEventName( GlobalEventId::DEACTIVATEDOC );
+                //fallthrough
+            case HTML_O_ONBLUR:
+                aEvent = GlobalEventConfig::GetEventName( STR_EVENT_DEACTIVATEDOC );
                 bSetEvent = true;
                 break;
 
-            case HtmlOptionId::ONERROR:
+            case HTML_O_ONERROR:
                 break;
 
-            case HtmlOptionId::STYLE:
+            case HTML_O_STYLE:
                 aStyle = rOption.GetString();
                 bTextColor = true;
                 break;
-            case HtmlOptionId::LANG:
+            case HTML_O_LANG:
                 aLang = rOption.GetString();
                 break;
-            case HtmlOptionId::DIR:
+            case HTML_O_DIR:
                 aDir = rOption.GetString();
                 break;
-            default: break;
         }
 
         if( bSetEvent )
@@ -921,22 +1006,22 @@ void SwHTMLParser::InsertBodyOptions()
         }
     }
 
-    if( bTextColor && !m_pCSS1Parser->IsBodyTextSet() )
+    if( bTextColor && !pCSS1Parser->IsBodyTextSet() )
     {
-        // The font colour is set in the default style
-        m_pCSS1Parser->GetTextCollFromPool( RES_POOLCOLL_STANDARD )
-            ->SetFormatAttr( SvxColorItem(aTextColor, RES_CHRATR_COLOR) );
-        m_pCSS1Parser->SetBodyTextSet();
+        // Die Textfarbe wird an der Standard-Vorlage gesetzt
+        pCSS1Parser->GetTxtCollFromPool( RES_POOLCOLL_STANDARD )
+            ->SetFmtAttr( SvxColorItem(aTextColor, RES_CHRATR_COLOR) );
+        pCSS1Parser->SetBodyTextSet();
     }
 
-    // Prepare the items for the page style (background, frame)
-    // If BrushItem already set values must remain!
-    SvxBrushItem aBrushItem( m_pCSS1Parser->makePageDescBackground() );
+    // Die Item fuer die Seitenvorlage vorbereiten (Hintergrund, Umrandung)
+    // Beim BrushItem muessen schon gesetzte werte erhalten bleiben!
+    SvxBrushItem aBrushItem( pCSS1Parser->makePageDescBackground() );
     bool bSetBrush = false;
 
-    if( bBGColor && !m_pCSS1Parser->IsBodyBGColorSet() )
+    if( bBGColor && !pCSS1Parser->IsBodyBGColorSet() )
     {
-        // background colour from "BGCOLOR"
+        // Hintergrundfarbe aus "BGCOLOR"
         OUString aLink;
         if( !aBrushItem.GetGraphicLink().isEmpty() )
             aLink = aBrushItem.GetGraphicLink();
@@ -950,70 +1035,75 @@ void SwHTMLParser::InsertBodyOptions()
             aBrushItem.SetGraphicPos( ePos );
         }
         bSetBrush = true;
-        m_pCSS1Parser->SetBodyBGColorSet();
+        pCSS1Parser->SetBodyBGColorSet();
     }
 
-    if( !aBackGround.isEmpty() && !m_pCSS1Parser->IsBodyBackgroundSet() )
+    if( !aBackGround.isEmpty() && !pCSS1Parser->IsBodyBackgroundSet() )
     {
-        // background graphic from "BACKGROUND"
-        aBrushItem.SetGraphicLink( INetURLObject::GetAbsURL( m_sBaseURL, aBackGround ) );
+        // Hintergrundgrafik aus "BACKGROUND"
+        aBrushItem.SetGraphicLink( INetURLObject::GetAbsURL( sBaseURL, aBackGround ) );
         aBrushItem.SetGraphicPos( GPOS_TILED );
         bSetBrush = true;
-        m_pCSS1Parser->SetBodyBackgroundSet();
+        pCSS1Parser->SetBodyBackgroundSet();
     }
 
     if( !aStyle.isEmpty() || !aDir.isEmpty() )
     {
-        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), m_pCSS1Parser->GetWhichMap() );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
         OUString aDummy;
-        ParseStyleOptions( aStyle, aDummy, aDummy, aItemSet, aPropInfo, nullptr, &aDir );
+        ParseStyleOptions( aStyle, aDummy, aDummy, aItemSet, aPropInfo, 0, &aDir );
 
-        // Some attributes have to set on the page style, in fact the ones
-        // which aren't inherited
-        m_pCSS1Parser->SetPageDescAttrs( bSetBrush ? &aBrushItem : nullptr,
+        // Ein par Attribute muessen an der Seitenvorlage gesetzt werden,
+        // und zwar die, die nicht vererbit werden
+        pCSS1Parser->SetPageDescAttrs( bSetBrush ? &aBrushItem : 0,
                                        &aItemSet );
 
         const SfxPoolItem *pItem;
         static const sal_uInt16 aWhichIds[3] = { RES_CHRATR_FONTSIZE,
                                        RES_CHRATR_CJK_FONTSIZE,
                                        RES_CHRATR_CTL_FONTSIZE };
-        for(sal_uInt16 i : aWhichIds)
+        for( sal_uInt16 i=0; i<3; i++ )
         {
-            if( SfxItemState::SET == aItemSet.GetItemState( i, false,
+            if( SfxItemState::SET == aItemSet.GetItemState( aWhichIds[i], false,
                                                        &pItem ) &&
                 static_cast <const SvxFontHeightItem * >(pItem)->GetProp() != 100)
             {
                 sal_uInt32 nHeight =
-                    ( m_aFontHeights[2] *
+                    ( aFontHeights[2] *
                      static_cast <const SvxFontHeightItem * >(pItem)->GetProp() ) / 100;
-                SvxFontHeightItem aNewItem( nHeight, 100, i );
+                SvxFontHeightItem aNewItem( nHeight, 100, aWhichIds[i] );
                 aItemSet.Put( aNewItem );
             }
         }
 
-        // all remaining options can be set on the default style
-        m_pCSS1Parser->GetTextCollFromPool( RES_POOLCOLL_STANDARD )
-            ->SetFormatAttr( aItemSet );
+        // alle noch uebrigen Optionen koennen an der Standard-Vorlage
+        // gesetzt werden und gelten dann automatisch als defaults
+        pCSS1Parser->GetTxtCollFromPool( RES_POOLCOLL_STANDARD )
+            ->SetFmtAttr( aItemSet );
     }
     else if( bSetBrush )
     {
-        m_pCSS1Parser->SetPageDescAttrs( &aBrushItem );
+        pCSS1Parser->SetPageDescAttrs( &aBrushItem );
     }
 
-    if( bLinkColor && !m_pCSS1Parser->IsBodyLinkSet() )
+    if( bLinkColor && !pCSS1Parser->IsBodyLinkSet() )
     {
-        SwCharFormat *pCharFormat =
-            m_pCSS1Parser->GetCharFormatFromPool(RES_POOLCHR_INET_NORMAL);
-        pCharFormat->SetFormatAttr( SvxColorItem(aLinkColor, RES_CHRATR_COLOR) );
-        m_pCSS1Parser->SetBodyLinkSet();
+        SwCharFmt *pCharFmt =
+            pCSS1Parser->GetCharFmtFromPool(RES_POOLCHR_INET_NORMAL);
+        pCharFmt->SetFmtAttr( SvxColorItem(aLinkColor, RES_CHRATR_COLOR) );
+        pCSS1Parser->SetBodyLinkSet();
     }
-    if( bVLinkColor && !m_pCSS1Parser->IsBodyVLinkSet() )
+    if( bVLinkColor && !pCSS1Parser->IsBodyVLinkSet() )
     {
-        SwCharFormat *pCharFormat =
-            m_pCSS1Parser->GetCharFormatFromPool(RES_POOLCHR_INET_VISIT);
-        pCharFormat->SetFormatAttr( SvxColorItem(aVLinkColor, RES_CHRATR_COLOR) );
-        m_pCSS1Parser->SetBodyVLinkSet();
+        SwCharFmt *pCharFmt =
+            pCSS1Parser->GetCharFmtFromPool(RES_POOLCHR_INET_VISIT);
+        pCharFmt->SetFmtAttr( SvxColorItem(aVLinkColor, RES_CHRATR_COLOR) );
+        pCSS1Parser->SetBodyVLinkSet();
     }
     if( !aLang.isEmpty() )
     {
@@ -1023,22 +1113,25 @@ void SwHTMLParser::InsertBodyOptions()
             sal_uInt16 nWhich = 0;
             switch( SvtLanguageOptions::GetScriptTypeOfLanguage( eLang ) )
             {
-            case SvtScriptType::LATIN:
+            case SCRIPTTYPE_LATIN:
                 nWhich = RES_CHRATR_LANGUAGE;
                 break;
-            case SvtScriptType::ASIAN:
+            case SCRIPTTYPE_ASIAN:
                 nWhich = RES_CHRATR_CJK_LANGUAGE;
                 break;
-            case SvtScriptType::COMPLEX:
+            case SCRIPTTYPE_COMPLEX:
                 nWhich = RES_CHRATR_CTL_LANGUAGE;
                 break;
-            default: break;
             }
             if( nWhich )
             {
                 SvxLanguageItem aLanguage( eLang, nWhich );
                 aLanguage.SetWhich( nWhich );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                pDoc->SetDefault( aLanguage );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 m_xDoc->SetDefault( aLanguage );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             }
         }
     }
@@ -1051,16 +1144,16 @@ void SwHTMLParser::InsertBodyOptions()
 
 void SwHTMLParser::NewAnchor()
 {
-    // end previous link if there was one
+    // den voherigen Link beenden, falls es einen gab
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    HTMLAttrContext *pOldCntxt = PopContext( HtmlTokenId::ANCHOR_ON );
+    _HTMLAttrContext *pOldCntxt = PopContext( HTML_ANCHOR_ON );
     if( pOldCntxt )
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    std::unique_ptr<HTMLAttrContext> xOldCntxt(PopContext(HtmlTokenId::ANCHOR_ON));
+    std::unique_ptr<_HTMLAttrContext> xOldCntxt(PopContext(HTML_ANCHOR_ON));
     if (xOldCntxt)
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     {
-        // and maybe end attributes
+        // und ggf. die Attribute beenden
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
         EndContext( pOldCntxt );
         delete pOldCntxt;
@@ -1069,7 +1162,7 @@ void SwHTMLParser::NewAnchor()
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
 
-    SvxMacroTableDtor aMacroTable;
+    SvxMacroTableDtor aMacroTbl;
     OUString sHRef, aName, sTarget;
     OUString aId, aStyle, aClass, aLang, aDir;
     bool bHasHRef = false, bFixed = false;
@@ -1086,55 +1179,55 @@ void SwHTMLParser::NewAnchor()
         const HTMLOption& rOption = rHTMLOptions[--i];
         switch( rOption.GetToken() )
         {
-            case HtmlOptionId::NAME:
+            case HTML_O_NAME:
                 aName = rOption.GetString();
                 break;
 
-            case HtmlOptionId::HREF:
+            case HTML_O_HREF:
                 sHRef = rOption.GetString();
                 bHasHRef = true;
                 break;
-            case HtmlOptionId::TARGET:
+            case HTML_O_TARGET:
                 sTarget = rOption.GetString();
                 break;
 
-            case HtmlOptionId::STYLE:
+            case HTML_O_STYLE:
                 aStyle = rOption.GetString();
                 break;
-            case HtmlOptionId::ID:
+            case HTML_O_ID:
                 aId = rOption.GetString();
                 break;
-            case HtmlOptionId::CLASS:
+            case HTML_O_CLASS:
                 aClass = rOption.GetString();
                 break;
-            case HtmlOptionId::SDFIXED:
+            case HTML_O_SDFIXED:
                 bFixed = true;
                 break;
-            case HtmlOptionId::LANG:
+            case HTML_O_LANG:
                 aLang = rOption.GetString();
                 break;
-            case HtmlOptionId::DIR:
+            case HTML_O_DIR:
                 aDir = rOption.GetString();
                 break;
 
-            case HtmlOptionId::SDONCLICK:
+            case HTML_O_SDONCLICK:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONCLICK:
+                //fall-through
+            case HTML_O_ONCLICK:
                 nEvent = SFX_EVENT_MOUSECLICK_OBJECT;
                 goto ANCHOR_SETEVENT;
 
-            case HtmlOptionId::SDONMOUSEOVER:
+            case HTML_O_SDONMOUSEOVER:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONMOUSEOVER:
+                //fall-through
+            case HTML_O_ONMOUSEOVER:
                 nEvent = SFX_EVENT_MOUSEOVER_OBJECT;
                 goto ANCHOR_SETEVENT;
 
-            case HtmlOptionId::SDONMOUSEOUT:
+            case HTML_O_SDONMOUSEOUT:
                 eScriptType2 = STARBASIC;
-                SAL_FALLTHROUGH;
-            case HtmlOptionId::ONMOUSEOUT:
+                //fall-through
+            case HTML_O_ONMOUSEOUT:
                 nEvent = SFX_EVENT_MOUSEOUT_OBJECT;
                 goto ANCHOR_SETEVENT;
 ANCHOR_SETEVENT:
@@ -1146,11 +1239,11 @@ ANCHOR_SETEVENT:
                         OUString sScriptType;
                         if( EXTENDED_STYPE == eScriptType2 )
                             sScriptType = sDfltScriptType;
-                        aMacroTable.Insert( nEvent, SvxMacro( sTmp, sScriptType, eScriptType2 ));
+                        aMacroTbl.Insert( nEvent, SvxMacro( sTmp, sScriptType, eScriptType2 ));
                     }
                 }
                 break;
-            default: break;
+
         }
     }
 
@@ -1158,12 +1251,13 @@ ANCHOR_SETEVENT:
     // wir hier ganz rigoros raus.
     if( !aName.isEmpty() )
     {
-        OUString sDecoded( INetURLObject::decode( aName,
-                                           INetURLObject::DecodeMechanism::Unambiguous ));
+        OUString sDecoded( INetURLObject::decode( aName, '%',
+                                           INetURLObject::DECODE_UNAMBIGUOUS,
+                                        RTL_TEXTENCODING_UTF8 ));
         sal_Int32 nPos = sDecoded.lastIndexOf( cMarkSeparator );
         if( nPos != -1 )
         {
-            OUString sCmp= sDecoded.copy(nPos+1).replaceAll(" ","");
+            OUString sCmp(comphelper::string::remove(sDecoded.copy(nPos+1), ' '));
             if( !sCmp.isEmpty() )
             {
                 sCmp = sCmp.toAsciiLowerCase();
@@ -1175,7 +1269,7 @@ ANCHOR_SETEVENT:
                     sCmp == "outline" ||
                     sCmp == "text" )
                 {
-                    aName.clear();
+                    aName = "";
                 }
             }
         }
@@ -1183,13 +1277,13 @@ ANCHOR_SETEVENT:
 
     // einen neuen Kontext anlegen
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-    HTMLAttrContext *pCntxt = new HTMLAttrContext( HtmlTokenId::ANCHOR_ON );
+    _HTMLAttrContext *pCntxt = new _HTMLAttrContext( HTML_ANCHOR_ON );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-    std::unique_ptr<HTMLAttrContext> xCntxt(new HTMLAttrContext(HtmlTokenId::ANCHOR_ON));
+    std::unique_ptr<_HTMLAttrContext> xCntxt(new _HTMLAttrContext(HTML_ANCHOR_ON));
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
 
-    bool bEnAnchor = false, bFootnoteAnchor = false, bFootnoteEnSymbol = false;
-    OUString aFootnoteName;
+    bool bEnAnchor = false, bFtnAnchor = false, bFtnEnSymbol = false;
+    OUString aFtnName;
     OUString aStrippedClass( aClass );
     SwCSS1Parser::GetScriptFromClass( aStrippedClass, false );
     if( aStrippedClass.getLength() >=9  && bHasHRef && sHRef.getLength() > 1 &&
@@ -1199,13 +1293,13 @@ ANCHOR_SETEVENT:
         if( aStrippedClass.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_sdendnote_anc ) )
             bEnAnchor = true;
         else if( aStrippedClass.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_sdfootnote_anc ) )
-            bFootnoteAnchor = true;
+            bFtnAnchor = true;
         else if( aStrippedClass.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_sdendnote_sym ) ||
                  aStrippedClass.equalsIgnoreAsciiCase( OOO_STRING_SVTOOLS_HTML_sdfootnote_sym ) )
-            bFootnoteEnSymbol = true;
-        if( bEnAnchor || bFootnoteAnchor || bFootnoteEnSymbol )
+            bFtnEnSymbol = true;
+        if( bEnAnchor || bFtnAnchor || bFtnEnSymbol )
         {
-            aFootnoteName = sHRef.copy( 1 );
+            aFtnName = sHRef.copy( 1 );
             aClass = aStrippedClass = aName = aEmptyOUStr;
             bHasHRef = false;
         }
@@ -1214,7 +1308,11 @@ ANCHOR_SETEVENT:
     // Styles parsen
     if( HasStyleOptions( aStyle, aId, aStrippedClass, &aLang, &aDir ) )
     {
-        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), m_pCSS1Parser->GetWhichMap() );
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( pDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        SfxItemSet aItemSet( m_xDoc->GetAttrPool(), pCSS1Parser->GetWhichMap() );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         SvxCSS1PropertyInfo aPropInfo;
 
         if( ParseStyleOptions( aStyle, aId, aClass, aItemSet, aPropInfo, &aLang, &aDir ) )
@@ -1233,27 +1331,27 @@ ANCHOR_SETEVENT:
     {
         if( !sHRef.isEmpty() )
         {
-            sHRef = URIHelper::SmartRel2Abs( INetURLObject(m_sBaseURL), sHRef, Link<OUString *, bool>(), false );
+            sHRef = URIHelper::SmartRel2Abs( INetURLObject(sBaseURL), sHRef, Link(), false );
         }
         else
         {
-            // use directory if empty URL
-            INetURLObject aURLObj( m_aPathToFile );
+            // Bei leerer URL das Directory nehmen
+            INetURLObject aURLObj( aPathToFile );
             sHRef = aURLObj.GetPartBeforeLastName();
         }
 
-        m_pCSS1Parser->SetATagStyles();
-        SwFormatINetFormat aINetFormat( sHRef, sTarget );
-        aINetFormat.SetName( aName );
+        pCSS1Parser->SetATagStyles();
+        SwFmtINetFmt aINetFmt( sHRef, sTarget );
+        aINetFmt.SetName( aName );
 
-        if( !aMacroTable.empty() )
-            aINetFormat.SetMacroTable( &aMacroTable );
+        if( !aMacroTbl.empty() )
+            aINetFmt.SetMacroTbl( &aMacroTbl );
 
-        // set the default attribute
+        // das Default-Attribut setzen
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
-        InsertAttr( &m_aAttrTab.pINetFormat, aINetFormat, pCntxt );
+        InsertAttr( &aAttrTab.pINetFmt, aINetFmt, pCntxt );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
-        InsertAttr(&m_aAttrTab.pINetFormat, aINetFormat, xCntxt.get());
+        InsertAttr(&aAttrTab.pINetFmt, aINetFmt, xCntxt.get());
 #endif	// NO_LIBO_HTML_PARSER_LEAK_FIX
     }
     else if( !aName.isEmpty() )
@@ -1261,17 +1359,17 @@ ANCHOR_SETEVENT:
         InsertBookmark( aName );
     }
 
-    if( bEnAnchor || bFootnoteAnchor )
+    if( bEnAnchor || bFtnAnchor )
     {
-        InsertFootEndNote( aFootnoteName, bEnAnchor, bFixed );
-        m_bInFootEndNoteAnchor = m_bCallNextToken = true;
+        InsertFootEndNote( aFtnName, bEnAnchor, bFixed );
+        bInFootEndNoteAnchor = bCallNextToken = true;
     }
-    else if( bFootnoteEnSymbol )
+    else if( bFtnEnSymbol )
     {
-        m_bInFootEndNoteSymbol = m_bCallNextToken = true;
+        bInFootEndNoteSymbol = bCallNextToken = true;
     }
 
-    // save context
+    // den Kontext merken
 #ifdef NO_LIBO_HTML_PARSER_LEAK_FIX
     PushContext( pCntxt );
 #else	// NO_LIBO_HTML_PARSER_LEAK_FIX
@@ -1281,41 +1379,42 @@ ANCHOR_SETEVENT:
 
 void SwHTMLParser::EndAnchor()
 {
-    if( m_bInFootEndNoteAnchor )
+    if( bInFootEndNoteAnchor )
     {
         FinishFootEndNote();
-        m_bInFootEndNoteAnchor = false;
+        bInFootEndNoteAnchor = false;
     }
-    else if( m_bInFootEndNoteSymbol )
+    else if( bInFootEndNoteSymbol )
     {
-        m_bInFootEndNoteSymbol = false;
+        bInFootEndNoteSymbol = false;
     }
 
-    EndTag( HtmlTokenId::ANCHOR_OFF );
+    EndTag( HTML_ANCHOR_OFF );
 }
 
 /*  */
 
 void SwHTMLParser::InsertBookmark( const OUString& rName )
 {
-    HTMLAttr* pTmp = new HTMLAttr( *m_pPam->GetPoint(),
+    _HTMLAttr* pTmp = new _HTMLAttr( *pPam->GetPoint(),
             SfxStringItem( RES_FLTR_BOOKMARK, rName ));
-    m_aSetAttrTab.push_back( pTmp );
+    aSetAttrTab.push_back( pTmp );
 }
 
 bool SwHTMLParser::HasCurrentParaBookmarks( bool bIgnoreStack ) const
 {
     bool bHasMarks = false;
-    sal_uLong nNodeIdx = m_pPam->GetPoint()->nNode.GetIndex();
+    sal_uLong nNodeIdx = pPam->GetPoint()->nNode.GetIndex();
 
     // first step: are there still bookmark in the attribute-stack?
     // bookmarks are added to the end of the stack - thus we only have
     // to check the last bookmark
     if( !bIgnoreStack )
     {
-        for( auto i = m_aSetAttrTab.size(); i; )
+        _HTMLAttr* pAttr;
+        for( sal_uInt16 i = aSetAttrTab.size(); i; )
         {
-            HTMLAttr* pAttr = m_aSetAttrTab[ --i ];
+            pAttr = aSetAttrTab[ --i ];
             if( RES_FLTR_BOOKMARK == pAttr->pItem->Which() )
             {
                 if( pAttr->GetSttParaIdx() == nNodeIdx )
@@ -1328,7 +1427,11 @@ bool SwHTMLParser::HasCurrentParaBookmarks( bool bIgnoreStack ) const
     if( !bHasMarks )
     {
         // second step: when we didn't find a bookmark, check if there is one set already
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+        IDocumentMarkAccess* const pMarkAccess = pDoc->getIDocumentMarkAccess();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         IDocumentMarkAccess* const pMarkAccess = m_xDoc->getIDocumentMarkAccess();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         for(IDocumentMarkAccess::const_iterator_t ppMark = pMarkAccess->getAllMarksBegin();
             ppMark != pMarkAccess->getAllMarksEnd();
             ++ppMark)
@@ -1355,46 +1458,60 @@ void SwHTMLParser::StripTrailingPara()
 {
     bool bSetSmallFont = false;
 
-    SwContentNode* pCNd = m_pPam->GetContentNode();
-    if( !m_pPam->GetPoint()->nContent.GetIndex() )
+    SwCntntNode* pCNd = pPam->GetCntntNode();
+    if( !pPam->GetPoint()->nContent.GetIndex() )
     {
         if( pCNd && pCNd->StartOfSectionIndex()+2 <
             pCNd->EndOfSectionIndex() )
         {
-            sal_uLong nNodeIdx = m_pPam->GetPoint()->nNode.GetIndex();
+            sal_uLong nNodeIdx = pPam->GetPoint()->nNode.GetIndex();
 
-            const SwFrameFormats& rFrameFormatTable = *m_xDoc->GetSpzFrameFormats();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            const SwFrmFmts& rFrmFmtTbl = *pDoc->GetSpzFrmFmts();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            const SwFrmFmts& rFrmFmtTbl = *m_xDoc->GetSpzFrmFmts();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 
-            for( auto pFormat : rFrameFormatTable )
+            for( sal_uInt16 i=0; i<rFrmFmtTbl.size(); i++ )
             {
-                SwFormatAnchor const*const pAnchor = &pFormat->GetAnchor();
-                SwPosition const*const pAPos = pAnchor->GetContentAnchor();
+                SwFrmFmt const*const pFmt = rFrmFmtTbl[i];
+                SwFmtAnchor const*const pAnchor = &pFmt->GetAnchor();
+                SwPosition const*const pAPos = pAnchor->GetCntntAnchor();
                 if (pAPos &&
-                    ((RndStdIds::FLY_AT_PARA == pAnchor->GetAnchorId()) ||
-                     (RndStdIds::FLY_AT_CHAR == pAnchor->GetAnchorId())) &&
+                    ((FLY_AT_PARA == pAnchor->GetAnchorId()) ||
+                     (FLY_AT_CHAR == pAnchor->GetAnchorId())) &&
                     pAPos->nNode == nNodeIdx )
 
-                    return;     // we can't delete the node
+                    return;     // den Knoten duerfen wir nicht loeschen
             }
 
-            SetAttr( false );   // the still open attributes must be
-                                // closed before the node is deleted,
-                                // otherwise the last index is dangling
+            SetAttr( false );   // die noch offenen Attribute muessen
+                                // beendet werden, bevor der Node
+                                // geloescht wird, weil sonst der
+                                // End-Index in die Botanik zeigt
 
-            if( pCNd->Len() && pCNd->IsTextNode() )
+            if( pCNd->Len() && pCNd->IsTxtNode() )
             {
-                // fields were inserted into the node, now they have
-                // to be moved
-                SwTextNode *pPrvNd = m_xDoc->GetNodes()[nNodeIdx-1]->GetTextNode();
+                // es wurden Felder in den Node eingefuegt, die muessen
+                // wir jetzt verschieben
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                SwTxtNode *pPrvNd = pDoc->GetNodes()[nNodeIdx-1]->GetTxtNode();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                SwTxtNode *pPrvNd = m_xDoc->GetNodes()[nNodeIdx-1]->GetTxtNode();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                 if( pPrvNd )
                 {
                     SwIndex aSrc( pCNd, 0 );
-                    pCNd->GetTextNode()->CutText( pPrvNd, aSrc, pCNd->Len() );
+                    pCNd->GetTxtNode()->CutText( pPrvNd, aSrc, pCNd->Len() );
                 }
             }
 
-            // now we have to move maybe existing bookmarks
+            // jetz muessen wir noch eventuell vorhandene Bookmarks verschieben
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            IDocumentMarkAccess* const pMarkAccess = pDoc->getIDocumentMarkAccess();
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             IDocumentMarkAccess* const pMarkAccess = m_xDoc->getIDocumentMarkAccess();
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
             for(IDocumentMarkAccess::const_iterator_t ppMark = pMarkAccess->getAllMarksBegin();
                 ppMark != pMarkAccess->getAllMarksEnd();
                 ++ppMark)
@@ -1404,11 +1521,15 @@ void SwHTMLParser::StripTrailingPara()
                 sal_uLong nBookNdIdx = pMark->GetMarkPos().nNode.GetIndex();
                 if(nBookNdIdx==nNodeIdx)
                 {
-                    SwNodeIndex nNewNdIdx(m_pPam->GetPoint()->nNode);
-                    SwContentNode* pNd = SwNodes::GoPrevious(&nNewNdIdx);
+                    SwNodeIndex nNewNdIdx(pPam->GetPoint()->nNode);
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    SwCntntNode* pNd = pDoc->GetNodes().GoPrevious(&nNewNdIdx);
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+                    SwCntntNode* pNd = m_xDoc->GetNodes().GoPrevious(&nNewNdIdx);
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
                     if(!pNd)
                     {
-                        OSL_ENSURE(false, "Oops, where is my predecessor node?");
+                        OSL_ENSURE(false, "Hoppla, wo ist mein Vorgaenger-Node");
                         return;
                     }
                     // #i81002# - refactoring
@@ -1424,49 +1545,54 @@ void SwHTMLParser::StripTrailingPara()
                     break;
             }
 
-            m_pPam->GetPoint()->nContent.Assign( nullptr, 0 );
-            m_pPam->SetMark();
-            m_pPam->DeleteMark();
-            m_xDoc->GetNodes().Delete( m_pPam->GetPoint()->nNode );
-            m_pPam->Move( fnMoveBackward, GoInNode );
+            pPam->GetPoint()->nContent.Assign( 0, 0 );
+            pPam->SetMark();
+            pPam->DeleteMark();
+#ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pDoc->GetNodes().Delete( pPam->GetPoint()->nNode );
+#else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            m_xDoc->GetNodes().Delete( pPam->GetPoint()->nNode );
+#endif	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
+            pPam->Move( fnMoveBackward, fnGoNode );
         }
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
-        else if( pCNd && pCNd->IsTextNode() && m_pTable )
+        else if( pCNd && pCNd->IsTxtNode() && pTable )
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
-        else if (pCNd && pCNd->IsTextNode() && m_xTable)
+        else if (pCNd && pCNd->IsTxtNode() && m_xTable)
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
         {
-            // In empty cells we set a small font, so that the cell doesn't
-            // get higher than the graphic resp. as low as possible.
+            // In leeren Zellen stellen wir einen kleinen Font ein, damit die
+            // Zelle nicht hoeher wird als die Grafik bzw. so niedrig wie
+            // moeglich bleibt.
             bSetSmallFont = true;
         }
     }
 #ifdef NO_LIBO_HTML_FIELD_LEAK_FIX
-    else if( pCNd && pCNd->IsTextNode() && m_pTable &&
+    else if( pCNd && pCNd->IsTxtNode() && pTable &&
 #else	// NO_LIBO_HTML_FIELD_LEAK_FIX
-    else if( pCNd && pCNd->IsTextNode() && m_xTable &&
+    else if( pCNd && pCNd->IsTxtNode() && m_xTable &&
 #endif	// NO_LIBO_HTML_FIELD_LEAK_FIX
              pCNd->StartOfSectionIndex()+2 ==
              pCNd->EndOfSectionIndex() )
     {
-        // When the cell contains only as-character anchored graphics/frames,
-        // then we also set a small font.
+        // Wenn die Zelle nur zeichengebundene Grafiken/Rahmen enthaelt
+        // stellen wir ebenfalls einen kleinen Font ein.
         bSetSmallFont = true;
-        SwTextNode* pTextNd = pCNd->GetTextNode();
+        SwTxtNode* pTxtNd = pCNd->GetTxtNode();
 
-        sal_Int32 nPos = m_pPam->GetPoint()->nContent.GetIndex();
+        sal_Int32 nPos = pPam->GetPoint()->nContent.GetIndex();
         while( bSetSmallFont && nPos>0 )
         {
             --nPos;
             bSetSmallFont =
-                (CH_TXTATR_BREAKWORD == pTextNd->GetText()[nPos]) &&
-                (nullptr != pTextNd->GetTextAttrForCharAt( nPos, RES_TXTATR_FLYCNT ));
+                (CH_TXTATR_BREAKWORD == pTxtNd->GetTxt()[nPos]) &&
+                (0 != pTxtNd->GetTxtAttrForCharAt( nPos, RES_TXTATR_FLYCNT ));
         }
     }
 
     if( bSetSmallFont )
     {
-        // Added default to CJK and CTL
+        //Added default to CJK and CTL
         SvxFontHeightItem aFontHeight( 40, 100, RES_CHRATR_FONTSIZE );
         pCNd->SetAttr( aFontHeight );
         SvxFontHeightItem aFontHeightCJK( 40, 100, RES_CHRATR_CJK_FONTSIZE );

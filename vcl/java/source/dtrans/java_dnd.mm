@@ -36,13 +36,9 @@
 #include <stdio.h>
 
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 #include <vcl/sysdata.hxx>
-
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#include <postmac.h>
-#undef check
 
 #include "java/salinst.h"
 
@@ -57,7 +53,8 @@ using namespace osl;
 
 static ::std::list< JavaDragSource* > aDragSources;
 static ::std::list< JavaDropTarget* > aDropTargets;
-static JavaDragSource *pTrackDragOwner = nullptr;
+static JavaDragSource *pTrackDragOwner = NULL;
+static sal_Bool bNeedToReleaseDragPrintLock = sal_False;
 
 static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow );
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
@@ -66,6 +63,23 @@ static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame );
 static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
+static inline sal_Bool ImplAcquireDragPrintLockIfNeeded()
+{
+	if ( bNeedToReleaseDragPrintLock )
+		return sal_False;
+
+	bNeedToReleaseDragPrintLock = VCLInstance_setDragPrintLock( sal_True );
+	return bNeedToReleaseDragPrintLock;
+}
+
+static inline void ImplReleaseDragPrintLockIfNeeded()
+{
+	if ( bNeedToReleaseDragPrintLock )
+	{
+		bNeedToReleaseDragPrintLock = sal_False;
+		VCLInstance_setDragPrintLock( sal_False );
+	}
+}
 
 // ========================================================================
 
@@ -179,7 +193,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	if ( mpDestination )
 		[mpDestination retain];
 	mpDraggingSource = nil;
-	mpDragOwner = nullptr;
+	mpDragOwner = NULL;
 	mbDragStarted = NO;
 	mpLastMouseEvent = nil;
 	mpNewTypes = pNewTypes;
@@ -301,7 +315,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 		// get released during a native drag session. This prevents drag events
 		// from getting dispatched out of order when we release and reacquire
 		// the mutex.
-		if ( VCLInstance_setDragPrintLock( YES ) )
+		if ( ImplAcquireDragPrintLockIfNeeded() )
 		{
 			NSDraggingSession *pDraggingSession = nil;
 			if ( mpDragOwner == pTrackDragOwner && mpDragOwner->maContents.is() )
@@ -324,9 +338,9 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 								NSRect aDraggingFrame = pDraggingItem.draggingFrame;
 								if ( NSIsEmptyRect( aDraggingFrame ) )
 								{
-								    aDraggingFrame.size.width = 1;
-								    aDraggingFrame.size.height = 1;
-								    pDraggingItem.draggingFrame = aDraggingFrame;
+									aDraggingFrame.size.width = 1;
+									aDraggingFrame.size.height = 1;
+									pDraggingItem.draggingFrame = aDraggingFrame;
 								}
 
 								pDraggingSession = [mpSource beginDraggingSessionWithItems:[NSArray arrayWithObject:pDraggingItem] event:mpLastMouseEvent source:mpDraggingSource];
@@ -345,7 +359,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 			if ( pDraggingSession )
 				mbDragStarted = YES;
 			else
-				VCLInstance_setDragPrintLock( NO );
+				ImplReleaseDragPrintLockIfNeeded();
 		}
 	}
 }
@@ -424,6 +438,9 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 - (void)draggingEnded:(id < NSDraggingInfo >)pSender
 {
+	// Release the drag print lock if it is still locked in case the
+	// the performDragOperation: selector was not called
+	ImplReleaseDragPrintLockIfNeeded();
 	(void)pSender;
 }
 
@@ -441,11 +458,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDropTarget *pTarget = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpDestination )
@@ -457,9 +471,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				nRet = ImplGetOperationFromActions( pTarget->handleDragEnter( aPos.X(), aPos.Y(), pSender ) );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return nRet;
@@ -477,11 +489,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDropTarget *pTarget = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpDestination )
@@ -493,9 +502,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				pTarget->handleDragExit( aPos.X(), aPos.Y(), pSender );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -513,11 +520,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDropTarget *pTarget = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpDestination )
@@ -529,9 +533,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				nRet = ImplGetOperationFromActions( pTarget->handleDragOver( aPos.X(), aPos.Y(), pSender ) );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return nRet;
@@ -560,7 +562,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	// native drag lock so that the OOo code can display any dialogs in the
 	// drop event
 	if ( [pSender draggingSource] )
-		VCLInstance_setDragPrintLock( NO );
+		ImplReleaseDragPrintLockIfNeeded();
 
 	if ( !mpDestination )
 		return bRet;
@@ -572,11 +574,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDropTarget *pTarget = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpDestination )
@@ -588,9 +587,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pTarget )
 				bRet = pTarget->handleDrop( aPos.X(), aPos.Y(), pSender );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
 	return bRet;
@@ -632,25 +629,22 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 	if ( !mpSource )
 	{
-		VCLInstance_setDragPrintLock( NO );
+		ImplReleaseDragPrintLockIfNeeded();
 		return;
 	}
  
 	NSWindow *pWindow = [mpSource window];
 	if ( !pWindow )
 	{
-		VCLInstance_setDragPrintLock( NO );
+		ImplReleaseDragPrintLockIfNeeded();
 		return;
 	}
  
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDragSource *pSource = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpSource )
@@ -677,14 +671,12 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 				// Fix bug 1442 by dispatching and deleting the
 				// DragSourceDropEvent in the VCL event dispatch thread
-				Application::PostUserEvent( LINK( nullptr, JavaDragSource, dragDropEnd ), pDragEvent );
+				Application::PostUserEvent( STATIC_LINK( NULL, JavaDragSource, dragDropEnd ), pDragEvent );
 			}
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 
-	VCLInstance_setDragPrintLock( NO );
+	ImplReleaseDragPrintLockIfNeeded();
 }
 
 - (void)draggingSession:(NSDraggingSession *)pSession movedToPoint:(NSPoint)aPoint
@@ -701,11 +693,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDragSource *pSource = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpSource )
@@ -717,9 +706,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pSource && pTrackDragOwner == pSource )
 				pSource->handleDrag( aPos.X(), aPos.Y() );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -734,11 +721,10 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
  
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( pTrackDragOwner && !Application::IsShutDown() )
+		ACQUIRE_SOLARMUTEX
+		if ( pTrackDragOwner )
 		{
-			JavaDragSource *pSource = nullptr;
+			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpSource )
@@ -751,8 +737,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 			if ( pSource && pSource == pTrackDragOwner )
 				nRet = ImplGetOperationMaskFromActions( pSource->mnActions );
 		}
-
-		rSolarMutex.release();
+		RELEASE_SOLARMUTEX
 	}
 
 	return nRet;
@@ -772,11 +757,8 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
-		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			JavaDragSource *pSource = nullptr;
+			ACQUIRE_SOLARMUTEX
+			JavaDragSource *pSource = NULL;
 			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
 			{
 				if ( (*it)->getNSView() == mpSource )
@@ -788,9 +770,7 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow );
 
 			if ( pSource && pTrackDragOwner == pSource )
 				pSource->handleDrag( aPos.X(), aPos.Y() );
-		}
-
-		rSolarMutex.release();
+			RELEASE_SOLARMUTEX
 	}
 }
 
@@ -825,7 +805,7 @@ static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow )
 		NSRect aFrameRect = [pWindow frame];
 		aFrameRect.origin = NSMakePoint( 0, 0 );
 		NSRect aContentRect = [pWindow contentRectForFrameRect:aFrameRect];
-		aRet = Point( static_cast< long >( aPoint.x ), static_cast< long >( aContentRect.size.height - aPoint.y ) );
+		aRet = Point( (long)aPoint.x, (long)( aContentRect.size.height - aPoint.y ) );
 	}
 	
 	return aRet;
@@ -953,10 +933,10 @@ static void ImplSetCursorFromAction( sal_Int8 nAction, vcl::Window *pWindow )
 			// We need to toggle the style to make sure that VCL resets the
 			// pointer
 			PointerStyle nStyle = pWindow->GetPointer().GetStyle();
-			if ( nStyle == PointerStyle::Arrow )
-				pWindow->SetPointer( Pointer( PointerStyle::Null ) );
+			if ( nStyle == POINTER_ARROW )
+				pWindow->SetPointer( Pointer( POINTER_NULL ) );
 			else
-				pWindow->SetPointer( Pointer( PointerStyle::Arrow ) );
+				pWindow->SetPointer( Pointer( POINTER_ARROW ) );
 			pWindow->SetPointer( Pointer( nStyle ) );
 			bSet = true;
 		}
@@ -1017,13 +997,15 @@ static uno::Sequence< OUString > JavaDropTarget_getSupportedServiceNames()
  
 // ========================================================================
 
-IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData, void )
+IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 {
-	datatransfer::dnd::DragSourceDropEvent *pDragEvent = static_cast< datatransfer::dnd::DragSourceDropEvent* >( pData );
+	(void)pThis;
+
+	datatransfer::dnd::DragSourceDropEvent *pDragEvent = (datatransfer::dnd::DragSourceDropEvent *)pData;
 
 	if ( pDragEvent )
 	{
-		JavaDragSource *pSource = static_cast< JavaDragSource* >( pDragEvent->DragSource.get() );
+		JavaDragSource *pSource = (JavaDragSource*)pDragEvent->DragSource.get();
 
 		if ( pSource && pTrackDragOwner == pSource )
 		{
@@ -1031,21 +1013,23 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData, void )
 			if ( xListener.is() )
 				xListener->dragDropEnd( *pDragEvent );
 
-			pTrackDragOwner = nullptr;
+			pTrackDragOwner = NULL;
 		}
 
 		delete pDragEvent;
 	}
+
+	return 0;
 }
 
 // ------------------------------------------------------------------------
 
 JavaDragSource::JavaDragSource() :
-	WeakComponentImplHelper< datatransfer::dnd::XDragSource, lang::XInitialization, lang::XServiceInfo >( maMutex ),
+	WeakComponentImplHelper3< datatransfer::dnd::XDragSource, lang::XInitialization, lang::XServiceInfo >( maMutex ),
 	mnActions( datatransfer::dnd::DNDConstants::ACTION_NONE ),
 	mpDraggingSource( nil ),
 	mpPasteboardHelper( nil ),
-	mpWindow( nullptr )
+	mpWindow( NULL )
 {
 }
 
@@ -1056,15 +1040,13 @@ JavaDragSource::~JavaDragSource()
 	aDragSources.remove( this );
 
 	if ( pTrackDragOwner == this )
-		pTrackDragOwner = nullptr;
+		pTrackDragOwner = NULL;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpPasteboardHelper )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterAndDestroy:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-
+		osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(unregisterAndDestroy:), mpPasteboardHelper, YES );
 		[mpPasteboardHelper release];
 	}
 
@@ -1073,7 +1055,7 @@ JavaDragSource::~JavaDragSource()
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments )
+void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException, std::exception )
 {
 	NSView *pView = nil;
 	if ( arguments.getLength() > 1 )
@@ -1081,10 +1063,10 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments )
 		sal_IntPtr nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
-			pView = reinterpret_cast< NSView* >( nPtr );
+			pView = (NSView *)nPtr;
 		arguments.getConstArray()[1] >>= nPtr;
 		if ( nPtr )
-			mpWindow = reinterpret_cast< vcl::Window* >( nPtr );
+			mpWindow = (vcl::Window *)nPtr;
 	}
 
 	if ( !pView || !mpWindow )
@@ -1099,10 +1081,7 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments )
 		// Do not retain as invoking alloc disables autorelease
 		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingSource:pView dragOwner:this];
 		if ( mpPasteboardHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[mpPasteboardHelper performSelectorOnMainThread:@selector(registerDragSource:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(registerDragSource:), mpPasteboardHelper, YES );
 	}
 
 	[pPool release];
@@ -1110,21 +1089,21 @@ void JavaDragSource::initialize( const uno::Sequence< uno::Any >& arguments )
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDragSource::isDragImageSupported() throw()
+sal_Bool JavaDragSource::isDragImageSupported() throw( uno::RuntimeException, std::exception )
 {
 	return sal_False;
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw()
+sal_Int32 JavaDragSource::getDefaultCursor( sal_Int8 /* dragAction */ ) throw( lang::IllegalArgumentException, uno::RuntimeException, std::exception )
 {
 	return 0;
 }
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw()
+void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* trigger */, sal_Int8 sourceActions, sal_Int32 /* cursor */, sal_Int32 /* image */, const uno::Reference< datatransfer::XTransferable >& transferable, const uno::Reference< datatransfer::dnd::XDragSourceListener >& listener ) throw( uno::RuntimeException, std::exception )
 {
 	datatransfer::dnd::DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = uno::Reference< uno::XInterface >( static_cast< OWeakObject* >( this ) );
@@ -1154,10 +1133,9 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 
 		// Fix bug 3644 by releasing the application mutex so that the drag
 		// code can display tooltip windows and dialogs without hanging
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		sal_uLong nCount = Application::ReleaseSolarMutex();
-		[static_cast< JavaDNDPasteboardHelper* >( mpPasteboardHelper ) performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-		bDragStarted = [static_cast< JavaDNDPasteboardHelper* >( mpPasteboardHelper ) dragStarted];
+		osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(startDrag:), mpPasteboardHelper, YES );
+		bDragStarted = [mpPasteboardHelper dragStarted];
 		Application::AcquireSolarMutex( nCount );
 
 		[pPool release];
@@ -1177,20 +1155,20 @@ void JavaDragSource::startDrag( const datatransfer::dnd::DragGestureEvent& /* tr
 			listener->dragDropEnd( aDragEvent );
 
 		if ( pTrackDragOwner == this )
-			pTrackDragOwner = nullptr;
+			pTrackDragOwner = NULL;
 	}
 }
 
 // ------------------------------------------------------------------------
 
-OUString JavaDragSource::getImplementationName() throw()
+OUString JavaDragSource::getImplementationName() throw( uno::RuntimeException, std::exception )
 {
 	return "com.sun.star.comp.datatransfer.dnd.OleDragSource_V1";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw()
+sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaDragSource_getSupportedServiceNames();
 
@@ -1203,7 +1181,7 @@ sal_Bool JavaDragSource::supportsService( const OUString& serviceName ) throw()
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw()
+uno::Sequence< OUString > JavaDragSource::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
 {
 	return JavaDragSource_getSupportedServiceNames();
 }
@@ -1235,12 +1213,12 @@ void JavaDragSource::handleDrag( sal_Int32 /* nX */, sal_Int32 /* nY */ )
 // ========================================================================
 
 JavaDropTarget::JavaDropTarget() :
-	WeakComponentImplHelper< datatransfer::dnd::XDropTarget, lang::XInitialization, lang::XServiceInfo >( maMutex ),
+	WeakComponentImplHelper3< datatransfer::dnd::XDropTarget, lang::XInitialization, lang::XServiceInfo >( maMutex ),
 	mbActive( sal_True ),
 	mnDefaultActions( datatransfer::dnd::DNDConstants::ACTION_NONE ),
 	mpPasteboardHelper( nil ),
 	mbRejected( false ),
-	mpWindow( nullptr )
+	mpWindow( NULL )
 {
 }
 
@@ -1261,21 +1239,19 @@ void JavaDropTarget::disposing()
 
 	if ( mpPasteboardHelper )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< JavaDNDPasteboardHelper* >( mpPasteboardHelper ) performSelectorOnMainThread:@selector(unregisterAndDestroy:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-
+		osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(unregisterAndDestroy:), mpPasteboardHelper, YES );
 		[mpPasteboardHelper release];
 		mpPasteboardHelper = nil;
 	}
 
 	[pPool release];
 
-	mpWindow = nullptr;
+	mpWindow = NULL;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments )
+void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments ) throw( uno::RuntimeException, std::exception )
 {
 	NSView *pView = nil;
 
@@ -1284,10 +1260,10 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments )
 		sal_uInt64 nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
-			pView = reinterpret_cast< NSView* >( nPtr );
+			pView = (NSView *)nPtr;
 		arguments.getConstArray()[1] >>= nPtr;
 		if ( nPtr )
-			mpWindow = reinterpret_cast< vcl::Window* >( nPtr );
+			mpWindow = (vcl::Window *)nPtr;
 	}
 
 	if ( !pView || !mpWindow )
@@ -1302,10 +1278,7 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments )
 		// Do not retain as invoking alloc disables autorelease
 		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingDestination:pView newTypes:DTransTransferable::getSupportedPasteboardTypes()];
 		if ( mpPasteboardHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[static_cast< JavaDNDPasteboardHelper* >( mpPasteboardHelper ) performSelectorOnMainThread:@selector(registerForDraggedTypes:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
-		}
+			osl_performSelectorOnMainThread( mpPasteboardHelper, @selector(registerForDraggedTypes:), mpPasteboardHelper, YES );
 	}
 
 	[pPool release];
@@ -1313,56 +1286,56 @@ void JavaDropTarget::initialize( const uno::Sequence< uno::Any >& arguments )
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw()
+void JavaDropTarget::addDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException, std::exception )
 {
 	maListeners.push_back( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw()
+void JavaDropTarget::removeDropTargetListener( const uno::Reference< datatransfer::dnd::XDropTargetListener >& xListener ) throw( uno::RuntimeException, std::exception )
 {
 	maListeners.remove( xListener );
 }
 
 // --------------------------------------------------------------------------
 
-sal_Bool JavaDropTarget::isActive() throw()
+sal_Bool JavaDropTarget::isActive() throw( uno::RuntimeException, std::exception )
 {
 	return mbActive;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::setActive( sal_Bool active ) throw()
+void JavaDropTarget::setActive( sal_Bool active ) throw( uno::RuntimeException, std::exception, std::exception )
 {
 	mbActive = active;
 }
 
 // --------------------------------------------------------------------------
 
-sal_Int8 JavaDropTarget::getDefaultActions() throw()
+sal_Int8 JavaDropTarget::getDefaultActions() throw( uno::RuntimeException, std::exception )
 {
 	return mnDefaultActions;
 }
 
 // --------------------------------------------------------------------------
 
-void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw()
+void JavaDropTarget::setDefaultActions( sal_Int8 actions ) throw( uno::RuntimeException, std::exception )
 {
 	mnDefaultActions = actions;
 }
 
 // --------------------------------------------------------------------------
 
-OUString JavaDropTarget::getImplementationName() throw()
+OUString JavaDropTarget::getImplementationName() throw( uno::RuntimeException, std::exception )
 {
 	return "com.sun.star.comp.datatransfer.dnd.OleDropTarget_V1";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw()
+sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaDropTarget_getSupportedServiceNames();
 
@@ -1375,7 +1348,7 @@ sal_Bool JavaDropTarget::supportsService( const OUString& ServiceName ) throw()
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw()
+uno::Sequence< OUString > JavaDropTarget::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
 {
 	return JavaDropTarget_getSupportedServiceNames();
 }
@@ -1611,8 +1584,8 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	{
 		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
-		JavaDropTargetDropContext *pDropContext = new JavaDropTargetDropContext( aDropEvent.DropAction );
-		aDropEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDropContext >( pDropContext );
+		JavaDropTargetDropContext *pContext = new JavaDropTargetDropContext( aDropEvent.DropAction );
+		aDropEvent.Context = uno::Reference< datatransfer::dnd::XDropTargetDropContext >( pContext );
 
 		listeners =  maListeners;
 
@@ -1625,8 +1598,8 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		// Fix bug 3647 by allowing the VCL event dispatch thread to run
 		Application::Reschedule();
 
-		mbRejected = pDropContext->isRejected();
-		bRet = ( !mbRejected && pDropContext->getDropComplete() );
+		mbRejected = pContext->isRejected();
+		bRet = ( !mbRejected && pContext->getDropComplete() );
 	}
 
 	return bRet;

@@ -34,9 +34,8 @@ gb_Executable_FILENAMES := $(patsubst uno:uno,uno:uno.bin,$(gb_Executable_FILENA
 endif
 gb_Executable_FILENAMES := $(patsubst unopkg_bin:unopkg_bin%,unopkg_bin:unopkg$(if $(filter-out MACOSX,$(OS)),.bin),$(gb_Executable_FILENAMES))
 gb_Executable_FILENAMES := $(patsubst unopkg_com:unopkg_com%,unopkg_com:unopkg.com,$(gb_Executable_FILENAMES))
-ifneq ($(OS),MACOSX)
+gb_Executable_FILENAMES := $(patsubst crashrep_com:crashrep_com%,crashrep_com:crashrep.com,$(gb_Executable_FILENAMES))
 gb_Executable_FILENAMES := $(patsubst gengal:gengal,gengal:gengal.bin,$(gb_Executable_FILENAMES))
-endif
 
 ifeq ($(OS),MACOSX)
 gb_Executable_FILENAMES := $(patsubst soffice_bin:soffice_bin,soffice_bin:soffice,$(gb_Executable_FILENAMES))
@@ -99,6 +98,21 @@ gb_Library_FILENAMES := $(patsubst rdf:rdf%,rdf:librdf%,$(gb_Library_FILENAMES))
 # libpyuno_wrapper.dll => pyuno.pyd
 gb_Library_FILENAMES := $(patsubst pyuno:pyuno.dll,pyuno:pyuno$(if $(MSVC_USE_DEBUG_RUNTIME),_d).pyd,$(gb_Library_FILENAMES))
 
+ifeq ($(COM),GCC)
+gb_Library_ILIBFILENAMES := $(patsubst libexttextcat:liblibext%,libexttextcat:libilibext%,$(gb_Library_ILIBFILENAMES))
+gb_Library_ILIBFILENAMES := $(patsubst z:iz%,z:zlib%,$(gb_Library_ILIBFILENAMES))
+
+# Libraries not provided by mingw(-w64), available only in the Windows
+# SDK. So if these actually are liked with somewhere, we can't
+# cross-compile that module then using MinGW. That needs to be fixed
+# then, and we need to use these libraries through run-time lookup of
+# APIs. Or something.
+gb_Library_SDKLIBFILENAMES:=
+
+gb_Library_FILENAMES := $(filter-out $(foreach lib,$(gb_Library_SDKLIBFILENAMES),$(lib):%),$(gb_Library_FILENAMES))
+gb_Library_FILENAMES += $(foreach lib,$(gb_Library_SDKLIBFILENAMES),$(lib):$(WINDOWS_SDK_HOME)/lib/$(lib).lib)
+
+else # $(COM) != GCC
 gb_Library_ILIBFILENAMES := $(patsubst z:z%,z:zlib%,$(gb_Library_ILIBFILENAMES))
 
 # these have prefix "lib" instead of "i"
@@ -113,6 +127,8 @@ gb_Library_ILIBFILENAMES += \
 
 gb_Library_FILENAMES := $(filter-out $(foreach lib,$(gb_Library_LIBLIBFILENAMES),$(lib):%),$(gb_Library_FILENAMES))
 gb_Library_FILENAMES += $(foreach lib,$(gb_Library_LIBLIBFILENAMES),$(lib):lib$(lib).dll)
+
+endif # ifeq ($(COM),GCC)
 
 endif # ifeq ($(OS),WNT)
 

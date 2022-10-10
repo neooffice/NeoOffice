@@ -30,6 +30,10 @@
 #include <sfx2/sfx.hrc>
 #include <unomid.h>
 
+/* Flags that are being used in the slot definitions for the disable-features */
+#define SW_DISABLE_ON_PROTECTED_CURSOR  0x00000001
+#define SW_DISABLE_ON_MAILBOX_EDITOR    0x00000002
+
 #define FN_FILE                 SID_SW_START
 #define FN_EDIT                 (SID_SW_START +  100)
 #define FN_VIEW                 (SID_SW_START +  200)
@@ -113,15 +117,28 @@
 
 #define FN_EDIT_REGION          (FN_EDIT + 65)  /* Edit region */
 #define FN_GOTO_REFERENCE       (FN_EDIT + 66)  /* From Refmark to the reference */
-#define FN_EDIT_CURRENT_REGION  (FN_EDIT + 67)  /* Edit current region*/
 
 // already defined in SVX
 #define FN_NEXT_BOOKMARK        (FN_EDIT + 68)  /*  */
 #define FN_PREV_BOOKMARK        (FN_EDIT + 69)  /*  */
 
+/*Navigator ToolBoxes*/
+#define FN_ITEM_DOWN                 (FN_EDIT + 71)  /**/
+#define FN_ITEM_LEFT                 (FN_EDIT + 72)  /**/
+#define FN_ITEM_RIGHT                (FN_EDIT + 73)  /**/
+#define FN_ITEM_UP                   (FN_EDIT + 74)  /**/
+#define FN_DOWN                      (FN_EDIT + 75)  /**/
+
+#define FN_SELECT_FOOTER             (FN_EDIT + 77)  /**/
+#define FN_SELECT_HEADER             (FN_EDIT + 79)  /**/
 #define FN_PAGENUMBER                (FN_EDIT + 80)  /**/
+#define FN_SELECT_FOOTNOTE           (FN_EDIT + 82)  /**/
+#define FN_SELECT_SET_AUTO_BOOKMARK  (FN_EDIT + 83)  /**/
+#define FN_UP                        (FN_EDIT + 86)  /**/
 
 #define FN_SELECT_PARA               (FN_EDIT + 97) /* select paragraph*/
+
+#define FN_SELECT_CONTENT            (FN_EDIT + 99) /* Navigator - Content Type */
 
 #define FN_UPDATE_ALL_LINKS          (FN_EDIT2 + 24) /* update all links */
 
@@ -134,7 +151,7 @@
                                                         CalcLayout */
 
 #define FN_REDLINE_ACCEPT            (FN_EDIT2 + 29) /* Redlining Accept/Reject */
-#define FN_ATTR_COLUMNS              (FN_EDIT2 + 31) /* SlotId for SwFormatCol */
+#define FN_ATTR_COLUMNS              (FN_EDIT2 + 31) /* SlotId for SwFmtCol */
 #define FN_EDIT_CURRENT_TOX          (FN_EDIT2 + 32) /* edit current index */
 #define FN_EDIT_AUTH_ENTRY_DLG       (FN_EDIT2 + 33) /* edit authorities entry*/
 #define FN_UPDATE_CHARTS             (FN_EDIT2 + 34) /* update all charts */
@@ -168,23 +185,38 @@
 
 #define FN_SET_PAGE             (FN_VIEW + 29)  /* Set page template to paragraph */
 
+// more Navigator
+#define FN_SHOW_CONTENT_BOX     (FN_VIEW + 33)  /**/
+#define FN_SHOW_ROOT            (FN_VIEW + 34)  /**/
+#define FN_DROP_REGION          (FN_VIEW + 35)  /**/
+#define FN_OUTLINE_LEVEL        (FN_VIEW + 36)  /**/
+
 #define FN_PRINT_LAYOUT         (FN_VIEW + 37)  /* print layout */
+
+#define FN_DROP_REGION_LINK     (FN_VIEW + 38)  /**/
+#define FN_DROP_REGION_COPY     (FN_VIEW + 39)  /**/
 
 #define FN_SCROLL_NAVIGATION    (FN_VIEW + 40)  /* Navigation Controller */
 
 #define FN_VIEW_HIDDEN_PARA     (FN_VIEW + 42)  /* View hidden paragraphs */
 #define FN_VIEW_SMOOTH_SCROLL   (FN_VIEW + 43)
 
+#define FN_GLOBAL_SWITCH        (FN_VIEW + 44)  /* Toggle between Global and Content */
+#define FN_GLOBAL_EDIT          (FN_VIEW + 45)  /* edit */
+#define FN_GLOBAL_UPDATE        (FN_VIEW + 46)  /* update */
+#define FN_GLOBAL_OPEN          (FN_VIEW + 47)  /* open */
+#define FN_GLOBAL_SAVE_CONTENT  (FN_VIEW + 48)  /* save content of link */
+#define FN_CREATE_NAVIGATION    (FN_VIEW + 49)  /* create Navigations-Controller */
 #define FN_PREVIEW_ZOOM          (FN_VIEW + 51)  /* create table controller for zoom */
 
 #define FN_SET_MODOPT_TBLNUMFMT  (FN_VIEW + 52) /* Number recognition in tables */
 #define FN_HSCROLL_METRIC        (FN_VIEW + 53) /* Metric horizontal scrollbar */
 #define FN_VSCROLL_METRIC        (FN_VIEW + 54) /* Metric vertical scrollbar */
-// 55 is free
+#define FN_VIEW_NOTES            (FN_VIEW + 55)
+
 #define FN_NAVIGATION_POPUP     (FN_VIEW + 56)  /* Navigation Popup */
 #define FN_SCROLL_PREV          (FN_VIEW + 57)  /* uno:ScrollToPrevious */
 #define FN_SCROLL_NEXT          (FN_VIEW + 58)  /* uno:ScrollToNext */
-#define FN_VIEW_HIDE_WHITESPACE (FN_VIEW + 59)  /* Hide header, footer, and pagebreak */
 
 // Region: Insert
 #define FN_INSERT_BOOKMARK      (FN_INSERT + 2 )  /* Bookmark */
@@ -223,23 +255,12 @@
 #define FN_MAILMERGE_WIZARD     (FN_INSERT + 64)    /* mail merge wizard */
 #define FN_TOOL_ANCHOR_FRAME    (FN_INSERT + 66)    /* anchor Draw-Object to frame*/
 #define FN_QRY_MERGE            (FN_INSERT + 67)    /* insert record (serial letter) */
+#define FN_MAILMERGE_CHILDWINDOW (FN_INSERT + 68)   /* back-to-mail-merge-wizard child window*/
 #define FN_INSERT_SMA           (FN_INSERT + 69)    /* insert StarMath  */
-
-#define FN_MAILMERGE_FIRST_ENTRY (FN_INSERT + 70)   /* mail merge toolbar - go to the first entry */
-#define FN_MAILMERGE_PREV_ENTRY (FN_INSERT + 71)    /* mail merge toolbar - go to the previous entry */
-#define FN_MAILMERGE_NEXT_ENTRY (FN_INSERT + 72)    /* mail merge toolbar - go to the next entry */
-#define FN_MAILMERGE_LAST_ENTRY (FN_INSERT + 73)    /* mail merge toolbar - go to the next entry */
-#define FN_MAILMERGE_CURRENT_ENTRY (FN_INSERT + 74) /* mail merge toolbar - show or change the current entry */
-#define FN_MAILMERGE_EXCLUDE_ENTRY (FN_INSERT + 75) /* mail merge toolbar - checkbox to exclude the current entry */
 
 #define FN_DRAWTEXT_ATTR_DLG    (FN_INSERT + 76)    /* position DrawText */
 
-#define FN_MAILMERGE_CREATE_DOCUMENTS (FN_INSERT + 77) /* mail merge toolbar - create the merged document */
-#define FN_MAILMERGE_SAVE_DOCUMENTS (FN_INSERT + 78) /* mail merge toolbar - save merged documents */
-#define FN_MAILMERGE_PRINT_DOCUMENTS (FN_INSERT + 79) /* mail merge toolbar - print merged documents */
-#define FN_MAILMERGE_EMAIL_DOCUMENTS (FN_INSERT + 80) /* mail merge toolbar - email merged documents */
-
-#define FN_TOOL_ANCHOR_CHAR     (FN_INSERT + 84)    /* anchor Draw object to character */
+#define FN_TOOL_ANCHOR_CHAR     (FN_INSERT + 84)    /* anchor Draw object to charater */
 
 #define FN_QRY_INSERT           (FN_INSERT + 86)    /* insert record selection in to text */
 #define FN_QRY_MERGE_FIELD      (FN_INSERT + 87)    /* insert record selection into fields */
@@ -285,7 +306,6 @@
 #define FN_AUTOFORMAT_REDLINE_APPLY (FN_FORMAT + 6 ) /* apply autoformat with Redlining */
 #define FN_SET_SUPER_SCRIPT     (FN_FORMAT + 11) /* superscript */
 #define FN_SET_SUB_SCRIPT       (FN_FORMAT + 12) /* subscript */
-#define FN_SET_SMALL_CAPS       (FN_FORMAT + 13) /* small caps */
 
 #define FN_FORMAT_PAGE_SETTING_DLG  (FN_FORMAT + 42)  /*  */
 #define FN_NUM_FORMAT_TABLE_DLG     (FN_FORMAT + 45)  /* number format in table */
@@ -299,9 +319,8 @@
 #define FN_FORMAT_GRAFIC_DLG        (FN_FORMAT + 58)  /* graphic */
 #define FN_FORMAT_TABLE_DLG         (FN_FORMAT + 60)  /* table */
 
-#define FN_UPDATE_STYLE_BY_EXAMPLE            (FN_FORMAT + 63)  /* update style */
-#define FN_FORMAT_FOOTNOTE_DLG                (FN_FORMAT + 68)  /* footnote dialog */
-#define FN_FORMAT_CURRENT_FOOTNOTE_DLG        (FN_FORMAT + 64)  /* Contextual footnote dialog */
+#define FN_UPDATE_STYLE_BY_EXAMPLE  (FN_FORMAT + 63)  /* update style */
+#define FN_FORMAT_FOOTNOTE_DLG      (FN_FORMAT + 68)  /* footnote dialog */
 
 #define FN_FRAME_NOWRAP             (FN_FORMAT + 72)
 #define FN_FRAME_WRAP               (FN_FORMAT + 73)
@@ -330,14 +349,10 @@
 #define FN_TABLE_MERGE_CELLS        (FN_FORMAT + 106)  /* */
 #define FN_TABLE_SET_ROW_HEIGHT     (FN_FORMAT + 107)  /* */
 #define FN_TABLE_SET_COL_WIDTH      (FN_FORMAT + 108)  /* */
-#define FN_TABLE_INSERT_ROW_AFTER   (FN_FORMAT + 109)  /* */
 #define FN_OPTIMIZE_TABLE           (FN_FORMAT + 110)  /* ToolBoxItem for optimizing tables */
-#define FN_TABLE_INSERT_ROW_BEFORE  (FN_FORMAT + 111)  /* */
-#define FN_TABLE_INSERT_COL_BEFORE  (FN_FORMAT + 112)  /* */
 #define FN_TABLE_SELECT_ROW         (FN_FORMAT + 113)  /* */
 #define FN_TABLE_SELECT_COL         (FN_FORMAT + 114)  /* */
 #define FN_TABLE_SELECT_ALL         (FN_FORMAT + 115)  /* */
-#define FN_TABLE_INSERT_COL_AFTER   (FN_FORMAT + 116)  /* */
 #define FN_TABLE_SET_READ_ONLY_CELLS (FN_FORMAT + 117)  /* protect table cells */
 #define FN_TABLE_UNSET_READ_ONLY_CELLS  (FN_FORMAT + 119)  /* undo table cell protection */
 #define FN_TABLE_HEADLINE_REPEAT    (FN_FORMAT + 120)   /* also used in SwXTextTable*/
@@ -481,7 +496,7 @@
 #define FN_UPDATE_CUR_TOX           (FN_EXTRA + 54)   /* update current index */
 #define FN_REMOVE_CUR_TOX           (FN_EXTRA + 55)  /* remove the current TOX*/
 
-#define FN_GOTO_PAGE                (FN_EXTRA + 59 )  /* goto page */
+#define FN_NAVIGATION_PI_GOTO_PAGE  (FN_EXTRA + 59 )  /* goto page from navigation-PI */
 
 #define FN_COLL_TYPE                (FN_EXTRA + 98)   /* type for GlobalDoc-Collection*/
 #define FN_COLL_ADD                 (FN_EXTRA + 99)
@@ -587,7 +602,7 @@
 #define FN_NAVIGATION_BACK                  (FN_EXTRA2 + 115)
 #define FN_NAVIGATION_FORWARD               (FN_EXTRA2 + 116)
 
-// #i972: bool items to be passed to SwFramePage for evaluation
+// #i972: bool items to be passed to SwFrmPage for evaluation
 #define FN_OLE_IS_MATH                      (FN_EXTRA2 + 114)
 #define FN_MATH_BASELINE_ALIGNMENT          (FN_EXTRA2 + 115)
 
@@ -599,10 +614,9 @@
 #define FN_UNO_REPLACEMENT_GRAPHIC_U_R_L    (FN_EXTRA2 + 121)
 #define FN_UNO_HIDDEN                       (FN_EXTRA2 + 122)
 #define FN_UNO_STYLE_INTEROP_GRAB_BAG       (FN_EXTRA2 + 123)
-#define FN_UNO_TABLE_TEMPLATE_NAME          (FN_EXTRA2 + 124)
 
 #ifdef USE_JAVA
-#define FN_LOOKUP_IN_MACOSX_DICTIONARY      (FN_EXTRA2 + 125)
+#define FN_LOOKUP_IN_MACOSX_DICTIONARY      (FN_EXTRA2 + 124)
 #endif	// USE_JAVA
 
 // Area: Help
@@ -692,8 +706,6 @@
 #define FN_READONLY_SELECTION_MODE  (FN_SELECTION + 89)   /* switches text selection mode in readonly documents*/
 #define FN_SELECTION_MODE_DEFAULT   (FN_SELECTION + 90)   /* use default selection mode - not block mode */
 #define FN_SELECTION_MODE_BLOCK     (FN_SELECTION + 91)   /* switch on block selection */
-#define SID_JUMP_TO_SPECIFIC_PAGE    (FN_SELECTION + 92)
-#define SID_TRACK_CHANGES_BAR       (FN_SELECTION + 93)   /* shows/hides track changes bar */
 
 // QUERY-Block
 #define FN_TXTATR_INET              (FN_QUERY +29)      /* INet-Attribut */
@@ -720,6 +732,13 @@
 #define FN_DELETE_COMMENT           (FN_NOTES+6)
 #define FN_REPLY                    (FN_NOTES+7)
 #define FN_FORMAT_ALL_NOTES         (FN_NOTES+8)
+
+#define FN_HEADERFOOTER_EDIT        (FN_HEADERFOOTER+1)
+#define FN_HEADERFOOTER_DELETE      (FN_HEADERFOOTER+2)
+#define FN_HEADERFOOTER_BORDERBACK  (FN_HEADERFOOTER+3)
+
+#define FN_PAGEBREAK_EDIT           (FN_PAGEBREAK+1)
+#define FN_PAGEBREAK_DELETE         (FN_PAGEBREAK+2)
 
 // Region: Parameter
 #define FN_PARAM_MOVE_COUNT         (FN_PARAM+2)
@@ -822,15 +841,6 @@
 #define SID_ATTR_PAGE_COLUMN            (FN_SIDEBAR + 0)
 #define SID_ATTR_PAGE_ULSPACE           (FN_SIDEBAR + 1)
 #define SID_ATTR_PAGE_LRSPACE           (FN_SIDEBAR + 2)
-#define SID_ATTR_PAGE_HEADER            (FN_SIDEBAR + 3)
-#define SID_ATTR_PAGE_HEADER_LRMARGIN   (FN_SIDEBAR + 4)
-#define SID_ATTR_PAGE_HEADER_SPACING    (FN_SIDEBAR + 5)
-#define SID_ATTR_PAGE_HEADER_LAYOUT     (FN_SIDEBAR + 6)
-#define SID_ATTR_PAGE_FOOTER            (FN_SIDEBAR + 7)
-#define SID_ATTR_PAGE_FOOTER_LRMARGIN   (FN_SIDEBAR + 8)
-#define SID_ATTR_PAGE_FOOTER_SPACING    (FN_SIDEBAR + 9)
-#define SID_ATTR_PAGE_FOOTER_LAYOUT     (FN_SIDEBAR + 10)
-#define SID_ATTR_PAGE_MARGIN            (FN_SIDEBAR + 11)
 
 //Member IDs for Fill / SetVariable of items
 #define         MID_STYLE       0xe0
@@ -861,6 +871,19 @@
 #define         MID_11          0xf8
 #define         MID_12          0xf9
 #define         MID_13          0xfa
+
+// defines for Event-assignments per Macro
+#define MAC_EVENT_MOUSEOVER         0x01
+#define MAC_EVENT_MOUSECLICK        0x02
+#define MAC_EVENT_MOUSEOUT          0x03
+#define MAC_EVENT_OBJECT_SELECT     0x04
+#define MAC_EVENT_KEYINPUT_ALPHA    0x05
+#define MAC_EVENT_KEYINPUT_NOALPHA  0x06
+#define MAC_EVENT_FRM_RESIZE        0x07
+#define MAC_EVENT_FRM_MOVE          0x08
+#define MAC_EVENT_IMAGE_LOAD        0x09
+#define MAC_EVENT_IMAGE_ABORT       0x0a
+#define MAC_EVENT_IMAGE_ERROR       0x0b
 
 #endif // INCLUDED_SW_INC_CMDID_H
 

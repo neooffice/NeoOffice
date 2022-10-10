@@ -39,7 +39,7 @@
 #include <vcl/svapp.hxx>
 #include <osl/mutex.hxx>
 #include <tools/rcid.h>
-#include <jvmfwk/framework.hxx>
+#include <jvmfwk/framework.h>
 
 #include <svtools/restartdialog.hxx>
 #include <svtools/svtresid.hxx>
@@ -52,7 +52,7 @@
 #import "javainteractionhandler_cocoa.h"
 #include "../../../extensions/source/update/check/updatehdl.hrc"
 
-static ResMgr *pUpdResMgr = nullptr;
+static ResMgr *pUpdResMgr = NULL;
 
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
 
@@ -83,9 +83,9 @@ static OUString GetUpdResString( int nId )
 
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
 
-JavaInteractionHandler::JavaInteractionHandler() :
+JavaInteractionHandler::JavaInteractionHandler(bool bReportErrorOnce) :
     m_aRefCount(0),
-    m_bShowErrorsOnce(true),
+    m_bShowErrorsOnce(bReportErrorOnce),
     m_bJavaDisabled_Handled(false),
     m_bInvalidSettings_Handled(false),
     m_bJavaNotFound_Handled(false),
@@ -100,6 +100,7 @@ JavaInteractionHandler::~JavaInteractionHandler()
 }
 
 Any SAL_CALL JavaInteractionHandler::queryInterface(const Type& aType )
+    throw (RuntimeException, std::exception)
 {
     if (aType == cppu::UnoType<XInterface>::get())
         return Any( static_cast<XInterface*>(this), aType);
@@ -120,7 +121,7 @@ void SAL_CALL JavaInteractionHandler::release(  ) throw ()
 }
 
 
-void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionRequest >& Request )
+void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionRequest >& Request ) throw (RuntimeException, std::exception)
 {
     Any anyExc = Request->getRequest();
     Sequence< Reference< XInteractionContinuation > > aSeqCont = Request->getContinuations();
@@ -131,23 +132,23 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
 
     for ( i = 0; i < aSeqCont.getLength(); i++ )
     {
-        abort.set( aSeqCont[i], UNO_QUERY );
+        abort = Reference< XInteractionAbort>::query( aSeqCont[i]);
         if ( abort.is() )
             break;
     }
 
     for ( i= 0; i < aSeqCont.getLength(); i++)
     {
-        retry.set( aSeqCont[i], UNO_QUERY );
+        retry= Reference<XInteractionRetry>::query( aSeqCont[i]);
         if ( retry.is() )
             break;
     }
 
-    css::java::JavaNotFoundException           e1;
-    css::java::InvalidJavaSettingsException    e2;
-    css::java::JavaDisabledException           e3;
-    css::java::JavaVMCreationFailureException  e4;
-    css::java::RestartRequiredException        e5;
+    com::sun::star::java::JavaNotFoundException e1;
+    com::sun::star::java::InvalidJavaSettingsException e2;
+     com::sun::star::java::JavaDisabledException                e3;
+    com::sun::star::java::JavaVMCreationFailureException    e4;
+    com::sun::star::java::RestartRequiredException e5;
     // Try to recover the Exception type in the any and
     // react accordingly.
     sal_uInt16      nResult = RET_CANCEL;
@@ -159,28 +160,24 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
            // No suitable JRE found
             SolarMutexGuard aSolarGuard;
             m_bJavaNotFound_Handled = true;
-#ifdef MACOSX
-            ScopedVclPtrInstance< MessageDialog > aWarningBox(nullptr, SvtResId(STR_WARNING_JAVANOTFOUND_MAC), VclMessageType::Warning);
-#else
-            ScopedVclPtrInstance< MessageDialog > aWarningBox(nullptr, SvtResId(STR_WARNING_JAVANOTFOUND), VclMessageType::Warning);
-#endif
-            aWarningBox->SetText(SvtResId(STR_WARNING_JAVANOTFOUND_TITLE));
+            MessageDialog aWarningBox(NULL, SvtResId(STR_WARNING_JAVANOTFOUND), VCL_MESSAGE_WARNING);
+            aWarningBox.SetText(SvtResId(STR_WARNING_JAVANOTFOUND_TITLE));
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             OUString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
             aDownload = aDownload.replaceAll("~", "");
             if (aDownload.getLength())
             {
-                ScopedVclPtrInstance< QueryBox > aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_JAVANOTFOUND));
-                aQueryBox->SetText(aWarningBox->GetText());
-                aQueryBox->SetButtonText(RET_OK, aDownload);
-                nResult = aQueryBox->Execute();
+                QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_JAVANOTFOUND));
+                aQueryBox.SetText(aWarningBox.GetText());
+                aQueryBox.SetButtonText(RET_OK, aDownload);
+                nResult = aQueryBox.Execute();
                 if (nResult == RET_OK)
                     JavaInteractionHandler_downloadJava();
             }
             else
             {
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-            nResult = aWarningBox->Execute();
+            nResult = aWarningBox.Execute();
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             }
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
@@ -198,27 +195,27 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             SolarMutexGuard aSolarGuard;
             m_bInvalidSettings_Handled = true;
 #ifdef MACOSX
-            ScopedVclPtrInstance< MessageDialog > aWarningBox(nullptr, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_MAC), VclMessageType::Warning);
+            MessageDialog aWarningBox(NULL, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_MAC), VCL_MESSAGE_WARNING);
 #else
-            ScopedVclPtrInstance< MessageDialog > aWarningBox(nullptr, SvtResId(STR_WARNING_INVALIDJAVASETTINGS), VclMessageType::Warning);
+            MessageDialog aWarningBox(NULL, SvtResId(STR_WARNING_INVALIDJAVASETTINGS), VCL_MESSAGE_WARNING);
 #endif
-            aWarningBox->SetText(SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
+            aWarningBox.SetText(SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             OUString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
             aDownload = aDownload.replaceAll("~", "");
             if (aDownload.getLength())
             {
-                ScopedVclPtrInstance< QueryBox > aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
-                aQueryBox->SetText(aWarningBox->GetText());
-                aQueryBox->SetButtonText(RET_OK, aDownload);
-                nResult = aQueryBox->Execute();
+                QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_WARNING_INVALIDJAVASETTINGS_TITLE));
+                aQueryBox.SetText(aWarningBox.GetText());
+                aQueryBox.SetButtonText(RET_OK, aDownload);
+                nResult = aQueryBox.Execute();
                 if (nResult == RET_OK)
                     JavaInteractionHandler_downloadJava();
             }
             else
             {
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-            nResult = aWarningBox->Execute();
+            nResult = aWarningBox.Execute();
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             }
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
@@ -235,12 +232,12 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             SolarMutexGuard aSolarGuard;
             m_bJavaDisabled_Handled = true;
             // Java disabled. Give user a chance to enable Java inside Office.
-            ScopedVclPtrInstance<MessageDialog> aQueryBox(nullptr , "JavaDisabledDialog",
-                                                          "svt/ui/javadisableddialog.ui");
-            nResult = aQueryBox->Execute();
+            MessageDialog aQueryBox(NULL, "JavaDisabledDialog",
+                                    "svt/ui/javadisableddialog.ui");
+            nResult = aQueryBox.Execute();
             if ( nResult == RET_YES )
             {
-                jfw_setEnabled(true);
+                jfw_setEnabled(sal_True);
             }
 
             m_nResult_JavaDisabled = nResult;
@@ -259,27 +256,27 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             SolarMutexGuard aSolarGuard;
             m_bVMCreationFailure_Handled = true;
 #ifdef MACOSX
-            ScopedVclPtrInstance< MessageDialog > aErrorBox(nullptr, SvtResId(STR_ERROR_JVMCREATIONFAILED_MAC));
+            MessageDialog aErrorBox(NULL, SvtResId(STR_ERROR_JVMCREATIONFAILED_MAC));
 #else
-            ScopedVclPtrInstance< MessageDialog > aErrorBox(nullptr, SvtResId(STR_ERROR_JVMCREATIONFAILED));
+            MessageDialog aErrorBox(NULL, SvtResId(STR_ERROR_JVMCREATIONFAILED));
 #endif
-            aErrorBox->SetText(SvtResId(STR_ERROR_JVMCREATIONFAILED_TITLE));
+            aErrorBox.SetText(SvtResId(STR_ERROR_JVMCREATIONFAILED_TITLE));
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             OUString aDownload = GetUpdResString(RID_UPDATE_BTN_DOWNLOAD);
             aDownload = aDownload.replaceAll("~", "");
             if (aDownload.getLength())
             {
-                ScopedVclPtrInstance< QueryBox > aQueryBox(nullptr, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_ERROR_JVMCREATIONFAILED));
-                aQueryBox->SetText(aErrorBox->GetText());
-                aQueryBox->SetButtonText(RET_OK, aDownload);
-                nResult = aQueryBox->Execute();
+                QueryBox aQueryBox(NULL, WB_OK_CANCEL | WB_DEF_OK, SvtResId(STR_ERROR_JVMCREATIONFAILED));
+                aQueryBox.SetText(aErrorBox.GetText());
+                aQueryBox.SetButtonText(RET_OK, aDownload);
+                nResult = aQueryBox.Execute();
                 if (nResult == RET_OK)
                     JavaInteractionHandler_downloadJava();
             }
             else
             {
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
-            nResult = aErrorBox->Execute();
+            nResult = aErrorBox.Execute();
 #if defined PRODUCT_JAVA_DOWNLOAD_URL && defined USE_JAVA && defined MACOSX
             }
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL && USE_JAVA && MACOSX
@@ -298,7 +295,7 @@ void SAL_CALL JavaInteractionHandler::handle( const Reference< XInteractionReque
             SolarMutexGuard aSolarGuard;
             m_bRestartRequired_Handled = true;
             svtools::executeRestartDialog(
-                comphelper::getProcessComponentContext(), nullptr,
+                comphelper::getProcessComponentContext(), 0,
                 svtools::RESTART_REASON_JAVA);
         }
         nResult = RET_OK;

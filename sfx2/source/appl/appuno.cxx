@@ -66,7 +66,6 @@
 #include <tools/config.hxx>
 #include <tools/debug.hxx>
 #include <tools/urlobj.hxx>
-#include <cppuhelper/implbase.hxx>
 
 #include <com/sun/star/document/FilterOptionsRequest.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
@@ -75,7 +74,7 @@
 #include <com/sun/star/task/XInteractionHandler.hpp>
 #include <com/sun/star/ucb/XContent.hpp>
 
-#include <memory>
+#include <boost/scoped_ptr.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::ucb;
@@ -86,30 +85,29 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::io;
 
 // needs to be converted to a better data structure
-SfxFormalArgument const aFormalArgs[] = {
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "SuggestedSaveAsName", SID_DEFAULTFILENAME },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "SuggestedSaveAsDir", SID_DEFAULTFILEPATH },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "VersionAuthor", SID_DOCINFO_AUTHOR },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "VersionComment", SID_DOCINFO_COMMENTS },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "DontTerminateEdit", FN_PARAM_1 },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "VersionMajor", SID_DOCINFO_MAJOR },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "FilterOptions", SID_FILE_FILTEROPTIONS },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "FilterName", SID_FILTER_NAME },
-//    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "FileName", SID_FILE_NAME },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "URL", SID_FILE_NAME },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "OpenFlags", SID_OPTIONS },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "Overwrite", SID_OVERWRITE },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "Password", SID_PASSWORD },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "PasswordInteraction", SID_PASSWORDINTERACTION },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "Referer", SID_REFERER },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "SaveTo", SID_SAVETO },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "TemplateName", SID_TEMPLATE_NAME },
-    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "TemplateRegion", SID_TEMPLATE_REGIONNAME },
-//    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "Region", SID_TEMPLATE_REGIONNAME },
-//    { reinterpret_cast<SfxType*>(&aSfxStringItem_Impl), "Name", SID_TEMPLATE_NAME },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "Unpacked", SID_UNPACK },
-    { reinterpret_cast<SfxType*>(&aSfxInt16Item_Impl), "Version", SID_VERSION },
-    { reinterpret_cast<SfxType*>(&aSfxBoolItem_Impl), "SaveACopy", SID_SAVEACOPYITEM },
+SfxFormalArgument aFormalArgs[] = {
+    { (const SfxType*) &aSfxStringItem_Impl, "SuggestedSaveAsName", SID_DEFAULTFILENAME },
+    { (const SfxType*) &aSfxStringItem_Impl, "SuggestedSaveAsDir", SID_DEFAULTFILEPATH },
+    { (const SfxType*) &aSfxStringItem_Impl, "VersionAuthor", SID_DOCINFO_AUTHOR },
+    { (const SfxType*) &aSfxStringItem_Impl, "VersionComment", SID_DOCINFO_COMMENTS },
+    { (const SfxType*) &aSfxBoolItem_Impl, "VersionMajor", SID_DOCINFO_MAJOR },
+    { (const SfxType*) &aSfxStringItem_Impl, "FilterOptions", SID_FILE_FILTEROPTIONS },
+    { (const SfxType*) &aSfxStringItem_Impl, "FilterName", SID_FILTER_NAME },
+//    { (const SfxType*) &aSfxStringItem_Impl, "FileName", SID_FILE_NAME },
+    { (const SfxType*) &aSfxStringItem_Impl, "URL", SID_FILE_NAME },
+    { (const SfxType*) &aSfxStringItem_Impl, "OpenFlags", SID_OPTIONS },
+    { (const SfxType*) &aSfxBoolItem_Impl, "Overwrite", SID_OVERWRITE },
+    { (const SfxType*) &aSfxStringItem_Impl, "Password", SID_PASSWORD },
+    { (const SfxType*) &aSfxBoolItem_Impl, "PasswordInteraction", SID_PASSWORDINTERACTION },
+    { (const SfxType*) &aSfxStringItem_Impl, "Referer", SID_REFERER },
+    { (const SfxType*) &aSfxBoolItem_Impl, "SaveTo", SID_SAVETO },
+    { (const SfxType*) &aSfxStringItem_Impl, "TemplateName", SID_TEMPLATE_NAME },
+    { (const SfxType*) &aSfxStringItem_Impl, "TemplateRegion", SID_TEMPLATE_REGIONNAME },
+//    { (const SfxType*) &aSfxStringItem_Impl, "Region", SID_TEMPLATE_REGIONNAME },
+//    { (const SfxType*) &aSfxStringItem_Impl, "Name", SID_TEMPLATE_NAME },
+    { (const SfxType*) &aSfxBoolItem_Impl, "Unpacked", SID_UNPACK },
+    { (const SfxType*) &aSfxInt16Item_Impl, "Version", SID_VERSION },
+    { (const SfxType*) &aSfxBoolItem_Impl, "SaveACopy", SID_SAVEACOPYITEM },
 };
 
 static sal_uInt16 nMediaArgsCount = sizeof(aFormalArgs) / sizeof (SfxFormalArgument);
@@ -136,6 +134,7 @@ static char const sViewOnly[] = "ViewOnly";
 static char const sDontEdit[] = "DontEdit";
 static char const sSilent[] = "Silent";
 static char const sJumpMark[] = "JumpMark";
+static char const sFileName[] = "FileName";
 static char const sSalvagedFile[] = "SalvagedFile";
 static char const sStatusInd[] = "StatusIndicator";
 static char const sModel[] = "Model";
@@ -143,6 +142,7 @@ static char const sFrame[] = "Frame";
 static char const sViewData[] = "ViewData";
 static char const sFilterData[] = "FilterData";
 static char const sSelectionOnly[] = "SelectionOnly";
+static char const sFilterFlags[] = "FilterFlags";
 static char const sMacroExecMode[] = "MacroExecutionMode";
 static char const sUpdateDocMode[] = "UpdateDocMode";
 static char const sMinimized[] = "Minimized";
@@ -193,17 +193,19 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 
     if ( nSlotId == SID_OPENURL )
         nSlotId = SID_OPENDOC;
+    if ( nSlotId == SID_SAVEASURL )
+        nSlotId = SID_SAVEASDOC;
 
     sal_Int32 nCount = rArgs.getLength();
     if ( !nCount )
         return;
 
     const beans::PropertyValue* pPropsVal = rArgs.getConstArray();
-    if ( !pSlot->IsMode(SfxSlotMode::METHOD) )
+    if ( !pSlot->IsMode(SFX_SLOT_METHOD) )
     {
         // slot is a property
         const SfxType* pType = pSlot->GetType();
-        std::unique_ptr<SfxPoolItem> pItem(pType->CreateItem());
+        boost::scoped_ptr<SfxPoolItem> pItem(pType->CreateItem());
 
         if ( !pItem )
         {
@@ -216,7 +218,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
         }
 
         sal_uInt16 nWhich = rSet.GetPool()->GetWhich(nSlotId);
-        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == MapUnit::MapTwip );
+        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == SFX_MAPUNIT_TWIP );
         pItem->SetWhich( nWhich );
         sal_uInt16 nSubCount = pType->nAttribs;
 
@@ -242,7 +244,9 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
         else if ( nSubCount == 0 )
         {
             // for a simple property there can be only one parameter and its name *must* match
-            SAL_WARN("sfx.appl", "Property name does not match: " << aName);
+            OUStringBuffer aStr("Property name does not match: ");
+            aStr.append(aName);
+            OSL_FAIL( aStr.getStr() );
         }
 #endif
         else
@@ -257,12 +261,12 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
             {
                 OStringBuffer aStr("MacroPlayer: wrong number of parameters for slot: ");
                 aStr.append(static_cast<sal_Int32>(nSlotId));
-                SAL_INFO("sfx.appl", aStr.getStr());
+                DBG_WARNING(aStr.getStr());
             }
 #endif
             // complex property; collect sub items from the parameter set and reconstruct complex item
             sal_uInt16 nFound=0;
-            for ( sal_Int32 n=0; n<nCount; n++ )
+            for ( sal_uInt16 n=0; n<nCount; n++ )
             {
                 const beans::PropertyValue& rPropValue = pPropsVal[n];
                 sal_uInt16 nSub;
@@ -321,7 +325,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
     for ( sal_uInt16 nArgs=0; nArgs<nMaxArgs; nArgs++ )
     {
         const SfxFormalArgument &rArg = bIsMediaDescriptor ? aFormalArgs[nArgs] : pSlot->GetFormalArgument( nArgs );
-        std::unique_ptr<SfxPoolItem> pItem(rArg.CreateItem());
+        boost::scoped_ptr<SfxPoolItem> pItem(rArg.CreateItem());
         if ( !pItem )
         {
 #ifdef DBG_UTIL
@@ -333,14 +337,14 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
         }
 
         sal_uInt16 nWhich = rSet.GetPool()->GetWhich(rArg.nSlotId);
-        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == MapUnit::MapTwip );
+        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == SFX_MAPUNIT_TWIP );
         pItem->SetWhich( nWhich );
         const SfxType* pType = rArg.pType;
         sal_uInt16 nSubCount = pType->nAttribs;
         if ( nSubCount == 0 )
         {
             // "simple" (base type) argument
-            for ( sal_Int32 n=0; n<nCount; n++ )
+            for ( sal_uInt16 n=0; n<nCount; n++ )
             {
                 const beans::PropertyValue& rProp = pPropsVal[n];
                 OUString aName = rProp.Name;
@@ -349,7 +353,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 #ifdef DBG_UTIL
                     ++nFoundArgs;
 #endif
-                    if( pItem->PutValue( rProp.Value, 0 ) )
+                    if( pItem->PutValue( rProp.Value ) )
                         // only use successfully converted items
                         rSet.Put( *pItem );
 #ifdef DBG_UTIL
@@ -368,7 +372,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
         {
             // complex argument, could be passed in one struct
             bool bAsWholeItem = false;
-            for ( sal_Int32 n=0; n<nCount; n++ )
+            for ( sal_uInt16 n=0; n<nCount; n++ )
             {
                 const beans::PropertyValue& rProp = pPropsVal[n];
                 OUString aName = rProp.Name;
@@ -378,7 +382,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 #ifdef DBG_UTIL
                     ++nFoundArgs;
 #endif
-                    if( pItem->PutValue( rProp.Value, 0 ) )
+                    if( pItem->PutValue( rProp.Value ) )
                         // only use successfully converted items
                         rSet.Put( *pItem );
 #ifdef DBG_UTIL
@@ -398,7 +402,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
                 // only put item if at least one member was found and had the correct type
                 // (is this a good idea?! Should we ask for *all* members?)
                 bool bRet = false;
-                for ( sal_Int32 n=0; n<nCount; n++ )
+                for ( sal_uInt16 n=0; n<nCount; n++ )
                 {
                     const beans::PropertyValue& rProp = pPropsVal[n];
                     for ( sal_uInt16 nSub=0; nSub<nSubCount; nSub++ )
@@ -447,7 +451,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
     // f.e. "SaveAs" shouldn't support parameters not in the slot definition!)
     if ( nSlotId == SID_NEWWINDOW )
     {
-        for ( sal_Int32 n=0; n<nCount; n++ )
+        for ( sal_uInt16 n=0; n<nCount; n++ )
         {
             const beans::PropertyValue& rProp = pPropsVal[n];
             OUString aName = rProp.Name;
@@ -468,7 +472,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
     }
     else if ( bIsMediaDescriptor )
     {
-        for ( sal_Int32 n=0; n<nCount; n++ )
+        for ( sal_uInt16 n=0; n<nCount; n++ )
         {
 #ifdef DBG_UTIL
             ++nFoundArgs;
@@ -701,7 +705,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
                     rSet.Put( stringList );
                 }
             }
-            else if ( aName == "FileName" )
+            else if ( aName == sFileName )
             {
                 OUString sVal;
                 bool bOK = ((rProp.Value >>= sVal) && !sVal.isEmpty());
@@ -773,7 +777,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
                 if (bOK)
                     rSet.Put( SfxStringItem( SID_CHARSET, sVal ) );
             }
-            else if ( aName == "FilterFlags" )
+            else if ( aName == sFilterFlags )
             {
                 OUString sVal;
                 bool bOK = ((rProp.Value >>= sVal) && !sVal.isEmpty());
@@ -894,13 +898,15 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
     else
     {
         // transform parameter "OptionsPageURL" of slot "OptionsTreeDialog"
-        if ( "OptionsTreeDialog" == OUString( pSlot->pUnoName, strlen(pSlot->pUnoName), RTL_TEXTENCODING_UTF8 ) )
+        OUString sSlotName( "OptionsTreeDialog" );
+        OUString sPropName( "OptionsPageURL" );
+        if ( sSlotName == OUString( pSlot->pUnoName, strlen(pSlot->pUnoName), RTL_TEXTENCODING_UTF8 ) )
         {
-            for ( sal_Int32 n = 0; n < nCount; ++n )
+            for ( sal_uInt16 n = 0; n < nCount; ++n )
             {
                 const PropertyValue& rProp = pPropsVal[n];
                 OUString sName( rProp.Name );
-                if ( sName == "OptionsPageURL" )
+                if ( sName == sPropName )
                 {
                     OUString sURL;
                     if ( rProp.Value >>= sURL )
@@ -916,7 +922,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
         // except for the "special" slots: assure that every argument was convertible
         OStringBuffer aStr("MacroPlayer: Some properties didn't match to any formal argument for slot: ");
         aStr.append(pSlot->pUnoName);
-        SAL_INFO( "sfx.appl", aStr.getStr() );
+        DBG_WARNING( aStr.getStr() );
     }
 #endif
 }
@@ -937,7 +943,7 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
 
     if ( nSlotId == SID_OPENURL )
         nSlotId = SID_OPENDOC;
-    if ( nSlotId == SID_SAVEASREMOTE )
+    if ( nSlotId == SID_SAVEASURL )
         nSlotId = SID_SAVEASDOC;
 
     // find number of properties to avoid permanent reallocations in the sequence
@@ -949,7 +955,7 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
 #endif
 
     const SfxType *pType = pSlot->GetType();
-    if ( !pSlot->IsMode(SfxSlotMode::METHOD) )
+    if ( !pSlot->IsMode(SFX_SLOT_METHOD) )
     {
         // slot is a property
         sal_uInt16 nWhich = rSet.GetPool()->GetWhich(nSlotId);
@@ -1139,7 +1145,7 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
                     // not really set
                     continue;
 
-                if ( !pSlot->IsMode(SfxSlotMode::METHOD) && nId == rSet.GetPool()->GetWhich( pSlot->GetSlotId() ) )
+                if ( !pSlot->IsMode(SFX_SLOT_METHOD) && nId == rSet.GetPool()->GetWhich( pSlot->GetSlotId() ) )
                     continue;
 
                 bool bIsMediaDescriptor = isMediaDescriptor( nSlotId );
@@ -1286,12 +1292,12 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
     beans::PropertyValue *pValue = aSequ.getArray();
 
     sal_Int32 nActProp=0;
-    if ( !pSlot->IsMode(SfxSlotMode::METHOD) )
+    if ( !pSlot->IsMode(SFX_SLOT_METHOD) )
     {
         // slot is a property
         sal_uInt16 nWhich = rSet.GetPool()->GetWhich(nSlotId);
-        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == MapUnit::MapTwip );
-        const SfxPoolItem* pItem = rSet.GetItem<SfxPoolItem>(nWhich, false);
+        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == SFX_MAPUNIT_TWIP );
+        SFX_ITEMSET_ARG( &rSet, pItem, SfxPoolItem, nWhich, false );
         if ( pItem ) //???
         {
             sal_uInt16 nSubCount = pType->nAttribs;
@@ -1342,8 +1348,8 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
     {
         const SfxFormalArgument &rArg = pSlot->GetFormalArgument( nArg );
         sal_uInt16 nWhich = rSet.GetPool()->GetWhich( rArg.nSlotId );
-        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == MapUnit::MapTwip );
-        const SfxPoolItem* pItem = rSet.GetItem<SfxPoolItem>(nWhich, false);
+        bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == SFX_MAPUNIT_TWIP );
+        SFX_ITEMSET_ARG( &rSet, pItem, SfxPoolItem, nWhich, false );
         if ( pItem ) //???
         {
             sal_uInt16 nSubCount = rArg.pType->nAttribs;
@@ -1389,277 +1395,277 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
          nSlotId == SID_SAVETO || nSlotId == SID_EXPORTDOCASPDF || nSlotId == SID_DIRECTEXPORTDOCASPDF ||
          nSlotId == SID_SAVEACOPY )
     {
-        const SfxPoolItem *pItem=nullptr;
+        const SfxPoolItem *pItem=0;
         if ( rSet.GetItemState( SID_COMPONENTDATA, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sComponentData;
+            pValue[nActProp].Name = OUString(sComponentData);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_COMPONENTCONTEXT, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sComponentContext;
+            pValue[nActProp].Name = OUString(sComponentContext);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_PROGRESS_STATUSBAR_CONTROL, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sStatusInd;
+            pValue[nActProp].Name = OUString(sStatusInd);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_INTERACTIONHANDLER, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sInteractionHdl;
+            pValue[nActProp].Name = OUString(sInteractionHdl);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_VIEW_DATA, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sViewData;
+            pValue[nActProp].Name = OUString(sViewData);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_FILTER_DATA, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sFilterData;
+            pValue[nActProp].Name = OUString(sFilterData);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DOCUMENT, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sModel;
+            pValue[nActProp].Name = OUString(sModel);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_CONTENT, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sUCBContent;
+            pValue[nActProp].Name = OUString(sUCBContent);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_INPUTSTREAM, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sInputStream;
+            pValue[nActProp].Name = OUString(sInputStream);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_STREAM, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sStream;
+            pValue[nActProp].Name = OUString(sStream);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_OUTPUTSTREAM, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sOutputStream;
+            pValue[nActProp].Name = OUString(sOutputStream);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_POSTDATA, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sPostData;
+            pValue[nActProp].Name = OUString(sPostData);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_FILLFRAME, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sFrame;
-            if ( dynamic_cast< const SfxUsrAnyItem *>( pItem ) !=  nullptr )
+            pValue[nActProp].Name = OUString(sFrame);
+            if ( pItem->ISA( SfxUsrAnyItem ) )
             {
                 OSL_FAIL( "TransformItems: transporting an XFrame via an SfxUsrAnyItem is not deprecated!" );
                 pValue[nActProp++].Value = static_cast< const SfxUsrAnyItem* >( pItem )->GetValue();
             }
-            else if ( dynamic_cast< const SfxUnoFrameItem *>( pItem ) !=  nullptr )
+            else if ( pItem->ISA( SfxUnoFrameItem ) )
                 pValue[nActProp++].Value <<= static_cast< const SfxUnoFrameItem* >( pItem )->GetFrame();
             else
                 OSL_FAIL( "TransformItems: invalid item type for SID_FILLFRAME!" );
         }
         if ( rSet.GetItemState( SID_TEMPLATE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sAsTemplate;
+            pValue[nActProp].Name = OUString(sAsTemplate);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_OPEN_NEW_VIEW, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sOpenNewView;
+            pValue[nActProp].Name = OUString(sOpenNewView);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_FAIL_ON_WARNING, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sFailOnWarning;
+            pValue[nActProp].Name = OUString(sFailOnWarning);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_VIEW_ID, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sViewId;
+            pValue[nActProp].Name = OUString(sViewId);
             pValue[nActProp++].Value <<= (sal_Int16) static_cast<const SfxUInt16Item*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_PLUGIN_MODE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sPluginMode;
+            pValue[nActProp].Name = OUString(sPluginMode);
             pValue[nActProp++].Value <<= (sal_Int16) static_cast<const SfxUInt16Item*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DOC_READONLY, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sReadOnly;
+            pValue[nActProp].Name = OUString(sReadOnly);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DDE_RECONNECT_ONLOAD, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sDdeReconnect;
+            pValue[nActProp].Name = OUString(sDdeReconnect);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DOC_STARTPRESENTATION, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sStartPresentation;
+            pValue[nActProp].Name = OUString(sStartPresentation);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_SELECTION, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sSelectionOnly;
+            pValue[nActProp].Name = OUString(sSelectionOnly);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_HIDDEN, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sHidden;
+            pValue[nActProp].Name = OUString(sHidden);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_MINIMIZED, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sMinimized;
+            pValue[nActProp].Name = OUString(sMinimized);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_SILENT, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sSilent;
+            pValue[nActProp].Name = OUString(sSilent);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_PREVIEW, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sPreview;
+            pValue[nActProp].Name = OUString(sPreview);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_VIEWONLY, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sViewOnly;
+            pValue[nActProp].Name = OUString(sViewOnly);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_EDITDOC, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sDontEdit;
+            pValue[nActProp].Name = OUString(sDontEdit);
             pValue[nActProp++].Value <<= !static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_FILE_DIALOG, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sUseSystemDialog;
+            pValue[nActProp].Name = OUString(sUseSystemDialog);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_STANDARD_DIR, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sStandardDir;
+            pValue[nActProp].Name = OUString(sStandardDir);
             pValue[nActProp++].Value <<= OUString( static_cast<const SfxStringItem*>(pItem)->GetValue());
         }
         if ( rSet.GetItemState( SID_BLACK_LIST, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sBlackList;
+            pValue[nActProp].Name = OUString(sBlackList);
 
-            css::uno::Sequence< OUString > aList;
+            com::sun::star::uno::Sequence< OUString > aList;
             static_cast<const SfxStringListItem*>(pItem)->GetStringList( aList );
             pValue[nActProp++].Value <<= aList ;
         }
         if ( rSet.GetItemState( SID_TARGETNAME, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sFrameName;
+            pValue[nActProp].Name = OUString(sFrameName);
             pValue[nActProp++].Value <<= OUString( static_cast<const SfxStringItem*>(pItem)->GetValue() );
         }
         if ( rSet.GetItemState( SID_DOC_SALVAGE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sSalvagedFile;
+            pValue[nActProp].Name = OUString(sSalvagedFile);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_PATH, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sFolderName;
+            pValue[nActProp].Name = OUString(sFolderName);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_CONTENTTYPE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sMediaType;
+            pValue[nActProp].Name = OUString(sMediaType);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_TEMPLATE_NAME, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sTemplateName;
+            pValue[nActProp].Name = OUString(sTemplateName);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_TEMPLATE_REGIONNAME, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sTemplateRegionName;
+            pValue[nActProp].Name = OUString(sTemplateRegionName);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_JUMPMARK, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sJumpMark;
+            pValue[nActProp].Name = OUString(sJumpMark);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
 
         if ( rSet.GetItemState( SID_CHARSET, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sCharacterSet;
+            pValue[nActProp].Name = OUString(sCharacterSet);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_MACROEXECMODE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sMacroExecMode;
+            pValue[nActProp].Name = OUString(sMacroExecMode);
             pValue[nActProp++].Value <<= (sal_Int16) static_cast<const SfxUInt16Item*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_UPDATEDOCMODE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sUpdateDocMode;
+            pValue[nActProp].Name = OUString(sUpdateDocMode);
             pValue[nActProp++].Value <<= (sal_Int16) static_cast<const SfxUInt16Item*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_REPAIRPACKAGE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sRepairPackage;
+            pValue[nActProp].Name = OUString(sRepairPackage);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue() ;
         }
         if ( rSet.GetItemState( SID_DOCINFO_TITLE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sDocumentTitle;
+            pValue[nActProp].Name = OUString(sDocumentTitle);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DOC_BASEURL, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sDocumentBaseURL;
+            pValue[nActProp].Name = OUString(sDocumentBaseURL);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DOC_HIERARCHICALNAME, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sHierarchicalDocumentName;
+            pValue[nActProp].Name = OUString(sHierarchicalDocumentName);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_COPY_STREAM_IF_POSSIBLE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sCopyStreamIfPossible;
+            pValue[nActProp].Name = OUString(sCopyStreamIfPossible);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_NOAUTOSAVE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sNoAutoSave;
+            pValue[nActProp].Name = OUString(sNoAutoSave);
             pValue[nActProp++].Value <<= static_cast<const SfxBoolItem*>(pItem)->GetValue() ;
         }
         if ( rSet.GetItemState( SID_MODIFYPASSWORDINFO, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sModifyPasswordInfo;
+            pValue[nActProp].Name = OUString(sModifyPasswordInfo);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_ENCRYPTIONDATA, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sEncryptionData;
+            pValue[nActProp].Name = OUString(sEncryptionData);
             pValue[nActProp++].Value = static_cast<const SfxUnoAnyItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_SUGGESTEDSAVEASDIR, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sSuggestedSaveAsDir;
+            pValue[nActProp].Name = OUString(sSuggestedSaveAsDir);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_SUGGESTEDSAVEASNAME, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sSuggestedSaveAsName;
+            pValue[nActProp].Name = OUString(sSuggestedSaveAsName);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if ( rSet.GetItemState( SID_DOC_SERVICE, false, &pItem ) == SfxItemState::SET )
         {
-            pValue[nActProp].Name = sDocumentService;
+            pValue[nActProp].Name = OUString(sDocumentService);
             pValue[nActProp++].Value <<= static_cast<const SfxStringItem*>(pItem)->GetValue();
         }
         if (rSet.HasItem(SID_FILTER_PROVIDER, &pItem))
@@ -1674,147 +1680,177 @@ void TransformItems( sal_uInt16 nSlotId, const SfxItemSet& rSet, uno::Sequence<b
 
 void SAL_CALL FilterOptionsContinuation::setFilterOptions(
                 const uno::Sequence<beans::PropertyValue>& rProps )
+        throw (uno::RuntimeException, std::exception)
 {
     rProperties = rProps;
 }
 
 uno::Sequence< beans::PropertyValue > SAL_CALL
     FilterOptionsContinuation::getFilterOptions()
+        throw (uno::RuntimeException, std::exception)
 {
     return rProperties;
 }
 
 
-RequestFilterOptions::RequestFilterOptions( uno::Reference< frame::XModel > const & rModel,
+
+RequestFilterOptions::RequestFilterOptions( uno::Reference< frame::XModel > rModel,
                               const uno::Sequence< beans::PropertyValue >& rProperties )
 {
     OUString temp;
     uno::Reference< uno::XInterface > temp2;
     document::FilterOptionsRequest aOptionsRequest( temp,
-                                                    temp2,
-                                                    rModel,
-                                                    rProperties );
+                                                                      temp2,
+                                                                      rModel,
+                                                                      rProperties );
 
     m_aRequest <<= aOptionsRequest;
 
-    m_xAbort  = new comphelper::OInteractionAbort;
-    m_xOptions = new FilterOptionsContinuation;
+    m_pAbort  = new comphelper::OInteractionAbort;
+    m_pOptions = new FilterOptionsContinuation;
+
+    m_lContinuations.realloc( 2 );
+    m_lContinuations[0] = uno::Reference< task::XInteractionContinuation >( m_pAbort  );
+    m_lContinuations[1] = uno::Reference< task::XInteractionContinuation >( m_pOptions );
 }
 
 uno::Any SAL_CALL RequestFilterOptions::getRequest()
+        throw( uno::RuntimeException, std::exception )
 {
     return m_aRequest;
 }
 
 uno::Sequence< uno::Reference< task::XInteractionContinuation > >
     SAL_CALL RequestFilterOptions::getContinuations()
+        throw( uno::RuntimeException, std::exception )
 {
-    return { m_xAbort.get(), m_xOptions.get() };
+    return m_lContinuations;
 }
 
 
-class RequestPackageReparation_Impl : public ::cppu::WeakImplHelper< task::XInteractionRequest >
+class RequestPackageReparation_Impl : public ::cppu::WeakImplHelper1< task::XInteractionRequest >
 {
     uno::Any m_aRequest;
-    rtl::Reference<comphelper::OInteractionApprove> m_xApprove;
-    rtl::Reference<comphelper::OInteractionDisapprove>  m_xDisapprove;
+    uno::Sequence< uno::Reference< task::XInteractionContinuation > > m_lContinuations;
+    comphelper::OInteractionApprove* m_pApprove;
+    comphelper::OInteractionDisapprove*  m_pDisapprove;
 
 public:
-    explicit RequestPackageReparation_Impl( const OUString& aName );
+    RequestPackageReparation_Impl( const OUString& aName );
     bool    isApproved();
-    virtual uno::Any SAL_CALL getRequest() override;
-    virtual uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL getContinuations() override;
+    virtual uno::Any SAL_CALL getRequest() throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL getContinuations()
+        throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 };
 
 RequestPackageReparation_Impl::RequestPackageReparation_Impl( const OUString& aName )
 {
     OUString temp;
     uno::Reference< uno::XInterface > temp2;
-    document::BrokenPackageRequest aBrokenPackageRequest( temp, temp2, aName );
-    m_aRequest <<= aBrokenPackageRequest;
-    m_xApprove = new comphelper::OInteractionApprove;
-    m_xDisapprove = new comphelper::OInteractionDisapprove;
+    document::BrokenPackageRequest aBrokenPackageRequest( temp,
+                                                                                 temp2,
+                                                                              aName );
+       m_aRequest <<= aBrokenPackageRequest;
+    m_pApprove = new comphelper::OInteractionApprove;
+    m_pDisapprove = new comphelper::OInteractionDisapprove;
+       m_lContinuations.realloc( 2 );
+       m_lContinuations[0] = uno::Reference< task::XInteractionContinuation >( m_pApprove );
+       m_lContinuations[1] = uno::Reference< task::XInteractionContinuation >( m_pDisapprove );
 }
 
 bool RequestPackageReparation_Impl::isApproved()
 {
-    return m_xApprove->wasSelected();
+    return m_pApprove->wasSelected();
 }
 
 uno::Any SAL_CALL RequestPackageReparation_Impl::getRequest()
+        throw( uno::RuntimeException, std::exception )
 {
     return m_aRequest;
 }
 
 uno::Sequence< uno::Reference< task::XInteractionContinuation > >
     SAL_CALL RequestPackageReparation_Impl::getContinuations()
+        throw( uno::RuntimeException, std::exception )
 {
-    return { m_xApprove.get(), m_xDisapprove.get() };
+    return m_lContinuations;
 }
 
 RequestPackageReparation::RequestPackageReparation( const OUString& aName )
-    : mxImpl(new RequestPackageReparation_Impl( aName ))
 {
+    pImp = new RequestPackageReparation_Impl( aName );
+    pImp->acquire();
 }
 
 RequestPackageReparation::~RequestPackageReparation()
 {
+    pImp->release();
 }
 
 bool RequestPackageReparation::isApproved()
 {
-    return mxImpl->isApproved();
+    return pImp->isApproved();
 }
 
-css::uno::Reference < task::XInteractionRequest > RequestPackageReparation::GetRequest()
+com::sun::star::uno::Reference < task::XInteractionRequest > RequestPackageReparation::GetRequest()
 {
-    return mxImpl.get();
+    return com::sun::star::uno::Reference < task::XInteractionRequest >(pImp);
 }
 
 
-class NotifyBrokenPackage_Impl : public ::cppu::WeakImplHelper< task::XInteractionRequest >
+class NotifyBrokenPackage_Impl : public ::cppu::WeakImplHelper1< task::XInteractionRequest >
 {
     uno::Any m_aRequest;
-    rtl::Reference<comphelper::OInteractionAbort>  m_xAbort;
+    uno::Sequence< uno::Reference< task::XInteractionContinuation > > m_lContinuations;
+    comphelper::OInteractionAbort*  m_pAbort;
 
 public:
-    explicit NotifyBrokenPackage_Impl(const OUString& rName);
-    virtual uno::Any SAL_CALL getRequest() override;
-    virtual uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL getContinuations() override;
+    NotifyBrokenPackage_Impl( const OUString& aName );
+    virtual uno::Any SAL_CALL getRequest() throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual uno::Sequence< uno::Reference< task::XInteractionContinuation > > SAL_CALL getContinuations()
+        throw( uno::RuntimeException, std::exception ) SAL_OVERRIDE;
 };
 
 NotifyBrokenPackage_Impl::NotifyBrokenPackage_Impl( const OUString& aName )
 {
     OUString temp;
     uno::Reference< uno::XInterface > temp2;
-    document::BrokenPackageRequest aBrokenPackageRequest( temp, temp2, aName );
-    m_aRequest <<= aBrokenPackageRequest;
-    m_xAbort = new comphelper::OInteractionAbort;
+    document::BrokenPackageRequest aBrokenPackageRequest( temp,
+                                                                                 temp2,
+                                                                              aName );
+       m_aRequest <<= aBrokenPackageRequest;
+    m_pAbort  = new comphelper::OInteractionAbort;
+       m_lContinuations.realloc( 1 );
+       m_lContinuations[0] = uno::Reference< task::XInteractionContinuation >( m_pAbort  );
 }
 
 uno::Any SAL_CALL NotifyBrokenPackage_Impl::getRequest()
+        throw( uno::RuntimeException, std::exception )
 {
     return m_aRequest;
 }
 
 uno::Sequence< uno::Reference< task::XInteractionContinuation > >
     SAL_CALL NotifyBrokenPackage_Impl::getContinuations()
+        throw( uno::RuntimeException, std::exception )
 {
-    return { m_xAbort.get() };
+    return m_lContinuations;
 }
 
 NotifyBrokenPackage::NotifyBrokenPackage( const OUString& aName )
-    : mxImpl(new NotifyBrokenPackage_Impl( aName ))
 {
+    pImp = new NotifyBrokenPackage_Impl( aName );
+    pImp->acquire();
 }
 
 NotifyBrokenPackage::~NotifyBrokenPackage()
 {
+    pImp->release();
 }
 
-css::uno::Reference < task::XInteractionRequest > NotifyBrokenPackage::GetRequest()
+com::sun::star::uno::Reference < task::XInteractionRequest > NotifyBrokenPackage::GetRequest()
 {
-    return mxImpl.get();
+    return com::sun::star::uno::Reference < task::XInteractionRequest >(pImp);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

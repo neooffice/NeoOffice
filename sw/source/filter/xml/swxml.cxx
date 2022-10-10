@@ -30,6 +30,7 @@
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/xml/sax/InputSource.hpp>
 #include <com/sun/star/xml/sax/Parser.hpp>
+#include <com/sun/star/io/XActiveDataControl.hpp>
 #include <com/sun/star/text/XTextRange.hpp>
 #include <com/sun/star/container/XChild.hpp>
 #include <com/sun/star/document/NamedPropertyValues.hpp>
@@ -37,12 +38,11 @@
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/NamedValue.hpp>
 #include <com/sun/star/beans/PropertyAttribute.hpp>
+#include <com/sun/star/task/XStatusIndicatorFactory.hpp>
 #include <com/sun/star/io/XActiveDataSource.hpp>
 #include <com/sun/star/packages/zip/ZipIOException.hpp>
 #include <com/sun/star/packages/WrongPasswordException.hpp>
 #include <com/sun/star/ucb/InteractiveAugmentedIOException.hpp>
-#include <o3tl/any.hxx>
-#include <vcl/errinf.hxx>
 #include <sfx2/docfile.hxx>
 #include <svtools/sfxecode.hxx>
 #include <svl/stritem.hxx>
@@ -72,7 +72,6 @@
 #include <poolfmt.hxx>
 #include <numrule.hxx>
 #include <paratr.hxx>
-#include <fmtrowsplt.hxx>
 
 #include <svx/svdmodel.hxx>
 #include <svx/svdpage.hxx>
@@ -93,18 +92,18 @@ using namespace ::com::sun::star::lang;
 
 static void lcl_EnsureValidPam( SwPaM& rPam )
 {
-    if( rPam.GetContentNode() != nullptr )
+    if( rPam.GetCntntNode() != NULL )
     {
         // set proper point content
-        if( rPam.GetContentNode() != rPam.GetPoint()->nContent.GetIdxReg() )
+        if( rPam.GetCntntNode() != rPam.GetPoint()->nContent.GetIdxReg() )
         {
-            rPam.GetPoint()->nContent.Assign( rPam.GetContentNode(), 0 );
+            rPam.GetPoint()->nContent.Assign( rPam.GetCntntNode(), 0 );
         }
         // else: point was already valid
 
         // if mark is invalid, we delete it
-        if( ( rPam.GetContentNode( false ) == nullptr ) ||
-            ( rPam.GetContentNode( false ) != rPam.GetMark()->nContent.GetIdxReg() ) )
+        if( ( rPam.GetCntntNode( false ) == NULL ) ||
+            ( rPam.GetCntntNode( false ) != rPam.GetMark()->nContent.GetIdxReg() ) )
         {
             rPam.DeleteMark();
         }
@@ -116,7 +115,7 @@ static void lcl_EnsureValidPam( SwPaM& rPam )
         rPam.GetPoint()->nNode =
             *rPam.GetDoc()->GetNodes().GetEndOfContent().StartOfSectionNode();
         ++ rPam.GetPoint()->nNode;
-        rPam.Move( fnMoveForward, GoInContent ); // go into content
+        rPam.Move( fnMoveForward, fnGoCntnt ); // go into content
     }
 }
 
@@ -134,8 +133,8 @@ namespace
 
 /// read a component (file + filter version)
 sal_Int32 ReadThroughComponent(
-    uno::Reference<io::XInputStream> const & xInputStream,
-    uno::Reference<XComponent> const & xModelComponent,
+    uno::Reference<io::XInputStream> xInputStream,
+    uno::Reference<XComponent> xModelComponent,
     const OUString& rStreamName,
     uno::Reference<uno::XComponentContext> & rxContext,
     const sal_Char* pFilterName,
@@ -147,7 +146,7 @@ sal_Int32 ReadThroughComponent(
     OSL_ENSURE(xInputStream.is(), "input stream missing");
     OSL_ENSURE(xModelComponent.is(), "document missing");
     OSL_ENSURE(rxContext.is(), "factory missing");
-    OSL_ENSURE(nullptr != pFilterName,"I need a service name for the component!");
+    OSL_ENSURE(NULL != pFilterName,"I need a service name for the component!");
 
     // prepare ParserInputSrouce
     xml::sax::InputSource aParserInput;
@@ -162,7 +161,7 @@ sal_Int32 ReadThroughComponent(
     uno::Reference< xml::sax::XDocumentHandler > xFilter(
         rxContext->getServiceManager()->createInstanceWithArgumentsAndContext(aFilterName, rFilterArguments, rxContext),
         UNO_QUERY);
-    SAL_WARN_IF(!xFilter.is(), "sw.filter", "Can't instantiate filter component: " << aFilterName);
+    SAL_WARN_IF(!xFilter.is(), "sw", "Can't instantiate filter component: " << aFilterName);
     if( !xFilter.is() )
         return ERR_SWG_READ_ERROR;
     SAL_INFO( "sw.filter", "" << pFilterName << " created" );
@@ -182,7 +181,7 @@ sal_Int32 ReadThroughComponent(
     {
         // sax parser sends wrapped exceptions,
         // try to find the original one
-        xml::sax::SAXException aSaxEx = *static_cast<xml::sax::SAXException*>(&r);
+        xml::sax::SAXException aSaxEx = *(xml::sax::SAXException*)(&r);
         bool bTryChild = true;
 
         while( bTryChild )
@@ -218,13 +217,13 @@ sal_Int32 ReadThroughComponent(
                             (bMustBeSuccessfull ? ERR_FORMAT_FILE_ROWCOL
                                                     : WARN_FORMAT_FILE_ROWCOL),
                             rStreamName, sErr,
-                            DialogMask::ButtonsOk | DialogMask::MessageError );
+                            ERRCODE_BUTTON_OK | ERRCODE_MSG_ERROR );
         }
         else
         {
             OSL_ENSURE( bMustBeSuccessfull, "Warnings are not supported" );
             return *new StringErrorInfo( ERR_FORMAT_ROWCOL, sErr,
-                             DialogMask::ButtonsOk | DialogMask::MessageError );
+                             ERRCODE_BUTTON_OK | ERRCODE_MSG_ERROR );
         }
     }
     catch(const xml::sax::SAXException& r)
@@ -285,8 +284,8 @@ sal_Int32 ReadThroughComponent(
 
 // read a component (storage version)
 sal_Int32 ReadThroughComponent(
-    uno::Reference<embed::XStorage> const & xStorage,
-    uno::Reference<XComponent> const & xModelComponent,
+    uno::Reference<embed::XStorage> xStorage,
+    uno::Reference<XComponent> xModelComponent,
     const sal_Char* pStreamName,
     const sal_Char* pCompatibilityStreamName,
     uno::Reference<uno::XComponentContext> & rxContext,
@@ -296,7 +295,7 @@ sal_Int32 ReadThroughComponent(
     bool bMustBeSuccessfull)
 {
     OSL_ENSURE(xStorage.is(), "Need storage!");
-    OSL_ENSURE(nullptr != pStreamName, "Please, please, give me a name!");
+    OSL_ENSURE(NULL != pStreamName, "Please, please, give me a name!");
 
     // open stream (and set parser input)
     OUString sStreamName = OUString::createFromAscii(pStreamName);
@@ -315,7 +314,7 @@ sal_Int32 ReadThroughComponent(
         // if no stream can be opened, return immediately with OK signal
 
         // do we even have an alternative name?
-        if ( nullptr == pCompatibilityStreamName )
+        if ( NULL == pCompatibilityStreamName )
             return 0;
 
         // if so, does the stream exist?
@@ -350,8 +349,8 @@ sal_Int32 ReadThroughComponent(
 
         Any aAny = xProps->getPropertyValue("Encrypted");
 
-        auto b = o3tl::tryAccess<bool>(aAny);
-        bool bEncrypted = b && *b;
+        bool bEncrypted = aAny.getValueType() == ::getBooleanCppuType() &&
+                *(sal_Bool *)aAny.getValue();
 
         uno::Reference <io::XInputStream> xInputStream = xStream->getInputStream();
 
@@ -371,7 +370,7 @@ sal_Int32 ReadThroughComponent(
     }
     catch ( uno::Exception& )
     {
-        OSL_FAIL( "Error on import" );
+        OSL_FAIL( "Error on import!\n" );
         // TODO/LATER: error handling
     }
 
@@ -391,7 +390,7 @@ static void lcl_AdjustOutlineStylesForOOo(SwDoc& _rDoc)
         for ( sal_uInt8 i = 0; i < MAXLEVEL; ++i )
         {
             sStyleName =
-                SwStyleNameMapper::GetProgName( RES_POOLCOLL_HEADLINE1 + i,
+                SwStyleNameMapper::GetProgName( static_cast< sal_uInt16 >(RES_POOLCOLL_HEADLINE1 + i),
                                                 sStyleName );
             aDefOutlStyleNames[i] = sStyleName;
         }
@@ -400,22 +399,22 @@ static void lcl_AdjustOutlineStylesForOOo(SwDoc& _rDoc)
     // array indicating, which outline level already has a style assigned.
     bool aOutlineLevelAssigned[ MAXLEVEL ];
     // array of the default outline styles, which are created for the document.
-    SwTextFormatColl* aCreatedDefaultOutlineStyles[ MAXLEVEL ];
+    SwTxtFmtColl* aCreatedDefaultOutlineStyles[ MAXLEVEL ];
 
     {
         for ( sal_uInt8 i = 0; i < MAXLEVEL; ++i )
         {
             aOutlineLevelAssigned[ i ] = false;
-            aCreatedDefaultOutlineStyles[ i ] = nullptr;
+            aCreatedDefaultOutlineStyles[ i ] = 0L;
         }
     }
 
     // determine, which outline level has already a style assigned and
     // which of the default outline styles is created.
-    const SwTextFormatColls& rColls = *(_rDoc.GetTextFormatColls());
+    const SwTxtFmtColls& rColls = *(_rDoc.GetTxtFmtColls());
     for ( size_t n = 1; n < rColls.size(); ++n )
     {
-        SwTextFormatColl* pColl = rColls[ n ];
+        SwTxtFmtColl* pColl = rColls[ n ];
         if ( pColl->IsAssignedToListLevelOfOutlineStyle() )
         {
             aOutlineLevelAssigned[ pColl->GetAssignedOutlineStyleLevel() ] = true;
@@ -423,7 +422,7 @@ static void lcl_AdjustOutlineStylesForOOo(SwDoc& _rDoc)
 
         for ( sal_uInt8 i = 0; i < MAXLEVEL; ++i )
         {
-            if ( aCreatedDefaultOutlineStyles[ i ] == nullptr &&
+            if ( aCreatedDefaultOutlineStyles[ i ] == 0L &&
                  pColl->GetName() == aDefOutlStyleNames[i] )
             {
                 aCreatedDefaultOutlineStyles[ i ] = pColl;
@@ -441,7 +440,7 @@ static void lcl_AdjustOutlineStylesForOOo(SwDoc& _rDoc)
         // Do not change assignment of already created default outline style
         // to a certain outline level.
         if ( !aOutlineLevelAssigned[ i ] &&
-             aCreatedDefaultOutlineStyles[ i ] != nullptr &&
+             aCreatedDefaultOutlineStyles[ i ] != 0 &&
              ! aCreatedDefaultOutlineStyles[ i ]->IsAssignedToListLevelOfOutlineStyle() )
         {
             // apply outline level at created default outline style
@@ -449,11 +448,11 @@ static void lcl_AdjustOutlineStylesForOOo(SwDoc& _rDoc)
 
             // apply outline numbering rule, if none is set.
             const SfxPoolItem& rItem =
-                aCreatedDefaultOutlineStyles[ i ]->GetFormatAttr( RES_PARATR_NUMRULE, false );
+                aCreatedDefaultOutlineStyles[ i ]->GetFmtAttr( RES_PARATR_NUMRULE, false );
             if ( static_cast<const SwNumRuleItem&>(rItem).GetValue().isEmpty() )
             {
                 SwNumRuleItem aItem( pOutlineRule->GetName() );
-                aCreatedDefaultOutlineStyles[ i ]->SetFormatAttr( aItem );
+                aCreatedDefaultOutlineStyles[ i ]->SetFmtAttr( aItem );
             }
         }
     }
@@ -498,24 +497,23 @@ static void lcl_ConvertSdrOle2ObjsToSdrGrafObjs(SwDoc& _rDoc)
 }
 
 sal_uLong XMLReader::Read( SwDoc &rDoc, const OUString& rBaseURL, SwPaM &rPaM, const OUString & rName )
-#if defined USE_JAVA && defined __clang__
+#ifdef __clang__
 __attribute__ ((optnone))
-#endif	// USE_JAVA && __clang__
+#endif	// __clang__
 {
-    // needed for relative URLs, but in clipboard copy/paste there may be none
-    // and also there is the SwXMLTextBlocks special case
-    SAL_INFO_IF(rBaseURL.isEmpty(), "sw.filter", "sw::XMLReader: no base URL");
-
     // Get service factory
     uno::Reference< uno::XComponentContext > xContext =
             comphelper::getProcessComponentContext();
 
+    uno::Reference< io::XActiveDataSource > xSource;
+    uno::Reference< XInterface > xPipe;
     uno::Reference< document::XGraphicObjectResolver > xGraphicResolver;
-    SvXMLGraphicHelper *pGraphicHelper = nullptr;
+    SvXMLGraphicHelper *pGraphicHelper = 0;
     uno::Reference< document::XEmbeddedObjectResolver > xObjectResolver;
-    SvXMLEmbeddedObjectHelper *pObjectHelper = nullptr;
+    SvXMLEmbeddedObjectHelper *pObjectHelper = 0;
 
     // get the input stream (storage or stream)
+    uno::Reference<io::XInputStream> xInputStream;
     uno::Reference<embed::XStorage> xStorage;
     if( pMedium )
         xStorage = pMedium->GetStorage();
@@ -526,7 +524,7 @@ __attribute__ ((optnone))
         return ERR_SWG_READ_ERROR;
 
     pGraphicHelper = SvXMLGraphicHelper::Create( xStorage,
-                                                 SvXMLGraphicHelperMode::Read,
+                                                 GRAPHICHELPER_MODE_READ,
                                                  false );
     xGraphicResolver = pGraphicHelper;
     SfxObjectShell *pPersist = rDoc.GetPersist();
@@ -534,7 +532,7 @@ __attribute__ ((optnone))
     {
         pObjectHelper = SvXMLEmbeddedObjectHelper::Create(
                                         xStorage, *pPersist,
-                                        SvXMLEmbeddedObjectHelperMode::Read,
+                                        EMBEDDEDOBJECTHELPER_MODE_READ,
                                         false );
         xObjectResolver = pObjectHelper;
     }
@@ -570,13 +568,13 @@ __attribute__ ((optnone))
               cppu::UnoType<container::XNameContainer>::get(),
               beans::PropertyAttribute::MAYBEVOID, 0},
         { OUString("RecordChanges"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("ShowChanges"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("RedlineProtectionKey"), 0,
-              cppu::UnoType<Sequence<sal_Int8>>::get(),
+              ::getCppuType((Sequence<sal_Int8>*)0),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("PrivateData"), 0,
               cppu::UnoType<XInterface>::get(),
@@ -592,26 +590,26 @@ __attribute__ ((optnone))
               beans::PropertyAttribute::MAYBEVOID, 0 },
         // properties for insert modes
         { OUString("StyleInsertModeFamilies"), 0,
-              cppu::UnoType<Sequence<OUString>>::get(),
+              ::getCppuType((Sequence<OUString>*)0),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("StyleInsertModeOverwrite"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("TextInsertModeRange"), 0,
               cppu::UnoType<text::XTextRange>::get(),
               beans::PropertyAttribute::MAYBEVOID, 0},
         { OUString("AutoTextMode"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("OrganizerMode"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
 
         // #i28749# - Add property, which indicates, if the
         // shape position attributes are given in horizontal left-to-right layout.
         // This is the case for the OpenOffice.org file format.
         { OUString("ShapePositionInHoriL2R"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
 
         { OUString("BuildId"), 0,
@@ -625,10 +623,10 @@ __attribute__ ((optnone))
         //       documents in StarOffice 5.2 binary file format this property
         //       will be true.
         { OUString("TextDocInOOoFileFormat"), 0,
-              cppu::UnoType<bool>::get(),
+              ::getBooleanCppuType(),
               beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString("SourceStorage"), 0, cppu::UnoType<embed::XStorage>::get(),
-          css::beans::PropertyAttribute::MAYBEVOID, 0 },
+          ::com::sun::star::beans::PropertyAttribute::MAYBEVOID, 0 },
         { OUString(), 0, css::uno::Type(), 0, 0 }
     };
     uno::Reference< beans::XPropertySet > xInfoSet(
@@ -672,7 +670,7 @@ __attribute__ ((optnone))
     sal_Int32 nProgressRange(1000000);
     if (xStatusIndicator.is())
     {
-        xStatusIndicator->start(SwResId(STR_STATSTR_SWGREAD), nProgressRange);
+        xStatusIndicator->start(SW_RESSTR(STR_STATSTR_SWGREAD), nProgressRange);
     }
     uno::Any aProgRange;
     aProgRange <<= nProgressRange;
@@ -684,80 +682,94 @@ __attribute__ ((optnone))
     xInfoSet->setPropertyValue( "SourceStorage", Any( xStorage ) );
 
     // prepare filter arguments, WARNING: the order is important!
-    Sequence<Any> aFilterArgs{  Any(xInfoSet),
-                                Any(xStatusIndicator),
-                                Any(xGraphicResolver),
-                                Any(xObjectResolver),
-                                Any(aLateInitSettings) };
+    Sequence<Any> aFilterArgs( 5 );
+    Any *pArgs = aFilterArgs.getArray();
+    *pArgs++ <<= xInfoSet;
+    *pArgs++ <<= xStatusIndicator;
+    *pArgs++ <<= xGraphicResolver;
+    *pArgs++ <<= xObjectResolver;
+    *pArgs++ <<= aLateInitSettings;
 
-    Sequence<Any> aEmptyArgs{   Any(xInfoSet),
-                                Any(xStatusIndicator) };
+    Sequence<Any> aEmptyArgs( 3 );
+    // cppcheck-suppress redundantAssignment
+    pArgs = aEmptyArgs.getArray();
+    *pArgs++ <<= xInfoSet;
+    *pArgs++ <<= xStatusIndicator;
 
     // prepare for special modes
-    if( aOpt.IsFormatsOnly() )
+    if( aOpt.IsFmtsOnly() )
     {
         sal_Int32 nCount =
-            (aOpt.IsFrameFormats() ? 1 : 0) +
+            (aOpt.IsFrmFmts() ? 1 : 0) +
             (aOpt.IsPageDescs() ? 1 : 0) +
-            (aOpt.IsTextFormats() ? 2 : 0) +
+            (aOpt.IsTxtFmts() ? 2 : 0) +
             (aOpt.IsNumRules() ? 1 : 0);
 
         Sequence< OUString> aFamiliesSeq( nCount );
         OUString *pSeq = aFamiliesSeq.getArray();
-        if( aOpt.IsFrameFormats() )
-            // SfxStyleFamily::Frame;
+        if( aOpt.IsFrmFmts() )
+            // SFX_STYLE_FAMILY_FRAME;
             *pSeq++ = "FrameStyles";
         if( aOpt.IsPageDescs() )
-            // SfxStyleFamily::Page;
+            // SFX_STYLE_FAMILY_PAGE;
             *pSeq++ = "PageStyles";
-        if( aOpt.IsTextFormats() )
+        if( aOpt.IsTxtFmts() )
         {
-            // (SfxStyleFamily::Char|SfxStyleFamily::Para);
+            // (SFX_STYLE_FAMILY_CHAR|SFX_STYLE_FAMILY_PARA);
             *pSeq++ = "CharacterStyles";
             *pSeq++ = "ParagraphStyles";
         }
         if( aOpt.IsNumRules() )
-            // SfxStyleFamily::Pseudo;
+            // SFX_STYLE_FAMILY_PSEUDO;
             *pSeq++ = "NumberingStyles";
 
         xInfoSet->setPropertyValue( "StyleInsertModeFamilies",
                                     makeAny(aFamiliesSeq) );
 
-        xInfoSet->setPropertyValue( "StyleInsertModeOverwrite", makeAny(!aOpt.IsMerge()) );
+        sal_Bool bTmp = !aOpt.IsMerge();
+        Any aAny;
+        aAny.setValue( &bTmp, ::getBooleanCppuType() );
+        xInfoSet->setPropertyValue( "StyleInsertModeOverwrite", aAny );
     }
     else if( bInsertMode )
     {
         const uno::Reference<text::XTextRange> xInsertTextRange =
-            SwXTextRange::CreateXTextRange(rDoc, *rPaM.GetPoint(), nullptr);
+            SwXTextRange::CreateXTextRange(rDoc, *rPaM.GetPoint(), 0);
         xInfoSet->setPropertyValue( "TextInsertModeRange",
                                     makeAny(xInsertTextRange) );
     }
     else
     {
-        rPaM.GetBound().nContent.Assign(nullptr, 0);
-        rPaM.GetBound(false).nContent.Assign(nullptr, 0);
+        rPaM.GetBound(true).nContent.Assign(0, 0);
+        rPaM.GetBound(false).nContent.Assign(0, 0);
     }
 
     if( IsBlockMode() )
     {
-        xInfoSet->setPropertyValue( "AutoTextMode", makeAny(true) );
+        sal_Bool bTmp = sal_True;
+        Any aAny;
+        aAny.setValue( &bTmp, ::getBooleanCppuType() );
+        xInfoSet->setPropertyValue( "AutoTextMode", aAny );
     }
     if( IsOrganizerMode() )
     {
-        xInfoSet->setPropertyValue( "OrganizerMode", makeAny(true) );
+        sal_Bool bTmp = sal_True;
+        Any aAny;
+        aAny.setValue( &bTmp, ::getBooleanCppuType() );
+        xInfoSet->setPropertyValue( "OrganizerMode", aAny );
     }
 
     // Set base URI
     // there is ambiguity which medium should be used here
     // for now the own medium has a preference
     SfxMedium* pMedDescrMedium = pMedium ? pMedium : pDocSh->GetMedium();
-    OSL_ENSURE( pMedDescrMedium, "There is no medium to get MediaDescriptor from!" );
+    OSL_ENSURE( pMedDescrMedium, "There is no medium to get MediaDescriptor from!\n" );
 
     xInfoSet->setPropertyValue( "BaseURI", makeAny( rBaseURL ) );
 
     // TODO/LATER: separate links from usual embedded objects
     OUString StreamPath;
-    if( SfxObjectCreateMode::EMBEDDED == rDoc.GetDocShell()->GetCreateMode() )
+    if( SFX_CREATE_MODE_EMBEDDED == rDoc.GetDocShell()->GetCreateMode() )
     {
         if ( pMedDescrMedium && pMedDescrMedium->GetItemSet() )
         {
@@ -785,18 +797,22 @@ __attribute__ ((optnone))
     sal_uInt32 nRet = 0;
 
     // save redline mode into import info property set
+    Any aAny;
+    sal_Bool bTmp;
     const OUString sShowChanges("ShowChanges");
     const OUString sRecordChanges("RecordChanges");
     const OUString sRedlineProtectionKey("RedlineProtectionKey");
-    xInfoSet->setPropertyValue( sShowChanges,
-        makeAny(IDocumentRedlineAccess::IsShowChanges(rDoc.getIDocumentRedlineAccess().GetRedlineFlags())) );
-    xInfoSet->setPropertyValue( sRecordChanges,
-        makeAny(IDocumentRedlineAccess::IsRedlineOn(rDoc.getIDocumentRedlineAccess().GetRedlineFlags())) );
-    xInfoSet->setPropertyValue( sRedlineProtectionKey,
-        makeAny(rDoc.getIDocumentRedlineAccess().GetRedlinePassword()) );
+    bTmp = IDocumentRedlineAccess::IsShowChanges( rDoc.getIDocumentRedlineAccess().GetRedlineMode() );
+    aAny.setValue( &bTmp, ::getBooleanCppuType() );
+    xInfoSet->setPropertyValue( sShowChanges, aAny );
+    bTmp = IDocumentRedlineAccess::IsRedlineOn(rDoc.getIDocumentRedlineAccess().GetRedlineMode());
+    aAny.setValue( &bTmp, ::getBooleanCppuType() );
+    xInfoSet->setPropertyValue( sRecordChanges, aAny );
+    aAny <<= rDoc.getIDocumentRedlineAccess().GetRedlinePassword();
+    xInfoSet->setPropertyValue( sRedlineProtectionKey, aAny );
 
     // force redline mode to "none"
-    rDoc.getIDocumentRedlineAccess().SetRedlineFlags_intern( RedlineFlags::NONE );
+    rDoc.getIDocumentRedlineAccess().SetRedlineMode_intern( nsRedlineMode_t::REDLINE_NONE );
 
     const bool bOASIS = ( SotStorage::GetVersion( xStorage ) > SOFFICE_FILEFORMAT_60 );
     // #i28749# - set property <ShapePositionInHoriL2R>
@@ -814,7 +830,7 @@ __attribute__ ((optnone))
     }
 
     sal_uInt32 nWarnRDF = 0;
-    if ( !(IsOrganizerMode() || IsBlockMode() || aOpt.IsFormatsOnly() ||
+    if ( !(IsOrganizerMode() || IsBlockMode() || aOpt.IsFmtsOnly() ||
            bInsertMode) )
     {
         // RDF metadata - must be read before styles/content
@@ -858,23 +874,23 @@ __attribute__ ((optnone))
         aEmptyArgs, rName, false );
 
     sal_uInt32 nWarn2 = 0;
-    if( !(IsOrganizerMode() || IsBlockMode() || aOpt.IsFormatsOnly() ||
+    if( !(IsOrganizerMode() || IsBlockMode() || aOpt.IsFmtsOnly() ||
           bInsertMode) )
     {
         nWarn2 = ReadThroughComponent(
-            xStorage, xModelComp, "settings.xml", nullptr, xContext,
+            xStorage, xModelComp, "settings.xml", NULL, xContext,
             (bOASIS ? "com.sun.star.comp.Writer.XMLOasisSettingsImporter"
                     : "com.sun.star.comp.Writer.XMLSettingsImporter"),
             aFilterArgs, rName, false );
     }
 
     nRet = ReadThroughComponent(
-        xStorage, xModelComp, "styles.xml", nullptr, xContext,
+        xStorage, xModelComp, "styles.xml", NULL, xContext,
         (bOASIS ? "com.sun.star.comp.Writer.XMLOasisStylesImporter"
                 : "com.sun.star.comp.Writer.XMLStylesImporter"),
         aFilterArgs, rName, true );
 
-    if( !nRet && !(IsOrganizerMode() || aOpt.IsFormatsOnly()) )
+    if( !nRet && !(IsOrganizerMode() || aOpt.IsFmtsOnly()) )
         nRet = ReadThroughComponent(
            xStorage, xModelComp, "content.xml", "Content.xml", xContext,
             (bOASIS ? "com.sun.star.comp.Writer.XMLOasisContentImporter"
@@ -882,7 +898,7 @@ __attribute__ ((optnone))
            aFilterArgs, rName, true );
 
     if( !(IsOrganizerMode() || IsBlockMode() || bInsertMode ||
-          aOpt.IsFormatsOnly() ) )
+          aOpt.IsFmtsOnly() ) )
     {
         try
         {
@@ -905,37 +921,39 @@ __attribute__ ((optnone))
 
     nRet = nRet ? nRet : (nWarn ? nWarn : (nWarn2 ? nWarn2 : nWarnRDF ) );
 
-    aOpt.ResetAllFormatsOnly();
+    aOpt.ResetAllFmtsOnly();
 
     // redline password
-    Any aAny = xInfoSet->getPropertyValue( sRedlineProtectionKey );
+    aAny = xInfoSet->getPropertyValue( sRedlineProtectionKey );
     Sequence<sal_Int8> aKey;
     aAny >>= aKey;
     rDoc.getIDocumentRedlineAccess().SetRedlinePassword( aKey );
 
     // restore redline mode from import info property set
-    RedlineFlags nRedlineFlags = RedlineFlags::ShowInsert;
+    sal_Int16 nRedlineMode = nsRedlineMode_t::REDLINE_SHOW_INSERT;
     aAny = xInfoSet->getPropertyValue( sShowChanges );
-    if ( *o3tl::doAccess<bool>(aAny) )
-        nRedlineFlags |= RedlineFlags::ShowDelete;
+    if ( *(sal_Bool*)aAny.getValue() )
+        nRedlineMode |= nsRedlineMode_t::REDLINE_SHOW_DELETE;
     aAny = xInfoSet->getPropertyValue( sRecordChanges );
-    if ( *o3tl::doAccess<bool>(aAny) || (aKey.getLength() > 0) )
-        nRedlineFlags |= RedlineFlags::On;
+    if ( *(sal_Bool*)aAny.getValue() || (aKey.getLength() > 0) )
+        nRedlineMode |= nsRedlineMode_t::REDLINE_ON;
+    else
+        nRedlineMode |= nsRedlineMode_t::REDLINE_NONE;
 
     // ... restore redline mode
-    // (First set bogus mode to make sure the mode in getIDocumentRedlineAccess().SetRedlineFlags()
-    //  is different from its previous mode.)
-    rDoc.getIDocumentRedlineAccess().SetRedlineFlags_intern( ~nRedlineFlags );
-    rDoc.getIDocumentRedlineAccess().SetRedlineFlags(  nRedlineFlags );
+    // (First set bogus mode to make sure the mode in getIDocumentRedlineAccess().SetRedlineMode()
+    //  is different from it's previous mode.)
+    rDoc.getIDocumentRedlineAccess().SetRedlineMode_intern((RedlineMode_t)( ~nRedlineMode ));
+    rDoc.getIDocumentRedlineAccess().SetRedlineMode( (RedlineMode_t)( nRedlineMode ));
 
     lcl_EnsureValidPam( rPaM ); // move Pam into valid content
 
     if( pGraphicHelper )
         SvXMLGraphicHelper::Destroy( pGraphicHelper );
-    xGraphicResolver = nullptr;
+    xGraphicResolver = 0;
     if( pObjectHelper )
         SvXMLEmbeddedObjectHelper::Destroy( pObjectHelper );
-    xObjectResolver = nullptr;
+    xObjectResolver = 0;
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
     (void)rDoc.release();
 #else	// NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
@@ -947,7 +965,7 @@ __attribute__ ((optnone))
         // #i44177# - assure that for documents in OpenOffice.org
         // file format the relation between outline numbering rule and styles is
         // filled-up accordingly.
-        // Note: The OpenOffice.org file format, which has no content that applies
+        // Note: The OpenOffice.org file format, which has no content that applys
         //       a certain style, which is related to the outline numbering rule,
         //       has lost the information, that this certain style is related to
         //       the outline numbering rule.
@@ -959,15 +977,15 @@ __attribute__ ((optnone))
         }
         // Fix #i58251#: Unfortunately is the static default different to SO7 behaviour,
         // so we have to set a dynamic default after importing SO7
-        rDoc.SetDefault(SwFormatRowSplit(false));
+        rDoc.SetDefault( SfxBoolItem( RES_ROW_SPLIT, false ) );
     }
 
     rDoc.PropagateOutlineRule();
 
     // #i62875#
-    if ( rDoc.getIDocumentSettingAccess().get(DocumentSettingId::DO_NOT_CAPTURE_DRAW_OBJS_ON_PAGE) && !docfunc::ExistsDrawObjs( rDoc ) )
+    if ( rDoc.getIDocumentSettingAccess().get(IDocumentSettingAccess::DO_NOT_CAPTURE_DRAW_OBJS_ON_PAGE) && !docfunc::ExistsDrawObjs( rDoc ) )
     {
-        rDoc.getIDocumentSettingAccess().set(DocumentSettingId::DO_NOT_CAPTURE_DRAW_OBJS_ON_PAGE, false);
+        rDoc.getIDocumentSettingAccess().set(IDocumentSettingAccess::DO_NOT_CAPTURE_DRAW_OBJS_ON_PAGE, false);
     }
 
     // Convert all instances of <SdrOle2Obj> into <SdrGrafObj>, because the

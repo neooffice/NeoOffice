@@ -27,7 +27,6 @@
 
 #include "splash.hxx"
 #include <stdio.h>
-#include <sal/log.hxx>
 #include <unotools/bootstrap.hxx>
 #include <tools/stream.hxx>
 #include <vcl/svapp.hxx>
@@ -37,7 +36,7 @@
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <com/sun/star/task/XStatusIndicator.hpp>
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase3.hxx>
 #include <cppuhelper/supportsservice.hxx>
 #include <rtl/bootstrap.hxx>
 #include <rtl/strbuf.hxx>
@@ -54,38 +53,23 @@ using namespace ::com::sun::star::uno;
 
 namespace {
 
-class SplashScreen;
-
-class SplashScreenWindow : public IntroWindow
-{
-public:
-    SplashScreen *pSpl;
-    ScopedVclPtr<VirtualDevice> _vdev;
-    explicit SplashScreenWindow(SplashScreen *);
-    virtual ~SplashScreenWindow() override { disposeOnce(); }
-    virtual void dispose() override;
-    // workwindow
-    virtual void Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&) override;
-    void Redraw();
-
-};
-
 class  SplashScreen
-    : public ::cppu::WeakImplHelper< XStatusIndicator, XInitialization, XServiceInfo >
+    : public ::cppu::WeakImplHelper3< XStatusIndicator, XInitialization, XServiceInfo >
+    , public IntroWindow
 {
-    friend class SplashScreenWindow;
 private:
-    VclPtr<SplashScreenWindow> pWindow;
+    enum BitmapMode { BM_FULLSCREEN, BM_DEFAULTMODE };
 
-    DECL_LINK( AppEventListenerHdl, VclSimpleEvent&, void );
-    virtual ~SplashScreen() override;
+    DECL_LINK( AppEventListenerHdl, VclWindowEvent * );
+    virtual ~SplashScreen();
     void loadConfig();
     void updateStatus();
     void SetScreenBitmap(BitmapEx &rBitmap);
-    static void determineProgressRatioValues( double& rXRelPos, double& rYRelPos, double& rRelWidth, double& rRelHeight );
+    void determineProgressRatioValues( double& rXRelPos, double& rYRelPos, double& rRelWidth, double& rRelHeight );
 
     static osl::Mutex _aMutex;
 
+    VirtualDevice   _vdev;
     BitmapEx        _aIntroBmp;
     Color           _cProgressFrameColor;
     Color           _cProgressBarColor;
@@ -96,6 +80,8 @@ private:
 
     sal_Int32   _iMax;
     sal_Int32   _iProgress;
+    BitmapMode  _eBitmapMode;
+    bool        _bPaintBitmap;
     bool        _bPaintProgress;
     bool        _bVisible;
     bool        _bShowLogo;
@@ -114,56 +100,44 @@ public:
     SplashScreen();
 
     // XStatusIndicator
-    virtual void SAL_CALL end() override;
-    virtual void SAL_CALL reset() override;
-    virtual void SAL_CALL setText(const OUString& aText) override;
-    virtual void SAL_CALL setValue(sal_Int32 nValue) override;
-    virtual void SAL_CALL start(const OUString& aText, sal_Int32 nRange) override;
+    virtual void SAL_CALL end() throw ( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL reset() throw ( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL setText(const OUString& aText) throw ( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL setValue(sal_Int32 nValue) throw ( RuntimeException, std::exception ) SAL_OVERRIDE;
+    virtual void SAL_CALL start(const OUString& aText, sal_Int32 nRange) throw ( RuntimeException, std::exception ) SAL_OVERRIDE;
 
     // XInitialize
-    virtual void SAL_CALL initialize( const css::uno::Sequence< css::uno::Any>& aArguments ) override;
+    virtual void SAL_CALL initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any>& aArguments )
+        throw ( RuntimeException, std::exception ) SAL_OVERRIDE;
 
-    virtual OUString SAL_CALL getImplementationName() override
+    virtual OUString SAL_CALL getImplementationName()
+        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE
     { return desktop::splash::getImplementationName(); }
 
-    virtual sal_Bool SAL_CALL supportsService(OUString const & ServiceName) override
+    virtual sal_Bool SAL_CALL supportsService(OUString const & ServiceName)
+        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE
     { return cppu::supportsService(this, ServiceName); }
 
-    virtual css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames() override
+    virtual css::uno::Sequence<OUString> SAL_CALL getSupportedServiceNames()
+        throw (css::uno::RuntimeException, std::exception) SAL_OVERRIDE
     { return desktop::splash::getSupportedServiceNames(); }
+
+    // workwindow
+    virtual void Paint( const Rectangle& ) SAL_OVERRIDE;
+
 };
 
-SplashScreenWindow::SplashScreenWindow(SplashScreen *pSplash)
-    : IntroWindow()
-    , pSpl( pSplash )
-    , _vdev(VclPtr<VirtualDevice>::Create(*this))
-{
-    _vdev->EnableRTL(IsRTLEnabled());
-}
-
-void SplashScreenWindow::dispose()
-{
-    pSpl = nullptr;
-    IntroWindow::dispose();
-}
-
-void SplashScreenWindow::Redraw()
-{
-    Invalidate();
-    // Trigger direct painting too - otherwise the splash screen won't be
-    // shown in some cases (when the idle timer won't be hit).
-    Paint(*this, tools::Rectangle());
-    Flush();
-}
-
 SplashScreen::SplashScreen()
-    : pWindow( VclPtr<SplashScreenWindow>::Create(this) )
+    : IntroWindow()
+    , _vdev(*((IntroWindow*)this))
     , _cProgressFrameColor(sal::static_int_cast< ColorData >(NOT_LOADED))
     , _cProgressBarColor(sal::static_int_cast< ColorData >(NOT_LOADED))
     , _cProgressTextColor(sal::static_int_cast< ColorData >(NOT_LOADED))
     , _bNativeProgress(true)
     , _iMax(100)
     , _iProgress(0)
+    , _eBitmapMode(BM_DEFAULTMODE)
+    , _bPaintBitmap(true)
     , _bPaintProgress(false)
     , _bVisible(true)
     , _bShowLogo(true)
@@ -188,28 +162,34 @@ SplashScreen::SplashScreen()
 #endif	// USE_JAVA && MACOSX
 {
     loadConfig();
+    _vdev.EnableRTL(IsRTLEnabled());
 }
 
 SplashScreen::~SplashScreen()
 {
     Application::RemoveEventListener(
         LINK( this, SplashScreen, AppEventListenerHdl ) );
-    pWindow->Hide();
-    pWindow.disposeAndClear();
+    Hide();
+
 }
 
 void SAL_CALL SplashScreen::start(const OUString&, sal_Int32 nRange)
+    throw (RuntimeException, std::exception)
 {
     _iMax = nRange;
     if (_bVisible) {
         _bProgressEnd = false;
         SolarMutexGuard aSolarGuard;
-        pWindow->Show();
-        pWindow->Redraw();
+        if ( _eBitmapMode == BM_FULLSCREEN )
+            ShowFullScreenMode( true );
+        Show();
+        Paint(Rectangle());
+        Flush();
     }
 }
 
 void SAL_CALL SplashScreen::end()
+    throw (RuntimeException, std::exception)
 {
     _iProgress = _iMax;
 #if defined USE_JAVA && defined MACOSX
@@ -217,22 +197,28 @@ void SAL_CALL SplashScreen::end()
 #endif	// USE_JAVA && MACOSX
     if (_bVisible )
     {
-        pWindow->Hide();
+        if ( _eBitmapMode == BM_FULLSCREEN )
+            EndFullScreenMode();
+        Hide();
     }
     _bProgressEnd = true;
 }
 
 void SAL_CALL SplashScreen::reset()
+    throw (RuntimeException, std::exception)
 {
     _iProgress = 0;
     if (_bVisible && !_bProgressEnd )
     {
-        pWindow->Show();
+        if ( _eBitmapMode == BM_FULLSCREEN )
+            ShowFullScreenMode( true );
+        Show();
         updateStatus();
     }
 }
 
 void SAL_CALL SplashScreen::setText(const OUString& rText)
+    throw (RuntimeException, std::exception)
 {
     SolarMutexGuard aSolarGuard;
     if ( _sProgressText != rText )
@@ -241,30 +227,35 @@ void SAL_CALL SplashScreen::setText(const OUString& rText)
 
         if (_bVisible && !_bProgressEnd)
         {
-            pWindow->Show();
+            if ( _eBitmapMode == BM_FULLSCREEN )
+                ShowFullScreenMode( true );
+            Show();
             updateStatus();
         }
     }
 }
 
 void SAL_CALL SplashScreen::setValue(sal_Int32 nValue)
+    throw (RuntimeException, std::exception)
 {
-    SAL_INFO( "desktop.splash", "setValue: " << nValue );
+    SAL_INFO( "desktop.splash", "::SplashScreen::setValue (lo119109)" );
+    SAL_INFO( "desktop.splash", "value=" << nValue );
 
     SolarMutexGuard aSolarGuard;
     if (_bVisible && !_bProgressEnd) {
-        pWindow->Show();
-        if (nValue >= _iMax)
-            _iProgress = _iMax;
-        else
-            _iProgress = nValue;
-        updateStatus();
+        if ( _eBitmapMode == BM_FULLSCREEN )
+            ShowFullScreenMode( true );
+        Show();
+        if (nValue >= _iMax) _iProgress = _iMax;
+    else _iProgress = nValue;
+    updateStatus();
     }
 }
 
 // XInitialize
 void SAL_CALL
-SplashScreen::initialize( const css::uno::Sequence< css::uno::Any>& aArguments )
+SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any>& aArguments )
+    throw (RuntimeException, std::exception)
 {
     ::osl::ClearableMutexGuard  aGuard( _aMutex );
     if (aArguments.getLength() > 0)
@@ -277,8 +268,12 @@ SplashScreen::initialize( const css::uno::Sequence< css::uno::Any>& aArguments )
         if ( _bShowLogo )
             SetScreenBitmap (_aIntroBmp);
         Size aSize = _aIntroBmp.GetSizePixel();
-        pWindow->SetOutputSizePixel( aSize );
-        pWindow->_vdev->SetOutputSizePixel( aSize );
+#ifdef USE_JAVA
+        // We use 144 DPI .png images so set all output devices to half the size
+        aSize = Size( aSize.Width() / 2, aSize.Height() / 2 );
+#endif	// USE_JAVA
+        SetOutputSizePixel( aSize );
+        _vdev.SetOutputSizePixel( aSize );
         _height = aSize.Height();
         _width = aSize.Width();
         if (_width > 500)
@@ -293,6 +288,19 @@ SplashScreen::initialize( const css::uno::Sequence< css::uno::Any>& aArguments )
                 _barwidth = 263;
             if ( NOT_LOADED == _barheight )
                 _barheight = 8;
+            if (( _eBitmapMode == BM_FULLSCREEN ) &&
+                _bFullScreenSplash )
+            {
+                if( ( _fXPos >= 0.0 ) && ( _fYPos >= 0.0 ))
+                {
+                    _tlx = sal_Int32( double( aSize.Width() ) * _fXPos );
+                    _tly = sal_Int32( double( aSize.Height() ) * _fYPos );
+                }
+                if ( _fWidth >= 0.0 )
+                    _barwidth  = sal_Int32( double( aSize.Width() ) * _fWidth );
+                if ( _fHeight >= 0.0 )
+                    _barheight = sal_Int32( double( aSize.Width() ) * _fHeight );
+            }
         }
         else
         {
@@ -335,27 +343,27 @@ SplashScreen::initialize( const css::uno::Sequence< css::uno::Any>& aArguments )
 
 void SplashScreen::updateStatus()
 {
-    if (!_bVisible || _bProgressEnd)
-        return;
-    if (!_bPaintProgress)
-        _bPaintProgress = true;
-    pWindow->Redraw();
+    if (!_bVisible || _bProgressEnd) return;
+    if (!_bPaintProgress) _bPaintProgress = true;
+    Paint(Rectangle());
+    Flush();
 }
 
 // internal private methods
-IMPL_LINK( SplashScreen, AppEventListenerHdl, VclSimpleEvent&, inEvent, void )
+IMPL_LINK( SplashScreen, AppEventListenerHdl, VclWindowEvent *, inEvent )
 {
-    if (static_cast<VclWindowEvent&>(inEvent).GetWindow() == pWindow)
+    if ( inEvent != 0 )
     {
-        switch ( inEvent.GetId() )
+        switch ( inEvent->GetId() )
         {
-            case VclEventId::WindowShow:
-                pWindow->Redraw();
+            case VCLEVENT_WINDOW_SHOW:
+                Paint( Rectangle() );
                 break;
             default:
                 break;
         }
     }
+    return 0;
 }
 
 // Read keys from soffice{.ini|rc}:
@@ -382,7 +390,7 @@ void SplashScreen::loadConfig()
 
     // Determine full screen splash mode
     _bFullScreenSplash = (( !sFullScreenSplash.isEmpty() ) &&
-                          ( sFullScreenSplash != "0" ));
+                          ( !sFullScreenSplash.equals( "0" )));
 
     // Try to retrieve the relative values for the progress bar. The current
     // schema uses the screen ratio to retrieve the associated values.
@@ -489,7 +497,7 @@ void SplashScreen::SetScreenBitmap(BitmapEx &rBitmap)
     if ( nCount > 0 )
     {
         // retrieve size from first screen
-        tools::Rectangle aScreenArea = Application::GetScreenPosSizePixel((unsigned int)0);
+        Rectangle aScreenArea = Application::GetScreenPosSizePixel((unsigned int)0);
         nWidth  = aScreenArea.GetWidth();
         nHeight = aScreenArea.GetHeight();
     }
@@ -516,7 +524,7 @@ void SplashScreen::SetScreenBitmap(BitmapEx &rBitmap)
     if (Application::LoadBrandBitmap (aResBuf.makeStringAndClear().getStr(), rBitmap))
         return;
 
-    (void)Application::LoadBrandBitmap ("intro", rBitmap);
+    Application::LoadBrandBitmap ("intro", rBitmap);
 }
 
 void SplashScreen::determineProgressRatioValues(
@@ -532,7 +540,7 @@ void SplashScreen::determineProgressRatioValues(
     if ( nCount > 0 )
     {
         // retrieve size from first screen
-        tools::Rectangle aScreenArea = Application::GetScreenPosSizePixel((unsigned int)0);
+        Rectangle aScreenArea = Application::GetScreenPosSizePixel((unsigned int)0);
         nWidth  = aScreenArea.GetWidth();
         nHeight = aScreenArea.GetHeight();
         nScreenRatio  = nHeight ? sal_Int32( rtl::math::round( double( nWidth ) / double( nHeight ), 2 ) * 100 ) :  0;
@@ -590,74 +598,83 @@ void SplashScreen::determineProgressRatioValues(
     }
 }
 
-void SplashScreenWindow::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle&)
+void SplashScreen::Paint( const Rectangle&)
 {
-    if (!pSpl || !pSpl->_bVisible)
-        return;
+    if(!_bVisible) return;
 
     //native drawing
     // in case of native controls we need to draw directly to the window
-    if (pSpl->_bNativeProgress && rRenderContext.IsNativeControlSupported(ControlType::IntroProgress, ControlPart::Entire))
+    if( _bNativeProgress && IsNativeControlSupported( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL ) )
     {
 #if defined USE_JAVA && defined MACOSX
         // Elminate unnecessary repainting
-        if (pSpl->_iLastProgressPainted == pSpl->_iProgress)
+        if( _iLastProgressPainted == _iProgress )
     		return;
 #endif	// USE_JAVA && MACOSX
 
-        rRenderContext.DrawBitmapEx(Point(), pSpl->_aIntroBmp);
+#ifdef USE_JAVA
+        // We use 144 DPI .png images so set all output devices to half the size
+        DrawBitmapEx( Point(), GetOutputSizePixel(), _aIntroBmp );
+#else	// USE_JAVA
+        DrawBitmapEx( Point(), _aIntroBmp );
+#endif	// USE_JAVA
 
-        ImplControlValue aValue( pSpl->_iProgress * pSpl->_barwidth / pSpl->_iMax);
-        tools::Rectangle aDrawRect( Point(pSpl->_tlx, pSpl->_tly), Size( pSpl->_barwidth, pSpl->_barheight));
-        tools::Rectangle aNativeControlRegion, aNativeContentRegion;
+        ImplControlValue aValue( _iProgress * _barwidth / _iMax);
+        Rectangle aDrawRect( Point(_tlx, _tly), Size( _barwidth, _barheight ) );
+        Rectangle aNativeControlRegion, aNativeContentRegion;
 
-        if (rRenderContext.GetNativeControlRegion(ControlType::IntroProgress, ControlPart::Entire, aDrawRect,
-                                                  ControlState::ENABLED, aValue,
-                                                  aNativeControlRegion, aNativeContentRegion))
+        if( GetNativeControlRegion( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL, aDrawRect,
+                                             CTRL_STATE_ENABLED, aValue, OUString(),
+                                             aNativeControlRegion, aNativeContentRegion ) )
         {
               long nProgressHeight = aNativeControlRegion.GetHeight();
-              aDrawRect.Top() -= (nProgressHeight - pSpl->_barheight)/2;
-              aDrawRect.Bottom() += (nProgressHeight - pSpl->_barheight)/2;
+              aDrawRect.Top() -= (nProgressHeight - _barheight)/2;
+              aDrawRect.Bottom() += (nProgressHeight - _barheight)/2;
         }
 
 #if defined USE_JAVA && defined MACOSX
-        rRenderContext.SetFillColor();
+        SetFillColor();
 #endif	// USE_JAVA && MACOSX
 
-        if ((rRenderContext.DrawNativeControl(ControlType::IntroProgress, ControlPart::Entire, aDrawRect,
-                                              ControlState::ENABLED, aValue, pSpl->_sProgressText)))
+        if( (DrawNativeControl( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL, aDrawRect,
+                                            CTRL_STATE_ENABLED, aValue, _sProgressText )) )
         {
 #if defined USE_JAVA && defined MACOSX
-            pSpl->_iLastProgressPainted = pSpl->_iProgress;
+            _iLastProgressPainted = _iProgress;
 #endif	// USE_JAVA && MACOSX
             return;
         }
     }
-
-    // non native drawing
+    //non native drawing
     // draw bitmap
-    _vdev->DrawBitmapEx(Point(), pSpl->_aIntroBmp);
+    if (_bPaintBitmap)
+#ifdef USE_JAVA
+        // We use 144 DPI .png images so set all output devices to half the size
+        _vdev.DrawBitmapEx( Point(), _vdev.GetOutputSizePixel(), _aIntroBmp );
+#else	// USE_JAVA
+        _vdev.DrawBitmapEx( Point(), _aIntroBmp );
+#endif	// USE_JAVA
 
-    if (pSpl->_bPaintProgress) {
+    if (_bPaintProgress) {
         // draw progress...
-        long length = (pSpl->_iProgress * pSpl->_barwidth / pSpl->_iMax) - (2 * pSpl->_barspace);
+        long length = (_iProgress * _barwidth / _iMax) - (2 * _barspace);
         if (length < 0) length = 0;
 
         // border
-        _vdev->SetFillColor();
-        _vdev->SetLineColor( pSpl->_cProgressFrameColor );
-        _vdev->DrawRect(tools::Rectangle(pSpl->_tlx, pSpl->_tly, pSpl->_tlx+pSpl->_barwidth, pSpl->_tly+pSpl->_barheight));
-        _vdev->SetFillColor( pSpl->_cProgressBarColor );
-        _vdev->SetLineColor();
-        _vdev->DrawRect(tools::Rectangle(pSpl->_tlx+pSpl->_barspace, pSpl->_tly+pSpl->_barspace, pSpl->_tlx+pSpl->_barspace+length, pSpl->_tly+pSpl->_barheight-pSpl->_barspace));
+        _vdev.SetFillColor();
+        _vdev.SetLineColor( _cProgressFrameColor );
+        _vdev.DrawRect(Rectangle(_tlx, _tly, _tlx+_barwidth, _tly+_barheight));
+        _vdev.SetFillColor( _cProgressBarColor );
+        _vdev.SetLineColor();
+        _vdev.DrawRect(Rectangle(_tlx+_barspace, _tly+_barspace, _tlx+_barspace+length, _tly+_barheight-_barspace));
         vcl::Font aFont;
-        aFont.SetFontSize(Size(0, 12));
-        aFont.SetAlignment(ALIGN_BASELINE);
-        _vdev->SetFont(aFont);
-        _vdev->SetTextColor(pSpl->_cProgressTextColor);
-        _vdev->DrawText(Point(pSpl->_tlx, pSpl->_textBaseline), pSpl->_sProgressText);
+        aFont.SetSize(Size(0, 12));
+        aFont.SetAlign(ALIGN_BASELINE);
+        _vdev.SetFont(aFont);
+        _vdev.SetTextColor(_cProgressTextColor);
+        _vdev.DrawText(Point(_tlx, _textBaseline), _sProgressText);
     }
-    rRenderContext.DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev->GetOutputSizePixel(), *_vdev.get());
+    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
 }
 
 
@@ -676,9 +693,9 @@ OUString desktop::splash::getImplementationName() {
     return OUString("com.sun.star.office.comp.SplashScreen");
 }
 
-css::uno::Sequence< OUString > desktop::splash::getSupportedServiceNames()
-{
-    return Sequence< OUString > { "com.sun.star.office.SplashScreen" };
+css::uno::Sequence< OUString > desktop::splash::getSupportedServiceNames() {
+    OUString name("com.sun.star.office.SplashScreen");
+    return css::uno::Sequence< OUString >(&name, 1);
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

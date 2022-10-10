@@ -33,11 +33,8 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-
 #include <osl/file.hxx>
+#include <osl/objcutils.h>
 
 #import "shellexec.hxx"
 #import "shellexec_cocoa.h"
@@ -46,21 +43,22 @@ using namespace com::sun::star::uno;
 
 @interface ShellExecOpenURL : NSObject
 {
+	BOOL				mbSelectInFinder;
 	BOOL				mbResult;
 	NSURL*				mpURL;
 }
-+ (id)createWithURL:(NSURL *)pURL;
++ (id)createWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder;
 - (void)dealloc;
-- (id)initWithURL:(NSURL *)pURL;
+- (id)initWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder;
 - (void)openURL:(id)pSender;
 - (BOOL)result;
 @end
 
 @implementation ShellExecOpenURL
 
-+ (id)createWithURL:(NSURL *)pURL
++ (id)createWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder
 {
-	ShellExecOpenURL *pRet = [[ShellExecOpenURL alloc] initWithURL:pURL];
+	ShellExecOpenURL *pRet = [[ShellExecOpenURL alloc] initWithURL:pURL selectInFinder:bSelectInFinder];
 	[pRet autorelease];
 	return pRet;
 }
@@ -73,10 +71,11 @@ using namespace com::sun::star::uno;
 	[super dealloc];
 }
 
-- (id)initWithURL:(NSURL *)pURL
+- (id)initWithURL:(NSURL *)pURL selectInFinder:(BOOL)bSelectInFinder
 {
 	[super init];
 
+	mbSelectInFinder = bSelectInFinder;
 	mbResult = NO;
 	mpURL = pURL;
 	if ( mpURL )
@@ -94,18 +93,27 @@ using namespace com::sun::star::uno;
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace && mpURL )
 	{
-		NSArray *pURLs = [NSArray arrayWithObject:mpURL];
-		if ( pURLs )
+		if ( mbSelectInFinder )
 		{
-			mbResult = [pWorkspace openURLs:pURLs withAppBundleIdentifier:nil options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+			[pWorkspace activateFileViewerSelectingURLs:[NSArray arrayWithObject:mpURL]];
+			mbResult = YES;
+		}
+		else
+		{
+			mbResult = [pWorkspace openURL:mpURL];
 			if ( !mbResult )
 			{
-				NSString *pAppID = nil;
+				NSURL *pAppURL = nil;
 				if ( [@"mailto" isEqualToString:[mpURL scheme]] )
-					pAppID = @"com.apple.mail";
+					pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
 				else
-					pAppID = @"com.apple.Safari";
-				mbResult = [pWorkspace openURLs:pURLs withAppBundleIdentifier:pAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
+					pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.Safari"];
+				NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+				if ( pAppURL && pConfiguration )
+				{
+					[pWorkspace openURLs:[NSArray arrayWithObject:mpURL] withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+					mbResult = YES;
+				}
 			}
 		}
 	}
@@ -118,21 +126,26 @@ using namespace com::sun::star::uno;
 
 @end
 
-sal_Bool ShellExec_openURL( OUString &rURL )
+sal_Bool ShellExec_openURL( OUString &rURL, sal_Bool bSelectInFinder )
 {
 	sal_Bool bRet = sal_False;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSString *pURLString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( rURL.getStr() ) length:rURL.getLength()];
+	NSString *pURLString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
 	if ( pURLString )
 	{
 		NSURL *pURL = [NSURL URLWithString:pURLString];
 		if ( pURL )
 		{
-			ShellExecOpenURL *pShellExecOpenURL = [ShellExecOpenURL createWithURL:pURL];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pShellExecOpenURL performSelectorOnMainThread:@selector(openURL:) withObject:pShellExecOpenURL waitUntilDone:YES modes:pModes];
+			// If the file is an alias file, open the directory in the Finder
+			// like LibO does for softlinks and other insecure extensions
+			NSNumber *pAlias = nil;
+			if ( !bSelectInFinder && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+				bSelectInFinder = sal_True;
+
+			ShellExecOpenURL *pShellExecOpenURL = [ShellExecOpenURL createWithURL:pURL selectInFinder:bSelectInFinder];
+			osl_performSelectorOnMainThread( pShellExecOpenURL, @selector(openURL:), pShellExecOpenURL, YES );
 			bRet = [pShellExecOpenURL result];
 		}
 	}

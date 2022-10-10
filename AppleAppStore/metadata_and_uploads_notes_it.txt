@@ -21,6 +21,9 @@ NeoOffice è una suite per ufficio per Mac che si basa su OpenOffice e LibreOffi
 Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto OpenOffice funzionare in modo nativo su OS X per la prima volta. Da allora, gli ingegneri di NeoOffice hanno continuamente aggiunti miglioramenti a NeoOffice che non troverete in OpenOffice o LibreOffice come ad esempio:
 
 • Modalità scura nativa
+• Menu accenti nativo tenendo premuto un tasto della tastiera
+• Pannelli nativi abilitando la preferenza di sistema «Preferenza pannelli»
+• Modalità a tutto schermo nativa
 • Menu di NeoOffice > Apri al inizio per aprire Calc o Impress, invece di Writer al inizio
 • Menu di File > Sfoglia tutte le versioni per ripristinare le versioni precedenti dei voi documenti
 • Blocco nativo dei file per modificare in modo sicuro i file in iCloud Drive, Dropbox o dischi di rete
@@ -31,28 +34,27 @@ Due ingegneri di NeoOffice hanno creato NeoOffice nel 2003, quando hanno fatto O
 
 
 What's New in this Version:
-Prima di acquistare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
+Prima di scaricare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
 
-This version of NeoOffice fixes the following bugs:
-• When running on macOS Big Sur, NeoOffice would freeze for several seconds when switching to a different document window
-• After each automatic backup of a Writer document, NeoOffice would automatically scroll back to the cursor
-• When running on macOS Big Sur, NeoOffice would fail to load many extensions that worked in earlier versions of NeoOffice
+This version of NeoOffice fixes the following bug:
+• Command-clicking on a hyperlink in a document would display a "fatal error" dialog and then crash if the hyperlink does not point to a local file. This bug was caused by our fix for LibreOffice bug 150873 that was added in the previous release to resolve any macOS aliases in a file path.
 
 
 Promotional Text:
-NeoOffice include la Modalità scura nativa!
-
-Gli utenti di macOS Big Sur: seguici su Twitter @NeoOffice per scaricare le ultime correzioni di bug.
+NeoOffice ora supporta VoiceOver.
 
 
 Keywords:
 neo,office,documento,foglio,testo,presentazioni,open,libre
 
 Support URL:
-http://www.neooffice.org/neojava/macappstore.php
+https://www.neooffice.org/neojava/macappstore.php
 
 Marketing URL:
-http://www.neooffice.org/neojava/features.php
+https://www.neooffice.org/neojava/features.php
+
+Privacy Policy URL:
+https://www.neooffice.org/neojava/faq.php?fragment=privacy
 
 App Screenshots:
 Upload ScreenSnapshotWriterAndCalc_it.png file. Note: the ScreenSnapshotWriterAndCalc_it.png was created using the document files in the ScreenSnapshotWriterAndCalc/it subdirectory.

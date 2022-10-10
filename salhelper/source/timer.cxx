@@ -52,13 +52,13 @@ public:
     TimerManager();
 
 
-    virtual ~TimerManager() override;
+    virtual ~TimerManager();
 
     /// register timer
-    void SAL_CALL registerTimer(salhelper::Timer* pTimer);
+    bool SAL_CALL registerTimer(salhelper::Timer* pTimer);
 
     /// unregister timer
-    void SAL_CALL unregisterTimer(salhelper::Timer* pTimer);
+    bool SAL_CALL unregisterTimer(salhelper::Timer* pTimer);
 
     /// lookup timer
     bool SAL_CALL lookupTimer(const salhelper::Timer* pTimer);
@@ -70,13 +70,13 @@ public:
 protected:
 
     /// worker-function of thread
-    virtual void SAL_CALL run() override;
+    virtual void SAL_CALL run() SAL_OVERRIDE;
 
     // Checking and triggering of a timer event
     void SAL_CALL checkForTimeout();
 
     // cleanup Method
-    virtual void SAL_CALL onTerminated() override;
+    virtual void SAL_CALL onTerminated() SAL_OVERRIDE;
 
     // sorted-queue data
     salhelper::Timer*       m_pHead;
@@ -91,6 +91,7 @@ protected:
 };
 
 
+
 // Timer class
 
 
@@ -98,7 +99,7 @@ Timer::Timer()
     : m_aTimeOut( 0 ),
       m_aExpired( 0 ),
       m_aRepeatDelta( 0 ),
-      m_pNext( nullptr )
+      m_pNext( NULL )
 {
 }
 
@@ -106,7 +107,7 @@ Timer::Timer( const TTimeValue& rTime )
     : m_aTimeOut( rTime ),
       m_aExpired( 0 ),
       m_aRepeatDelta( 0 ),
-      m_pNext( nullptr )
+      m_pNext( NULL )
 {
 }
 
@@ -114,7 +115,7 @@ Timer::Timer( const TTimeValue& rTime, const TTimeValue& Repeat )
     : m_aTimeOut( rTime ),
       m_aExpired( 0 ),
       m_aRepeatDelta( Repeat ),
-      m_pNext( nullptr )
+      m_pNext( NULL )
 {
 }
 
@@ -134,7 +135,7 @@ void Timer::start()
 
         OSL_ASSERT(pManager);
 
-        if ( pManager != nullptr )
+        if ( pManager != 0 )
         {
             pManager->registerTimer(this);
         }
@@ -147,7 +148,7 @@ void Timer::stop()
 
     OSL_ASSERT(pManager);
 
-    if ( pManager != nullptr )
+    if ( pManager != 0 )
     {
         pManager->unregisterTimer(this);
     }
@@ -162,7 +163,7 @@ sal_Bool Timer::isTicking() const
     if (pManager)
         return pManager->lookupTimer(this);
     else
-        return false;
+        return sal_False;
 
 }
 
@@ -179,13 +180,13 @@ sal_Bool Timer::expiresBefore(const Timer* pTimer) const
 {
     OSL_ASSERT(pTimer);
 
-    if ( pTimer != nullptr )
+    if ( pTimer != 0 )
     {
         return m_aExpired < pTimer->m_aExpired;
     }
     else
     {
-        return false;
+        return sal_False;
     }
 }
 
@@ -247,6 +248,8 @@ TTimeValue Timer::getRemainingTime() const
 }
 
 
+
+
 // Timer manager
 
 namespace
@@ -255,17 +258,17 @@ namespace
     struct theTimerManagerMutex : public rtl::Static< osl::Mutex, theTimerManagerMutex> {};
 }
 
-TimerManager* salhelper::TimerManager::m_pManager = nullptr;
+TimerManager* salhelper::TimerManager::m_pManager = NULL;
 
 TimerManager::TimerManager()
 {
     osl::MutexGuard Guard(theTimerManagerMutex::get());
 
-    OSL_ASSERT(m_pManager == nullptr);
+    OSL_ASSERT(m_pManager == 0);
 
     m_pManager = this;
 
-    m_pHead= nullptr;
+    m_pHead= 0;
 
     m_notEmpty.reset();
 
@@ -278,7 +281,7 @@ TimerManager::~TimerManager()
     osl::MutexGuard Guard(theTimerManagerMutex::get());
 
     if ( m_pManager == this )
-        m_pManager = nullptr;
+        m_pManager = 0;
 }
 
 void TimerManager::onTerminated()
@@ -296,13 +299,13 @@ TimerManager* TimerManager::getTimerManager()
     return m_pManager;
 }
 
-void TimerManager::registerTimer(Timer* pTimer)
+bool TimerManager::registerTimer(Timer* pTimer)
 {
     OSL_ASSERT(pTimer);
 
-    if ( pTimer == nullptr )
+    if ( pTimer == 0 )
     {
-        return;
+        return false;
     }
 
     osl::MutexGuard Guard(m_Lock);
@@ -333,15 +336,17 @@ void TimerManager::registerTimer(Timer* pTimer)
         // signal it to TimerManager Thread
         m_notEmpty.set();
     }
+
+    return true;
 }
 
-void TimerManager::unregisterTimer(Timer* pTimer)
+bool TimerManager::unregisterTimer(Timer* pTimer)
 {
     OSL_ASSERT(pTimer);
 
-    if ( pTimer == nullptr )
+    if ( pTimer == 0 )
     {
-        return;
+        return false;
     }
 
     // lock access
@@ -355,17 +360,19 @@ void TimerManager::unregisterTimer(Timer* pTimer)
         {
             // remove timer from list
             *ppIter = (*ppIter)->m_pNext;
-            return;
+            return true;
         }
         ppIter= &((*ppIter)->m_pNext);
     }
+
+    return false;
 }
 
 bool TimerManager::lookupTimer(const Timer* pTimer)
 {
     OSL_ASSERT(pTimer);
 
-    if ( pTimer == nullptr )
+    if ( pTimer == 0 )
     {
         return false;
     }
@@ -374,7 +381,7 @@ bool TimerManager::lookupTimer(const Timer* pTimer)
     osl::MutexGuard Guard(m_Lock);
 
     // check the list
-    for (Timer* pIter = m_pHead; pIter != nullptr; pIter= pIter->m_pNext)
+    for (Timer* pIter = m_pHead; pIter != 0; pIter= pIter->m_pNext)
     {
         if (pIter == pTimer)
         {
@@ -390,7 +397,7 @@ void TimerManager::checkForTimeout()
 
     m_Lock.acquire();
 
-    if ( m_pHead == nullptr )
+    if ( m_pHead == 0 )
     {
         m_Lock.release();
         return;
@@ -403,8 +410,8 @@ void TimerManager::checkForTimeout()
     // locking the application mutex before executing the timer:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8428
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8456
-    Application_acquireSolarMutexFunc *pAcquireFunc = reinterpret_cast< Application_acquireSolarMutexFunc* >( dlsym( RTLD_DEFAULT, "Application_acquireSolarMutex" ) );
-    Application_releaseSolarMutexFunc *pReleaseFunc = reinterpret_cast< Application_releaseSolarMutexFunc* >( dlsym( RTLD_DEFAULT, "Application_releaseSolarMutex" ) );
+    Application_acquireSolarMutexFunc *pAcquireFunc = (Application_acquireSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_acquireSolarMutex" );
+    Application_releaseSolarMutexFunc *pReleaseFunc = (Application_releaseSolarMutexFunc *)dlsym( RTLD_DEFAULT, "Application_releaseSolarMutex" );
 #endif	// USE_JAVA && MACOSX
 
     if (pTimer->isExpired())
@@ -461,19 +468,19 @@ void TimerManager::run()
     while (schedule())
     {
         TTimeValue      delay;
-        TTimeValue*     pDelay=nullptr;
+        TTimeValue*     pDelay=0;
 
 
         m_Lock.acquire();
 
-        if (m_pHead != nullptr)
+        if (m_pHead != 0)
         {
             delay = m_pHead->getRemainingTime();
             pDelay=&delay;
         }
         else
         {
-            pDelay=nullptr;
+            pDelay=0;
         }
 
 
@@ -488,6 +495,8 @@ void TimerManager::run()
     }
 
 }
+
+
 
 
 // Timer manager cleanup

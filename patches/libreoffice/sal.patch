@@ -1,0 +1,66 @@
+--- osl/unx/salinit.cxx	2015-11-25 07:55:38.000000000 -0500
++++ osl/unx/salinit.cxx	2020-12-22 07:56:11.000000000 -0500
+@@ -60,12 +60,14 @@
+     // OS X appears to have no better interface to close all fds (like
+     // closefrom):
+     long openMax = sysconf(_SC_OPEN_MAX);
+-    if (openMax == -1) {
+-        // Some random value, but hopefully sysconf never returns -1 anyway:
+-        openMax = 1024;
++    // When LibreOffice restarts itself on macOS 11 beta on arm64, for
++    // some reason sysconf(_SC_OPEN_MAX) returns 0x7FFFFFFFFFFFFFFF,
++    // so use a sanity limit here.
++    if (openMax == -1 || openMax == std::numeric_limits<long>::max()) {
++        openMax = 100000;
+     }
+     assert(openMax >= 0 && openMax <= std::numeric_limits< int >::max());
+-    for (int fd = 3; fd < openMax; ++fd) {
++    for (int fd = 3; fd < int(openMax); ++fd) {
+         struct stat s;
+         if (fstat(fd, &s) != -1 && S_ISREG(s.st_mode))
+             close(fd);
+--- qa/rtl/oustring/rtl_OUString2.cxx	2015-11-25 07:55:38.000000000 -0500
++++ qa/rtl/oustring/rtl_OUString2.cxx	2022-03-24 14:26:10.000000000 -0400
+@@ -894,14 +894,11 @@
+         int i;
+         static const int nSequence = 4096;
+         rtl::OUString *pStrs;
+-        sal_uIntPtr   *pValues;
+ 
+         pStrs = new rtl::OUString[nSequence];
+-        pValues = new sal_uIntPtr[nSequence];
+         for (i = 0; i < nSequence; i++)
+         {
+             pStrs[i] = rtl::OUString::number( sqrt( static_cast<double>(i) ) ).intern();
+-            pValues[i] = reinterpret_cast<sal_uIntPtr>( pStrs[i].pData );
+         }
+         for (i = 0; i < nSequence; i++)
+         {
+@@ -909,27 +906,6 @@
+             CPPUNIT_ASSERT_MESSAGE("double intern failed",
+                                    aNew.pData == pStrs[i].pData);
+         }
+-
+-        // Free strings to check for leaks
+-        for (i = 0; i < nSequence; i++)
+-        {
+-            // Overwrite - hopefully this re-uses the memory
+-            pStrs[i] = rtl::OUString();
+-            pStrs[i] = rtl::OUString::number( sqrt( static_cast<double>(i) ) );
+-        }
+-
+-        for (i = 0; i < nSequence; i++)
+-        {
+-            rtl::OUString aIntern;
+-            sal_uIntPtr nValue;
+-            aIntern = rtl::OUString::number( sqrt( static_cast<double>(i) ) ).intern();
+-
+-            nValue = reinterpret_cast<sal_uIntPtr>( aIntern.pData );
+-            // This may not be 100% reliable: memory may
+-            // have been re-used, but it's worth checking.
+-            CPPUNIT_ASSERT_MESSAGE("intern leaking", nValue != pValues[i]);
+-        }
+-        delete [] pValues;
+         delete [] pStrs;
+     }
+ 

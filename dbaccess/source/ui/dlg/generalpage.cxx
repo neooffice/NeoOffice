@@ -31,16 +31,17 @@
 #include "dsitems.hxx"
 #include "dbustrings.hrc"
 #include "dbadmin.hxx"
-#include "moduledbu.hxx"
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/docfilt.hxx>
 #include <vcl/stdtext.hxx>
+#include "localresaccess.hxx"
 #include <vcl/msgbox.hxx>
 #include <svl/stritem.hxx>
 #include <vcl/waitobj.hxx>
 #include <com/sun/star/sdbc/XDriverAccess.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
+#include <com/sun/star/uno/Sequence.hxx>
 #include <com/sun/star/container/XNameAccess.hpp>
 #include "DriverSettings.hxx"
 #include "UITools.hxx"
@@ -54,7 +55,7 @@
 
 typedef sal_Bool Application_canUseJava_Type();
 
-static Application_canUseJava_Type *pApplication_canUseJava = nullptr;
+static Application_canUseJava_Type *pApplication_canUseJava = NULL;
 
 #endif	// USE_JAVA && MACOSX
 
@@ -71,7 +72,7 @@ namespace dbaui
     static sal_Bool lcl_canUseJava()
     {
         if ( !pApplication_canUseJava )
-            pApplication_canUseJava = reinterpret_cast< Application_canUseJava_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" ) );
+            pApplication_canUseJava = (Application_canUseJava_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canUseJava" );
         return ( pApplication_canUseJava && pApplication_canUseJava() );
     }
 
@@ -81,21 +82,21 @@ namespace dbaui
     OGeneralPage::OGeneralPage( vcl::Window* pParent, const OUString& _rUIXMLDescription, const SfxItemSet& _rItems )
         :OGenericAdministrationPage( pParent, "PageGeneral", _rUIXMLDescription, _rItems )
         ,m_eNotSupportedKnownType       ( ::dbaccess::DST_UNKNOWN )
-        ,m_pSpecialMessage              ( nullptr )
+        ,m_pSpecialMessage              ( NULL )
         ,m_eLastMessage                 ( smNone )
         ,m_bDisplayingInvalid           ( false )
         ,m_bInitTypeList                ( true )
-        ,m_pDatasourceType              ( nullptr )
-        ,m_pCollection                  ( nullptr )
+        ,m_pDatasourceType              ( NULL )
+        ,m_pCollection                  ( NULL )
     {
         get( m_pDatasourceType, "datasourceType" );
         get( m_pSpecialMessage, "specialMessage" );
 
         // extract the datasource type collection from the item set
-        const DbuTypeCollectionItem* pCollectionItem = dynamic_cast<const DbuTypeCollectionItem*>( _rItems.GetItem(DSID_TYPECOLLECTION) );
+        const DbuTypeCollectionItem* pCollectionItem = PTR_CAST(DbuTypeCollectionItem, _rItems.GetItem(DSID_TYPECOLLECTION));
         if (pCollectionItem)
             m_pCollection = pCollectionItem->getCollection();
-        SAL_WARN_IF(!m_pCollection, "dbaccess.ui.generalpage", "OGeneralPage::OGeneralPage : really need a DSN type collection !");
+        SAL_WARN_IF(!m_pCollection, "dbaccess", "OGeneralPage::OGeneralPage : really need a DSN type collection !");
 
         // do some knittings
         m_pDatasourceType->SetSelectHdl(LINK(this, OGeneralPage, OnDatasourceTypeSelected));
@@ -103,14 +104,6 @@ namespace dbaui
 
     OGeneralPage::~OGeneralPage()
     {
-        disposeOnce();
-    }
-
-    void OGeneralPage::dispose()
-    {
-        m_pSpecialMessage.clear();
-        m_pDatasourceType.clear();
-        OGenericAdministrationPage::dispose();
     }
 
     namespace
@@ -122,9 +115,9 @@ namespace dbaui
 
             DisplayedType( const OUString& _eType, const OUString& _rDisplayName ) : eType( _eType ), sDisplayName( _rDisplayName ) { }
         };
-        typedef std::vector< DisplayedType > DisplayedTypes;
+        typedef ::std::vector< DisplayedType > DisplayedTypes;
 
-        struct DisplayedTypeLess : std::binary_function< DisplayedType, DisplayedType, bool >
+        struct DisplayedTypeLess : ::std::binary_function< DisplayedType, DisplayedType, bool >
         {
             bool operator() ( const DisplayedType& _rLHS, const DisplayedType& _rRHS )
             {
@@ -166,7 +159,7 @@ namespace dbaui
                         }
                     }
                 }
-                std::sort( aDisplayedTypes.begin(), aDisplayedTypes.end(), DisplayedTypeLess() );
+                ::std::sort( aDisplayedTypes.begin(), aDisplayedTypes.end(), DisplayedTypeLess() );
                 DisplayedTypes::const_iterator aDisplayEnd = aDisplayedTypes.end();
                 for (   DisplayedTypes::const_iterator loop = aDisplayedTypes.begin();
                         loop != aDisplayEnd;
@@ -199,13 +192,13 @@ namespace dbaui
                     {
                         OUString sDisplayName = aTypeLoop.getDisplayName();
                         if ( m_pEmbeddedDBType->GetEntryPos( sDisplayName ) == LISTBOX_ENTRY_NOTFOUND
-                            && dbaccess::ODsnTypeCollection::isEmbeddedDatabase( sURLPrefix ) )
+                            && m_pCollection->isEmbeddedDatabase( sURLPrefix ) )
                         {
                             aDisplayedTypes.push_back( DisplayedTypes::value_type( sURLPrefix, sDisplayName ) );
                         }
                     }
                 }
-                std::sort( aDisplayedTypes.begin(), aDisplayedTypes.end(), DisplayedTypeLess() );
+                ::std::sort( aDisplayedTypes.begin(), aDisplayedTypes.end(), DisplayedTypeLess() );
                 DisplayedTypes::const_iterator aDisplayEnd = aDisplayedTypes.end();
                 for (   DisplayedTypes::const_iterator loop = aDisplayedTypes.begin();
                         loop != aDisplayEnd;
@@ -263,7 +256,8 @@ namespace dbaui
 
         switchMessage(_sURLPrefix);
 
-        m_aTypeSelectHandler.Call(*this);
+        if ( m_aTypeSelectHandler.IsSet() )
+            m_aTypeSelectHandler.Call(this);
     }
 
     void OGeneralPage::implInitControls( const SfxItemSet& _rSet, bool _bSaveValue )
@@ -294,8 +288,8 @@ namespace dbaui
         if ( bValid )
         {
             // collect some items and some values
-            const SfxStringItem* pNameItem = _rSet.GetItem<SfxStringItem>(DSID_NAME);
-            const SfxStringItem* pUrlItem = _rSet.GetItem<SfxStringItem>(DSID_CONNECTURL);
+            SFX_ITEMSET_GET( _rSet, pNameItem, SfxStringItem, DSID_NAME, true );
+            SFX_ITEMSET_GET( _rSet, pUrlItem, SfxStringItem, DSID_CONNECTURL, true );
             assert( pUrlItem );
             assert( pNameItem );
             sName = pNameItem->GetValue();
@@ -315,7 +309,7 @@ namespace dbaui
         }
 
         // select the correct datasource type
-        if  (  dbaccess::ODsnTypeCollection::isEmbeddedDatabase( m_eCurrentSelection )
+        if  (  m_pCollection->isEmbeddedDatabase( m_eCurrentSelection )
             &&  ( LISTBOX_ENTRY_NOTFOUND == m_pEmbeddedDBType->GetEntryPos( sDisplayName ) )
             )
         {   // this indicates it's really a type which is known in general, but not supported on the current platform
@@ -342,8 +336,8 @@ namespace dbaui
         if ( bValid )
         {
             // collect some items and some values
-            const SfxStringItem* pNameItem = _rSet.GetItem<SfxStringItem>(DSID_NAME);
-            const SfxStringItem* pUrlItem = _rSet.GetItem<SfxStringItem>(DSID_CONNECTURL);
+            SFX_ITEMSET_GET( _rSet, pNameItem, SfxStringItem, DSID_NAME, true );
+            SFX_ITEMSET_GET( _rSet, pUrlItem, SfxStringItem, DSID_CONNECTURL, true );
             assert( pUrlItem );
             assert( pNameItem );
             sName = pNameItem->GetValue();
@@ -401,12 +395,12 @@ namespace dbaui
             // do not display the Connector/OOo driver itself, it is always wrapped via the MySQL-Driver, if
             // this driver is installed
             if ( m_pCollection->hasDriver( "sdbc:mysql:mysqlc:" ) )
-                _inout_rDisplayName.clear();
+                _inout_rDisplayName = "";
         }
 
         if ( eType ==  ::dbaccess::DST_EMBEDDED_HSQLDB
                 || eType ==  ::dbaccess::DST_EMBEDDED_FIREBIRD )
-            _inout_rDisplayName.clear();
+            _inout_rDisplayName = "";
 
         return _inout_rDisplayName.getLength() > 0;
     }
@@ -414,8 +408,8 @@ namespace dbaui
     void OGeneralPage::insertDatasourceTypeEntryData(const OUString& _sType, const OUString& sDisplayName)
     {
         // insert a (temporary) entry
-        const sal_Int32 nPos = m_pDatasourceType->InsertEntry(sDisplayName);
-        if ( static_cast<size_t>(nPos) >= m_aURLPrefixes.size() )
+        sal_uInt16 nPos = m_pDatasourceType->InsertEntry(sDisplayName);
+        if ( nPos >= m_aURLPrefixes.size() )
             m_aURLPrefixes.resize(nPos+1);
         m_aURLPrefixes[nPos] = _sType;
     }
@@ -423,18 +417,18 @@ namespace dbaui
     void OGeneralPageWizard::insertEmbeddedDBTypeEntryData(const OUString& _sType, const OUString& sDisplayName)
     {
         // insert a (temporary) entry
-        const sal_Int32 nPos = m_pEmbeddedDBType->InsertEntry(sDisplayName);
-        if ( static_cast<size_t>(nPos) >= m_aEmbeddedURLPrefixes.size() )
+        sal_uInt16 nPos = m_pEmbeddedDBType->InsertEntry(sDisplayName);
+        if ( nPos >= m_aEmbeddedURLPrefixes.size() )
             m_aEmbeddedURLPrefixes.resize(nPos+1);
         m_aEmbeddedURLPrefixes[nPos] = _sType;
     }
 
-    void OGeneralPage::fillWindows(std::vector< ISaveValueWrapper* >& _rControlList)
+    void OGeneralPage::fillWindows(::std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back( new ODisableWrapper<FixedText>( m_pSpecialMessage ) );
     }
 
-    void OGeneralPage::fillControls(std::vector< ISaveValueWrapper* >& _rControlList)
+    void OGeneralPage::fillControls(::std::vector< ISaveValueWrapper* >& _rControlList)
     {
         _rControlList.push_back( new OSaveValueWrapper<ListBox>( m_pDatasourceType ) );
     }
@@ -456,14 +450,14 @@ namespace dbaui
         OGenericAdministrationPage::Reset(_rCoreAttrs);
     }
 
-    IMPL_LINK( OGeneralPageWizard, OnEmbeddedDBTypeSelected, ListBox&, _rBox, void )
+    IMPL_LINK( OGeneralPageWizard, OnEmbeddedDBTypeSelected, ListBox*, _pBox )
     {
         // get the type from the entry data
-        const sal_Int32 nSelected = _rBox.GetSelectEntryPos();
-        if (static_cast<size_t>(nSelected) >= m_aEmbeddedURLPrefixes.size() )
+        sal_uInt16 nSelected = _pBox->GetSelectEntryPos();
+        if (nSelected >= m_aEmbeddedURLPrefixes.size() )
         {
-            SAL_WARN("dbaccess.ui.generalpage", "Got out-of-range value '" << nSelected <<  "' from the DatasourceType selection ListBox's GetSelectEntryPos(): no corresponding URL prefix");
-            return;
+            SAL_WARN("dbaccess.ui.OGeneralPage", "Got out-of-range value '" << nSelected <<  "' from the DatasourceType selection ListBox's GetSelectEntryPos(): no corresponding URL prefix");
+            return 0L;
         }
         const OUString sURLPrefix = m_aEmbeddedURLPrefixes[ nSelected ];
 
@@ -473,17 +467,17 @@ namespace dbaui
         // tell the listener we were modified
         callModifiedHdl();
         // outta here
-        return;
+        return 0L;
     }
 
-    IMPL_LINK( OGeneralPage, OnDatasourceTypeSelected, ListBox&, _rBox, void )
+    IMPL_LINK( OGeneralPage, OnDatasourceTypeSelected, ListBox*, _pBox )
     {
         // get the type from the entry data
-        const sal_Int32 nSelected = _rBox.GetSelectEntryPos();
-        if (static_cast<size_t>(nSelected) >= m_aURLPrefixes.size() )
+        sal_uInt16 nSelected = _pBox->GetSelectEntryPos();
+        if (nSelected >= m_aURLPrefixes.size() )
         {
-            SAL_WARN("dbaccess.ui.generalpage", "Got out-of-range value '" << nSelected <<  "' from the DatasourceType selection ListBox's GetSelectEntryPos(): no corresponding URL prefix");
-            return;
+            SAL_WARN("dbaccess.ui.OGeneralPage", "Got out-of-range value '" << nSelected <<  "' from the DatasourceType selection ListBox's GetSelectEntryPos(): no corresponding URL prefix");
+            return 0L;
         }
         const OUString sURLPrefix = m_aURLPrefixes[ nSelected ];
 
@@ -492,6 +486,8 @@ namespace dbaui
         onTypeSelected( sURLPrefix );
         // tell the listener we were modified
         callModifiedHdl();
+        // outta here
+        return 0L;
     }
 
     // OGeneralPageDialog
@@ -525,7 +521,7 @@ namespace dbaui
     {
         bool bChangedSomething = false;
 
-        const sal_Int32 nEntry = m_pDatasourceType->GetSelectEntryPos();
+        sal_uInt16 nEntry = m_pDatasourceType->GetSelectEntryPos();
         OUString sURLPrefix = m_aURLPrefixes[ nEntry ];
 
         if ( m_pDatasourceType->IsValueChangedFromSaved() )
@@ -540,14 +536,14 @@ namespace dbaui
     // OGeneralPageWizard
     OGeneralPageWizard::OGeneralPageWizard( vcl::Window* pParent, const SfxItemSet& _rItems )
         :OGeneralPage( pParent, "dbaccess/ui/generalpagewizard.ui", _rItems )
-        ,m_pRB_CreateDatabase           ( nullptr )
-        ,m_pRB_OpenExistingDatabase     ( nullptr )
-        ,m_pRB_ConnectDatabase          ( nullptr )
-        ,m_pFT_EmbeddedDBLabel          ( nullptr )
-        ,m_pEmbeddedDBType              ( nullptr )
-        ,m_pFT_DocListLabel             ( nullptr )
-        ,m_pLB_DocumentList             ( nullptr )
-        ,m_pPB_OpenDatabase             ( nullptr )
+        ,m_pRB_CreateDatabase           ( NULL )
+        ,m_pRB_OpenExistingDatabase     ( NULL )
+        ,m_pRB_ConnectDatabase          ( NULL )
+        ,m_pFT_EmbeddedDBLabel          ( NULL )
+        ,m_pEmbeddedDBType              ( NULL )
+        ,m_pFT_DocListLabel             ( NULL )
+        ,m_pLB_DocumentList             ( NULL )
+        ,m_pPB_OpenDatabase             ( NULL )
         ,m_eOriginalCreationMode        ( eCreateNew )
         ,m_bInitEmbeddedDBList          ( true )
     {
@@ -563,13 +559,13 @@ namespace dbaui
         // If no driver for embedded DBs is installed, and no dBase driver, then hide the "Create new database" option
         sal_Int32 nCreateNewDBIndex = m_pCollection->getIndexOf( m_pCollection->getEmbeddedDatabase() );
         if ( nCreateNewDBIndex == -1 )
-            nCreateNewDBIndex = m_pCollection->getIndexOf( "sdbc:dbase:" );
+            nCreateNewDBIndex = m_pCollection->getIndexOf( OUString( "sdbc:dbase:" ) );
         bool bHideCreateNew = ( nCreateNewDBIndex == -1 );
 
         // also, if our application policies tell us to hide the option, do it
         ::utl::OConfigurationTreeRoot aConfig( ::utl::OConfigurationTreeRoot::createWithComponentContext(
             ::comphelper::getProcessComponentContext(),
-            "/org.openoffice.Office.DataAccess/Policies/Features/Base"
+            OUString( "/org.openoffice.Office.DataAccess/Policies/Features/Base" )
         ) );
         bool bAllowCreateLocalDatabase( true );
         OSL_VERIFY( aConfig.getNodeValue( "CreateLocalDatabase" ) >>= bAllowCreateLocalDatabase );
@@ -591,24 +587,6 @@ namespace dbaui
         m_pRB_OpenExistingDatabase->SetClickHdl( LINK( this, OGeneralPageWizard, OnSetupModeSelected ) );
         m_pLB_DocumentList->SetSelectHdl( LINK( this, OGeneralPageWizard, OnDocumentSelected ) );
         m_pPB_OpenDatabase->SetClickHdl( LINK( this, OGeneralPageWizard, OnOpenDocument ) );
-    }
-
-    OGeneralPageWizard::~OGeneralPageWizard()
-    {
-        disposeOnce();
-    }
-
-    void OGeneralPageWizard::dispose()
-    {
-        m_pRB_CreateDatabase.clear();
-        m_pRB_OpenExistingDatabase.clear();
-        m_pRB_ConnectDatabase.clear();
-        m_pFT_EmbeddedDBLabel.clear();
-        m_pEmbeddedDBType.clear();
-        m_pFT_DocListLabel.clear();
-        m_pLB_DocumentList.clear();
-        m_pPB_OpenDatabase.clear();
-        OGeneralPage::dispose();
     }
 
     OGeneralPageWizard::CreationMode OGeneralPageWizard::GetDatabaseCreationMode() const
@@ -668,9 +646,9 @@ namespace dbaui
 
     OUString OGeneralPageWizard::getDatasourceName(const SfxItemSet& _rSet)
     {
-        // Sets jdbc as the default selected database on startup.
+        // Sets jdbc as the default selected databse on startup.
         if (m_pRB_CreateDatabase->IsChecked() )
-            return m_pCollection->getTypeDisplayName( "jdbc:" );
+            return m_pCollection->getTypeDisplayName( OUString( "jdbc:" ) );
 
         return OGeneralPage::getDatasourceName( _rSet );
     }
@@ -686,7 +664,7 @@ namespace dbaui
         case ::dbaccess::DST_MYSQL_JDBC:
 #if defined USE_JAVA && defined MACOSX
             if ( !bCanUseJava )
-                _inout_rDisplayName.clear();
+                _inout_rDisplayName = "";
             else
 #endif	// USE_JAVA && MACOSX
             _inout_rDisplayName = "MySQL";
@@ -700,7 +678,7 @@ namespace dbaui
                 _inout_rDisplayName = "MySQL";
             else
 #endif	// USE_JAVA && MACOSX
-            _inout_rDisplayName.clear();
+            _inout_rDisplayName = "";
             break;
         default:
             break;
@@ -732,7 +710,7 @@ namespace dbaui
 
         if ( bCommitTypeSelection )
         {
-            const sal_Int32 nEntry = m_pDatasourceType->GetSelectEntryPos();
+            sal_uInt16 nEntry = m_pDatasourceType->GetSelectEntryPos();
             OUString sURLPrefix = m_aURLPrefixes[nEntry];
 
             if  (  m_pDatasourceType->IsValueChangedFromSaved()
@@ -761,30 +739,35 @@ namespace dbaui
         return aDocument;
     }
 
-    IMPL_LINK_NOARG( OGeneralPageWizard, OnCreateDatabaseModeSelected, Button*, void )
+    IMPL_LINK( OGeneralPageWizard, OnCreateDatabaseModeSelected, RadioButton*, /*_pBox*/ )
     {
-        m_aCreationModeHandler.Call( *this );
+        if ( m_aCreationModeHandler.IsSet() )
+            m_aCreationModeHandler.Call( this );
 
-        OnEmbeddedDBTypeSelected( *m_pEmbeddedDBType );
+        OnEmbeddedDBTypeSelected( m_pEmbeddedDBType );
+        return 1L;
     }
 
-    IMPL_LINK_NOARG( OGeneralPageWizard, OnSetupModeSelected, Button*, void )
+    IMPL_LINK( OGeneralPageWizard, OnSetupModeSelected, RadioButton*, /*_pBox*/ )
     {
-        m_aCreationModeHandler.Call( *this );
-        OnDatasourceTypeSelected(*m_pDatasourceType);
+        if ( m_aCreationModeHandler.IsSet() )
+            m_aCreationModeHandler.Call( this );
+        OnDatasourceTypeSelected(m_pDatasourceType);
+        return 1L;
     }
 
-    IMPL_LINK_NOARG( OGeneralPageWizard, OnDocumentSelected, ListBox&, void )
+    IMPL_LINK( OGeneralPageWizard, OnDocumentSelected, ListBox*, /*_pBox*/ )
     {
-        m_aDocumentSelectionHandler.Call( *this );
+        m_aDocumentSelectionHandler.Call( this );
+        return 0L;
     }
 
-    IMPL_LINK_NOARG( OGeneralPageWizard, OnOpenDocument, Button*, void )
+    IMPL_LINK( OGeneralPageWizard, OnOpenDocument, PushButton*, /*_pBox*/ )
     {
         ::sfx2::FileDialogHelper aFileDlg(
                 ui::dialogs::TemplateDescription::FILEOPEN_READONLY_VERSION,
-                FileDialogFlags::NONE, "sdatabase" );
-        std::shared_ptr<const SfxFilter> pFilter = getStandardDatabaseFilter();
+                0, OUString("sdatabase") );
+        const SfxFilter* pFilter = getStandardDatabaseFilter();
         if ( pFilter )
         {
             aFileDlg.SetCurrentFilter(pFilter->GetUIName());
@@ -795,16 +778,19 @@ namespace dbaui
             if ( aFileDlg.GetCurrentFilter() != pFilter->GetUIName() || !pFilter->GetWildcard().Matches(sPath) )
             {
                 OUString sMessage(ModuleRes(STR_ERR_USE_CONNECT_TO));
-                ScopedVclPtrInstance< InfoBox > aError(this, sMessage);
-                aError->Execute();
+                InfoBox aError(this, sMessage);
+                aError.Execute();
                 m_pRB_ConnectDatabase->Check();
                 OnSetupModeSelected( m_pRB_ConnectDatabase );
-                return;
+                return 0L;
             }
             m_aBrowsedDocument.sURL = sPath;
-            m_aBrowsedDocument.sFilter.clear();
-            m_aChooseDocumentHandler.Call( *this );
+            m_aBrowsedDocument.sFilter = "";
+            m_aChooseDocumentHandler.Call( this );
+            return 1L;
         }
+
+        return 0L;
     }
 
 }   // namespace dbaui

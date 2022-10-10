@@ -1,0 +1,177 @@
+--- source/core/drawdoc.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/core/drawdoc.cxx	2021-05-11 13:11:01.000000000 -0400
+@@ -128,24 +128,6 @@
+ {
+ }
+ 
+-PresentationSettings::PresentationSettings( const PresentationSettings& r )
+-:   maPresPage( r.maPresPage ),
+-    mbAll( r.mbAll ),
+-    mbEndless( r.mbEndless ),
+-    mbCustomShow( r.mbCustomShow ),
+-    mbManual( r.mbManual ),
+-    mbMouseVisible( r.mbMouseVisible ),
+-    mbMouseAsPen( r.mbMouseAsPen ),
+-    mbLockedPages( r.mbLockedPages ),
+-    mbAlwaysOnTop( r.mbAlwaysOnTop ),
+-    mbFullScreen( r.mbFullScreen ),
+-    mbAnimationAllowed( r.mbAnimationAllowed ),
+-    mnPauseTimeout( r.mnPauseTimeout ),
+-    mbShowPauseLogo( r.mbShowPauseLogo ),
+-    mbStartWithNavigator( r.mbStartWithNavigator )
+-{
+-}
+-
+ SdDrawDocument::SdDrawDocument(DocumentType eType, SfxObjectShell* pDrDocSh)
+ : FmFormModel( SvtPathOptions().GetPalettePath(), NULL, pDrDocSh )
+ , bReadOnly(false)
+@@ -691,6 +673,12 @@
+     {
+         pDocLockedInsertingLinks = this; // lock inserting links. only links in this document should by resolved
+ 
++        if (mpDocSh)
++        {
++            comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = mpDocSh->getEmbeddedObjectContainer();
++            rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
++        }
++
+         pLinkManager->UpdateAllLinks();  // query box: update all links?
+ 
+         if( pDocLockedInsertingLinks == this )
+--- source/ui/docshell/docshel4.cxx	2015-11-25 04:55:38.000000000 -0800
++++ source/ui/docshell/docshel4.cxx	2016-12-08 17:08:54.000000000 -0800
+@@ -288,8 +288,11 @@
+     }
+ 
+     bRet = SfxObjectShell::Load( rMedium );
+-    if( bRet )
++    if (bRet)
+     {
++        comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = getEmbeddedObjectContainer();
++        rEmbeddedObjectContainer.setUserAllowsLinkUpdate(false);
++
+         bRet = SdXMLFilter( rMedium, *this, true, SDXMLMODE_Normal, SotStorage::GetVersion( rMedium.GetStorage() ) ).Import( nError );
+     }
+ 
+--- source/ui/remotecontrol/BluetoothServer.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/remotecontrol/BluetoothServer.cxx	2021-10-28 19:01:40.000000000 -0400
+@@ -53,6 +53,11 @@
+   #include <postmac.h>
+   #import "OSXBluetooth.h"
+   #include "OSXBluetoothWrapper.hxx"
++
++  #include <dlfcn.h>
++
++  typedef IOReturn IOBluetoothAddServiceDict_Type( CFDictionaryRef aServiceDict, IOBluetoothSDPServiceRecordRef *pOutServiceRecord );
++  typedef IOBluetoothUserNotificationRef IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications_Type( IOBluetoothUserNotificationCallback aCallback, void *pRefCon, BluetoothRFCOMMChannelID aChannelID, IOBluetoothUserNotificationChannelDirection aDirection );
+ #endif
+ 
+ #ifdef __MINGW32__
+@@ -1491,7 +1496,15 @@
+ 
+     // Create service
+     IOBluetoothSDPServiceRecordRef serviceRecordRef;
+-    IOReturn rc = IOBluetoothAddServiceDict((CFDictionaryRef) dict, &serviceRecordRef);
++    IOReturn rc = kIOReturnError;
++    void *pLib = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
++    if (pLib)
++    {
++        IOBluetoothAddServiceDict_Type *pIOBluetoothAddServiceDict = (IOBluetoothAddServiceDict_Type *)dlsym(pLib, "IOBluetoothAddServiceDict");
++        if (pIOBluetoothAddServiceDict)
++            rc = pIOBluetoothAddServiceDict((CFDictionaryRef) dict, &serviceRecordRef);
++        dlclose(pLib);
++    }
+ 
+     SAL_INFO("sdremote.bluetooth", "IOBluetoothAddServiceDict returned " << rc);
+ 
+@@ -1507,12 +1520,21 @@
+         [serviceRecord getServiceRecordHandle: &serviceRecordHandle];
+ 
+         // Register callback for incoming connections
+-        IOBluetoothUserNotificationRef callbackRef =
+-            IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications(
+-                incomingCallback,
+-                this,
+-                channelID,
+-                kIOBluetoothUserNotificationChannelDirectionIncoming);
++        IOBluetoothUserNotificationRef callbackRef = NULL;
++        void *pLib = dlopen(NULL, RTLD_LAZY | RTLD_LOCAL);
++        if (pLib)
++        {
++            IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications_Type *pIOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications = (IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications_Type *)dlsym(pLib, "IOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications");
++            if (pIOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications)
++            {
++                pIOBluetoothRegisterForFilteredRFCOMMChannelOpenNotifications(
++                    incomingCallback,
++                    this,
++                    channelID,
++                    kIOBluetoothUserNotificationChannelDirectionIncoming);
++            }
++            dlclose(pLib);
++        }
+ 
+         (void) callbackRef;
+ 
+--- source/ui/slidesorter/inc/view/SlsLayouter.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/slidesorter/inc/view/SlsLayouter.hxx	2021-05-11 13:07:14.000000000 -0400
+@@ -202,7 +202,6 @@
+ {
+ public:
+     InsertPosition (void);
+-    InsertPosition& operator= (const InsertPosition& rInsertPosition);
+     bool operator== (const InsertPosition& rInsertPosition) const;
+     bool operator!= (const InsertPosition& rInsertPosition) const;
+ 
+--- source/ui/slidesorter/view/SlsLayouter.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/slidesorter/view/SlsLayouter.cxx	2021-05-11 13:08:28.000000000 -0400
+@@ -1199,23 +1199,6 @@
+ {
+ }
+ 
+-InsertPosition& InsertPosition::operator= (const InsertPosition& rInsertPosition)
+-{
+-    if (this != &rInsertPosition)
+-    {
+-        mnRow = rInsertPosition.mnRow;
+-        mnColumn = rInsertPosition.mnColumn;
+-        mnIndex = rInsertPosition.mnIndex;
+-        mbIsAtRunStart = rInsertPosition.mbIsAtRunStart;
+-        mbIsAtRunEnd = rInsertPosition.mbIsAtRunEnd;
+-        mbIsExtraSpaceNeeded = rInsertPosition.mbIsExtraSpaceNeeded;
+-        maLocation = rInsertPosition.maLocation;
+-        maLeadingOffset = rInsertPosition.maLeadingOffset;
+-        maTrailingOffset = rInsertPosition.maTrailingOffset;
+-    }
+-    return *this;
+-}
+-
+ bool InsertPosition::operator== (const InsertPosition& rInsertPosition) const
+ {
+     // Do not compare the geometrical information (maLocation).
+--- inc/drawdoc.hxx	2015-11-25 07:55:38.000000000 -0500
++++ inc/drawdoc.hxx	2021-05-11 13:09:29.000000000 -0400
+@@ -128,7 +128,6 @@
+         bool mbStartWithNavigator;
+ 
+         PresentationSettings();
+-        PresentationSettings( const PresentationSettings& r );
+     };
+ }
+ 
+--- source/ui/tools/PropertySet.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/tools/PropertySet.cxx	2021-05-12 08:15:40.000000000 -0400
+@@ -119,10 +119,10 @@
+         ::std::find_if(
+             aRange.first,
+             aRange.second,
+-            o3tl::compose1(
+-                std::bind1st(std::equal_to<Reference<beans::XPropertyChangeListener> >(),
+-                    rxListener),
+-                o3tl::select2nd<ChangeListenerContainer::value_type>())));
++            [&rxListener] (const ChangeListenerContainer::value_type& listener) {
++                return listener.second == rxListener;
++            }));
++
+     if (iListener != mpChangeListeners->end())
+     {
+         mpChangeListeners->erase(iListener);

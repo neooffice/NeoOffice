@@ -48,11 +48,12 @@ public:
 							JavaSalSystem();
 	virtual					~JavaSalSystem();
 
-	virtual unsigned int	GetDisplayScreenCount() override;
-	virtual bool			IsUnifiedDisplay() override { return true; }
-	virtual unsigned int	GetDisplayBuiltInScreen() override;
-	virtual tools::Rectangle	GetDisplayScreenPosSizePixel( unsigned int nScreen ) override;
-	virtual int				ShowNativeMessageBox( const OUString& rTitle, const OUString& rMessage ) override;
+	virtual unsigned int	GetDisplayScreenCount() SAL_OVERRIDE;
+	virtual bool			IsUnifiedDisplay() SAL_OVERRIDE { return true; }
+	virtual unsigned int	GetDisplayBuiltInScreen() SAL_OVERRIDE;
+	virtual Rectangle		GetDisplayScreenPosSizePixel( unsigned int nScreen ) SAL_OVERRIDE;
+	virtual OUString		GetDisplayScreenName( unsigned int nScreen ) SAL_OVERRIDE;
+	virtual int				ShowNativeMessageBox( const OUString& rTitle, const OUString& rMessage, int nButtonCombination, int nDefaultButton, bool bUseResources ) SAL_OVERRIDE;
 };
 
 #endif // _SV_SALSYS_H

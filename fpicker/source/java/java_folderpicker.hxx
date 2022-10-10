@@ -59,25 +59,25 @@ public:
 	virtual				~JavaFolderPicker();
 
     // XExecutableDialog
-    virtual void SAL_CALL setTitle( const OUString& aTitle ) override;
-    virtual sal_Int16 SAL_CALL execute(  ) override;
+    virtual void SAL_CALL setTitle( const OUString& aTitle ) throw( ::com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
+    virtual sal_Int16 SAL_CALL execute(  ) throw( ::com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
 
     // XFolderPicker
-    virtual void SAL_CALL setDisplayDirectory( const OUString& rDirectory ) override;
-    virtual OUString SAL_CALL getDisplayDirectory(  ) override;
-    virtual OUString SAL_CALL getDirectory( ) override;
-    virtual void SAL_CALL setDescription( const OUString& rDescription ) override;
+    virtual void SAL_CALL setDisplayDirectory( const OUString& rDirectory ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getDisplayDirectory(  ) throw( com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
+    virtual OUString SAL_CALL getDirectory( ) throw( com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
+    virtual void SAL_CALL setDescription( const OUString& rDescription ) throw( com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
 
     // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName(  ) override;
-    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) override;
-    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) override;
+    virtual OUString SAL_CALL getImplementationName(  ) throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
 
     // XCancellable
-    virtual void SAL_CALL cancel( ) override;
+    virtual void SAL_CALL cancel( ) throw( ::com::sun::star::uno::RuntimeException ) SAL_OVERRIDE;
 
     // XEventListener
-    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) override;
+    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& aEvent ) throw(::com::sun::star::uno::RuntimeException) SAL_OVERRIDE;
 };
 
 }

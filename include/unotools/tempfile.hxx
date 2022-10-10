@@ -16,11 +16,11 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
+#include <unotools/unotoolsdllapi.h>
 
 #ifndef INCLUDED_UNOTOOLS_TEMPFILE_HXX
 #define INCLUDED_UNOTOOLS_TEMPFILE_HXX
 
-#include <unotools/unotoolsdllapi.h>
 #include <tools/stream.hxx>
 
 namespace utl
@@ -45,12 +45,16 @@ namespace utl
 class UNOTOOLS_DLLPUBLIC TempFile
 {
     OUString    aName;
+    OUString    aURL;
     SvStream*   pStream;
     bool        bIsDirectory;
     bool        bKillingFileEnabled;
 
-    TempFile( const TempFile& ) = delete;
-    TempFile& operator=(const TempFile&) = delete;
+    // prevent copy c'tor
+    TempFile( const TempFile& );
+    TempFile& operator=(const TempFile&);
+
+protected:
 
 public:
                     /**
@@ -59,18 +63,15 @@ public:
                     The temporary object is created in the local file system, even if there is no UCB that can access it.
                     If the given folder is part of the local file system, the TempFile is created in this folder.
                     */
-                    TempFile( const OUString* pParent=nullptr, bool bDirectory=false );
+                    TempFile( const OUString* pParent=NULL, bool bDirectory=false );
 
                     /**
                     Same as above; additionally the name starts with some given characters followed by a counter ( example:
                     rLeadingChars="abc" means "abc0","abc1" and so on, depending on existing files in the folder ).
                     The extension string may be f.e. ".txt" or "", if no extension string is given, ".tmp" is used
                         @param  _bStartWithZero If set to false names will be generated like "abc","abc0","abc1"
-                        @param  bCreateParentDirs If rLeadingChars contains a slash, this will create the required
-                                parent directories.
                     */
-                    TempFile( const OUString& rLeadingChars, bool _bStartWithZero=true, const OUString* pExtension=nullptr,
-                              const OUString* pParent=nullptr, bool bCreateParentDirs=false );
+                    TempFile( const OUString& rLeadingChars, bool _bStartWithZero=true, const OUString* pExtension=NULL, const OUString* pParent=NULL, bool bDirectory=false);
 
                     /**
                     TempFile will be removed from disk in dtor if EnableKillingFile(true) was called before.
@@ -84,14 +85,20 @@ public:
     bool            IsValid() const;
 
                     /**
-                    Returns the URL of the tempfile object.
-                    If you want to have the system path file name, use the GetFileName() method of this object
+                    Returns the "UCB compatible" URL of the tempfile object.
+                    If you want to have the "physical" file name, use the GetFileName() method of this object, because these
+                    method uses the UCB for the conversion, but never use any external conversion functions for URLs into
+                    "physical" names.
+                    If no UCP is available for the local file system, an empty URL is returned. In this case you can't access
+                    the file as a UCB content !
                     */
-    OUString const & GetURL();
+    OUString        GetURL();
 
                     /**
-                    Returns the system path name of the tempfile in host notation
-                    If you want to have the URL, use the GetURL() method of this object.
+                    Returns the "physical" name of the tempfile in host notation ( should only be used for 3rd party code
+                    with file name interfaces ).
+                    If you want to have the URL, use the GetURL() method of this object, but never use any external
+                    conversion functions for "physical" names into URLs.
                     */
     OUString        GetFileName() const;
 
@@ -128,7 +135,7 @@ public:
                     that does not belong to the local file system.
                     The caller of the SetTempNameBase is responsible for deleting this folder and all temporary files in it.
                     The return value of both methods is the complete "physical" name of the tempname base folder.
-                    It is not a URL because all URLs must be "UCB compatible", so there may be no suitable URL at all.
+                    It is not a URL because alle URLs must be "UCB compatible", so there may be no suitable URL at all.
                     */
     static OUString SetTempNameBaseDirectory( const OUString &rBaseName );
 #ifndef NO_OOO_4_1_3_GET_TEMP_NAME_BASE_DIR

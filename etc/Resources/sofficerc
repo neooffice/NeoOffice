@@ -1,11 +1,5 @@
 [Bootstrap]
-CrashDirectory=${$BRAND_BASE_DIR/Resources/bootstraprc:UserInstallation}/crash
 HideEula=1
 Logo=1
 NativeProgress=true
-SecureUserConfig=true
-SecureUserConfigCompress=true
-SecureUserConfigExtensions=true
-SecureUserConfigMode=1
-SecureUserConfigNumCopies=2
 URE_BOOTSTRAP=${ORIGIN}/fundamentalrc

@@ -132,7 +132,7 @@ gb_UIImageListTarget_XSLTFILE := $(SRCDIR)/solenv/bin/uiimagelist.xsl
 define gb_UIImageListTarget__command
 $(call gb_Output_announce,$(2),$(true),UIL,1)
 $(call gb_Helper_abbreviate_dirs,\
-	$(gb_UIImageListTarget_COMMAND) --nonet -o $@ $(gb_UIImageListTarget_XSLTFILE) $(UIFILE) && \
+	$(gb_UIImageListTarget_COMMAND) -o $@ $(gb_UIImageListTarget_XSLTFILE) $(UIFILE) && \
 	touch $@ \
 )
 endef
@@ -202,7 +202,7 @@ $(call gb_UIConfig_get_clean_target,%) :
 	)
 ifeq ($(strip $(PRODUCT_BUILD_TYPE)),java)
 	$(call gb_Helper_abbreviate_dirs,\
-		rm -f $(call gb_UIConfig_get_imagelist_target,$*) \
+		rm -f $(patsubst %.done,%.ilst,$(call gb_UIConfig_get_target,$*)) \
 	)
 endif	# PRODUCT_BUILD_TYPE == java
 
@@ -214,10 +214,6 @@ gb_UIConfig_get_zipname_for_lang = UIConfig/$(1)/$(2)
 #
 # gb_UIConfig_UIConfig modulename
 define gb_UIConfig_UIConfig
-ifeq (,$$(filter $(1),$$(gb_UIConfig_REGISTERED)))
-$$(eval $$(call gb_Output_info,Currently known UI configs are: $(sort $(gb_UIConfig_REGISTERED)),ALL))
-$$(eval $$(call gb_Output_error,UIConfig $(1) must be registered in Repository.mk))
-endif
 $(call gb_UIConfig_get_imagelist_target,$(1)) : UI_IMAGELISTS :=
 
 $(call gb_PackageSet_PackageSet_internal,$(call gb_UIConfig_get_packagesetname,$(1)))
@@ -433,24 +429,6 @@ endef
 # gb_UIConfig_add_toolbarfiles target file(s)
 define gb_UIConfig_add_toolbarfiles
 $(foreach toolbarfile,$(2),$(call gb_UIConfig_add_toolbarfile,$(1),$(toolbarfile)))
-
-endef
-
-# Add popupmenu config file to the package.
-#
-# The file is relative to $(SRCDIR) and without extension.
-#
-# gb_UIConfig_add_popupmenufile target file
-define gb_UIConfig_add_popupmenufile
-$(call gb_UIConfig__add_xmlfile,$(1),$(1),popupmenu,$(2))
-
-endef
-
-# Adds multiple popupmenu config files to the package.
-#
-# gb_UIConfig_add_popupmenufiles target file(s)
-define gb_UIConfig_add_popupmenufiles
-$(foreach popupmenufile,$(2),$(call gb_UIConfig_add_popupmenufile,$(1),$(popupmenufile)))
 
 endef
 

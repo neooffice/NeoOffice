@@ -1,0 +1,42 @@
+--- source/unourl.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/unourl.cxx	2020-12-19 11:15:24.000000000 -0500
+@@ -141,8 +141,8 @@
+ {}
+ 
+ SAL_WNODEPRECATED_DECLARATIONS_PUSH
+-UnoUrlDescriptor::UnoUrlDescriptor(std::auto_ptr< Impl > & rImpl):
+-    m_xImpl(rImpl)
++UnoUrlDescriptor::UnoUrlDescriptor(std::unique_ptr< Impl > & rImpl):
++    m_xImpl(rImpl.release())
+ {}
+ SAL_WNODEPRECATED_DECLARATIONS_POP
+ 
+@@ -197,8 +197,8 @@
+ 
+ private:
+ SAL_WNODEPRECATED_DECLARATIONS_PUSH
+-    Impl(std::auto_ptr< UnoUrlDescriptor::Impl > & rConnection,
+-                              std::auto_ptr< UnoUrlDescriptor::Impl > & rProtocol,
++    Impl(std::unique_ptr< UnoUrlDescriptor::Impl > & rConnection,
++                              std::unique_ptr< UnoUrlDescriptor::Impl > & rProtocol,
+                               rtl::OUString const & rObjectName):
+         m_aConnection(rConnection),
+         m_aProtocol(rProtocol),
+@@ -218,7 +218,7 @@
+         throw rtl::MalformedUriException(
+             rtl::OUString("UNO URL has too few semicolons"));
+     SAL_WNODEPRECATED_DECLARATIONS_PUSH
+-    std::auto_ptr< UnoUrlDescriptor::Impl >
++    std::unique_ptr< UnoUrlDescriptor::Impl >
+         xConnection(new UnoUrlDescriptor::Impl(rUrl.copy(i, j - i)));
+     SAL_WNODEPRECATED_DECLARATIONS_POP
+     i = j + 1;
+@@ -227,7 +227,7 @@
+         throw rtl::MalformedUriException(
+             rtl::OUString("UNO URL has too few semicolons"));
+     SAL_WNODEPRECATED_DECLARATIONS_PUSH
+-    std::auto_ptr< UnoUrlDescriptor::Impl >
++    std::unique_ptr< UnoUrlDescriptor::Impl >
+         xProtocol(new UnoUrlDescriptor::Impl(rUrl.copy(i, j - i)));
+     SAL_WNODEPRECATED_DECLARATIONS_POP
+     i = j + 1;

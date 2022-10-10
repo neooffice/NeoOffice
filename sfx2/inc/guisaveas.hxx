@@ -53,45 +53,47 @@ class SfxStoringHelper
     friend class ModelData_Impl;
 
 private:
-    css::uno::Reference< css::container::XNameAccess >     m_xFilterCFG;
-    css::uno::Reference< css::container::XContainerQuery > m_xFilterQuery;
-    css::uno::Reference< css::frame::XModuleManager2 >     m_xModuleManager;
+    ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameAccess > m_xFilterCFG;
+    ::com::sun::star::uno::Reference< ::com::sun::star::container::XContainerQuery > m_xFilterQuery;
+    ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModuleManager2 > m_xModuleManager;
 
-    css::uno::Reference< css::container::XNameAccess > const & GetFilterConfiguration();
-    css::uno::Reference< css::container::XContainerQuery > const & GetFilterQuery();
-    css::uno::Reference< css::frame::XModuleManager2 > const & GetModuleManager();
+    ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameAccess > GetFilterConfiguration();
+    ::com::sun::star::uno::Reference< ::com::sun::star::container::XContainerQuery > GetFilterQuery();
+    ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModuleManager2 > GetModuleManager();
 
 public:
     SfxStoringHelper();
 
     bool GUIStoreModel(
-                    const css::uno::Reference< css::frame::XModel >& xModel,
+                    ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel > xModel,
                     const OUString& aSlotName,
-                    css::uno::Sequence< css::beans::PropertyValue >& aArgsSequence,
+                    ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >& aArgsSequence,
                     bool bPreselectPassword,
-                    SignatureState nDocumentSignatureState );
+                    const OUString& aUserSelectedName,
+                    sal_uInt16 nDocumentSignatureState = SIGNATURESTATE_NOSIGNATURES );
 
-    static bool CheckFilterOptionsAppearance(
-                    const css::uno::Reference< css::container::XNameAccess >& xFilterCFG,
+    static bool CheckFilterOptionsAppearence(
+                    const ::com::sun::star::uno::Reference< ::com::sun::star::container::XNameAccess >& xFilterCFG,
                     const OUString& aFilterName );
 
 
     static void SetDocInfoState(
-        const css::uno::Reference< css::frame::XModel >& xModel,
-        const css::uno::Reference< css::document::XDocumentProperties>& i_xOldDocInfo,
+        const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& xModel,
+        const ::com::sun::star::uno::Reference<
+            ::com::sun::star::document::XDocumentProperties>& i_xOldDocInfo,
         bool bNoModify );
 
     static bool WarnUnacceptableFormat(
-                                    const css::uno::Reference< css::frame::XModel >& xModel,
+                                    const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& xModel,
                                     const OUString& aOldUIName,
-                                    const OUString& aDefExtension,
+                                    const OUString& aDefUIName,
 #ifdef USE_JAVA
-                                    bool rDefaultIsAlien, bool bForceDisplay );
+                                    bool bCanProceedFurther, bool bForceDisplay );
 #else	// USE_JAVA
-                                    bool rDefaultIsAlien );
+                                    bool bCanProceedFurther );
 #endif	// USE_JAVA
 
-    static vcl::Window* GetModelWindow( const css::uno::Reference< css::frame::XModel >& xModel );
+    static vcl::Window* GetModelWindow( const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XModel >& xModel );
 
 };
 

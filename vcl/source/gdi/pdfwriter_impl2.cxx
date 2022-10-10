@@ -26,19 +26,18 @@
 
 #include "pdfwriter_impl.hxx"
 
-#include <vcl/pdfextoutdevdata.hxx>
-#include <vcl/virdev.hxx>
-#include <vcl/gdimtf.hxx>
-#include <vcl/metaact.hxx>
-#include <vcl/bitmapaccess.hxx>
-#include <vcl/graph.hxx>
+#include "vcl/pdfextoutdevdata.hxx"
+#include "vcl/virdev.hxx"
+#include "vcl/gdimtf.hxx"
+#include "vcl/metaact.hxx"
+#include "vcl/bmpacc.hxx"
+#include "vcl/graph.hxx"
 
 #include "svdata.hxx"
 
 #include "unotools/streamwrap.hxx"
 
 #include <tools/fract.hxx>
-#include <tools/stream.hxx>
 
 #include "comphelper/processfactory.hxx"
 
@@ -47,10 +46,10 @@
 #include "com/sun/star/graphic/GraphicProvider.hpp"
 #include "com/sun/star/graphic/XGraphicProvider.hpp"
 
-#include <cppuhelper/implbase.hxx>
+#include "cppuhelper/implbase1.hxx"
 
 #include <rtl/digest.h>
-#include <memory>
+#include <boost/scoped_ptr.hpp>
 
 using namespace vcl;
 using namespace com::sun::star;
@@ -68,11 +67,11 @@ void PDFWriterImpl::implWriteGradient( const tools::PolyPolygon& i_rPolyPoly, co
 
     m_rOuterFace.Push();
     m_rOuterFace.IntersectClipRegion( i_rPolyPoly.getB2DPolyPolygon() );
-    playMetafile( aTmpMtf, nullptr, i_rContext, i_pDummyVDev );
+    playMetafile( aTmpMtf, NULL, i_rContext, i_pDummyVDev );
     m_rOuterFace.Pop();
 }
 
-void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSize, const BitmapEx& i_rBitmapEx, const Graphic& i_Graphic,
+void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSize, const BitmapEx& i_rBitmapEx,
                                        VirtualDevice* i_pDummyVDev, const vcl::PDFWriter::PlayMetafileContext& i_rContext )
 {
     if ( !i_rBitmapEx.IsEmpty() && i_rSize.Width() && i_rSize.Height() )
@@ -84,37 +83,28 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
         // #i19065# Negative sizes have mirror semantics on
         // OutputDevice. BitmapEx and co. have no idea about that, so
         // perform that _before_ doing anything with aBitmapEx.
-        BmpMirrorFlags nMirrorFlags(BmpMirrorFlags::NONE);
+        sal_uLong nMirrorFlags(BMP_MIRROR_NONE);
         if( aSize.Width() < 0 )
         {
             aSize.Width() *= -1;
             aPoint.X() -= aSize.Width();
-            nMirrorFlags |= BmpMirrorFlags::Horizontal;
+            nMirrorFlags |= BMP_MIRROR_HORZ;
         }
         if( aSize.Height() < 0 )
         {
             aSize.Height() *= -1;
             aPoint.Y() -= aSize.Height();
-            nMirrorFlags |= BmpMirrorFlags::Vertical;
+            nMirrorFlags |= BMP_MIRROR_VERT;
         }
 
-        if( nMirrorFlags != BmpMirrorFlags::NONE )
+        if( nMirrorFlags != BMP_MIRROR_NONE )
         {
             aBitmapEx.Mirror( nMirrorFlags );
         }
-
-        bool bIsJpeg = false, bIsPng = false;
-        if( i_Graphic.GetType() != GraphicType::NONE && i_Graphic.GetBitmapEx() == aBitmapEx )
-        {
-            GfxLinkType eType = i_Graphic.GetLink().GetType();
-            bIsJpeg = (eType == GfxLinkType::NativeJpg);
-            bIsPng = (eType == GfxLinkType::NativePng);
-        }
-
         if( i_rContext.m_nMaxImageResolution > 50 )
         {
             // do downsampling if necessary
-            const Size      aDstSizeTwip( i_pDummyVDev->PixelToLogic( i_pDummyVDev->LogicToPixel( aSize ), MapUnit::MapTwip ) );
+            const Size      aDstSizeTwip( i_pDummyVDev->PixelToLogic( i_pDummyVDev->LogicToPixel( aSize ), MAP_TWIP ) );
             const Size      aBmpSize( aBitmapEx.GetSizePixel() );
             const double    fBmpPixelX = aBmpSize.Width();
             const double    fBmpPixelY = aBmpSize.Height();
@@ -145,7 +135,7 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
                 if( aNewBmpSize.Width() && aNewBmpSize.Height() )
                 {
                     // #i121233# Use best quality for PDF exports
-                    aBitmapEx.Scale( aNewBmpSize, BmpScaleFlag::BestQuality );
+                    aBitmapEx.Scale( aNewBmpSize, BMP_SCALE_BESTQUALITY );
                 }
                 else
                 {
@@ -159,15 +149,15 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
         {
             if( m_aContext.ColorMode == PDFWriter::DrawGreyscale )
             {
-                BmpConversion eConv = BmpConversion::N8BitGreys;
+                BmpConversion eConv = BMP_CONVERSION_8BIT_GREYS;
                 int nDepth = aBitmapEx.GetBitmap().GetBitCount();
                 if( nDepth <= 4 )
-                    eConv = BmpConversion::N4BitGreys;
+                    eConv = BMP_CONVERSION_4BIT_GREYS;
                 if( nDepth > 1 )
                     aBitmapEx.Convert( eConv );
             }
             bool bUseJPGCompression = !i_rContext.m_bOnlyLosslessCompression;
-            if ( bIsPng || ( aSizePixel.Width() < 32 ) || ( aSizePixel.Height() < 32 ) )
+            if ( ( aSizePixel.Width() < 32 ) || ( aSizePixel.Height() < 32 ) )
                 bUseJPGCompression = false;
 
             SvMemoryStream  aStrm;
@@ -176,12 +166,10 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
             bool bTrueColorJPG = true;
             if ( bUseJPGCompression )
             {
-
-                sal_uInt32 nZippedFileSize = 0; // sj: we will calculate the filesize of a zipped bitmap
-                if ( !bIsJpeg )                 // to determine if jpeg compression is useful
-                {
+                sal_uInt32 nZippedFileSize;     // sj: we will calculate the filesize of a zipped bitmap
+                {                               // to determine if jpeg compression is useful
                     SvMemoryStream aTemp;
-                    aTemp.SetCompressMode( aTemp.GetCompressMode() | SvStreamCompressFlags::ZBITMAP );
+                    aTemp.SetCompressMode( aTemp.GetCompressMode() | COMPRESSMODE_ZBITMAP );
                     aTemp.SetVersion( SOFFICE_FILEFORMAT_40 );  // sj: up from version 40 our bitmap stream operator
                     WriteDIBBitmapEx(aBitmapEx, aTemp); // is capable of zlib stream compression
                     aTemp.Seek( STREAM_SEEK_TO_END );
@@ -221,7 +209,7 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
                     aOutMediaProperties[2].Value <<= aFilterData;
                     xGraphicProvider->storeGraphic( xGraphic, aOutMediaProperties );
                     xOut->flush();
-                    if ( !bIsJpeg && xSeekable->getLength() > nZippedFileSize )
+                    if ( xSeekable->getLength() > nZippedFileSize )
                     {
                         bUseJPGCompression = false;
                     }
@@ -250,11 +238,11 @@ void PDFWriterImpl::implWriteBitmapEx( const Point& i_rPoint, const Size& i_rSiz
                 }
             }
             if ( bUseJPGCompression )
-                m_rOuterFace.DrawJPGBitmap( aStrm, bTrueColorJPG, aSizePixel, tools::Rectangle( aPoint, aSize ), aMask, i_Graphic );
+                m_rOuterFace.DrawJPGBitmap( aStrm, bTrueColorJPG, aSizePixel, Rectangle( aPoint, aSize ), aMask );
             else if ( aBitmapEx.IsTransparent() )
                 m_rOuterFace.DrawBitmapEx( aPoint, aSize, aBitmapEx );
             else
-                m_rOuterFace.DrawBitmap( aPoint, aSize, aBitmapEx.GetBitmap(), i_Graphic );
+                m_rOuterFace.DrawBitmap( aPoint, aSize, aBitmapEx.GetBitmap() );
         }
     }
 }
@@ -263,44 +251,40 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
 {
     bool bAssertionFired( false );
 
-    ScopedVclPtr<VirtualDevice> xPrivateDevice;
+    boost::scoped_ptr<VirtualDevice> pPrivateDevice;
     if( ! pDummyVDev )
     {
-        xPrivateDevice.disposeAndReset(VclPtr<VirtualDevice>::Create());
-        pDummyVDev = xPrivateDevice.get();
+        pPrivateDevice.reset(new VirtualDevice());
+        pDummyVDev = pPrivateDevice.get();
         pDummyVDev->EnableOutput( false );
         pDummyVDev->SetMapMode( i_rMtf.GetPrefMapMode() );
     }
     GDIMetaFile aMtf( i_rMtf );
 
-#if defined USE_JAVA && defined MACOSX
-    m_nMetafiles++;
-#endif	// USE_JAVA && MACOSX
-
-    for( sal_uInt32 i = 0, nCount = aMtf.GetActionSize(); i < nCount; )
+    for( sal_uInt32 i = 0, nCount = aMtf.GetActionSize(); i < (sal_uInt32)nCount; )
     {
         if ( !i_pOutDevData || !i_pOutDevData->PlaySyncPageAct( m_rOuterFace, i ) )
         {
-            const MetaAction*    pAction = aMtf.GetAction( i );
-            const MetaActionType nType = pAction->GetType();
+            const MetaAction*   pAction = aMtf.GetAction( i );
+            const sal_uInt16        nType = pAction->GetType();
 
             switch( nType )
             {
-                case( MetaActionType::PIXEL ):
+                case( META_PIXEL_ACTION ):
                 {
                     const MetaPixelAction* pA = static_cast<const MetaPixelAction*>(pAction);
                     m_rOuterFace.DrawPixel( pA->GetPoint(), pA->GetColor() );
                 }
                 break;
 
-                case( MetaActionType::POINT ):
+                case( META_POINT_ACTION ):
                 {
                     const MetaPointAction* pA = static_cast<const MetaPointAction*>(pAction);
                     m_rOuterFace.DrawPixel( pA->GetPoint() );
                 }
                 break;
 
-                case( MetaActionType::LINE ):
+                case( META_LINE_ACTION ):
                 {
                     const MetaLineAction* pA = static_cast<const MetaLineAction*>(pAction);
                     if ( pA->GetLineInfo().IsDefault() )
@@ -310,56 +294,56 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::RECT ):
+                case( META_RECT_ACTION ):
                 {
                     const MetaRectAction* pA = static_cast<const MetaRectAction*>(pAction);
                     m_rOuterFace.DrawRect( pA->GetRect() );
                 }
                 break;
 
-                case( MetaActionType::ROUNDRECT ):
+                case( META_ROUNDRECT_ACTION ):
                 {
                     const MetaRoundRectAction* pA = static_cast<const MetaRoundRectAction*>(pAction);
                     m_rOuterFace.DrawRect( pA->GetRect(), pA->GetHorzRound(), pA->GetVertRound() );
                 }
                 break;
 
-                case( MetaActionType::ELLIPSE ):
+                case( META_ELLIPSE_ACTION ):
                 {
                     const MetaEllipseAction* pA = static_cast<const MetaEllipseAction*>(pAction);
                     m_rOuterFace.DrawEllipse( pA->GetRect() );
                 }
                 break;
 
-                case( MetaActionType::ARC ):
+                case( META_ARC_ACTION ):
                 {
                     const MetaArcAction* pA = static_cast<const MetaArcAction*>(pAction);
                     m_rOuterFace.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
                 }
                 break;
 
-                case( MetaActionType::PIE ):
+                case( META_PIE_ACTION ):
                 {
                     const MetaArcAction* pA = static_cast<const MetaArcAction*>(pAction);
                     m_rOuterFace.DrawPie( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
                 }
                 break;
 
-                case( MetaActionType::CHORD ):
+                case( META_CHORD_ACTION ):
                 {
                     const MetaChordAction* pA = static_cast<const MetaChordAction*>(pAction);
                     m_rOuterFace.DrawChord( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
                 }
                 break;
 
-                case( MetaActionType::POLYGON ):
+                case( META_POLYGON_ACTION ):
                 {
                     const MetaPolygonAction* pA = static_cast<const MetaPolygonAction*>(pAction);
                     m_rOuterFace.DrawPolygon( pA->GetPolygon() );
                 }
                 break;
 
-                case( MetaActionType::POLYLINE ):
+                case( META_POLYLINE_ACTION ):
                 {
                     const MetaPolyLineAction* pA = static_cast<const MetaPolyLineAction*>(pAction);
                     if ( pA->GetLineInfo().IsDefault() )
@@ -369,14 +353,14 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::POLYPOLYGON ):
+                case( META_POLYPOLYGON_ACTION ):
                 {
                     const MetaPolyPolygonAction* pA = static_cast<const MetaPolyPolygonAction*>(pAction);
                     m_rOuterFace.DrawPolyPolygon( pA->GetPolyPolygon() );
                 }
                 break;
 
-                case( MetaActionType::GRADIENT ):
+                case( META_GRADIENT_ACTION ):
                 {
                     const MetaGradientAction* pA = static_cast<const MetaGradientAction*>(pAction);
                     const Gradient& rGradient = pA->GetGradient();
@@ -392,7 +376,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::GRADIENTEX ):
+                case( META_GRADIENTEX_ACTION ):
                 {
                     const MetaGradientExAction* pA = static_cast<const MetaGradientExAction*>(pAction);
                     const Gradient& rGradient = pA->GetGradient();
@@ -404,21 +388,21 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case MetaActionType::HATCH:
+                case META_HATCH_ACTION:
                 {
                     const MetaHatchAction*  pA = static_cast<const MetaHatchAction*>(pAction);
                     m_rOuterFace.DrawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
                 }
                 break;
 
-                case( MetaActionType::Transparent ):
+                case( META_TRANSPARENT_ACTION ):
                 {
                     const MetaTransparentAction* pA = static_cast<const MetaTransparentAction*>(pAction);
                     m_rOuterFace.DrawTransparent( pA->GetPolyPolygon(), pA->GetTransparence() );
                 }
                 break;
 
-                case( MetaActionType::FLOATTRANSPARENT ):
+                case( META_FLOATTRANSPARENT_ACTION ):
                 {
                     const MetaFloatTransparentAction* pA = static_cast<const MetaFloatTransparentAction*>(pAction);
 
@@ -441,13 +425,13 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                         const Color aTransCol( rTransparenceGradient.GetStartColor() );
                         const sal_uInt16 nTransPercent = aTransCol.GetLuminance() * 100 / 255;
                         m_rOuterFace.BeginTransparencyGroup();
-                        playMetafile( aTmpMtf, nullptr, i_rContext, pDummyVDev );
-                        m_rOuterFace.EndTransparencyGroup( tools::Rectangle( rPos, rSize ), nTransPercent );
+                        playMetafile( aTmpMtf, NULL, i_rContext, pDummyVDev );
+                        m_rOuterFace.EndTransparencyGroup( Rectangle( rPos, rSize ), nTransPercent );
                     }
                     else
 #endif	// USE_JAVA && MACOSX
                     {
-                        const Size  aDstSizeTwip( pDummyVDev->PixelToLogic( pDummyVDev->LogicToPixel( rSize ), MapUnit::MapTwip ) );
+                        const Size  aDstSizeTwip( pDummyVDev->PixelToLogic( pDummyVDev->LogicToPixel( rSize ), MAP_TWIP ) );
 
                         // i#115962# Always use at least 300 DPI for bitmap conversion of transparence gradients,
                         // else the quality is not acceptable (see bugdoc as example)
@@ -463,8 +447,8 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                         if ( nPixelX && nPixelY )
                         {
                             Size aDstSizePixel( nPixelX, nPixelY );
-                            ScopedVclPtrInstance<VirtualDevice> xVDev;
-                            if( xVDev->SetOutputSizePixel( aDstSizePixel ) )
+                            boost::scoped_ptr<VirtualDevice> pVDev(new VirtualDevice);
+                            if( pVDev->SetOutputSizePixel( aDstSizePixel ) )
                             {
                                 Bitmap          aPaint, aMask;
                                 AlphaMask       aAlpha;
@@ -472,8 +456,8 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
 
                                 MapMode aMapMode( pDummyVDev->GetMapMode() );
                                 aMapMode.SetOrigin( aPoint );
-                                xVDev->SetMapMode( aMapMode );
-                                Size aDstSize( xVDev->PixelToLogic( aDstSizePixel ) );
+                                pVDev->SetMapMode( aMapMode );
+                                Size aDstSize( pVDev->PixelToLogic( aDstSizePixel ) );
 
                                 Point   aMtfOrigin( aTmpMtf.GetPrefMapMode().GetOrigin() );
                                 if ( aMtfOrigin.X() || aMtfOrigin.Y() )
@@ -486,39 +470,33 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
 
                                 // create paint bitmap
                                 aTmpMtf.WindStart();
-                                aTmpMtf.Play( xVDev.get(), aPoint, aDstSize );
+                                aTmpMtf.Play( pVDev.get(), aPoint, aDstSize );
                                 aTmpMtf.WindStart();
 
-                                xVDev->EnableMapMode( false );
-                                aPaint = xVDev->GetBitmap( aPoint, aDstSizePixel );
-                                xVDev->EnableMapMode();
+                                pVDev->EnableMapMode( false );
+                                aPaint = pVDev->GetBitmap( aPoint, aDstSizePixel );
+                                pVDev->EnableMapMode( true );
 
                                 // create mask bitmap
-                                xVDev->SetLineColor( COL_BLACK );
-                                xVDev->SetFillColor( COL_BLACK );
-                                xVDev->DrawRect( tools::Rectangle( aPoint, aDstSize ) );
-                                xVDev->SetDrawMode( DrawModeFlags::WhiteLine | DrawModeFlags::WhiteFill | DrawModeFlags::WhiteText |
-                                                    DrawModeFlags::WhiteBitmap | DrawModeFlags::WhiteGradient );
+                                pVDev->SetLineColor( COL_BLACK );
+                                pVDev->SetFillColor( COL_BLACK );
+                                pVDev->DrawRect( Rectangle( aPoint, aDstSize ) );
+                                pVDev->SetDrawMode( DRAWMODE_WHITELINE | DRAWMODE_WHITEFILL | DRAWMODE_WHITETEXT |
+                                                    DRAWMODE_WHITEBITMAP | DRAWMODE_WHITEGRADIENT );
                                 aTmpMtf.WindStart();
-                                aTmpMtf.Play( xVDev.get(), aPoint, aDstSize );
+                                aTmpMtf.Play( pVDev.get(), aPoint, aDstSize );
                                 aTmpMtf.WindStart();
-                                xVDev->EnableMapMode( false );
-                                aMask = xVDev->GetBitmap( aPoint, aDstSizePixel );
-                                xVDev->EnableMapMode();
+                                pVDev->EnableMapMode( false );
+                                aMask = pVDev->GetBitmap( aPoint, aDstSizePixel );
+                                pVDev->EnableMapMode( true );
 
                                 // create alpha mask from gradient
-                                xVDev->SetDrawMode( DrawModeFlags::GrayGradient );
-                                xVDev->DrawGradient( tools::Rectangle( aPoint, aDstSize ), rTransparenceGradient );
-                                xVDev->SetDrawMode( DrawModeFlags::Default );
-                                xVDev->EnableMapMode( false );
-                                xVDev->DrawMask( aPoint, aDstSizePixel, aMask, Color( COL_WHITE ) );
-                                aAlpha = xVDev->GetBitmap( aPoint, aDstSizePixel );
-
-#if defined USE_JAVA && defined MACOSX
-                                Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                                Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
+                                pVDev->SetDrawMode( DRAWMODE_GRAYGRADIENT );
+                                pVDev->DrawGradient( Rectangle( aPoint, aDstSize ), rTransparenceGradient );
+                                pVDev->SetDrawMode( DRAWMODE_DEFAULT );
+                                pVDev->EnableMapMode( false );
+                                pVDev->DrawMask( aPoint, aDstSizePixel, aMask, Color( COL_WHITE ) );
+                                aAlpha = pVDev->GetBitmap( aPoint, aDstSizePixel );
 #ifdef USE_JAVA
                                 // Reset temporary metafile to reset map mode
                                 aTmpMtf = pA->GetGDIMetaFile();
@@ -529,24 +507,24 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                 size_t nTransGradPushClipEndPos = GDI_METAFILE_END;
                                 size_t nTransGradPopClipBeginPos = GDI_METAFILE_END;
                                 size_t nTransGradPopClipEndPos = GDI_METAFILE_END;
-                                size_t nActionSize = aTmpMtf.GetActionSize();
+                                size_t nCount = aTmpMtf.GetActionSize();
                                 size_t nPos;
-                                for ( nPos = 0; nPos < nActionSize; nPos++ )
+                                for ( nPos = 0; nPos < nCount; nPos++ )
                                 {
                                     MetaAction *pAct = aTmpMtf.GetAction( nPos );
-                                    if ( pAct && pAct->GetType() == MetaActionType::COMMENT )
+                                    if ( pAct && pAct->GetType() == META_COMMENT_ACTION )
                                     {
-                                        if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
+                                        if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_BEGIN" ) )
                                             nGradBeginPos = nPos;
-                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
+                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XGRAD_SEQ_END" ) )
                                             nGradEndPos = nPos;
-                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
+                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_BEGIN" ) )
                                             nTransGradPushClipBeginPos = nPos;
-                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
+                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPUSHCLIP_SEQ_END" ) )
                                             nTransGradPushClipEndPos = nPos;
-                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) )
+                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_BEGIN" ) )
                                             nTransGradPopClipBeginPos = nPos;
-                                        else if ( static_cast< MetaCommentAction* >( pAct )->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_END" ) )
+                                        else if ( ((MetaCommentAction *)pAct)->GetComment().equalsIgnoreAsciiCase( "XTRANSGRADPOPCLIP_SEQ_END" ) )
                                             nTransGradPopClipEndPos = nPos;
                                     }
                                 }
@@ -557,7 +535,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                     nTransGradPushClipBeginPos < nTransGradPushClipEndPos &&
                                     nTransGradPushClipEndPos < nTransGradPopClipBeginPos &&
                                     nTransGradPopClipBeginPos < nTransGradPopClipEndPos &&
-                                    ( nTransGradPopClipEndPos == nActionSize - 1 || nTransGradPopClipEndPos == nGradEndPos - 1 ) )
+                                    ( nTransGradPopClipEndPos == nCount - 1 || nTransGradPopClipEndPos == nGradEndPos - 1 ) )
                                 {
                                     m_rOuterFace.Push();
 
@@ -572,9 +550,9 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                             aTransGradClipPushMtf.AddAction( pAct );
                                         }
                                     }
-                                    playMetafile( aTransGradClipPushMtf, nullptr, i_rContext, pDummyVDev );
+                                    playMetafile( aTransGradClipPushMtf, NULL, i_rContext, pDummyVDev );
 
-                                    implWriteBitmapEx( rPos, rSize, BitmapEx( aPaint, aAlpha ), aGraphic, pDummyVDev, i_rContext );
+                                    implWriteBitmapEx( rPos, rSize, BitmapEx( aPaint, aAlpha ), pDummyVDev, i_rContext );
 
                                     GDIMetaFile aTransGradClipPopMtf( aTmpMtf );
                                     aTransGradClipPopMtf.Clear();
@@ -587,19 +565,19 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                             aTransGradClipPopMtf.AddAction( pAct );
                                         }
                                     }
-                                    playMetafile( aTransGradClipPopMtf, nullptr, i_rContext, pDummyVDev );
+                                    playMetafile( aTransGradClipPopMtf, NULL, i_rContext, pDummyVDev );
                                     m_rOuterFace.Pop();
                                 }
                                 else
 #endif	// USE_JAVA
-                                implWriteBitmapEx( rPos, rSize, BitmapEx( aPaint, aAlpha ), aGraphic, pDummyVDev, i_rContext );
+                                implWriteBitmapEx( rPos, rSize, BitmapEx( aPaint, aAlpha ), pDummyVDev, i_rContext );
                             }
                         }
                     }
                 }
                 break;
 
-                case( MetaActionType::EPS ):
+                case( META_EPS_ACTION ):
                 {
                     const MetaEPSAction*    pA = static_cast<const MetaEPSAction*>(pAction);
 #if defined USE_JAVA && defined MACOSX
@@ -624,12 +602,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                             // Convert EPS to bitmap
                             Point aPoint;
                             pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
-#if defined USE_JAVA && defined MACOSX
-                            Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                            Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                            implWriteBitmapEx( rPos, rSize, pVDev->GetBitmapEx( aPoint, aDstSizePixel ), aGraphic, pDummyVDev, i_rContext );
+                            implWriteBitmapEx( rPos, rSize, pVDev->GetBitmapEx( aPoint, aDstSizePixel ), pDummyVDev, i_rContext );
                         }
                         delete pVDev;
                     }
@@ -647,30 +620,30 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
 
                     m_rOuterFace.SetMapMode( aMapMode );
                     pDummyVDev->SetMapMode( aMapMode );
-                    playMetafile( aSubstitute, nullptr, i_rContext, pDummyVDev );
+                    playMetafile( aSubstitute, NULL, i_rContext, pDummyVDev );
                     pDummyVDev->Pop();
                     m_rOuterFace.Pop();
 #endif	// USE_JAVA && MACOSX
                 }
                 break;
 
-                case( MetaActionType::COMMENT ):
+                case( META_COMMENT_ACTION ):
                 if( ! i_rContext.m_bTransparenciesWereRemoved )
                 {
                     const MetaCommentAction*    pA = static_cast<const MetaCommentAction*>(pAction);
 
                     if( pA->GetComment().equalsIgnoreAsciiCase("XGRAD_SEQ_BEGIN"))
                     {
-                        const MetaGradientExAction* pGradAction = nullptr;
+                        const MetaGradientExAction* pGradAction = NULL;
                         bool                        bDone = false;
 
                         while( !bDone && ( ++i < nCount ) )
                         {
                             pAction = aMtf.GetAction( i );
 
-                            if( pAction->GetType() == MetaActionType::GRADIENTEX )
+                            if( pAction->GetType() == META_GRADIENTEX_ACTION )
                                 pGradAction = static_cast<const MetaGradientExAction*>(pAction);
-                            else if( ( pAction->GetType() == MetaActionType::COMMENT ) &&
+                            else if( ( pAction->GetType() == META_COMMENT_ACTION ) &&
                                      ( static_cast<const MetaCommentAction*>(pAction)->GetComment().equalsIgnoreAsciiCase("XGRAD_SEQ_END")) )
                             {
                                 bDone = true;
@@ -694,7 +667,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                         const sal_uInt8* pData = pA->GetData();
                         if ( pData )
                         {
-                            SvMemoryStream  aMemStm( const_cast<sal_uInt8 *>(pData), pA->GetDataSize(), StreamMode::READ );
+                            SvMemoryStream  aMemStm( (void*)pData, pA->GetDataSize(), STREAM_READ );
                             bool            bSkipSequence = false;
                             OString sSeqEnd;
 
@@ -704,7 +677,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                 SvtGraphicStroke aStroke;
                                 ReadSvtGraphicStroke( aMemStm, aStroke );
 
-                                tools::Polygon aPath;
+                                Polygon aPath;
                                 aStroke.getPath( aPath );
 
                                 tools::PolyPolygon aStartArrow;
@@ -758,12 +731,12 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                         for(sal_uInt16 a(0); a + 1 < nPoints; a++)
                                         {
                                             if(bCurve
-                                                && PolyFlags::Normal != aPath.GetFlags(a + 1)
+                                                && POLY_NORMAL != aPath.GetFlags(a + 1)
                                                 && a + 2 < nPoints
-                                                && PolyFlags::Normal != aPath.GetFlags(a + 2)
+                                                && POLY_NORMAL != aPath.GetFlags(a + 2)
                                                 && a + 3 < nPoints)
                                             {
-                                                const tools::Polygon aSnippet(4,
+                                                const Polygon aSnippet(4,
                                                     aPath.GetConstPointAry() + a,
                                                     aPath.GetConstFlagAry() + a);
                                                 m_rOuterFace.DrawPolyLine( aSnippet, aInfo );
@@ -771,7 +744,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                             }
                                             else
                                             {
-                                                const tools::Polygon aSnippet(2,
+                                                const Polygon aSnippet(2,
                                                     aPath.GetConstPointAry() + a);
                                                 m_rOuterFace.DrawPolyLine( aSnippet, aInfo );
                                             }
@@ -891,7 +864,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                 while( ++i < nCount )
                                 {
                                     pAction = aMtf.GetAction( i );
-                                    if ( pAction->GetType() == MetaActionType::COMMENT )
+                                    if ( pAction->GetType() == META_COMMENT_ACTION )
                                     {
                                         OString sComment( static_cast<const MetaCommentAction*>(pAction)->GetComment() );
                                         if (sComment == sSeqEnd)
@@ -901,7 +874,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                     // the replacement action for stroke is a filled rectangle
                                     // the set fillcolor of the replacement is part of the graphics
                                     // state and must not be skipped
-                                    else if( pAction->GetType() == MetaActionType::FILLCOLOR )
+                                    else if( pAction->GetType() == META_FILLCOLOR_ACTION )
                                     {
                                         const MetaFillColorAction* pMA = static_cast<const MetaFillColorAction*>(pAction);
                                         if( pMA->IsSetting() )
@@ -916,7 +889,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::BMP ):
+                case( META_BMP_ACTION ):
                 {
                     const MetaBmpAction* pA = static_cast<const MetaBmpAction*>(pAction);
                     BitmapEx aBitmapEx( pA->GetBitmap() );
@@ -924,120 +897,89 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                                                             aBitmapEx.GetPrefMapMode(), pDummyVDev->GetMapMode() ) );
                     if( ! ( aSize.Width() && aSize.Height() ) )
                         aSize = pDummyVDev->PixelToLogic( aBitmapEx.GetSizePixel() );
-
-#if defined USE_JAVA && defined MACOSX
-                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                    Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                    implWriteBitmapEx( pA->GetPoint(), aSize, aBitmapEx, aGraphic, pDummyVDev, i_rContext );
+                    implWriteBitmapEx( pA->GetPoint(), aSize, aBitmapEx, pDummyVDev, i_rContext );
                 }
                 break;
 
-                case( MetaActionType::BMPSCALE ):
+                case( META_BMPSCALE_ACTION ):
                 {
                     const MetaBmpScaleAction* pA = static_cast<const MetaBmpScaleAction*>(pAction);
-#if defined USE_JAVA && defined MACOSX
-                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                    Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                    implWriteBitmapEx( pA->GetPoint(), pA->GetSize(), BitmapEx( pA->GetBitmap() ), aGraphic, pDummyVDev, i_rContext );
+                    implWriteBitmapEx( pA->GetPoint(), pA->GetSize(), BitmapEx( pA->GetBitmap() ), pDummyVDev, i_rContext );
                 }
                 break;
 
-                case( MetaActionType::BMPSCALEPART ):
+                case( META_BMPSCALEPART_ACTION ):
                 {
                     const MetaBmpScalePartAction* pA = static_cast<const MetaBmpScalePartAction*>(pAction);
                     BitmapEx aBitmapEx( pA->GetBitmap() );
-                    aBitmapEx.Crop( tools::Rectangle( pA->GetSrcPoint(), pA->GetSrcSize() ) );
-#if defined USE_JAVA && defined MACOSX
-                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                    Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                    implWriteBitmapEx( pA->GetDestPoint(), pA->GetDestSize(), aBitmapEx, aGraphic, pDummyVDev, i_rContext );
+                    aBitmapEx.Crop( Rectangle( pA->GetSrcPoint(), pA->GetSrcSize() ) );
+                    implWriteBitmapEx( pA->GetDestPoint(), pA->GetDestSize(), aBitmapEx, pDummyVDev, i_rContext );
                 }
                 break;
 
-                case( MetaActionType::BMPEX ):
+                case( META_BMPEX_ACTION ):
                 {
                     const MetaBmpExAction*  pA = static_cast<const MetaBmpExAction*>(pAction);
                     BitmapEx aBitmapEx( pA->GetBitmapEx() );
                     Size aSize( OutputDevice::LogicToLogic( aBitmapEx.GetPrefSize(),
                             aBitmapEx.GetPrefMapMode(), pDummyVDev->GetMapMode() ) );
-#if defined USE_JAVA && defined MACOSX
-                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                    Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                    implWriteBitmapEx( pA->GetPoint(), aSize, aBitmapEx, aGraphic, pDummyVDev, i_rContext );
+                    implWriteBitmapEx( pA->GetPoint(), aSize, aBitmapEx, pDummyVDev, i_rContext );
                 }
                 break;
 
-                case( MetaActionType::BMPEXSCALE ):
+                case( META_BMPEXSCALE_ACTION ):
                 {
                     const MetaBmpExScaleAction* pA = static_cast<const MetaBmpExScaleAction*>(pAction);
-#if defined USE_JAVA && defined MACOSX
-                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                    Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                    implWriteBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx(), aGraphic, pDummyVDev, i_rContext );
+                    implWriteBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx(), pDummyVDev, i_rContext );
                 }
                 break;
 
-                case( MetaActionType::BMPEXSCALEPART ):
+                case( META_BMPEXSCALEPART_ACTION ):
                 {
                     const MetaBmpExScalePartAction* pA = static_cast<const MetaBmpExScalePartAction*>(pAction);
                     BitmapEx aBitmapEx( pA->GetBitmapEx() );
-                    aBitmapEx.Crop( tools::Rectangle( pA->GetSrcPoint(), pA->GetSrcSize() ) );
-#if defined USE_JAVA && defined MACOSX
-                    Graphic aGraphic = getCachedGraphic( m_nMetafiles, i, i_pOutDevData );
-#else	// USE_JAVA && MACOSX
-                    Graphic aGraphic = i_pOutDevData ? i_pOutDevData->GetCurrentGraphic() : Graphic();
-#endif	// USE_JAVA && MACOSX
-                    implWriteBitmapEx( pA->GetDestPoint(), pA->GetDestSize(), aBitmapEx, aGraphic, pDummyVDev, i_rContext );
+                    aBitmapEx.Crop( Rectangle( pA->GetSrcPoint(), pA->GetSrcSize() ) );
+                    implWriteBitmapEx( pA->GetDestPoint(), pA->GetDestSize(), aBitmapEx, pDummyVDev, i_rContext );
                 }
                 break;
 
-                case( MetaActionType::MASK ):
-                case( MetaActionType::MASKSCALE ):
-                case( MetaActionType::MASKSCALEPART ):
+                case( META_MASK_ACTION ):
+                case( META_MASKSCALE_ACTION ):
+                case( META_MASKSCALEPART_ACTION ):
                 {
-                    SAL_WARN( "vcl", "MetaMask...Action not supported yet" );
+                    OSL_TRACE( "MetaMask...Action not supported yet" );
                 }
                 break;
 
-                case( MetaActionType::TEXT ):
+                case( META_TEXT_ACTION ):
                 {
                     const MetaTextAction* pA = static_cast<const MetaTextAction*>(pAction);
                     m_rOuterFace.DrawText( pA->GetPoint(), pA->GetText().copy( pA->GetIndex(), std::min<sal_Int32>(pA->GetText().getLength() - pA->GetIndex(), pA->GetLen()) ) );
                 }
                 break;
 
-                case( MetaActionType::TEXTRECT ):
+                case( META_TEXTRECT_ACTION ):
                 {
                     const MetaTextRectAction* pA = static_cast<const MetaTextRectAction*>(pAction);
                     m_rOuterFace.DrawText( pA->GetRect(), pA->GetText(), pA->GetStyle() );
                 }
                 break;
 
-                case( MetaActionType::TEXTARRAY ):
+                case( META_TEXTARRAY_ACTION ):
                 {
                     const MetaTextArrayAction* pA = static_cast<const MetaTextArrayAction*>(pAction);
                     m_rOuterFace.DrawTextArray( pA->GetPoint(), pA->GetText(), pA->GetDXArray(), pA->GetIndex(), pA->GetLen() );
                 }
                 break;
 
-                case( MetaActionType::STRETCHTEXT ):
+                case( META_STRETCHTEXT_ACTION ):
                 {
                     const MetaStretchTextAction* pA = static_cast<const MetaStretchTextAction*>(pAction);
                     m_rOuterFace.DrawStretchText( pA->GetPoint(), pA->GetWidth(), pA->GetText(), pA->GetIndex(), pA->GetLen() );
                 }
                 break;
 
-                case( MetaActionType::TEXTLINE ):
+                case( META_TEXTLINE_ACTION ):
                 {
                     const MetaTextLineAction* pA = static_cast<const MetaTextLineAction*>(pAction);
                     m_rOuterFace.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->GetOverline() );
@@ -1045,7 +987,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::CLIPREGION ):
+                case( META_CLIPREGION_ACTION ):
                 {
                     const MetaClipRegionAction* pA = static_cast<const MetaClipRegionAction*>(pAction);
 
@@ -1064,14 +1006,14 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::ISECTRECTCLIPREGION ):
+                case( META_ISECTRECTCLIPREGION_ACTION ):
                 {
                     const MetaISectRectClipRegionAction* pA = static_cast<const MetaISectRectClipRegionAction*>(pAction);
                     m_rOuterFace.IntersectClipRegion( pA->GetRect() );
                 }
                 break;
 
-                case( MetaActionType::ISECTREGIONCLIPREGION ):
+                case( META_ISECTREGIONCLIPREGION_ACTION ):
                 {
                     const MetaISectRegionClipRegionAction* pA = static_cast<const MetaISectRegionClipRegionAction*>(pAction);
                     vcl::Region aReg( pA->GetRegion() );
@@ -1079,21 +1021,21 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::MOVECLIPREGION ):
+                case( META_MOVECLIPREGION_ACTION ):
                 {
                     const MetaMoveClipRegionAction* pA = static_cast<const MetaMoveClipRegionAction*>(pAction);
                     m_rOuterFace.MoveClipRegion( pA->GetHorzMove(), pA->GetVertMove() );
                 }
                 break;
 
-                case( MetaActionType::MAPMODE ):
+                case( META_MAPMODE_ACTION ):
                 {
                     const_cast< MetaAction* >( pAction )->Execute( pDummyVDev );
                     m_rOuterFace.SetMapMode( pDummyVDev->GetMapMode() );
                 }
                 break;
 
-                case( MetaActionType::LINECOLOR ):
+                case( META_LINECOLOR_ACTION ):
                 {
                     const MetaLineColorAction* pA = static_cast<const MetaLineColorAction*>(pAction);
 
@@ -1104,7 +1046,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::FILLCOLOR ):
+                case( META_FILLCOLOR_ACTION ):
                 {
                     const MetaFillColorAction* pA = static_cast<const MetaFillColorAction*>(pAction);
 
@@ -1115,7 +1057,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::TEXTLINECOLOR ):
+                case( META_TEXTLINECOLOR_ACTION ):
                 {
                     const MetaTextLineColorAction* pA = static_cast<const MetaTextLineColorAction*>(pAction);
 
@@ -1126,7 +1068,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::OVERLINECOLOR ):
+                case( META_OVERLINECOLOR_ACTION ):
                 {
                     const MetaOverlineColorAction* pA = static_cast<const MetaOverlineColorAction*>(pAction);
 
@@ -1137,7 +1079,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::TEXTFILLCOLOR ):
+                case( META_TEXTFILLCOLOR_ACTION ):
                 {
                     const MetaTextFillColorAction* pA = static_cast<const MetaTextFillColorAction*>(pAction);
 
@@ -1148,28 +1090,28 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::TEXTCOLOR ):
+                case( META_TEXTCOLOR_ACTION ):
                 {
                     const MetaTextColorAction* pA = static_cast<const MetaTextColorAction*>(pAction);
                     m_rOuterFace.SetTextColor( pA->GetColor() );
                 }
                 break;
 
-                case( MetaActionType::TEXTALIGN ):
+                case( META_TEXTALIGN_ACTION ):
                 {
                     const MetaTextAlignAction* pA = static_cast<const MetaTextAlignAction*>(pAction);
                     m_rOuterFace.SetTextAlign( pA->GetTextAlign() );
                 }
                 break;
 
-                case( MetaActionType::FONT ):
+                case( META_FONT_ACTION ):
                 {
                     const MetaFontAction* pA = static_cast<const MetaFontAction*>(pAction);
                     m_rOuterFace.SetFont( pA->GetFont() );
                 }
                 break;
 
-                case( MetaActionType::PUSH ):
+                case( META_PUSH_ACTION ):
                 {
                     const MetaPushAction* pA = static_cast<const MetaPushAction*>(pAction);
 
@@ -1178,41 +1120,41 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                 }
                 break;
 
-                case( MetaActionType::POP ):
+                case( META_POP_ACTION ):
                 {
                     pDummyVDev->Pop();
                     m_rOuterFace.Pop();
                 }
                 break;
 
-                case( MetaActionType::LAYOUTMODE ):
+                case( META_LAYOUTMODE_ACTION ):
                 {
                     const MetaLayoutModeAction* pA = static_cast<const MetaLayoutModeAction*>(pAction);
                     m_rOuterFace.SetLayoutMode( pA->GetLayoutMode() );
                 }
                 break;
 
-                case MetaActionType::TEXTLANGUAGE:
+                case META_TEXTLANGUAGE_ACTION:
                 {
                     const  MetaTextLanguageAction* pA = static_cast<const MetaTextLanguageAction*>(pAction);
                     m_rOuterFace.SetDigitLanguage( pA->GetTextLanguage() );
                 }
                 break;
 
-                case( MetaActionType::WALLPAPER ):
+                case( META_WALLPAPER_ACTION ):
                 {
                     const MetaWallpaperAction* pA = static_cast<const MetaWallpaperAction*>(pAction);
                     m_rOuterFace.DrawWallpaper( pA->GetRect(), pA->GetWallpaper() );
                 }
                 break;
 
-                case( MetaActionType::RASTEROP ):
+                case( META_RASTEROP_ACTION ):
                 {
                     // !!! >>> we don't want to support this actions
                 }
                 break;
 
-                case( MetaActionType::REFPOINT ):
+                case( META_REFPOINT_ACTION ):
                 {
                     // !!! >>> we don't want to support this actions
                 }
@@ -1225,7 +1167,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
                     if( !bAssertionFired )
                     {
                         bAssertionFired = true;
-                        SAL_WARN( "vcl", "PDFExport::ImplWriteActions: deprecated and unsupported MetaAction encountered " << (int)nType );
+                        OSL_TRACE( "PDFExport::ImplWriteActions: deprecated and unsupported MetaAction encountered" );
                     }
                 break;
             }
@@ -1243,7 +1185,7 @@ void PDFWriterImpl::playMetafile( const GDIMetaFile& i_rMtf, vcl::PDFExtOutDevDa
    is not sufficient, since an rtl MD5 digest cannot be created in an arbitrary state
    which would be needed in PDFWriterImpl::computeEncryptionKey.
 */
-class EncHashTransporter : public cppu::WeakImplHelper < css::beans::XMaterialHolder >
+class EncHashTransporter : public cppu::WeakImplHelper1 < com::sun::star::beans::XMaterialHolder >
 {
     rtlDigest                   maUDigest;
     sal_IntPtr                  maID;
@@ -1260,12 +1202,12 @@ public:
         sTransporters[ maID ] = this;
     }
 
-    virtual ~EncHashTransporter() override
+    virtual ~EncHashTransporter()
     {
         sTransporters.erase( maID );
         if( maUDigest )
             rtl_digest_destroyMD5( maUDigest );
-        SAL_INFO( "vcl", "EncHashTransporter freed" );
+        OSL_TRACE( "EncHashTransporter freed" );
     }
 
     rtlDigest getUDigest() const { return maUDigest; };
@@ -1275,12 +1217,12 @@ public:
         if( maUDigest )
         {
             rtl_digest_destroyMD5( maUDigest );
-            maUDigest = nullptr;
+            maUDigest = NULL;
         }
     }
 
     // XMaterialHolder
-    virtual uno::Any SAL_CALL getMaterial() override
+    virtual uno::Any SAL_CALL getMaterial() throw(std::exception) SAL_OVERRIDE
     {
         return uno::makeAny( sal_Int64(maID) );
     }
@@ -1293,7 +1235,7 @@ std::map< sal_IntPtr, EncHashTransporter* > EncHashTransporter::sTransporters;
 
 EncHashTransporter* EncHashTransporter::getEncHashTransporter( const uno::Reference< beans::XMaterialHolder >& xRef )
 {
-    EncHashTransporter* pResult = nullptr;
+    EncHashTransporter* pResult = NULL;
     if( xRef.is() )
     {
         uno::Any aMat( xRef->getMaterial() );
@@ -1314,7 +1256,7 @@ bool PDFWriterImpl::checkEncryptionBufferSize( sal_Int32 newSize )
     {
         /* reallocate the buffer, the used function allocate as rtl_allocateMemory
         if the pointer parameter is NULL */
-        m_pEncryptionBuffer = static_cast<sal_uInt8*>(rtl_reallocateMemory( m_pEncryptionBuffer, newSize ));
+        m_pEncryptionBuffer = (sal_uInt8*)rtl_reallocateMemory( m_pEncryptionBuffer, newSize );
         if( m_pEncryptionBuffer )
             m_nEncryptionBufferSize = newSize;
         else
@@ -1339,7 +1281,7 @@ void PDFWriterImpl::checkAndEnableStreamEncryption( sal_Int32 nObject )
         rtl_digest_MD5( &m_aContext.Encryption.EncryptionKey[0], i+2, nMD5Sum, sizeof(nMD5Sum) );
         // initialize the RC4 with the key
         // key length: see algorithm 3.1, step 4: (N+5) max 16
-        rtl_cipher_initARCFOUR( m_aCipher, rtl_Cipher_DirectionEncode, nMD5Sum, m_nRC4KeyLength, nullptr, 0 );
+        rtl_cipher_initARCFOUR( m_aCipher, rtl_Cipher_DirectionEncode, nMD5Sum, m_nRC4KeyLength, NULL, 0 );
     }
 }
 
@@ -1358,7 +1300,7 @@ void PDFWriterImpl::enableStringEncryption( sal_Int32 nObject )
         rtl_digest_MD5( &m_aContext.Encryption.EncryptionKey[0], i+2, nMD5Sum, sizeof(nMD5Sum) );
         // initialize the RC4 with the key
         // key length: see algorithm 3.1, step 4: (N+5) max 16
-        rtl_cipher_initARCFOUR( m_aCipher, rtl_Cipher_DirectionEncode, nMD5Sum, m_nRC4KeyLength, nullptr, 0 );
+        rtl_cipher_initARCFOUR( m_aCipher, rtl_Cipher_DirectionEncode, nMD5Sum, m_nRC4KeyLength, NULL, 0 );
     }
 }
 
@@ -1395,8 +1337,9 @@ uno::Reference< beans::XMaterialHolder > PDFWriterImpl::initEncryption( const OU
             xResult.clear();
 
         // trash temporary padded cleartext PWDs
-        rtl_secureZeroMemory (aPadOPW, sizeof(aPadOPW));
-        rtl_secureZeroMemory (aPadUPW, sizeof(aPadUPW));
+        memset( aPadOPW, 0, sizeof(aPadOPW) );
+        memset( aPadUPW, 0, sizeof(aPadUPW) );
+
     }
     return xResult;
 }
@@ -1431,7 +1374,7 @@ sal_Int32 PDFWriterImpl::computeAccessPermissions( const vcl::PDFWriter::PDFEncr
     - for 40 bit security the unused bit must be set to 1, since they are not used
     - for 128 bit security the same bit must be preset to 0 and set later if needed
     according to the table 3.15, pdf v 1.4 */
-    sal_Int32 nAccessPermissions = 0xfffff0c0;
+    sal_Int32 nAccessPermissions = ( i_rProperties.Security128bit ) ? 0xfffff0c0 : 0xffffffc0 ;
 
     /* check permissions for 40 bit security case */
     nAccessPermissions |= ( i_rProperties.CanPrintTheDocument ) ?  1 << 2 : 0;
@@ -1441,13 +1384,16 @@ sal_Int32 PDFWriterImpl::computeAccessPermissions( const vcl::PDFWriter::PDFEncr
     o_rKeyLength = SECUR_40BIT_KEY;
     o_rRC4KeyLength = SECUR_40BIT_KEY+5; // for this value see PDF spec v 1.4, algorithm 3.1 step 4, where n is 5
 
-    o_rKeyLength = SECUR_128BIT_KEY;
-    o_rRC4KeyLength = 16; // for this value see PDF spec v 1.4, algorithm 3.1 step 4, where n is 16, thus maximum
-    // permitted value is 16
-    nAccessPermissions |= ( i_rProperties.CanFillInteractive ) ?         1 << 8 : 0;
-    nAccessPermissions |= ( i_rProperties.CanExtractForAccessibility ) ? 1 << 9 : 0;
-    nAccessPermissions |= ( i_rProperties.CanAssemble ) ?                1 << 10 : 0;
-    nAccessPermissions |= ( i_rProperties.CanPrintFull ) ?               1 << 11 : 0;
+    if( i_rProperties.Security128bit )
+    {
+        o_rKeyLength = SECUR_128BIT_KEY;
+        o_rRC4KeyLength = 16; // for this value see PDF spec v 1.4, algorithm 3.1 step 4, where n is 16, thus maximum
+        // permitted value is 16
+        nAccessPermissions |= ( i_rProperties.CanFillInteractive ) ?         1 << 8 : 0;
+        nAccessPermissions |= ( i_rProperties.CanExtractForAccessibility ) ? 1 << 9 : 0;
+        nAccessPermissions |= ( i_rProperties.CanAssemble ) ?                1 << 10 : 0;
+        nAccessPermissions |= ( i_rProperties.CanPrintFull ) ?               1 << 11 : 0;
+    }
     return nAccessPermissions;
 }
 
@@ -1519,15 +1465,18 @@ bool PDFWriterImpl::computeEncryptionKey( EncHashTransporter* i_pTransporter, vc
             rtl_digest_getMD5( aDigest, nMD5Sum, sizeof( nMD5Sum ) );
 
             //step 6, only if 128 bit
-            for( sal_Int32 i = 0; i < 50; i++ )
+            if( io_rProperties.Security128bit )
             {
-                nError = rtl_digest_updateMD5( aDigest, &nMD5Sum, sizeof( nMD5Sum ) );
-                if( nError != rtl_Digest_E_None )
+                for( sal_Int32 i = 0; i < 50; i++ )
                 {
-                    bSuccess =  false;
-                    break;
+                    nError = rtl_digest_updateMD5( aDigest, &nMD5Sum, sizeof( nMD5Sum ) );
+                    if( nError != rtl_Digest_E_None )
+                    {
+                        bSuccess =  false;
+                        break;
+                    }
+                    rtl_digest_getMD5( aDigest, nMD5Sum, sizeof( nMD5Sum ) );
                 }
-                rtl_digest_getMD5( aDigest, nMD5Sum, sizeof( nMD5Sum ) );
             }
         }
         else
@@ -1555,7 +1504,7 @@ bool PDFWriterImpl::computeEncryptionKey( EncHashTransporter* i_pTransporter, vc
 
 /**********************************
 Algorithm 3.3  Compute the encryption dictionary /O value, save into the class data member
-the step numbers down here correspond to the ones in PDF v.1.4 specification
+the step numbers down here correspond to the ones in PDF v.1.4 specfication
 */
 bool PDFWriterImpl::computeODictionaryValue( const sal_uInt8* i_pPaddedOwnerPassword,
                                              const sal_uInt8* i_pPaddedUserPassword,
@@ -1599,7 +1548,7 @@ bool PDFWriterImpl::computeODictionaryValue( const sal_uInt8* i_pPaddedOwnerPass
             //step 5 already done, data is in i_pPaddedUserPassword
             //step 6
             rtl_cipher_initARCFOUR( aCipher, rtl_Cipher_DirectionEncode,
-                                     nMD5Sum, i_nKeyLength , nullptr, 0 );
+                                     nMD5Sum, i_nKeyLength , NULL, 0 );
             // encrypt the user password using the key set above
             rtl_cipher_encodeARCFOUR( aCipher, i_pPaddedUserPassword, ENCRYPTED_PWD_SIZE, // the data to be encrypted
                                       &io_rOValue[0], sal_Int32(io_rOValue.size()) ); //encrypted data
@@ -1615,7 +1564,7 @@ bool PDFWriterImpl::computeODictionaryValue( const sal_uInt8* i_pPaddedOwnerPass
                         nLocalKey[y] = (sal_uInt8)( nMD5Sum[y] ^ i );
 
                     rtl_cipher_initARCFOUR( aCipher, rtl_Cipher_DirectionEncode,
-                                            nLocalKey, SECUR_128BIT_KEY, nullptr, 0 ); //destination data area, on init can be NULL
+                                            nLocalKey, SECUR_128BIT_KEY, NULL, 0 ); //destination data area, on init can be NULL
                     rtl_cipher_encodeARCFOUR( aCipher, &io_rOValue[0], sal_Int32(io_rOValue.size()), // the data to be encrypted
                                               &io_rOValue[0], sal_Int32(io_rOValue.size()) ); // encrypted data, can be the same as the input, encrypt "in place"
                     //step 8, store in class data member
@@ -1662,38 +1611,53 @@ bool PDFWriterImpl::computeUDictionaryValue( EncHashTransporter* i_pTransporter,
             for( sal_Int32 i = i_nKeyLength, y = 0; y < 5 ; y++ )
                 io_rProperties.EncryptionKey[i++] = 0;
 
-            //or 3.5, for 128 bit security
-            //step6, initialize the last 16 bytes of the encrypted user password to 0
-            for(sal_uInt32 i = MD5_DIGEST_SIZE; i < sal_uInt32(io_rProperties.UValue.size()); i++)
-                io_rProperties.UValue[i] = 0;
-            //steps 2 and 3
-            if (rtl_digest_updateMD5( aDigest, s_nPadString, sizeof( s_nPadString ) ) != rtl_Digest_E_None
-                || rtl_digest_updateMD5( aDigest, &io_rProperties.DocumentIdentifier[0], sal_Int32(io_rProperties.DocumentIdentifier.size()) ) != rtl_Digest_E_None)
+            if( io_rProperties.Security128bit == false )
             {
-                bSuccess = false;
-            }
-
-            sal_uInt8 nMD5Sum[ RTL_DIGEST_LENGTH_MD5 ];
-            rtl_digest_getMD5( aDigest, nMD5Sum, sizeof(nMD5Sum) );
-            //Step 4
-            rtl_cipher_initARCFOUR( aCipher, rtl_Cipher_DirectionEncode,
-                                    &io_rProperties.EncryptionKey[0], SECUR_128BIT_KEY, nullptr, 0 ); //destination data area
-            rtl_cipher_encodeARCFOUR( aCipher, nMD5Sum, sizeof( nMD5Sum ), // the data to be encrypted
-                                      &io_rProperties.UValue[0], sizeof( nMD5Sum ) ); //encrypted data, stored in class data member
-            //step 5
-            sal_uInt32 i, y;
-            sal_uInt8 nLocalKey[SECUR_128BIT_KEY];
-
-            for( i = 1; i <= 19; i++ ) // do it 19 times, start with 1
-            {
-                for( y = 0; y < sizeof( nLocalKey ) ; y++ )
-                    nLocalKey[y] = (sal_uInt8)( io_rProperties.EncryptionKey[y] ^ i );
-
+                //3.4
+                //step 2 and 3
                 rtl_cipher_initARCFOUR( aCipher, rtl_Cipher_DirectionEncode,
-                                        nLocalKey, SECUR_128BIT_KEY, // key and key length
-                                        nullptr, 0 ); //destination data area, on init can be NULL
-                rtl_cipher_encodeARCFOUR( aCipher, &io_rProperties.UValue[0], SECUR_128BIT_KEY, // the data to be encrypted
-                                          &io_rProperties.UValue[0], SECUR_128BIT_KEY ); // encrypted data, can be the same as the input, encrypt "in place"
+                                        &io_rProperties.EncryptionKey[0], 5 , // key and key length
+                                        NULL, 0 ); //destination data area
+                // encrypt the user password using the key set above, save for later use
+                rtl_cipher_encodeARCFOUR( aCipher, s_nPadString, sizeof( s_nPadString ), // the data to be encrypted
+                                          &io_rProperties.UValue[0], sal_Int32(io_rProperties.UValue.size()) ); //encrypted data, stored in class data member
+            }
+            else
+            {
+                //or 3.5, for 128 bit security
+                //step6, initialize the last 16 bytes of the encrypted user password to 0
+                for(sal_uInt32 i = MD5_DIGEST_SIZE; i < sal_uInt32(io_rProperties.UValue.size()); i++)
+                    io_rProperties.UValue[i] = 0;
+                //step 2
+                rtlDigestError nError = rtl_digest_updateMD5( aDigest, s_nPadString, sizeof( s_nPadString ) );
+                //step 3
+                if( nError == rtl_Digest_E_None )
+                    nError = rtl_digest_updateMD5( aDigest, &io_rProperties.DocumentIdentifier[0], sal_Int32(io_rProperties.DocumentIdentifier.size()) );
+                else
+                    bSuccess = false;
+
+                sal_uInt8 nMD5Sum[ RTL_DIGEST_LENGTH_MD5 ];
+                rtl_digest_getMD5( aDigest, nMD5Sum, sizeof(nMD5Sum) );
+                //Step 4
+                rtl_cipher_initARCFOUR( aCipher, rtl_Cipher_DirectionEncode,
+                                        &io_rProperties.EncryptionKey[0], SECUR_128BIT_KEY, NULL, 0 ); //destination data area
+                rtl_cipher_encodeARCFOUR( aCipher, nMD5Sum, sizeof( nMD5Sum ), // the data to be encrypted
+                                          &io_rProperties.UValue[0], sizeof( nMD5Sum ) ); //encrypted data, stored in class data member
+                //step 5
+                sal_uInt32 i, y;
+                sal_uInt8 nLocalKey[SECUR_128BIT_KEY];
+
+                for( i = 1; i <= 19; i++ ) // do it 19 times, start with 1
+                {
+                    for( y = 0; y < sizeof( nLocalKey ) ; y++ )
+                        nLocalKey[y] = (sal_uInt8)( io_rProperties.EncryptionKey[y] ^ i );
+
+                    rtl_cipher_initARCFOUR( aCipher, rtl_Cipher_DirectionEncode,
+                                            nLocalKey, SECUR_128BIT_KEY, // key and key length
+                                            NULL, 0 ); //destination data area, on init can be NULL
+                    rtl_cipher_encodeARCFOUR( aCipher, &io_rProperties.UValue[0], SECUR_128BIT_KEY, // the data to be encrypted
+                                              &io_rProperties.UValue[0], SECUR_128BIT_KEY ); // encrypted data, can be the same as the input, encrypt "in place"
+                }
             }
         }
         else
@@ -1759,8 +1723,17 @@ inline bool isSet( const Scanline i_pLine, long i_nIndex )
     return (i_pLine[ i_nIndex/8 ] & (0x80 >> (i_nIndex&7))) != 0;
 }
 
+#ifdef NO_LIBO_FINDBITRUN_FIX
+long findBitRun( const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_bSet )
+#else	// NO_LIBO_FINDBITRUN_FIX
 long findBitRunImpl( const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_bSet )
+#endif	// NO_LIBO_FINDBITRUN_FIX
 {
+#ifdef NO_LIBO_FINDBITRUN_FIX
+    if( i_nStartIndex < 0 )
+        return i_nW;
+#endif	// NO_LIBO_FINDBITRUN_FIX
+
     long nIndex = i_nStartIndex;
     if( nIndex < i_nW )
     {
@@ -1822,6 +1795,8 @@ long findBitRunImpl( const Scanline i_pLine, long i_nStartIndex, long i_nW, bool
     return nIndex < i_nW ? nIndex : i_nW;
 }
 
+#ifndef NO_LIBO_FINDBITRUN_FIX
+
 long findBitRun(const Scanline i_pLine, long i_nStartIndex, long i_nW, bool i_bSet)
 {
     if (i_nStartIndex < 0)
@@ -1839,6 +1814,8 @@ long findBitRun(const Scanline i_pLine, long i_nStartIndex, long i_nW)
 
     return findBitRunImpl(i_pLine, i_nStartIndex, i_nW, bSet);
 }
+
+#endif	// !NO_LIBO_FINDBITRUN_FIX
 
 struct BitStreamState
 {
@@ -2131,19 +2108,23 @@ void PDFWriterImpl::writeG4Stream( BitmapReadAccess* i_pBitmap )
     BitStreamState aBitState;
 
     // the first reference line is virtual and completely empty
-    const Scanline pFirstRefLine = static_cast<Scanline>(rtl_allocateZeroMemory( nW/8 + 1 ));
+    const Scanline pFirstRefLine = (Scanline)rtl_allocateZeroMemory( nW/8 + 1 );
     Scanline pRefLine = pFirstRefLine;
     for( long nY = 0; nY < nH; nY++ )
     {
         const Scanline pCurLine = i_pBitmap->GetScanline( nY );
         long nLineIndex = 0;
-        bool bRunSet = (*pCurLine & 0x80) != 0;
-        bool bRefSet = (*pRefLine & 0x80) != 0;
+        bool bRunSet = (*pCurLine & 0x80) ? true : false;
+        bool bRefSet = (*pRefLine & 0x80) ? true : false;
         long nRunIndex1 = bRunSet ? 0 : findBitRun( pCurLine, 0, nW, bRunSet );
         long nRefIndex1 = bRefSet ? 0 : findBitRun( pRefLine, 0, nW, bRefSet );
         for( ; nLineIndex < nW; )
         {
+#ifdef NO_LIBO_FINDBITRUN_FIX
+            long nRefIndex2 = findBitRun( pRefLine, nRefIndex1, nW, isSet( pRefLine, nRefIndex1 ) );
+#else	// NO_LIBO_FINDBITRUN_FIX
             long nRefIndex2 = findBitRun( pRefLine, nRefIndex1, nW );
+#endif	// NO_LIBO_FINDBITRUN_FIX
             if( nRefIndex2 >= nRunIndex1 )
             {
                 long nDiff = nRefIndex1 - nRunIndex1;
@@ -2173,7 +2154,11 @@ void PDFWriterImpl::writeG4Stream( BitmapReadAccess* i_pBitmap )
                 {   // difference too large, horizontal coding
                     // emit horz code 001
                     putG4Bits( 3, 0x1, aBitState );
+#ifdef NO_LIBO_FINDBITRUN_FIX
+                    long nRunIndex2 = findBitRun( pCurLine, nRunIndex1, nW, isSet( pCurLine, nRunIndex1 ) );
+#else	// NO_LIBO_FINDBITRUN_FIX
                     long nRunIndex2 = findBitRun( pCurLine, nRunIndex1, nW );
+#endif	// NO_LIBO_FINDBITRUN_FIX
                     bool bWhiteFirst = ( nLineIndex + nRunIndex1 == 0 || ! isSet( pCurLine, nLineIndex ) );
                     putG4Span( nRunIndex1 - nLineIndex, bWhiteFirst, aBitState );
                     putG4Span( nRunIndex2 - nRunIndex1, ! bWhiteFirst, aBitState );
@@ -2212,41 +2197,18 @@ void PDFWriterImpl::writeG4Stream( BitmapReadAccess* i_pBitmap )
 static bool lcl_canUsePDFAxialShading(const Gradient& rGradient) {
     switch (rGradient.GetStyle())
     {
-        case GradientStyle::Linear:
-        case GradientStyle::Axial:
+        case GradientStyle_LINEAR:
+        case GradientStyle_AXIAL:
             break;
         default:
             return false;
     }
 
     // TODO: handle step count
-    return rGradient.GetSteps() <= 0;
+    if (rGradient.GetSteps() > 0)
+        return false;
+
+    return true;
 }
-
-#if defined USE_JAVA && defined MACOSX
-
-const Graphic PDFWriterImpl::getCachedGraphic( size_t nMetafile, size_t nAction, PDFExtOutDevData *pOutDevData )
-{
-    if ( pOutDevData && pOutDevData->GetCurrentGraphic().GetType() != GraphicType::NONE )
-    {
-        m_aCachedGraphics[ nMetafile ][ nAction ] = pOutDevData->GetCurrentGraphic();
-        return pOutDevData->GetCurrentGraphic();
-    }
-
-    std::map< size_t, std::map< size_t, Graphic > >::iterator mit = m_aCachedGraphics.find( nMetafile );
-    if ( mit != m_aCachedGraphics.end() )
-    {
-        std::map< size_t, Graphic >::iterator git = mit->second.find( nAction );
-        if ( git != mit->second.end() )
-            return git->second;
-    }
-
-    if ( m_pCachedGraphicsWriter && m_pCachedGraphicsWriter != this )
-        return m_pCachedGraphicsWriter->getCachedGraphic( nMetafile, nAction, pOutDevData );
-
-    return Graphic();
-}
-
-#endif	// USE_JAVA && MACOSX
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

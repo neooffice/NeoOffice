@@ -33,9 +33,7 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <AppKit/AppKit.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "scanunx_cocoa.h"
 
@@ -71,7 +69,12 @@
 	// will prevent our application from accessing a device's files
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace )
-		[pWorkspace launchAppWithBundleIdentifier:@"com.apple.Image_Capture" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifier:nil];
+	{
+		NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.Image_Capture"];
+		NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+		if ( pAppURL && pConfiguration )
+			[pWorkspace openApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+	}
 }
 
 @end
@@ -81,8 +84,7 @@ void NSWorkspace_launchImageCaptureApplication()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	ScnLaunchImageCaptureApplication *pScnLaunchImageCaptureApplication = [ScnLaunchImageCaptureApplication create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pScnLaunchImageCaptureApplication performSelectorOnMainThread:@selector(launchImageCaptureApplication:) withObject:pScnLaunchImageCaptureApplication waitUntilDone:NO modes:pModes];
+	osl_performSelectorOnMainThread( pScnLaunchImageCaptureApplication, @selector(launchImageCaptureApplication:), pScnLaunchImageCaptureApplication, NO );
 
 	[pPool release];
 }

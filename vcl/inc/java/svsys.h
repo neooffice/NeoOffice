@@ -39,6 +39,5 @@
 #include <premac.h>
 #include <Cocoa/Cocoa.h>
 #include <postmac.h>
-#undef check
 
 #endif // _SV_SVSYS_H

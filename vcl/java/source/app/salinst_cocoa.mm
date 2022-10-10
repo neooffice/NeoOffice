@@ -35,15 +35,12 @@
 
 #include <dlfcn.h>
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-#undef check
-
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
 #include "java/saldata.hxx"
+#include "java/salmenu.h"
 
 #include "salinst_cocoa.h"
 
@@ -59,7 +56,7 @@ static NSMutableDictionary *pCurrentInstanceSecurityURLCacheDictionary = nil;
 static BOOL bIsCppUnitTesterInitialized = NO;
 static BOOL bIsCppUnitTester = NO;
 static BOOL bIsRunningInSandbox = YES;
-static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = nullptr;
+static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = NULL;
 
 using namespace osl;
 
@@ -228,11 +225,8 @@ static BOOL IsInIgnoreURLs( NSString *pURLString )
 				NSMutableArray *pTmpURLs = [NSMutableArray arrayWithCapacity:[pTmpPaths count] + 3];
 				if ( pTmpURLs )
 				{
-					NSUInteger nCount = [pTmpPaths count];
-					NSUInteger i = 0;
-					for ( ; i < nCount; i++ )
+					for ( NSString *pTmpPath in pTmpPaths )
 					{
-						NSString *pTmpPath = [pTmpPaths objectAtIndex:i];
 						if ( pTmpPath )
 						{
 							NSURL *pTmpURL = [NSURL fileURLWithPath:pTmpPath isDirectory:YES];
@@ -269,13 +263,11 @@ static BOOL IsInIgnoreURLs( NSString *pURLString )
 					}
 
 					// Convert URLs to absolute strings
-					nCount = [pTmpURLs count];
-					pTmpPaths = [NSMutableArray arrayWithCapacity:nCount];
+					pTmpPaths = [NSMutableArray arrayWithCapacity:[pTmpURLs count]];
 					if ( pTmpPaths )
 					{
-						for ( i = 0; i < nCount; i++ )
+						for ( NSURL *pTmpURL in pTmpURLs )
 						{
-							NSURL *pTmpURL = [pTmpURLs objectAtIndex:i];
 							if ( pTmpURL )
 							{
 								pTmpURL = [pTmpURL URLByStandardizingPath];
@@ -303,11 +295,8 @@ static BOOL IsInIgnoreURLs( NSString *pURLString )
 
 	if ( pIgnoreURLStrings )
 	{
-		NSUInteger nCount = [pIgnoreURLStrings count];
-		NSUInteger i = 0;
-		for ( ; i < nCount; i++ )
+		for ( NSString *pTmpURLString in pIgnoreURLStrings )
 		{
-			NSString *pTmpURLString = [pIgnoreURLStrings objectAtIndex:i];
 			if ( pTmpURLString )
 			{
 				NSRange aTmpRange = [pURLString rangeOfString:pTmpURLString];
@@ -329,15 +318,16 @@ static NSURL *ResolveAliasURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, NS
 
 	if ( pURL )
 	{
+		NSURL *pOriginalURL = pURL;
+
 		if ( pSecurityScopedURLs )
 			AcquireSecurityScopedURL( pURL, bMustShowDialogIfNoBookmark, NO, pTitle, pSecurityScopedURLs );
 
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:pURL error:nil];
 		if ( pData )
 		{
-			BOOL bStale = NO;
-			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-			if ( !bStale && pURL )
+			pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+			if ( pURL )
 			{
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
@@ -345,12 +335,16 @@ static NSURL *ResolveAliasURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookmark, NS
 					pURL = [pURL URLByResolvingSymlinksInPath];
 					if ( pURL )
 					{
-						// Recurse to check if the URL is also an alias
-						NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
-						if ( pRecursedURL )
-							pRet = pRecursedURL;
-						else
-							pRet = pURL;
+						// Recurse if the URL is also an alias
+						NSNumber *pAlias = nil;
+						if ( ![pURL isEqual:pOriginalURL] && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+						{
+							NSURL *pRecursedURL = ResolveAliasURL( pURL, bMustShowDialogIfNoBookmark, pTitle, pSecurityScopedURLs );
+							if ( pRecursedURL )
+								pURL = pRecursedURL;
+						}
+
+						pRet = pURL;
 					}
 				}
 			}
@@ -444,9 +438,8 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							NSObject *pBookmarkData = [pUserDefaults objectForKey:pKey];
 							if ( pBookmarkData && [pBookmarkData isKindOfClass:[NSData class]] )
 							{
-								BOOL bStale = NO;
-								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:static_cast< NSData* >( pBookmarkData ) options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-								if ( !bStale && pSecurityScopedURL )
+								NSURL *pSecurityScopedURL = [NSURL URLByResolvingBookmarkData:(NSData *)pBookmarkData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+								if ( pSecurityScopedURL )
 								{
 									if ( [pSecurityScopedURL startAccessingSecurityScopedResource] )
 									{
@@ -482,13 +475,12 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 						// Don't lock mutex as we expect callbacks to this
 						// object from a different thread while the dialog is
 						// showing
-						sal_uLong nReleaseCount = Application::ReleaseSolarMutex();
+						sal_uLong nCount = Application::ReleaseSolarMutex();
 
 						// Ignore any AWT events while the open dialog is
 						// showing to emulate a modal dialog
 						VCLRequestSecurityScopedURL *pVCLRequestSecurityScopedURL = [VCLRequestSecurityScopedURL createWithURL:pURL title:pTitle];
-						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(requestSecurityScopedURL:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						osl_performSelectorOnMainThread( pVCLRequestSecurityScopedURL, @selector(requestSecurityScopedURL:), pVCLRequestSecurityScopedURL, YES );
 
 						NSURL *pSecurityScopedURL = [pVCLRequestSecurityScopedURL securityScopedURL];
 						if ( pSecurityScopedURL && [pSecurityScopedURL startAccessingSecurityScopedResource] )
@@ -497,9 +489,9 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 							[pSecurityScopedURLs addObject:pSecurityScopedURL];
 						}
 
-						[pVCLRequestSecurityScopedURL performSelectorOnMainThread:@selector(destroy:) withObject:pVCLRequestSecurityScopedURL waitUntilDone:YES modes:pModes];
+						osl_performSelectorOnMainThread( pVCLRequestSecurityScopedURL, @selector(destroy:), pVCLRequestSecurityScopedURL, YES );
 
-						Application::AcquireSolarMutex( nReleaseCount );
+						Application::AcquireSolarMutex( nCount );
 					}
 				}
 			}
@@ -805,12 +797,15 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 								// NSURLBookmarkResolutionWithoutUI or
 								// NSURLBookmarkResolutionWithoutMounting flags:
 								// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64379#64379
-								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+								// Add back the NSURLBookmarkResolutionWithoutUI
+								// flag as this call is extremely slow on
+								// macOS 11 without it and adding it back does
+								// not cause the above bug to reoccur.
+								NSData *pData = [pDirURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 								if ( pData )
 								{
-									BOOL bStale = NO;
-									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-									if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+									NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+									if ( pResolvedURL && [pResolvedURL isFileURL] )
 									{
 										pResolvedURL = [pResolvedURL URLByStandardizingPath];
 										if ( pResolvedURL )
@@ -881,21 +876,21 @@ static void AcquireSecurityScopedURL( NSURL *pURL, BOOL bMustShowDialogIfNoBookm
 		mpModalWindow = [pApp modalWindow];
 		if ( !mpModalWindow )
 		{
-			NSArray *pWindows = [pApp windows];
-			if ( pWindows )
-			{
-				NSUInteger nCount = [pWindows count];
-				NSUInteger i = 0;
-				for ( ; i < nCount ; i++ )
+			// Eliminate temporary hang on macOS 11 by not requesting ordered
+			// windows
+			[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+				if ( bStop )
+					*bStop = NO;
+
+				// Eliminate temporary hang in [NSWindow isSheet] on macOS 11
+				// by checking if a window has a sheet parent
+				if ( pWindow && [pWindow isVisible] && [pWindow sheetParent] )
 				{
-					NSWindow *pWindow = [pWindows objectAtIndex:i];
-					if ( [pWindow isSheet] && [pWindow isVisible] )
-					{
-						mpModalWindow = pWindow;
-						break;
-					}
+					mpModalWindow = pWindow;
+					if ( bStop )
+						*bStop = YES;
 				}
-			}
+			}];
 		}
 	}
 }
@@ -981,8 +976,7 @@ id NSApplication_getModalWindow()
 	NSWindow *pModalWindow = nil;
 
 	GetModalWindow *pGetModalWindow = [GetModalWindow create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pGetModalWindow performSelectorOnMainThread:@selector(getModalWindow:) withObject:pGetModalWindow waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pGetModalWindow, @selector(getModalWindow:), pGetModalWindow, YES );
 	pModalWindow = [pGetModalWindow modalWindow];
 
 	[pPool release];
@@ -998,12 +992,12 @@ sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
 	if ( pSalData->mbInNativeModalSheet || !pNSWindowForSheet )
 		return sal_False;
 
-	JavaSalFrame *pFocusFrame = nullptr;
+	JavaSalFrame *pFocusFrame = NULL;
 
 	// Get the active document window
 	vcl::Window *pWindow = Application::GetActiveTopWindow();
 	if ( pWindow )
-		pFocusFrame = static_cast< JavaSalFrame* >( pWindow->ImplGetFrame() );
+		pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
 
 	if ( !pFocusFrame )
 		pFocusFrame = pSalData->mpFocusFrame;
@@ -1016,7 +1010,7 @@ sal_Bool Application_beginModalSheet( id *pNSWindowForSheet )
 	// first visible non-floating, non-utility frame.
 	if ( !pFocusFrame || !pFocusFrame->mbVisible )
 	{
-		pFocusFrame = nullptr;
+		pFocusFrame = NULL;
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
@@ -1047,14 +1041,14 @@ void Application_endModalSheet()
 {
 	SalData *pSalData = GetSalData();
 	pSalData->mbInNativeModalSheet = false;
-	pSalData->mpNativeModalSheetFrame = nullptr;
+	pSalData->mpNativeModalSheetFrame = NULL;
 }
 
 void Application_postWakeUpEvent()
 {
 	if ( !Application::IsShutDown() )
 	{
-		JavaSalEvent *pUserEvent = new JavaSalEvent( SalEvent::WakeUp, nullptr, nullptr );
+		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_WAKEUP, NULL, NULL );
 		JavaSalEventQueue::postCachedEvent( pUserEvent );
 		pUserEvent->release();
 	}
@@ -1064,13 +1058,13 @@ id Application_acquireSecurityScopedURLFromOUString( const OUString *pNonSecurit
 {
 	id pRet = nil;
 
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
+	if ( ImplSalInstanceExists() && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pNonSecurityScopedURL->getStr() ) length:pNonSecurityScopedURL->getLength()];
+		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
-			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pDialogTitle->getStr() ) length:pDialogTitle->getLength()] : nil );
+			pRet = Application_acquireSecurityScopedURLFromNSURL( [NSURL URLWithString:pString], bMustShowDialogIfNoBookmark, pDialogTitle && pDialogTitle->getLength() ? [NSString stringWithCharacters:pDialogTitle->getStr() length:pDialogTitle->getLength()] : nil );
 
 		[pPool release];
 	}
@@ -1082,13 +1076,13 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 {
 	id pRet = nil;
 
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL )
+	if ( ImplSalInstanceExists() && pNonSecurityScopedURL )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		if ( [pNonSecurityScopedURL isKindOfClass:[NSURL class]] )
 		{
-			NSURL *pURL = static_cast< NSURL* >( pNonSecurityScopedURL );
+			NSURL *pURL = (NSURL *)pNonSecurityScopedURL;
 			if ( [pURL isFileURL] )
 			{
 				pURL = [pURL URLByStandardizingPath];
@@ -1098,7 +1092,7 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 					if ( pURL )
 					{
 						NSMutableArray *pSecurityScopedURLs = [NSMutableArray arrayWithCapacity:2];
-						AcquireSecurityScopedURL( pURL, static_cast< BOOL >( bMustShowDialogIfNoBookmark ), YES, pDialogTitle && [pDialogTitle isKindOfClass:[NSString class]] ? static_cast< NSString* >( pDialogTitle ) : nil, pSecurityScopedURLs );
+						AcquireSecurityScopedURL( pURL, (BOOL)bMustShowDialogIfNoBookmark, YES, pDialogTitle && [pDialogTitle isKindOfClass:[NSString class]] ? (NSString *)pDialogTitle : nil, pSecurityScopedURLs );
 						if ( pSecurityScopedURLs && [pSecurityScopedURLs count] )
 						{
 							pRet = pSecurityScopedURLs;
@@ -1117,11 +1111,11 @@ id Application_acquireSecurityScopedURLFromNSURL( const id pNonSecurityScopedURL
 
 void Application_cacheSecurityScopedURLFromOUString( const OUString *pNonSecurityScopedURL )
 {
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
+	if ( ImplSalInstanceExists() && pNonSecurityScopedURL && pNonSecurityScopedURL->getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		NSString *pString = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( pNonSecurityScopedURL->getStr() ) length:pNonSecurityScopedURL->getLength()];
+		NSString *pString = [NSString stringWithCharacters:pNonSecurityScopedURL->getStr() length:pNonSecurityScopedURL->getLength()];
 		if ( pString )
 			Application_cacheSecurityScopedURL( [NSURL URLWithString:pString] );
 
@@ -1133,7 +1127,7 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSURL *pURL = static_cast< NSURL* >( pNonSecurityScopedURL );
+	NSURL *pURL = (NSURL *)pNonSecurityScopedURL;
 	if ( pURL && [pURL isKindOfClass:[NSURL class]] && [pURL isFileURL] )
 	{
 		pURL = [pURL URLByStandardizingPath];
@@ -1146,12 +1140,14 @@ void Application_cacheSecurityScopedURL( id pNonSecurityScopedURL )
 				// not using the NSURLBookmarkResolutionWithoutUI or
 				// NSURLBookmarkResolutionWithoutMounting flags:
 				// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64379#64379
-				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
+				// Add back the NSURLBookmarkResolutionWithoutUI flag as this
+				// call is extremely slow on macOS 11 without it and adding it
+				// back does not cause the above bug to reoccur.
+				NSData *pData = [pURL bookmarkDataWithOptions:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkCreationWithSecurityScope includingResourceValuesForKeys:nil relativeToURL:nil error:nil];
 				if ( pData )
 				{
-					BOOL bStale = NO;
-					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-					if ( pResolvedURL && !bStale && [pResolvedURL isFileURL] )
+					NSURL *pResolvedURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting | NSURLBookmarkResolutionWithSecurityScope relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+					if ( pResolvedURL && [pResolvedURL isFileURL] )
 					{
 						pResolvedURL = [pResolvedURL URLByStandardizingPath];
 						if ( pResolvedURL )
@@ -1208,14 +1204,10 @@ void Application_releaseSecurityScopedURL( id pSecurityScopedURLs )
 	{
 		if ( [pSecurityScopedURLs isKindOfClass:[NSArray class]] )
 		{
-			NSArray *pArray = static_cast< NSArray* >( pSecurityScopedURLs );
-			NSUInteger nCount = [pArray count];
-			NSUInteger i = 0;
-			for ( ; i < nCount; i++ )
+			for ( NSURL *pURL in (NSArray *)pSecurityScopedURLs )
 			{
-				NSURL *pURL = [pArray objectAtIndex:i];
 				if ( pURL && [pURL isKindOfClass:[NSURL class]] )
-					[static_cast< NSURL* >( pURL ) stopAccessingSecurityScopedResource];
+					[pURL stopAccessingSecurityScopedResource];
 			}
 		}
 

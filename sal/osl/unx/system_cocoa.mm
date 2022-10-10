@@ -33,9 +33,7 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Foundation/Foundation.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
 #include "system.hxx"
 
@@ -45,22 +43,27 @@ static NSURL *macxp_resolveAliasImpl( NSURL *url )
 
 	if ( url )
 	{
+		NSURL *pOriginalURL = url;
+
 		NSData *pData = [NSURL bookmarkDataWithContentsOfURL:url error:nil];
 		if ( pData )
 		{
-			BOOL bStale = NO;
-			NSURL *pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:&bStale error:nil];
-			if ( !bStale && pURL )
+			NSURL *pURL = [NSURL URLByResolvingBookmarkData:pData options:NSURLBookmarkResolutionWithoutUI | NSURLBookmarkResolutionWithoutMounting relativeToURL:nil bookmarkDataIsStale:nil error:nil];
+			if ( pURL )
 			{
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
 				{
-					// Recurse to check if the URL is also an alias
-					NSURL *pRecursedURL = macxp_resolveAliasImpl( pURL );
-					if ( pRecursedURL )
-						pRet = pRecursedURL;
-					else
-						pRet = pURL;
+					// Recurse if the URL is also an alias
+					NSNumber *pAlias = nil;
+					if ( ![pURL isEqual:pOriginalURL] && [pURL getResourceValue:&pAlias forKey:NSURLIsAliasFileKey error:nil] && pAlias && [pAlias boolValue] )
+					{
+						NSURL *pRecursedURL = macxp_resolveAliasImpl( pURL );
+						if ( pRecursedURL )
+							pURL = pRecursedURL;
+					}
+
+					pRet = pURL;
 				}
 			}
 		}
@@ -190,7 +193,7 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
 				{
-					pHomeDir = [pURL path];
+					NSString *pHomeDir = [pURL path];
 					if ( pHomeDir )
 					{
 						const char *pHomeDirStr = [pHomeDir UTF8String];
@@ -228,7 +231,7 @@ void macxp_setFileType(const sal_Char* path)
 			NSDictionary *pAttributes = [pFileManager attributesOfItemAtPath:pPath error:nil];
 			if ( !pAttributes || ![pAttributes fileHFSTypeCode] )
 			{
-				pAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedLong:reinterpret_cast< unsigned long >( PRODUCT_FILETYPE )] forKey:NSFileHFSTypeCode];
+				pAttributes = [NSDictionary dictionaryWithObject:[NSNumber numberWithUnsignedLong:(unsigned long)PRODUCT_FILETYPE] forKey:NSFileHFSTypeCode];
 				if ( pAttributes )
 					[pFileManager setAttributes:pAttributes ofItemAtPath:pPath error:nil];
 			}
@@ -250,7 +253,7 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 		NSFileManager *pFileManager = [NSFileManager defaultManager];
 		if ( pFileManager )
 		{
-			NSString *pPath = [NSString stringWithCharacters:reinterpret_cast<unichar const *>( path ) length:len];
+			NSString *pPath = [NSString stringWithCharacters:path length:len];
 			if ( pPath && [pPath length] )
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pPath];
@@ -302,4 +305,15 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 	}
 
 	return bRet;
+}
+
+void osl_performSelectorOnMainThread( NSObject *pObj, SEL aSel, NSObject *pArg, sal_Bool bWait )
+{
+	if ( pObj && aSel )
+		[pObj performSelectorOnMainThread:aSel withObject:pArg waitUntilDone:bWait modes:osl_getStandardRunLoopModes()];
+}
+
+NSArray<NSRunLoopMode> *osl_getStandardRunLoopModes()
+{
+	return [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, (NSRunLoopMode)JAVA_AWT_RUNLOOPMODE, nil];
 }

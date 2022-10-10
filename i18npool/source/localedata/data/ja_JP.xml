@@ -77,14 +77,11 @@
     <FormatElement msgid="FixedFormatskey6" default="false" type="short" usage="FIXED_NUMBER" formatindex="5">
       <FormatCode>#,###.00</FormatCode>
     </FormatElement>
-    <FormatElement msgid="ScientificFormatskey1" default="false" type="medium" usage="SCIENTIFIC_NUMBER" formatindex="6">
+    <FormatElement msgid="ScientificFormatskey1" default="true" type="long" usage="SCIENTIFIC_NUMBER" formatindex="6">
       <FormatCode>0.00E+000</FormatCode>
     </FormatElement>
     <FormatElement msgid="ScientificFormatskey2" default="true" type="medium" usage="SCIENTIFIC_NUMBER" formatindex="7">
       <FormatCode>0.00E+00</FormatCode>
-    </FormatElement>
-    <FormatElement msgid="ScientificFormatskey3" default="false" type="medium" usage="SCIENTIFIC_NUMBER" formatindex="78">
-      <FormatCode>##0.00E+00</FormatCode>
     </FormatElement>
     <FormatElement msgid="PercentFormatskey1" default="true" type="medium" usage="PERCENT_NUMBER" formatindex="8">
       <FormatCode>0%</FormatCode>
@@ -195,10 +192,10 @@
     <FormatElement msgid="TimeFormatskey7" default="false" type="medium" usage="TIME" formatindex="45">
       <FormatCode>[HH]:MM:SS.00</FormatCode>
     </FormatElement>
-    <FormatElement msgid="TimeFormatskey8" default="false" type="short" usage="TIME" formatindex="62">
+    <FormatElement msgid="TimeFormatskey8" default="false" type="short" usage="TIME" formatindex="52">
       <FormatCode>H時MM分</FormatCode>
     </FormatElement>
-    <FormatElement msgid="TimeFormatskey9" default="false" type="medium" usage="TIME" formatindex="63">
+    <FormatElement msgid="TimeFormatskey9" default="false" type="medium" usage="TIME" formatindex="53">
       <FormatCode>H時MM分SS秒</FormatCode>
     </FormatElement>
     <FormatElement msgid="DateTimeFormatskey1" default="false" type="long" usage="DATE_TIME" formatindex="46">
@@ -207,10 +204,10 @@
     <FormatElement msgid="DateTimeFormatskey3" default="false" type="long" usage="DATE_TIME" formatindex="47">
       <FormatCode>YYYY/M/D H:MM:SS</FormatCode>
     </FormatElement>
-    <FormatElement msgid="DateTimeFormatskey2" default="true" type="long" usage="DATE_TIME" formatindex="65">
+    <FormatElement msgid="DateTimeFormatskey2" default="true" type="long" usage="DATE_TIME" formatindex="55">
       <FormatCode>YYYY/M/D H:MM</FormatCode>
     </FormatElement>
-    <FormatElement msgid="DateFormatskey22" default="false" type="medium" usage="DATE" formatindex="64">
+    <FormatElement msgid="DateFormatskey22" default="false" type="medium" usage="DATE" formatindex="54">
       <FormatCode>GE.MM.DD</FormatCode>
     </FormatElement>
   </LC_FORMAT>

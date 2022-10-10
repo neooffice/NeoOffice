@@ -26,9 +26,6 @@ $(eval $(call gb_Module_add_targets,desktop,\
     Library_deploymentmisc \
     Library_offacc \
     Library_sofficeapp \
-    $(if $(ENABLE_BREAKPAD), \
-        Library_crashreport \
-        ) \
     $(if $(ENABLE_HEADLESS),,Library_spl) \
     Package_branding \
     $(if $(CUSTOM_BRAND_DIR),Package_branding_custom) \
@@ -45,7 +42,6 @@ ifneq (,$(filter DESKTOP,$(BUILD_TYPE)))
 $(eval $(call gb_Module_add_targets,desktop,\
     Executable_soffice_bin \
     $(if $(filter $(GUIBASE),java),,Executable_unopkg_bin) \
-    $(if $(ENABLE_BREAKPAD),Executable_minidump_upload) \
     Library_migrationoo2 \
     Library_migrationoo3 \
     Library_unopkgapp \
@@ -68,10 +64,6 @@ $(eval $(call gb_Module_add_targets,desktop,\
     Pagein_impress \
     Pagein_writer \
     CustomTarget_soffice \
-))
-
-ifeq ($(USING_X11), TRUE)
-$(eval $(call gb_Module_add_targets,desktop,\
     Package_sbase_sh \
     Package_scalc_sh \
     Package_sdraw_sh \
@@ -83,12 +75,17 @@ $(eval $(call gb_Module_add_targets,desktop,\
 endif
 endif
 endif
-endif
 
 ifeq ($(OS),WNT)
 
+ifneq ($(ENABLE_CRASHDUMP),)
 $(eval $(call gb_Module_add_targets,desktop,\
-    StaticLibrary_winloader \
+    Executable_crashrep_com \
+))
+endif
+
+$(eval $(call gb_Module_add_targets,desktop,\
+    StaticLibrary_winextendloaderenv \
     StaticLibrary_winlauncher \
     Executable_quickstart \
     Executable_sbase \
@@ -115,6 +112,10 @@ $(eval $(call gb_Module_add_targets,desktop,\
 ))
 
 else ifeq ($(OS),MACOSX)
+
+$(eval $(call gb_Module_add_targets,desktop,\
+    Package_desktop_install \
+))
 
 else ifeq ($(OS),ANDROID)
 
@@ -146,21 +147,5 @@ $(eval $(call gb_Module_add_targets,desktop, \
     Rdb_passive_platform \
 ))
 endif
-
-$(eval $(call gb_Module_add_check_targets,desktop, \
-    CppunitTest_desktop_app \
-    CppunitTest_desktop_version \
-))
-
-ifeq ($(OS),LINUX)
-$(eval $(call gb_Module_add_check_targets,desktop, \
-    CppunitTest_desktop_lib \
-))
-endif
-
-# screenshots
-$(eval $(call gb_Module_add_screenshot_targets,desktop,\
-    CppunitTest_desktop_dialogs_test \
-))
 
 # vim: set ts=4 sw=4 et:

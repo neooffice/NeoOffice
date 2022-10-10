@@ -35,6 +35,7 @@
 #include <osl/conditn.hxx>
 #include <osl/thread.hxx>
 #include <rtl/instance.hxx>
+#include <salhelper/refobj.hxx>
 
 #include "updateinfo.hxx"
 #include "updatecheckconfiglistener.hxx"
@@ -65,14 +66,14 @@ class UpdateCheck :
 {
     UpdateCheck();
 
-    virtual ~UpdateCheck() override;
+    virtual ~UpdateCheck();
 
 public:
-    SAL_CALL operator rtl::Reference< UpdateCheckConfigListener > ()
+    inline SAL_CALL operator rtl::Reference< UpdateCheckConfigListener > ()
         { return static_cast< UpdateCheckConfigListener * > (this); }
 
-    void initialize(const css::uno::Sequence<css::beans::NamedValue>& rValues,
-                    const css::uno::Reference<css::uno::XComponentContext>& xContext);
+    void initialize(const com::sun::star::uno::Sequence<com::sun::star::beans::NamedValue>& rValues,
+                    const com::sun::star::uno::Reference<com::sun::star::uno::XComponentContext>& xContext);
 
     // Update internal update info member
     void setUpdateInfo(const UpdateInfo& aInfo);
@@ -103,31 +104,31 @@ public:
     bool hasOfficeUpdate() const { return (m_aUpdateInfo.BuildId.getLength() > 0); }
 
     // DownloadInteractionHandler
-    virtual bool downloadTargetExists(const OUString& rFileName) override;
-    virtual void downloadStalled(const OUString& rErrorMessage) override;
-    virtual void downloadProgressAt(sal_Int8 nProcent) override;
-    virtual void downloadStarted(const OUString& rLocalFileName, sal_Int64 nFileSize) override;
-    virtual void downloadFinished(const OUString& rLocalFileName) override;
+    virtual bool downloadTargetExists(const OUString& rFileName) SAL_OVERRIDE;
+    virtual void downloadStalled(const OUString& rErrorMessage) SAL_OVERRIDE;
+    virtual void downloadProgressAt(sal_Int8 nProcent) SAL_OVERRIDE;
+    virtual void downloadStarted(const OUString& rLocalFileName, sal_Int64 nFileSize) SAL_OVERRIDE;
+    virtual void downloadFinished(const OUString& rLocalFileName) SAL_OVERRIDE;
     // checks if the download target already exists and asks user what to do next
-    virtual bool checkDownloadDestination( const OUString& rFile ) override;
+    virtual bool checkDownloadDestination( const OUString& rFile ) SAL_OVERRIDE;
 
     // Cancels the download action (and resumes checking if enabled)
     void cancelDownload();
 
     // Returns the XInteractionHandler of the UpdateHandler instance if present (and visible)
-    css::uno::Reference< css::task::XInteractionHandler > getInteractionHandler() const;
+    com::sun::star::uno::Reference< com::sun::star::task::XInteractionHandler > getInteractionHandler() const;
 
     // UpdateCheckConfigListener
-    virtual void autoCheckStatusChanged(bool enabled) override;
-    virtual void autoCheckIntervalChanged() override;
+    virtual void autoCheckStatusChanged(bool enabled) SAL_OVERRIDE;
+    virtual void autoCheckIntervalChanged() SAL_OVERRIDE;
 
     // IActionListener
-    void cancel() override;
-    void download() override;
-    void install() override;
-    void pause() override;
-    void resume() override;
-    void closeAfterFailure() override;
+    void cancel() SAL_OVERRIDE;
+    void download() SAL_OVERRIDE;
+    void install() SAL_OVERRIDE;
+    void pause() SAL_OVERRIDE;
+    void resume() SAL_OVERRIDE;
+    void closeAfterFailure() SAL_OVERRIDE;
 
 private:
 
@@ -151,7 +152,7 @@ private:
 
     /* This method turns on the menubar icon and triggers the bubble window
      */
-    void handleMenuBarUI( const rtl::Reference< UpdateHandler >& rUpdateHandler,
+    void handleMenuBarUI( rtl::Reference< UpdateHandler > rUpdateHandler,
                           UpdateState& eState, bool suppressBubble );
     enum State {
         NOT_INITIALIZED,
@@ -174,8 +175,8 @@ private:
     bool m_bShowExtUpdDlg;
 
     rtl::Reference<UpdateHandler> m_aUpdateHandler;
-    css::uno::Reference<css::beans::XPropertySet> m_xMenuBarUI;
-    css::uno::Reference<css::uno::XComponentContext> m_xContext;
+    com::sun::star::uno::Reference<com::sun::star::beans::XPropertySet> m_xMenuBarUI;
+    com::sun::star::uno::Reference<com::sun::star::uno::XComponentContext> m_xContext;
 
     friend class UpdateCheckInitData;
 };

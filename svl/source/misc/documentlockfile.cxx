@@ -25,6 +25,8 @@
  */
 
 
+#include <stdio.h>
+
 #include <com/sun/star/ucb/XSimpleFileAccess.hpp>
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <com/sun/star/ucb/InsertCommandArgument.hpp>
@@ -35,7 +37,6 @@
 #include <osl/time.h>
 #include <osl/security.hxx>
 #include <osl/socket.hxx>
-#include <o3tl/enumrange.hxx>
 
 #include <rtl/string.hxx>
 #include <rtl/ustring.hxx>
@@ -68,7 +69,7 @@ bool DocumentLockFile::m_bAllowInteraction = true;
 
 
 DocumentLockFile::DocumentLockFile( const OUString& aOrigURL )
-: LockFileCommon( aOrigURL, ".~lock." )
+: LockFileCommon( aOrigURL, OUString( ".~lock."  ) )
 {
 }
 
@@ -78,23 +79,23 @@ DocumentLockFile::~DocumentLockFile()
 }
 
 
-void DocumentLockFile::WriteEntryToStream( const LockFileEntry& aEntry, const uno::Reference< io::XOutputStream >& xOutput )
+void DocumentLockFile::WriteEntryToStream( const uno::Sequence< OUString >& aEntry, uno::Reference< io::XOutputStream > xOutput )
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
     OUStringBuffer aBuffer;
 
-    for ( LockFileComponent lft : o3tl::enumrange<LockFileComponent>() )
+    for ( sal_Int32 nEntryInd = 0; nEntryInd < aEntry.getLength(); nEntryInd++ )
     {
-        aBuffer.append( EscapeCharacters( aEntry[lft] ) );
-        if ( lft < LockFileComponent::LAST )
+        aBuffer.append( EscapeCharacters( aEntry[nEntryInd] ) );
+        if ( nEntryInd < aEntry.getLength() - 1 )
             aBuffer.append( ',' );
         else
             aBuffer.append( ';' );
     }
 
     OString aStringData( OUStringToOString( aBuffer.makeStringAndClear(), RTL_TEXTENCODING_UTF8 ) );
-    uno::Sequence< sal_Int8 > aData( reinterpret_cast<sal_Int8 const *>(aStringData.getStr()), aStringData.getLength() );
+    uno::Sequence< sal_Int8 > aData( (sal_Int8*)aStringData.getStr(), aStringData.getLength() );
     xOutput->writeBytes( aData );
 }
 
@@ -116,25 +117,25 @@ bool DocumentLockFile::CreateOwnLockFile()
         if ( !xInput.is() || !xOutput.is() )
             throw uno::RuntimeException();
 
-        LockFileEntry aNewEntry = GenerateOwnEntry();
+        uno::Sequence< OUString > aNewEntry = GenerateOwnEntry();
         WriteEntryToStream( aNewEntry, xOutput );
         xOutput->closeOutput();
 
         xSeekable->seek( 0 );
 
-        uno::Reference < css::ucb::XCommandEnvironment > xEnv;
+        uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
         ::ucbhelper::Content aTargetContent( m_aURL, xEnv, comphelper::getProcessComponentContext() );
 
         ucb::InsertCommandArgument aInsertArg;
         aInsertArg.Data = xInput;
-        aInsertArg.ReplaceExisting = false;
+        aInsertArg.ReplaceExisting = sal_False;
         uno::Any aCmdArg;
         aCmdArg <<= aInsertArg;
-        aTargetContent.executeCommand( "insert", aCmdArg );
+        aTargetContent.executeCommand( OUString( "insert"  ), aCmdArg );
 
         // try to let the file be hidden if possible
         try {
-            aTargetContent.setPropertyValue("IsHidden", uno::makeAny( true ) );
+            aTargetContent.setPropertyValue("IsHidden", uno::makeAny( sal_True ) );
         } catch( uno::Exception& ) {}
     }
     catch( ucb::NameClashException& )
@@ -146,7 +147,7 @@ bool DocumentLockFile::CreateOwnLockFile()
 }
 
 
-LockFileEntry DocumentLockFile::GetLockData()
+uno::Sequence< OUString > DocumentLockFile::GetLockData()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
@@ -183,7 +184,7 @@ uno::Reference< io::XInputStream > DocumentLockFile::OpenStream()
 {
     ::osl::MutexGuard aGuard( m_aMutex );
 
-    uno::Reference < css::ucb::XCommandEnvironment > xEnv;
+    uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
     ::ucbhelper::Content aSourceContent( m_aURL, xEnv, comphelper::getProcessComponentContext() );
 
     // the file can be opened readonly, no locking will be done
@@ -196,10 +197,10 @@ bool DocumentLockFile::OverwriteOwnLockFile()
     // allows to overwrite the lock file with the current data
     try
     {
-        uno::Reference < css::ucb::XCommandEnvironment > xEnv;
+        uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
         ::ucbhelper::Content aTargetContent( m_aURL, xEnv, comphelper::getProcessComponentContext() );
 
-        LockFileEntry aNewEntry = GenerateOwnEntry();
+        uno::Sequence< OUString > aNewEntry = GenerateOwnEntry();
 
         uno::Reference< io::XStream > xStream = aTargetContent.openWriteableStreamNoLock();
         uno::Reference< io::XOutputStream > xOutput = xStream->getOutputStream();
@@ -223,17 +224,20 @@ void DocumentLockFile::RemoveFile()
     ::osl::MutexGuard aGuard( m_aMutex );
 
     // TODO/LATER: the removing is not atomic, is it possible in general to make it atomic?
-    LockFileEntry aNewEntry = GenerateOwnEntry();
-    LockFileEntry aFileData = GetLockData();
+    uno::Sequence< OUString > aNewEntry = GenerateOwnEntry();
+    uno::Sequence< OUString > aFileData = GetLockData();
 
-    if ( !aFileData[LockFileComponent::SYSUSERNAME].equals( aNewEntry[LockFileComponent::SYSUSERNAME] )
-      || !aFileData[LockFileComponent::LOCALHOST].equals( aNewEntry[LockFileComponent::LOCALHOST] )
-      || !aFileData[LockFileComponent::USERURL].equals( aNewEntry[LockFileComponent::USERURL] ) )
+    if ( aFileData.getLength() < LOCKFILE_ENTRYSIZE )
+        throw io::WrongFormatException();
+
+    if ( !aFileData[LOCKFILE_SYSUSERNAME_ID].equals( aNewEntry[LOCKFILE_SYSUSERNAME_ID] )
+      || !aFileData[LOCKFILE_LOCALHOST_ID].equals( aNewEntry[LOCKFILE_LOCALHOST_ID] )
+      || !aFileData[LOCKFILE_USERURL_ID].equals( aNewEntry[LOCKFILE_USERURL_ID] ) )
         throw io::IOException(); // not the owner, access denied
 
-    uno::Reference < css::ucb::XCommandEnvironment > xEnv;
+    uno::Reference < ::com::sun::star::ucb::XCommandEnvironment > xEnv;
     ::ucbhelper::Content aCnt(m_aURL, xEnv, comphelper::getProcessComponentContext());
-    aCnt.executeCommand("delete",
+    aCnt.executeCommand(OUString("delete"),
         uno::makeAny(true));
 }
 

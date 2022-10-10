@@ -156,7 +156,7 @@ static short GetCurrentKeyModifiers()
 	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableServicesMenu" ), kCFPreferencesCurrentApplication );
 	if( aPref )
 	{
-		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
 			bDisableServicesMenu = YES;
 		CFRelease( aPref );
 	}
@@ -180,7 +180,7 @@ static short GetCurrentKeyModifiers()
 	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "IgnoreTrackpadGestures" ), kCFPreferencesCurrentApplication );
 	if( aPref )
 	{
-		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && static_cast< CFBooleanRef >( aPref ) == kCFBooleanTrue )
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
 			bIgnoreTrackpadGestures = YES;
 		CFRelease( aPref );
 	}

@@ -72,7 +72,7 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
       if ( (res = gethostbyname(name)) )
       {
-        int nname, naliases, naddr_list, naliasesdata;
+        int nname, naliases, naddr_list, naliasesdata, n;
         char **p, **parray, *data;
 
         /* Check buffer size before copying, we want to leave the
@@ -85,12 +85,12 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
         naliases = naddr_list = naliasesdata = 0;
 
-        for ( p = res->h_aliases; *p != nullptr; p++) {
+        for ( p = res->h_aliases; *p != NULL; p++) {
             naliases++;
             naliasesdata += strlen(*p)+1;
         }
 
-        for ( p = res->h_addr_list; *p != nullptr; p++)
+        for ( p = res->h_addr_list; *p != NULL; p++)
             naddr_list++;
 
         if ( nname
@@ -104,33 +104,33 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
               result->h_name = buffer;
             buffer += nname;
 
-            parray = reinterpret_cast<char**>(buffer);
+            parray = (char**)buffer;
             result->h_aliases = parray;
             data = buffer + (naliases+1)*sizeof(char*);
-            for ( p = res->h_aliases; *p != nullptr; p++) {
-                int n = strlen(*p)+1;
+            for ( p = res->h_aliases; *p != NULL; p++) {
+                n = strlen(*p)+1;
                 *parray++ = data;
                 memcpy(data, *p, n);
                 data += n;
             }
-            *parray = nullptr;
+            *parray = NULL;
             buffer = data;
-            parray = reinterpret_cast<char**>(buffer);
+            parray = (char**)buffer;
             result->h_addr_list = parray;
             data = buffer + (naddr_list+1)*sizeof(char*);
-            for ( p = res->h_addr_list; *p != nullptr; p++) {
+            for ( p = res->h_addr_list; *p != NULL; p++) {
                 *parray++ = data;
                 memcpy(data, *p, res->h_length);
                 data += res->h_length;
             }
-            *parray = nullptr;
+            *parray = NULL;
 
                res = result;
         }
         else
         {
             errno = ERANGE;
-            res = nullptr;
+            res = NULL;
         }
     }
     else
@@ -149,7 +149,7 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
 void macxp_decomposeString(char *pszStr, int buflen)
 {
-    CFMutableStringRef strRef = CFStringCreateMutable( nullptr, 0 );
+    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
     CFStringAppendCString( strRef, pszStr, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
     CFStringNormalize( strRef, kCFStringNormalizationFormD );
     CFStringGetCString( strRef, pszStr, buflen, kCFStringEncodingUTF8 );
@@ -210,14 +210,14 @@ int macxp_resolveAlias(char *path, int buflen)
       if ( unprocessedPath )
           *unprocessedPath = '\0';
 
-      cfpath = CFStringCreateWithCString( nullptr, path, kCFStringEncodingUTF8 );
-      cfurl = CFURLCreateWithFileSystemPath( nullptr, cfpath, kCFURLPOSIXPathStyle, false );
+      cfpath = CFStringCreateWithCString( NULL, path, kCFStringEncodingUTF8 );
+      cfurl = CFURLCreateWithFileSystemPath( NULL, cfpath, kCFURLPOSIXPathStyle, false );
       CFRelease( cfpath );
-      cferror = nullptr;
-      cfbookmark = CFURLCreateBookmarkDataFromFile( nullptr, cfurl, &cferror );
+      cferror = NULL;
+      cfbookmark = CFURLCreateBookmarkDataFromFile( NULL, cfurl, &cferror );
       CFRelease( cfurl );
 
-      if ( cfbookmark == nullptr )
+      if ( cfbookmark == NULL )
       {
           if(cferror)
           {
@@ -227,10 +227,10 @@ int macxp_resolveAlias(char *path, int buflen)
       else
       {
           Boolean isStale;
-          cfurl = CFURLCreateByResolvingBookmarkData( nullptr, cfbookmark, kCFBookmarkResolutionWithoutUIMask,
-                                                      nullptr, nullptr, &isStale, &cferror );
+          cfurl = CFURLCreateByResolvingBookmarkData( NULL, cfbookmark, kCFBookmarkResolutionWithoutUIMask,
+                                                      NULL, NULL, &isStale, &cferror );
           CFRelease( cfbookmark );
-          if ( cfurl == nullptr )
+          if ( cfurl == NULL )
           {
               CFRelease( cferror );
           }
@@ -238,7 +238,7 @@ int macxp_resolveAlias(char *path, int buflen)
           {
               cfpath = CFURLCopyFileSystemPath( cfurl, kCFURLPOSIXPathStyle );
               CFRelease( cfurl );
-              if ( cfpath != nullptr )
+              if ( cfpath != NULL )
               {
                   char tmpPath[ PATH_MAX ];
                   if ( CFStringGetCString( cfpath, tmpPath, PATH_MAX, kCFStringEncodingUTF8 ) )
@@ -283,6 +283,54 @@ int macxp_resolveAlias(char *path, int buflen)
 #endif  /* defined MACOSX */
 
 #endif /* NO_PTHREAD_RTL */
+
+#if defined(FREEBSD)
+char *fcvt(double value, int ndigit, int *decpt, int *sign)
+{
+  static char ret[256];
+  char buf[256],zahl[256],format[256]="%";
+  char *v1,*v2;
+
+  if (value==0.0) value=1e-30;
+
+  if (value<0.0) *sign=1; else *sign=0;
+
+  if (value<1.0)
+  {
+    *decpt=(int)log10(value);
+    value*=pow(10.0,1-*decpt);
+    ndigit+=*decpt-1;
+    if (ndigit<0) ndigit=0;
+  }
+  else
+  {
+    *decpt=(int)log10(value)+1;
+  }
+
+  sprintf(zahl,"%d",ndigit);
+  strcat(format,zahl);
+  strcat(format,".");
+  strcat(format,zahl);
+  strcat(format,"f");
+
+  sprintf(buf,format,value);
+
+  if (ndigit!=0)
+  {
+    v1=strtok(buf,".");
+    v2=strtok(NULL,".");
+    strcpy(ret,v1);
+    strcat(ret,v2);
+  }
+  else
+  {
+    strcpy(ret,buf);
+  }
+
+  return(ret);
+}
+
+#endif
 
 //might be useful on other platforms, but doesn't compiler under MACOSX anyway
 #if defined(__GNUC__) && defined(LINUX)

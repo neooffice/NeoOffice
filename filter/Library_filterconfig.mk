@@ -55,6 +55,7 @@ $(eval $(call gb_Library_use_libraries,filterconfig,\
 	sal \
 	salhelper \
 	i18nlangtag \
+	$(gb_UWINAPI) \
 ))
 
 

@@ -16,6 +16,7 @@
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
+#
 
 $(eval $(call gb_Library_Library,scn))
 
@@ -38,6 +39,7 @@ $(eval $(call gb_Library_use_libraries,scn,\
 	cppu \
 	sal \
 	i18nlangtag \
+	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_add_exception_objects,scn,\

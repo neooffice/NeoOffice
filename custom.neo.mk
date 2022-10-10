@@ -8,3 +8,11 @@ PRODUCT_DOMAIN=org.neooffice
 PRODUCT_TRADEMARKED_NAME=NeoOffice®
 PRODUCT_TRADEMARKED_NAME_RTF=NeoOffice\\\'a8
 PRODUCT_DIR_PATCH_VERSION_EXTRA=
+
+# Set to some text to enable experimental cross compiling to arm64 on x86_64
+CROSS_COMPILE_ARM64=
+# Set to some text to enable experimental cross compiling to x86_64 on arm64
+CROSS_COMPILE_X86_64=
+# Set to the path of a separate build to combine with this build to create
+# Universal installers
+PRODUCT_LIPO_PATH_FOR_UNIVERSAL_INSTALLERS=

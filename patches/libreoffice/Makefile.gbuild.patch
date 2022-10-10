@@ -1,0 +1,15 @@
+--- Makefile.gbuild	2015-11-25 07:55:38.000000000 -0500
++++ Makefile.gbuild	2020-12-27 11:04:31.000000000 -0500
+@@ -18,6 +18,12 @@
+ 
+ include $(SRCDIR)/solenv/gbuild/gbuild.mk
+ 
++# If cross-compiling to a DESKTOP platform, just use RepositoryModule_host.mk on the build platform, too
++ifeq ($(gb_Side)-$(filter DESKTOP,$(BUILD_TYPE_FOR_HOST)),build-DESKTOP)
++$(eval $(call gb_Module_make_global_targets,$(SRCDIR)/RepositoryModule_host.mk))
++else
+ $(eval $(call gb_Module_make_global_targets,$(SRCDIR)/RepositoryModule_$(gb_Side).mk))
++endif
++
+ 
+ # vim: set noet sw=4 ts=4:

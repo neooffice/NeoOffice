@@ -32,11 +32,10 @@
 #include <vcl/msgbox.hxx>
 #include "alienwarn.hxx"
 
-SfxAlienWarningDialog::SfxAlienWarningDialog(vcl::Window* pParent, const OUString& _rFormatName,
 #ifdef USE_JAVA
-                                             const OUString& _rDefaultExtension, bool rDefaultIsAlien, bool bHideWarningOnBox)
+SfxAlienWarningDialog::SfxAlienWarningDialog(vcl::Window* pParent, const OUString& _rFormatName, bool bHideWarningOnBox)
 #else	// USE_JAVA
-                                             const OUString& _rDefaultExtension, bool rDefaultIsAlien)
+SfxAlienWarningDialog::SfxAlienWarningDialog(vcl::Window* pParent, const OUString& _rFormatName)
 #endif	// USE_JAVA
     : MessageDialog(pParent, "AlienWarnDialog", "sfx/ui/alienwarndialog.ui")
 {
@@ -46,9 +45,6 @@ SfxAlienWarningDialog::SfxAlienWarningDialog(vcl::Window* pParent, const OUStrin
     m_pWarningOnBox->set_margin_left(QueryBox::GetStandardImage().GetSizePixel().Width() + 12);
 
     get(m_pKeepCurrentBtn, "save");
-    get(m_pUseDefaultFormatBtn, "cancel");
-
-    OUString aExtension = "ODF";
 
     // replace formatname (text)
     OUString sInfoText = get_primary_text();
@@ -60,19 +56,6 @@ SfxAlienWarningDialog::SfxAlienWarningDialog(vcl::Window* pParent, const OUStrin
     sInfoText = sInfoText.replaceAll( "%FORMATNAME", _rFormatName );
     m_pKeepCurrentBtn->SetText( sInfoText );
 
-    // hide ODF explanation if default format is alien
-    // and set the proper extension in the button
-    if( rDefaultIsAlien )
-    {
-        set_secondary_text(OUString());
-        aExtension = _rDefaultExtension.toAsciiUpperCase();
-    }
-
-    // replace defaultextension (button)
-    sInfoText = m_pUseDefaultFormatBtn->GetText();
-    sInfoText = sInfoText.replaceAll( "%DEFAULTEXTENSION", aExtension );
-    m_pUseDefaultFormatBtn->SetText( sInfoText );
-
     // load value of "warning on" checkbox from save options
     m_pWarningOnBox->Check( SvtSaveOptions().IsWarnAlienFormat() );
 #ifdef USE_JAVA
@@ -83,20 +66,11 @@ SfxAlienWarningDialog::SfxAlienWarningDialog(vcl::Window* pParent, const OUStrin
 
 SfxAlienWarningDialog::~SfxAlienWarningDialog()
 {
-    disposeOnce();
-}
-
-void SfxAlienWarningDialog::dispose()
-{
     // save value of "warning off" checkbox, if necessary
     SvtSaveOptions aSaveOpt;
     bool bChecked = m_pWarningOnBox->IsChecked();
     if ( aSaveOpt.IsWarnAlienFormat() != bChecked )
         aSaveOpt.SetWarnAlienFormat( bChecked );
-    m_pKeepCurrentBtn.clear();
-    m_pUseDefaultFormatBtn.clear();
-    m_pWarningOnBox.clear();
-    MessageDialog::dispose();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

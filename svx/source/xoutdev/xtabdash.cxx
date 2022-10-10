@@ -38,13 +38,12 @@
 #include <drawinglayer/attribute/strokeattribute.hxx>
 #include <drawinglayer/primitive2d/polygonprimitive2d.hxx>
 #include <drawinglayer/processor2d/processor2dtools.hxx>
-#include <memory>
-#include <o3tl/make_unique.hxx>
+#include <boost/scoped_ptr.hpp>
 
 using namespace com::sun::star;
 
 XDashList::XDashList(const OUString& rPath, const OUString& rReferer)
-    : XPropertyList(XPropertyListType::Dash, rPath, rReferer)
+    : XPropertyList(XDASH_LIST, rPath, rReferer)
     , maBitmapSolidLine()
     , maStringSolidLine()
     , maStringNoLine()
@@ -55,9 +54,14 @@ XDashList::~XDashList()
 {
 }
 
-void XDashList::Replace(std::unique_ptr<XDashEntry> pEntry, long nIndex)
+XDashEntry* XDashList::Replace(XDashEntry* pEntry, long nIndex )
 {
-    XPropertyList::Replace(std::move(pEntry), nIndex);
+    return static_cast<XDashEntry*>( XPropertyList::Replace(pEntry, nIndex) );
+}
+
+XDashEntry* XDashList::Remove(long nIndex)
+{
+    return static_cast<XDashEntry*>( XPropertyList::Remove(nIndex) );
 }
 
 XDashEntry* XDashList::GetDash(long nIndex) const
@@ -73,11 +77,11 @@ uno::Reference< container::XNameContainer > XDashList::createInstance()
 
 bool XDashList::Create()
 {
-    const OUString aStr(SvxResId(RID_SVXSTR_LINESTYLE));
+    const OUString aStr(SVX_RESSTR(RID_SVXSTR_LINESTYLE));
 
-    Insert(o3tl::make_unique<XDashEntry>(XDash(css::drawing::DashStyle_RECT,1, 50,1, 50, 50),aStr + " 1"));
-    Insert(o3tl::make_unique<XDashEntry>(XDash(css::drawing::DashStyle_RECT,1,500,1,500,500),aStr + " 2"));
-    Insert(o3tl::make_unique<XDashEntry>(XDash(css::drawing::DashStyle_RECT,2, 50,3,250,120),aStr + " 3"));
+    Insert(new XDashEntry(XDash(XDASH_RECT,1, 50,1, 50, 50),aStr + " 1"));
+    Insert(new XDashEntry(XDash(XDASH_RECT,1,500,1,500,500),aStr + " 2"));
+    Insert(new XDashEntry(XDash(XDASH_RECT,2, 50,3,250,120),aStr + " 3"));
 
     return true;
 }
@@ -114,7 +118,7 @@ Bitmap XDashList::ImpCreateBitmapForXDash(const XDash* pDash)
 
     if(pDash && (pDash->GetDots() || pDash->GetDashes()))
     {
-        const basegfx::B2DHomMatrix aScaleMatrix(OutputDevice::LogicToLogic(MapUnit::Map100thMM, MapUnit::MapPixel));
+        const basegfx::B2DHomMatrix aScaleMatrix(OutputDevice::LogicToLogic(MAP_100TH_MM, MAP_PIXEL));
         const basegfx::B2DVector aScaleVector(aScaleMatrix * basegfx::B2DVector(1.0, 0.0));
         const double fScaleValue(aScaleVector.getLength() * (nFactor * (1.4 / 2.0)));
         const double fLineWidthInUnits(fLineWidth / fScaleValue);
@@ -123,9 +127,9 @@ Bitmap XDashList::ImpCreateBitmapForXDash(const XDash* pDash)
 
         if(!aDotDashArray.empty())
         {
-            for(double & a : aDotDashArray)
+            for(sal_uInt32 a(0); a < aDotDashArray.size(); a++)
             {
-                a *= fScaleValue;
+                aDotDashArray[a] *= fScaleValue;
             }
 
             fFullDotDashLen *= fScaleValue;
@@ -136,7 +140,7 @@ Bitmap XDashList::ImpCreateBitmapForXDash(const XDash* pDash)
         aDotDashArray,
         fFullDotDashLen);
 
-    // create LinePrimitive
+    // cerate LinePrimitive
     const drawinglayer::primitive2d::Primitive2DReference aLinePrimitive(
         new drawinglayer::primitive2d::PolygonStrokePrimitive2D(
             aLine,
@@ -144,13 +148,13 @@ Bitmap XDashList::ImpCreateBitmapForXDash(const XDash* pDash)
             aStrokeAttribute));
 
     // prepare VirtualDevice
-    ScopedVclPtrInstance< VirtualDevice > pVirtualDevice;
+    VirtualDevice aVirtualDevice;
     const drawinglayer::geometry::ViewInformation2D aNewViewInformation2D;
 
-    pVirtualDevice->SetOutputSizePixel(aSize);
-    pVirtualDevice->SetDrawMode(rStyleSettings.GetHighContrastMode()
-        ? DrawModeFlags::SettingsLine | DrawModeFlags::SettingsFill | DrawModeFlags::SettingsText | DrawModeFlags::SettingsGradient
-        : DrawModeFlags::Default);
+    aVirtualDevice.SetOutputSizePixel(aSize);
+    aVirtualDevice.SetDrawMode(rStyleSettings.GetHighContrastMode()
+        ? DRAWMODE_SETTINGSLINE | DRAWMODE_SETTINGSFILL | DRAWMODE_SETTINGSTEXT | DRAWMODE_SETTINGSGRADIENT
+        : DRAWMODE_DEFAULT);
 
     if(rStyleSettings.GetPreviewUsesCheckeredBackground())
     {
@@ -159,33 +163,33 @@ Bitmap XDashList::ImpCreateBitmapForXDash(const XDash* pDash)
         static const Color aW(COL_WHITE);
         static const Color aG(0xef, 0xef, 0xef);
 
-        pVirtualDevice->DrawCheckered(aNull, aSize, nLen, aW, aG);
+        aVirtualDevice.DrawCheckered(aNull, aSize, nLen, aW, aG);
     }
     else
     {
-        pVirtualDevice->SetBackground(rStyleSettings.GetFieldColor());
-        pVirtualDevice->Erase();
+        aVirtualDevice.SetBackground(rStyleSettings.GetFieldColor());
+        aVirtualDevice.Erase();
     }
 
     // create processor and draw primitives
-    std::unique_ptr<drawinglayer::processor2d::BaseProcessor2D> pProcessor2D(drawinglayer::processor2d::createPixelProcessor2DFromOutputDevice(
-        *pVirtualDevice.get(),
+    boost::scoped_ptr<drawinglayer::processor2d::BaseProcessor2D> pProcessor2D(drawinglayer::processor2d::createPixelProcessor2DFromOutputDevice(
+        aVirtualDevice,
         aNewViewInformation2D));
 
     if(pProcessor2D)
     {
-        const drawinglayer::primitive2d::Primitive2DContainer aSequence { aLinePrimitive };
+        const drawinglayer::primitive2d::Primitive2DSequence aSequence(&aLinePrimitive, 1);
 
         pProcessor2D->process(aSequence);
         pProcessor2D.reset();
     }
 
     // get result bitmap and scale
-    Bitmap aRetval(pVirtualDevice->GetBitmap(Point(0, 0), pVirtualDevice->GetOutputSizePixel()));
+    Bitmap aRetval(aVirtualDevice.GetBitmap(Point(0, 0), aVirtualDevice.GetOutputSizePixel()));
 
     if(1 != nFactor)
     {
-        aRetval.Scale(Size((rSize.Width() * 5) / 2, rSize.Height()));
+        aRetval.Scale(Size((rSize.Width() * 5) / 2, rSize.Height()), BMP_SCALE_DEFAULT);
     }
 
     return aRetval;
@@ -198,33 +202,33 @@ Bitmap XDashList::CreateBitmapForUI( long nIndex )
     return ImpCreateBitmapForXDash(&rDash);
 }
 
-Bitmap const & XDashList::GetBitmapForUISolidLine() const
+Bitmap XDashList::GetBitmapForUISolidLine() const
 {
     if(maBitmapSolidLine.IsEmpty())
     {
-        const_cast< XDashList* >(this)->maBitmapSolidLine = XDashList::ImpCreateBitmapForXDash(nullptr);
+        const_cast< XDashList* >(this)->maBitmapSolidLine = const_cast< XDashList* >(this)->ImpCreateBitmapForXDash(0);
     }
 
     return maBitmapSolidLine;
 }
 
-OUString const & XDashList::GetStringForUiSolidLine() const
+OUString XDashList::GetStringForUiSolidLine() const
 {
     if(maStringSolidLine.isEmpty())
     {
-        const_cast< XDashList* >(this)->maStringSolidLine = SvxResId(RID_SVXSTR_SOLID);
+        const_cast< XDashList* >(this)->maStringSolidLine = ResId(RID_SVXSTR_SOLID, DIALOG_MGR()).toString();
     }
 
     return maStringSolidLine;
 }
 
-OUString const & XDashList::GetStringForUiNoLine() const
+OUString XDashList::GetStringForUiNoLine() const
 {
     if(maStringNoLine.isEmpty())
     {
-        // formerly was RID_SVXSTR_INVISIBLE, but to make equal
+        // formally was RID_SVXSTR_INVISIBLE, but tomake equal
         // everywhere, use RID_SVXSTR_NONE
-        const_cast< XDashList* >(this)->maStringNoLine = SvxResId(RID_SVXSTR_NONE);
+        const_cast< XDashList* >(this)->maStringNoLine = ResId(RID_SVXSTR_NONE, DIALOG_MGR()).toString();
     }
 
     return maStringNoLine;

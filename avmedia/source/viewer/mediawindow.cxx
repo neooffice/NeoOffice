@@ -24,10 +24,12 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+
 #include <avmedia/mediawindow.hxx>
+#include <boost/scoped_ptr.hpp>
 #include "mediawindow_impl.hxx"
 #include "mediamisc.hxx"
-#include "bitmaps.hlst"
 #include "mediawindow.hrc"
 #include <tools/urlobj.hxx>
 #include <vcl/layout.hxx>
@@ -39,7 +41,6 @@
 #include "com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp"
 #include "com/sun/star/ui/dialogs/TemplateDescription.hpp"
 #include "com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp"
-#include <memory>
 
 #define AVMEDIA_FRAMEGRABBER_DEFAULTFRAME_MEDIATIME 3.0
 
@@ -47,17 +48,20 @@ using namespace ::com::sun::star;
 
 namespace avmedia {
 
+
+// - MediaWindow -
+
+
 MediaWindow::MediaWindow( vcl::Window* parent, bool bInternalMediaControl ) :
-    mpImpl( VclPtr<priv::MediaWindowImpl>::Create( parent, this, bInternalMediaControl ) )
+    mpImpl( new priv::MediaWindowImpl( parent, this, bInternalMediaControl ) )
 {
     mpImpl->Show();
 }
 
 
-MediaWindow::~MediaWindow()
-{
-    mpImpl.disposeAndClear();
-}
+
+MediaWindow::~MediaWindow() {}
+
 
 
 void MediaWindow::setURL( const OUString& rURL, const OUString& rReferer )
@@ -66,10 +70,12 @@ void MediaWindow::setURL( const OUString& rURL, const OUString& rReferer )
 }
 
 
+
 const OUString& MediaWindow::getURL() const
 {
     return mpImpl->getURL();
 }
+
 
 
 bool MediaWindow::isValid() const
@@ -78,50 +84,61 @@ bool MediaWindow::isValid() const
 }
 
 
-void MediaWindow::MouseMove( const MouseEvent& )
+
+void MediaWindow::MouseMove( const MouseEvent& /* rMEvt */ )
 {
 }
 
 
-void MediaWindow::MouseButtonDown( const MouseEvent& )
+
+void MediaWindow::MouseButtonDown( const MouseEvent& /* rMEvt */ )
 {
 }
 
 
-void MediaWindow::MouseButtonUp( const MouseEvent& )
+
+void MediaWindow::MouseButtonUp( const MouseEvent& /* rMEvt */ )
 {
 }
 
 
-void MediaWindow::KeyInput( const KeyEvent& )
+
+void MediaWindow::KeyInput( const KeyEvent& /* rKEvt */ )
 {
 }
 
 
-void MediaWindow::KeyUp( const KeyEvent& )
+
+void MediaWindow::KeyUp( const KeyEvent& /* rKEvt */ )
 {
 }
 
-void MediaWindow::Command( const CommandEvent& )
+
+
+void MediaWindow::Command( const CommandEvent& /* rCEvt */ )
 {
 }
 
 
-sal_Int8 MediaWindow::AcceptDrop( const AcceptDropEvent& )
+
+sal_Int8 MediaWindow::AcceptDrop( const AcceptDropEvent& /* rEvt */ )
 {
     return 0;
 }
 
 
-sal_Int8 MediaWindow::ExecuteDrop( const ExecuteDropEvent& )
+
+sal_Int8 MediaWindow::ExecuteDrop( const ExecuteDropEvent& /* rEvt */ )
 {
     return 0;
 }
 
 
-void MediaWindow::StartDrag( sal_Int8, const Point& )
+
+void MediaWindow::StartDrag( sal_Int8 /* nAction */, const Point& /* rPosPixel */ )
 {
 }
+
 
 
 Size MediaWindow::getPreferredSize() const
@@ -130,10 +147,12 @@ Size MediaWindow::getPreferredSize() const
 }
 
 
-void MediaWindow::setPosSize( const tools::Rectangle& rNewRect )
+
+void MediaWindow::setPosSize( const Rectangle& rNewRect )
 {
     mpImpl->setPosSize( rNewRect );
 }
+
 
 
 void MediaWindow::setPointer( const Pointer& rPointer )
@@ -142,10 +161,12 @@ void MediaWindow::setPointer( const Pointer& rPointer )
 }
 
 
+
 bool MediaWindow::start()
 {
     return mpImpl->start();
 }
+
 
 
 void MediaWindow::updateMediaItem( MediaItem& rItem ) const
@@ -154,10 +175,12 @@ void MediaWindow::updateMediaItem( MediaItem& rItem ) const
 }
 
 
+
 void MediaWindow::executeMediaItem( const MediaItem& rItem )
 {
     mpImpl->executeMediaItem( rItem );
 }
+
 
 
 void MediaWindow::show()
@@ -166,16 +189,19 @@ void MediaWindow::show()
 }
 
 
+
 void MediaWindow::hide()
 {
     mpImpl->Hide();
 }
 
 
+
 vcl::Window* MediaWindow::getWindow() const
 {
     return mpImpl.get();
 }
+
 
 
 void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
@@ -223,29 +249,32 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
 
     for( size_t i = 0; i < SAL_N_ELEMENTS(pFilters); i += 2 )
     {
-        rFilterNameVector.push_back( std::make_pair< OUString, OUString >(
+        rFilterNameVector.push_back( ::std::make_pair< OUString, OUString >(
                                         OUString::createFromAscii(pFilters[i]),
                                         OUString::createFromAscii(pFilters[i+1]) ) );
     }
 }
 
 
-bool MediaWindow::executeMediaURLDialog(OUString& rURL, bool *const o_pbLink)
+
+bool MediaWindow::executeMediaURLDialog(vcl::Window* /* pParent */,
+        OUString& rURL, bool *const o_pbLink)
 {
-    ::sfx2::FileDialogHelper        aDlg( o_pbLink
+    ::sfx2::FileDialogHelper        aDlg( (o_pbLink)
             ? ui::dialogs::TemplateDescription::FILEOPEN_LINK_PREVIEW
-            : ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE );
+            : ui::dialogs::TemplateDescription::FILEOPEN_SIMPLE, 0 );
     static const char               aWildcard[] = "*.";
     FilterNameVector                aFilters;
     static const char               aSeparator[] = ";";
     OUString                        aAllTypes;
 
-    aDlg.SetTitle( AvmResId( (o_pbLink)
+    aDlg.SetTitle( AVMEDIA_RESSTR( (o_pbLink)
                 ? AVMEDIA_STR_INSERTMEDIA_DLG : AVMEDIA_STR_OPENMEDIA_DLG ) );
 
     getMediaFilters( aFilters );
 
-    for( FilterNameVector::size_type i = 0; i < aFilters.size(); ++i )
+    unsigned int i;
+    for( i = 0; i < aFilters.size(); ++i )
     {
         for( sal_Int32 nIndex = 0; nIndex >= 0; )
         {
@@ -257,9 +286,9 @@ bool MediaWindow::executeMediaURLDialog(OUString& rURL, bool *const o_pbLink)
     }
 
     // add filter for all media types
-    aDlg.AddFilter( AvmResId( AVMEDIA_STR_ALL_MEDIAFILES ), aAllTypes );
+    aDlg.AddFilter( AVMEDIA_RESSTR( AVMEDIA_STR_ALL_MEDIAFILES ), aAllTypes );
 
-    for( FilterNameVector::size_type i = 0; i < aFilters.size(); ++i )
+    for( i = 0; i < aFilters.size(); ++i )
     {
         OUString aTypes;
 
@@ -276,9 +305,9 @@ bool MediaWindow::executeMediaURLDialog(OUString& rURL, bool *const o_pbLink)
     }
 
     // add filter for all types
-    aDlg.AddFilter( AvmResId( AVMEDIA_STR_ALL_FILES ), "*.*" );
+    aDlg.AddFilter( AVMEDIA_RESSTR( AVMEDIA_STR_ALL_FILES ), OUString( "*.*"  ) );
 
-    uno::Reference<ui::dialogs::XFilePicker2> const xFP(aDlg.GetFilePicker());
+    uno::Reference<ui::dialogs::XFilePicker> const xFP(aDlg.GetFilePicker());
     uno::Reference<ui::dialogs::XFilePickerControlAccess> const xCtrlAcc(xFP,
             uno::UNO_QUERY_THROW);
     if (o_pbLink)
@@ -286,7 +315,7 @@ bool MediaWindow::executeMediaURLDialog(OUString& rURL, bool *const o_pbLink)
         // for video link should be the default
         xCtrlAcc->setValue(
                 ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_LINK, 0,
-                uno::Any(true) );
+                uno::makeAny(true) );
         // disabled for now: TODO: preview?
         xCtrlAcc->enableControl(
                 ui::dialogs::ExtendedFilePickerElementIds::CHECKBOX_PREVIEW,
@@ -296,7 +325,7 @@ bool MediaWindow::executeMediaURLDialog(OUString& rURL, bool *const o_pbLink)
     if( aDlg.Execute() == ERRCODE_NONE )
     {
         const INetURLObject aURL( aDlg.GetPath() );
-        rURL = aURL.GetMainURL( INetURLObject::DecodeMechanism::Unambiguous );
+        rURL = aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS );
 
         if (o_pbLink)
         {
@@ -316,13 +345,14 @@ bool MediaWindow::executeMediaURLDialog(OUString& rURL, bool *const o_pbLink)
 }
 
 
+
 void MediaWindow::executeFormatErrorBox( vcl::Window* pParent )
 {
-    ScopedVclPtrInstance< MessageDialog > aErrBox( pParent, AvmResId( AVMEDIA_STR_ERR_URL ) );
+    MessageDialog aErrBox( pParent, AVMEDIA_RESID( AVMEDIA_STR_ERR_URL ) );
 
-    aErrBox->Execute();
-    aErrBox.disposeAndClear();
+    aErrBox.Execute();
 }
+
 
 
 bool MediaWindow::isMediaURL( const OUString& rURL, const OUString& rReferer, bool bDeep, Size* pPreferredSizePixel )
@@ -330,15 +360,15 @@ bool MediaWindow::isMediaURL( const OUString& rURL, const OUString& rReferer, bo
     const INetURLObject aURL( rURL );
     bool                bRet = false;
 
-    if( aURL.GetProtocol() != INetProtocol::NotValid )
+    if( aURL.GetProtocol() != INET_PROT_NOT_VALID )
     {
         if( bDeep || pPreferredSizePixel )
         {
             try
             {
                 uno::Reference< media::XPlayer > xPlayer( priv::MediaWindowImpl::createPlayer(
-                                                            aURL.GetMainURL( INetURLObject::DecodeMechanism::Unambiguous ),
-                                                            rReferer, nullptr ) );
+                                                            aURL.GetMainURL( INetURLObject::DECODE_UNAMBIGUOUS ),
+                                                            rReferer ) );
 
                 if( xPlayer.is() )
                 {
@@ -364,7 +394,8 @@ bool MediaWindow::isMediaURL( const OUString& rURL, const OUString& rReferer, bo
 
             getMediaFilters( aFilters );
 
-            for( FilterNameVector::size_type i = 0; ( i < aFilters.size() ) && !bRet; ++i )
+            unsigned int i;
+            for( i = 0; ( i < aFilters.size() ) && !bRet; ++i )
             {
                 for( sal_Int32 nIndex = 0; nIndex >= 0 && !bRet; )
                 {
@@ -379,19 +410,22 @@ bool MediaWindow::isMediaURL( const OUString& rURL, const OUString& rReferer, bo
 }
 
 
+
 uno::Reference< media::XPlayer > MediaWindow::createPlayer( const OUString& rURL, const OUString& rReferer, const OUString* pMimeType )
 {
     return priv::MediaWindowImpl::createPlayer( rURL, rReferer, pMimeType );
 }
 
 
+
 uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const OUString& rURL,
                                                             const OUString& rReferer,
-                                                            const OUString& sMimeType )
+                                                            const OUString& sMimeType,
+                                                            double fMediaTime )
 {
     uno::Reference< media::XPlayer >    xPlayer( createPlayer( rURL, rReferer, &sMimeType ) );
     uno::Reference< graphic::XGraphic > xRet;
-    std::unique_ptr< Graphic > xGraphic;
+    boost::scoped_ptr< Graphic > apGraphic;
 
     if( xPlayer.is() )
     {
@@ -399,7 +433,8 @@ uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const OUString& rURL
 
         if( xGrabber.is() )
         {
-            double fMediaTime = AVMEDIA_FRAMEGRABBER_DEFAULTFRAME_MEDIATIME;
+            if( AVMEDIA_FRAMEGRABBER_DEFAULTFRAME == fMediaTime )
+                fMediaTime = AVMEDIA_FRAMEGRABBER_DEFAULTFRAME_MEDIATIME;
 
             if( fMediaTime >= xPlayer->getDuration() )
                 fMediaTime = ( xPlayer->getDuration() * 0.5 );
@@ -413,25 +448,35 @@ uno::Reference< graphic::XGraphic > MediaWindow::grabFrame( const OUString& rURL
 
             if( !aPrefSize.Width && !aPrefSize.Height )
             {
-                const BitmapEx aBmpEx(AVMEDIA_BMP_AUDIOLOGO);
-                xGraphic.reset( new Graphic( aBmpEx ) );
+                const BitmapEx aBmpEx( getAudioLogo() );
+                apGraphic.reset( new Graphic( aBmpEx ) );
             }
         }
     }
 
-    if( !xRet.is() && !xGraphic.get() )
+    if( !xRet.is() && !apGraphic.get() )
     {
-        const BitmapEx aBmpEx(AVMEDIA_BMP_EMPTYLOGO);
-        xGraphic.reset( new Graphic( aBmpEx ) );
+        const BitmapEx aBmpEx( getEmptyLogo() );
+        apGraphic.reset( new Graphic( aBmpEx ) );
     }
 
-    if( xGraphic.get() )
-        xRet = xGraphic->GetXGraphic();
+    if( apGraphic.get() )
+        xRet = apGraphic->GetXGraphic();
 
     return xRet;
 }
 
+BitmapEx MediaWindow::getAudioLogo()
+{
+    return BitmapEx(AVMEDIA_RESID(AVMEDIA_BMP_AUDIOLOGO));
+}
 
-} // namespace avmedia
+BitmapEx MediaWindow::getEmptyLogo()
+{
+    return BitmapEx(AVMEDIA_RESID(AVMEDIA_BMP_EMPTYLOGO));
+}
+
+
+} // namespace avemdia
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

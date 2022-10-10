@@ -49,9 +49,11 @@
 @interface VCLApplicationDelegate : NSObject <NSApplicationDelegate, NSMenuDelegate>
 {
 	BOOL					mbAppMenuInitialized;
+	BOOL					mbAwaitingTracking;
 	BOOL					mbCancelTracking;
 	id						mpDelegate;
 	NSMenu*					mpDockMenu;
+	BOOL					mbInPerformKeyEquivalent;
 	BOOL					mbInTermination;
 	BOOL					mbInTracking;
 	AppleRemoteMainController*	mpAppleRemoteMainController;
@@ -72,9 +74,12 @@
 - (void)cancelTermination;
 - (void)dealloc;
 - (id)init;
+- (BOOL)isInPerformKeyEquivalent;
+- (BOOL)isInTermination;
 - (BOOL)isInTracking;
 - (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (void)setDelegate:(id)pDelegate;
+- (void)setInPerformKeyEquivalent:(BOOL)bInPerformKeyEquivalent;
 - (void)showAbout;
 - (void)showPreferences;
 - (void)trackMenuBar:(NSNotification *)pNotification;

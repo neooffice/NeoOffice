@@ -36,17 +36,16 @@
 #include <dlfcn.h>
 #include <signal.h>
 
+#include <osl/objcutils.h>
 #include <rtl/digest.h>
 #include <vcl/unohelp.hxx>
 
 #include <premac.h>
-#import <Cocoa/Cocoa.h>
 #import <CommonCrypto/CommonDigest.h>
 #import <IOKit/IOKitLib.h>
 #import <Security/SecAsn1Coder.h>
 #import <Security/SecAsn1Templates.h>
 #include <postmac.h>
-#undef check
 
 #include "svmainhook_cocoa.h"
 #include "../../java/source/java/VCLEventQueue_cocoa.h"
@@ -54,9 +53,15 @@
 #define DOFUNCTION( x ) BOOL SAL_DLLPUBLIC_EXPORT _##x ()
 #define FUNCTION( x ) DOFUNCTION( x )
 
+// Uncomment the following line to force validation of the App Store receipt
+// upon application termination
+// #define VALIDATE_APP_STORE_RECEIPT_ON_EXIT
+
 typedef BOOL BundleCheck_Type();
+#ifdef VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 typedef sal_Bool Application_canSave_Type();
 typedef sal_Bool Application_isRunningInSandbox_Type();
+#endif	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 
 // The following are custom data types for Apple's App Store receipt payload
 // ASN.1 format as documented in the following URL:
@@ -74,21 +79,25 @@ typedef struct
 	AppReceiptAttribute**	mpAttrs;
 } AppReceiptAttributes;
 
+#ifdef VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 static const int nDefaultExitCode = 173;
-static Application_canSave_Type *pApplication_canSave = nullptr;
-static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = nullptr;
+static Application_canSave_Type *pApplication_canSave = NULL;
+static Application_isRunningInSandbox_Type *pApplication_isRunningInSandbox = NULL;
+#else	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
+static const int nDefaultExitCode = 0;
+#endif	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 
 static const SecAsn1Template aAttributeTemplate[] = {
-	{ SEC_ASN1_SEQUENCE, 0, nullptr, sizeof( AppReceiptAttribute ) },
-	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, type ), nullptr, 0 },
-	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, version ), nullptr, 0 },
-	{ SEC_ASN1_OCTET_STRING, offsetof( AppReceiptAttribute, value ), nullptr, 0 },
-	{ 0, 0, nullptr, 0 }
+	{ SEC_ASN1_SEQUENCE, 0, NULL, sizeof( AppReceiptAttribute ) },
+	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, type ), NULL, 0 },
+	{ SEC_ASN1_INTEGER, offsetof( AppReceiptAttribute, version ), NULL, 0 },
+	{ SEC_ASN1_OCTET_STRING, offsetof( AppReceiptAttribute, value ), NULL, 0 },
+	{ 0, 0, NULL, 0 }
 };
 
 static const SecAsn1Template aAttributeSetTemplate[] = {
 	{ SEC_ASN1_SET_OF, 0, aAttributeTemplate, sizeof( AppReceiptAttributes ) },
-	{ 0, 0, nullptr, 0 }
+	{ 0, 0, NULL, 0 }
 };
 
 static int ImplConvertAttributeToInt( SecAsn1Item *pItem )
@@ -103,7 +112,7 @@ static int ImplConvertAttributeToInt( SecAsn1Item *pItem )
 
 static CFDataRef ImplCreateMacAddress()
 {
-	CFDataRef aRet = nullptr;
+	CFDataRef aRet = NULL;
 
 	mach_port_t aMasterPort;
 	if ( IOMasterPort( MACH_PORT_NULL, &aMasterPort ) == KERN_SUCCESS )
@@ -122,7 +131,7 @@ static CFDataRef ImplCreateMacAddress()
 					io_object_t aParentService;
 					if ( IORegistryEntryGetParentEntry( aService, kIOServicePlane, &aParentService ) == KERN_SUCCESS )
 					{
-						aRet = static_cast< CFDataRef >( IORegistryEntryCreateCFProperty( aParentService, CFSTR( "IOMACAddress" ), kCFAllocatorDefault, 0 ) );
+						aRet = (CFDataRef)IORegistryEntryCreateCFProperty( aParentService, CFSTR( "IOMACAddress" ), kCFAllocatorDefault, 0 );
 
 						IOObjectRelease( aParentService );
 
@@ -199,7 +208,7 @@ void NSApplication_run()
 								[pKeyMD5 appendFormat:@"%02x", aBuf[ i ]];
 
 							const char *pKeyMD5String = [pKeyMD5 UTF8String];
-							BundleCheck_Type *pBundleCheck = reinterpret_cast< BundleCheck_Type * >( dlsym( RTLD_SELF, pKeyMD5String ) );
+							BundleCheck_Type *pBundleCheck = (BundleCheck_Type *)dlsym( RTLD_SELF, pKeyMD5String );
 							if ( pBundleCheck )
 								bBundleOK = pBundleCheck();
 						}
@@ -216,17 +225,36 @@ void NSApplication_run()
 
  			[pBundle loadNibNamed:@"MainMenu" owner:pApp topLevelObjects:nil];
 
+			// Menu items in the windows menu aren't localized automatically
+			NSBundle *pAppBundle = [NSBundle bundleForClass:[pApp class]];
+			if ( pAppBundle && pApp.windowsMenu )
+			{
+				for ( NSMenuItem *pMenuItem in [pApp.windowsMenu itemArray] )
+				{
+					if ( !pMenuItem || [pMenuItem isSeparatorItem] )
+						continue;
+
+					NSString *pTitle = [pMenuItem title];
+					if ( pTitle )
+					{
+						NSString *pLocalizedTitle = [pAppBundle localizedStringForKey:pTitle value:nil table:@"MenuCommands"];
+						if ( pLocalizedTitle )
+							[pMenuItem setTitle:pLocalizedTitle];
+					}
+				}
+			}
+
 			VCLEventQueue_installVCLEventQueueClasses();
 
 			// Make sure our application is registered with launch services
 			NSURL *pBundleURL = [pBundle bundleURL];
 			if ( pBundleURL )
-				LSRegisterURL( static_cast< CFURLRef >( pBundleURL ), false );
+				LSRegisterURL( (CFURLRef)pBundleURL, false );
 
 			// Fix deadlock waiting for the application mutex when Oracle's Java
 			// calls [NSObject performSelectorOnMainThread:withObject:waitUntilDone:]
 			// by adding our custom run loop mode to the list of common modes
-			CFRunLoopAddCommonMode( CFRunLoopGetMain(), CFSTR( "AWTRunLoopMode" ) );
+			CFRunLoopAddCommonMode( CFRunLoopGetMain(), JAVA_AWT_RUNLOOPMODE );
 
 			// Attempt to stop crashing due to uncaught Objective-C exceptions
 			// in the main thread by running until the [NSApplication run]
@@ -293,7 +321,7 @@ void NSApplication_run()
 			NSData *pData = [NSData dataWithContentsOfURL:pURL];
 			if ( pData && pData.length && pData.bytes )
 			{
-				CMSDecoderRef aDecoder = nullptr;
+				CMSDecoderRef aDecoder = NULL;
 				if ( CMSDecoderCreate( &aDecoder ) == errSecSuccess && aDecoder )
 				{
 					if ( CMSDecoderUpdateMessage( aDecoder, pData.bytes, pData.length ) == errSecSuccess && CMSDecoderFinalizeMessage( aDecoder ) == errSecSuccess )
@@ -308,7 +336,7 @@ void NSApplication_run()
 								for ( size_t i = 0; i < nSigners; i++ )
 								{
 									CMSSignerStatus nSignerStatus = kCMSSignerUnsigned;
-									if ( CMSDecoderCopySignerStatus( aDecoder, i, aPolicy, TRUE, &nSignerStatus, nullptr, nullptr ) == errSecSuccess && nSignerStatus == kCMSSignerValid )
+									if ( CMSDecoderCopySignerStatus( aDecoder, i, aPolicy, TRUE, &nSignerStatus, NULL, NULL ) == errSecSuccess && nSignerStatus == kCMSSignerValid )
 									{
 										bSigned = YES;
 										break;
@@ -326,15 +354,15 @@ void NSApplication_run()
 							NSString *pVersion = nil;
 							NSData *pOpaque = nil;
 							NSData *pHash = nil;
-							CFDataRef aContent = nullptr;
+							CFDataRef aContent = NULL;
 							if ( CMSDecoderCopyContent( aDecoder, &aContent ) == errSecSuccess && aContent )
 							{
 								const UInt8 *pContentBytes = CFDataGetBytePtr( aContent );
 								CFIndex nContentLen = CFDataGetLength( aContent );
-								SecAsn1CoderRef aAsn1Decoder = nullptr;
+								SecAsn1CoderRef aAsn1Decoder = NULL;
 								if ( pContentBytes && nContentLen && SecAsn1CoderCreate( &aAsn1Decoder ) == errSecSuccess && aAsn1Decoder )
 								{
-									AppReceiptAttributes aPayload = { nullptr };
+									AppReceiptAttributes aPayload = { NULL };
 									if ( SecAsn1Decode( aAsn1Decoder, pContentBytes, nContentLen, aAttributeSetTemplate, &aPayload ) == errSecSuccess && aPayload.mpAttrs )
 									{
 										for ( AppReceiptAttribute **pAttrs = aPayload.mpAttrs; pAttrs && *pAttrs; pAttrs++ )
@@ -392,28 +420,32 @@ void NSApplication_run()
 
 							if ( pIdentifier && pIdentifierData && pIdentifierData.bytes && pIdentifierData.length && pVersion && pOpaque && pOpaque.length && pOpaque.bytes && pHash && pHash.length == CC_SHA1_DIGEST_LENGTH && pHash.bytes )
 							{
-								NSDictionary *pInfoDict = [pBundle infoDictionary];
-								if ( pInfoDict )
+								NSBundle *pBundle = [NSBundle mainBundle];
+								if ( pBundle )
 								{
-									NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
-									if ( pBundleIdentifier && [pBundleIdentifier isEqualToString:pIdentifier] )
+									NSDictionary *pInfoDict = [pBundle infoDictionary];
+									if ( pInfoDict )
 									{
-										CFDataRef aMacAddress = ImplCreateMacAddress();
-										if ( aMacAddress )
+										NSString *pBundleIdentifier = [pInfoDict objectForKey:@"CFBundleIdentifier"];
+										if ( pBundleIdentifier && [pBundleIdentifier isEqualToString:pIdentifier] )
 										{
-											const UInt8 *pMacAddressBytes = CFDataGetBytePtr( aMacAddress );
-											CFIndex nMacAddressLen = CFDataGetLength( aMacAddress );
-											unsigned char aDigest[ CC_SHA1_DIGEST_LENGTH ];
-											if ( pMacAddressBytes && nMacAddressLen )
+											CFDataRef aMacAddress = ImplCreateMacAddress();
+											if ( aMacAddress )
 											{
-												CC_SHA1_CTX aContext;
-												CC_SHA1_Init( &aContext );
-												CC_SHA1_Update( &aContext, pMacAddressBytes, nMacAddressLen );
-												CC_SHA1_Update( &aContext, pOpaque.bytes, pOpaque.length );
-												CC_SHA1_Update( &aContext, pIdentifierData.bytes, pIdentifierData.length );
-												CC_SHA1_Final( aDigest, &aContext );
-												if ( !memcmp( aDigest, pHash.bytes, CC_SHA1_DIGEST_LENGTH ) )
-													mnExitCode = 0;
+												const UInt8 *pMacAddressBytes = CFDataGetBytePtr( aMacAddress );
+												CFIndex nMacAddressLen = CFDataGetLength( aMacAddress );
+												unsigned char aDigest[ CC_SHA1_DIGEST_LENGTH ];
+												if ( pMacAddressBytes && nMacAddressLen )
+												{
+													CC_SHA1_CTX aContext;
+													CC_SHA1_Init( &aContext );
+													CC_SHA1_Update( &aContext, pMacAddressBytes, nMacAddressLen );
+													CC_SHA1_Update( &aContext, pOpaque.bytes, pOpaque.length );
+													CC_SHA1_Update( &aContext, pIdentifierData.bytes, pIdentifierData.length );
+													CC_SHA1_Final( aDigest, &aContext );
+													if ( !memcmp( aDigest, pHash.bytes, CC_SHA1_DIGEST_LENGTH ) )
+														mnExitCode = 0;
+												}
 											}
 										}
 									}
@@ -449,15 +481,15 @@ void NSApplication_run()
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 	{
-		NSArray *pWindows = [pApp windows];
-		if ( pWindows )
-		{
-			for ( NSWindow *pWindow in pWindows )
-			{
-				if ( pWindow )
-					[pWindow orderOut:pWindow];
-			}
-		}
+		// Eliminate temporary hang on macOS 11 by not requesting ordered
+		// windows
+		[pApp enumerateWindowsWithOptions:0 usingBlock:^(NSWindow *pWindow, BOOL *bStop) {
+			if ( bStop )
+				*bStop = NO;
+
+			if ( pWindow )
+				[pWindow orderOut:pWindow];
+		}];
 	}
 
 	[self getExitCode:pObject];
@@ -469,10 +501,11 @@ void NSApplication_terminate()
 {
 	int nRet = nDefaultExitCode;
 
+#ifdef VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 	if ( !pApplication_canSave )
-		pApplication_canSave = reinterpret_cast< Application_canSave_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_canSave" ) );
+		pApplication_canSave = (Application_canSave_Type *)dlsym( RTLD_MAIN_ONLY, "Application_canSave" );
 	if ( !pApplication_isRunningInSandbox )
-		pApplication_isRunningInSandbox = reinterpret_cast< Application_isRunningInSandbox_Type* >( dlsym( RTLD_MAIN_ONLY, "Application_isRunningInSandbox" ) );
+		pApplication_isRunningInSandbox = (Application_isRunningInSandbox_Type *)dlsym( RTLD_MAIN_ONLY, "Application_isRunningInSandbox" );
 	if ( ( pApplication_isRunningInSandbox && !pApplication_isRunningInSandbox() ) || ( pApplication_canSave && !pApplication_canSave() ) )
 	{
 		nRet = 0;
@@ -482,12 +515,12 @@ void NSApplication_terminate()
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		GetExitCode *pGetExitCode = [GetExitCode create];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pGetExitCode performSelectorOnMainThread:@selector(getExitCodeForTermination:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( pGetExitCode, @selector(getExitCodeForTermination:), pGetExitCode, YES );
 		nRet = [pGetExitCode exitCode];
 
 		[pPool release];
 	}
+#endif	// VALIDATE_APP_STORE_RECEIPT_ON_EXIT
 
 	// Force exit since NSApplication won't shutdown when only exit() is invoked
 	_exit( nRet );
@@ -500,8 +533,7 @@ sal_Bool Application_validateReceipt()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	GetExitCode *pGetExitCode = [GetExitCode create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pGetExitCode performSelectorOnMainThread:@selector(getExitCode:) withObject:pGetExitCode waitUntilDone:YES modes:pModes];
+	osl_performSelectorOnMainThread( pGetExitCode, @selector(getExitCode:), pGetExitCode, YES );
 	if ( ![pGetExitCode exitCode] )
 		bRet = sal_True;
 

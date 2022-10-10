@@ -94,8 +94,6 @@
 
 - (void) postTheEvent: (short int)buttonIdentifier modifierFlags:(int)modifierFlags
 {
-SAL_WNODEPRECATED_DECLARATIONS_PUSH
-        // 'NSApplicationDefined' is deprecated: first deprecated in macOS 10.12
     [NSApp postEvent:
 #ifdef USE_JAVA
     [NSEvent    otherEventWithType:NSEventTypeApplicationDefined
@@ -111,25 +109,24 @@ SAL_WNODEPRECATED_DECLARATIONS_PUSH
                 data1: buttonIdentifier
                 data2: 0]
     atStart: NO];
-SAL_WNODEPRECATED_DECLARATIONS_POP
 }
 
 
 - (void) remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (BOOL) pressedDown clickCount: (unsigned int)clickCount
 {
     (void)clickCount;
-#ifdef DEBUG
     NSString* pressed = @"";
+#ifdef DEBUG
     NSString* buttonName = nil;
 #endif
     if (pressedDown)
     {
-#ifdef DEBUG
         pressed = @"(AppleRemoteMainController: button pressed)";
 
+#ifdef DEBUG
         switch(buttonIdentifier)
         {
-            case kRemoteButtonPlus:         buttonName = @"Volume up";              break;  // MEDIA_COMMAND_VOLUME_UP  ( see include/vcl/commandevent.hxx )
+            case kRemoteButtonPlus:         buttonName = @"Volume up";              break;  // MEDIA_COMMAND_VOLUME_UP  ( see vcl/inc/vcl/cmdevt.hxx )
             case kRemoteButtonMinus:        buttonName = @"Volume down";            break;  // MEDIA_COMMAND_VOLUME_DOWN
             case kRemoteButtonMenu:         buttonName = @"Menu";                   break;  // MEDIA_COMMAND_MENU
             case kRemoteButtonPlay:         buttonName = @"Play";                   break;  // MEDIA_COMMAND_PLAY
@@ -150,16 +147,14 @@ SAL_WNODEPRECATED_DECLARATIONS_POP
     }
     else // not pressed
     {
-#ifdef DEBUG
         pressed = @"(AppleRemoteMainController: button released)";
-#endif
     }
 
 #ifdef DEBUG
 	//NSLog(@"Button %@ pressed %@", buttonName, pressed);
 	NSString* clickCountString = @"";
 	if (clickCount > 1) clickCountString = [NSString stringWithFormat: @"%d clicks", clickCount];
-	NSString* feedbackString = [NSString stringWithFormat:@"(Value:%4d) %@  %@ %@", buttonIdentifier, buttonName, pressed, clickCountString];
+	NSString* feedbackString = [NSString stringWithFormat:@"(Value:%4d) %@  %@ %@",buttonIdentifier, buttonName, pressed, clickCountString];
 
 	// print out events
 	NSLog(@"%@", feedbackString);
@@ -171,9 +166,9 @@ SAL_WNODEPRECATED_DECLARATIONS_POP
 }
 
 - (void) dealloc {
-    [ remoteControl release ]; remoteControl = nil;
-    [ remoteControlBehavior release ]; remoteControlBehavior = nil;
-    [super dealloc];
+    [remoteControl autorelease];
+	[remoteControlBehavior autorelease];
+	[super dealloc];
 }
 
 // for bindings access

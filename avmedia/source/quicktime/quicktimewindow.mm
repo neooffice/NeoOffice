@@ -37,6 +37,7 @@
 #include "quicktimecommon.hxx"
 #include "quicktimewindow.hxx"
 
+#include <osl/objcutils.h>
 #include <vcl/svapp.hxx>
 
 using namespace ::com::sun::star::awt;
@@ -58,7 +59,7 @@ namespace quicktime
 
 Window* Window::findWindow( const void* pMoviePlayer )
 {
-	Window *pRet = nullptr;
+	Window *pRet = NULL;
 
 	for ( ::std::list< Window* >::const_iterator it = Window::maWindows.begin(); it != Window::maWindows.end(); ++it )
 	{
@@ -74,13 +75,13 @@ Window* Window::findWindow( const void* pMoviePlayer )
 
 // ----------------------------------------------------------------------------
 
-IMPL_STATIC_LINK( Window, fireFocusGainedEvent, void*, pEvtData, void )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireFocusGainedEvent, void*, pEvtData )
 {
 	FocusEventData *pFocusEvtData = static_cast< FocusEventData* >( pEvtData );
 	Window *pWindow = Window::findWindow( pFocusEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
-		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( cppu::UnoType< Reference< XFocusListener > >::get() );
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XFocusListener >*)0 ) );
 		if ( pContainer )
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
@@ -90,17 +91,18 @@ IMPL_STATIC_LINK( Window, fireFocusGainedEvent, void*, pEvtData, void )
 	}
 
 	delete pFocusEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
 
-IMPL_STATIC_LINK( Window, fireMouseMovedEvent, void*, pEvtData, void )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireMouseMovedEvent, void*, pEvtData )
 {
 	MouseEventData *pMouseEvtData = static_cast< MouseEventData* >( pEvtData );
 	Window *pWindow = Window::findWindow( pMouseEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
-		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( cppu::UnoType< Reference< XMouseMotionListener > >::get() );
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseMotionListener >*)0 ) );
 		if ( pContainer )
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
@@ -110,17 +112,18 @@ IMPL_STATIC_LINK( Window, fireMouseMovedEvent, void*, pEvtData, void )
 	}
 
 	delete pMouseEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
 
-IMPL_STATIC_LINK( Window, fireMousePressedEvent, void*, pEvtData, void )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireMousePressedEvent, void*, pEvtData )
 {
 	MouseEventData *pMouseEvtData = static_cast< MouseEventData* >( pEvtData );
 	Window *pWindow = Window::findWindow( pMouseEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
-		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( cppu::UnoType< Reference< XMouseListener > >::get() );
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseListener >*)0 ) );
 		if ( pContainer )
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
@@ -130,17 +133,18 @@ IMPL_STATIC_LINK( Window, fireMousePressedEvent, void*, pEvtData, void )
 	}
 
 	delete pMouseEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
 
-IMPL_STATIC_LINK( Window, fireMouseReleasedEvent, void*, pEvtData, void )
+IMPL_STATIC_LINK_NOINSTANCE( Window, fireMouseReleasedEvent, void*, pEvtData )
 {
 	MouseEventData *pMouseEvtData = static_cast< MouseEventData* >( pEvtData );
 	Window *pWindow = Window::findWindow( pMouseEvtData->mpMoviePlayer );
 	if ( pWindow )
 	{
-		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( cppu::UnoType< Reference< XMouseListener > >::get() );
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseListener >*)0 ) );
 		if ( pContainer )
 		{
 			OInterfaceIteratorHelper aIterator( *pContainer );
@@ -150,6 +154,7 @@ IMPL_STATIC_LINK( Window, fireMouseReleasedEvent, void*, pEvtData, void )
 	}
 
 	delete pMouseEvtData;
+	return 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -157,8 +162,8 @@ IMPL_STATIC_LINK( Window, fireMouseReleasedEvent, void*, pEvtData, void )
 Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 	maListeners( maMutex ),
 	mxMgr( rxMgr ),
-	mpMoviePlayer( nullptr ),
-	mpParentView( nullptr ),
+	mpMoviePlayer( NULL ),
+	mpParentView( NULL ),
 	mbVisible( sal_False ),
 	mnZoomLevel( ZoomLevel_NOT_AVAILABLE )
 {
@@ -176,14 +181,14 @@ Window::~Window()
 
 // ----------------------------------------------------------------------------
 
-void Window::update()
+void Window::update() throw( RuntimeException )
 {
 	setVisible( mbVisible );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel )
+sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 {
 	sal_Bool bRet = sal_False;
 
@@ -191,9 +196,8 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:static_cast< int >( nZoomLevel )]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setZoomLevel:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nZoomLevel]]];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setZoomLevel:), pArgs, YES );
 		bRet = sal_True;
 		if ( bRet )
 			mnZoomLevel = nZoomLevel;
@@ -206,22 +210,21 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel )
 
 // ----------------------------------------------------------------------------
 
-ZoomLevel Window::getZoomLevel()
+ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 {
 	return mnZoomLevel;
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::setPointerType( sal_Int32 nPointerType )
+void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nPointerType]]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setPointer:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setPointer:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -229,7 +232,7 @@ void Window::setPointerType( sal_Int32 nPointerType )
 
 // ----------------------------------------------------------------------------
 
-void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 /* nFlags*/ )
+void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 /* nFlags*/ ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -237,9 +240,8 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 	if ( mpMoviePlayer && mpParentView )
 	{
-		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:static_cast< NSView* >( mpParentView ), [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setBounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(NSView *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setBounds:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -247,7 +249,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 // ----------------------------------------------------------------------------
 
-::com::sun::star::awt::Rectangle Window::getPosSize()
+::com::sun::star::awt::Rectangle Window::getPosSize() throw( RuntimeException )
 {
 	::com::sun::star::awt::Rectangle aRet( 0, 0, 0, 0 );
 
@@ -256,14 +258,13 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(bounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSValue *pRet = static_cast< NSValue* >( [pArgs result] );
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(bounds:), pArgs, YES );
+		NSValue *pRet = (NSValue *)[pArgs result];
 		if ( pRet )
 		{
 			NSRect aRect = [pRet rectValue];
 			if ( aRect.size.width > 0 && aRect.size.height > 0 )
-				aRet = ::com::sun::star::awt::Rectangle( static_cast< long >( aRect.origin.x ), static_cast< long >( aRect.origin.y ), static_cast< long >( aRect.size.width ), static_cast< long >( aRect.size.height ) );
+				aRet = ::com::sun::star::awt::Rectangle( (long)aRect.origin.x, (long)aRect.origin.y, (long)aRect.size.width, (long)aRect.size.height );
 		}
 	}
 
@@ -274,7 +275,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 // ----------------------------------------------------------------------------
 
-void Window::setVisible( sal_Bool bVisible )
+void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -284,11 +285,10 @@ void Window::setVisible( sal_Bool bVisible )
 	{
 		AvmediaArgs *pArgs;
 		if ( bVisible && mpParentView )
-			pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:static_cast< AvmediaMoviePlayer* >( mpParentView ), [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
+			pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(AvmediaMoviePlayer *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
 		else
 			pArgs = [AvmediaArgs argsWithArgs:nil];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setSuperview:), pArgs, YES );
 	}
 
 	[pPool release];
@@ -296,7 +296,7 @@ void Window::setVisible( sal_Bool bVisible )
 
 // ----------------------------------------------------------------------------
 
-void Window::setEnable( sal_Bool /* bEnable */ )
+void Window::setEnable( sal_Bool /* bEnable */ ) throw( RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "Window::setEnable not implemented\n" );
@@ -305,115 +305,112 @@ void Window::setEnable( sal_Bool /* bEnable */ )
 
 // ----------------------------------------------------------------------------
 
-void Window::setFocus()
+void Window::setFocus() throw( RuntimeException )
 {
 	if ( mpMoviePlayer )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) performSelectorOnMainThread:@selector(setFocus:) withObject:static_cast< id >( mpMoviePlayer ) waitUntilDone:YES modes:pModes];
-	}
+		osl_performSelectorOnMainThread( (AvmediaMoviePlayer *)mpMoviePlayer, @selector(setFocus:), (AvmediaMoviePlayer *)mpMoviePlayer, YES );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addWindowListener( const Reference< XWindowListener >& xListener )
+void Window::addWindowListener( const Reference< XWindowListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeWindowListener( const Reference< XWindowListener >& xListener )
+void Window::removeWindowListener( const Reference< XWindowListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addFocusListener( const Reference< XFocusListener >& xListener )
+void Window::addFocusListener( const Reference< XFocusListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeFocusListener( const Reference< XFocusListener >& xListener )
+void Window::removeFocusListener( const Reference< XFocusListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addKeyListener( const Reference< XKeyListener >& xListener )
+void Window::addKeyListener( const Reference< XKeyListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeKeyListener( const Reference< XKeyListener >& xListener )
+void Window::removeKeyListener( const Reference< XKeyListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addMouseListener( const Reference< XMouseListener >& xListener )
+void Window::addMouseListener( const Reference< XMouseListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeMouseListener( const Reference< XMouseListener >& xListener )
+void Window::removeMouseListener( const Reference< XMouseListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addMouseMotionListener( const Reference< XMouseMotionListener >& xListener )
+void Window::addMouseMotionListener( const Reference< XMouseMotionListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeMouseMotionListener( const Reference< XMouseMotionListener >& xListener )
+void Window::removeMouseMotionListener( const Reference< XMouseMotionListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::addPaintListener( const Reference< XPaintListener >& xListener )
+void Window::addPaintListener( const Reference< XPaintListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removePaintListener( const Reference< XPaintListener >& xListener )
+void Window::removePaintListener( const Reference< XPaintListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::dispose()
+void Window::dispose() throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
 	{
-		[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) release];
-		mpMoviePlayer = nullptr;
+		[(AvmediaMoviePlayer *)mpMoviePlayer release];
+		mpMoviePlayer = NULL;
 	}
 
 	if ( mpParentView )
 	{
-		[static_cast< NSView* >( mpParentView ) release];
-		mpParentView = nullptr;
+		[(NSView *)mpParentView release];
+		mpParentView = NULL;
 	}
 
 	[pPool release];
@@ -421,35 +418,35 @@ void Window::dispose()
 
 // ----------------------------------------------------------------------------
 
-void Window::addEventListener( const Reference< XEventListener >& xListener )
+void Window::addEventListener( const Reference< XEventListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.addInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeEventListener( const Reference< XEventListener >& xListener )
+void Window::removeEventListener( const Reference< XEventListener >& xListener ) throw( RuntimeException )
 {
-	maListeners.removeInterface( cppu::UnoType< decltype( xListener ) >::get(), xListener );
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-OUString SAL_CALL Window::getImplementationName()
+OUString SAL_CALL Window::getImplementationName() throw( RuntimeException )
 {
 	return OUString( AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool SAL_CALL Window::supportsService( const OUString& ServiceName )
+sal_Bool SAL_CALL Window::supportsService( const OUString& ServiceName ) throw( RuntimeException )
 {
 	return ServiceName == AVMEDIA_QUICKTIME_WINDOW_SERVICENAME;
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< OUString > SAL_CALL Window::getSupportedServiceNames()
+Sequence< OUString > SAL_CALL Window::getSupportedServiceNames() throw( RuntimeException )
 {
 	Sequence< OUString > aRet(1);
 	aRet[0] = OUString( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME );
@@ -474,11 +471,12 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 		if ( nPtr )
 		{
 			mpMoviePlayer = pMoviePlayer;
-			[static_cast< AvmediaMoviePlayer* >( mpMoviePlayer ) retain];
+			[(AvmediaMoviePlayer *)mpMoviePlayer retain];
 
-			mpParentView = reinterpret_cast< void* >( nPtr );
-			[static_cast< NSView* >( mpParentView ) retain];
+			mpParentView = (void *)nPtr;
+			[(NSView *)mpParentView retain];
 
+			::com::sun::star::awt::Rectangle aRect;
 			rArguments.getConstArray()[1] >>= maRect;
 
 			setZoomLevel( ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT );

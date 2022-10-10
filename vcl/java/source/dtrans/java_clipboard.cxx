@@ -76,7 +76,7 @@ JavaClipboard::~JavaClipboard()
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::flushClipboard( ) throw()
+void SAL_CALL JavaClipboard::flushClipboard( ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Reference< datatransfer::XTransferable > aContents;
 
@@ -89,9 +89,9 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw()
 
 	if ( aContents.is() )
 	{
-		DTransTransferable *pTransferable = nullptr;
+		DTransTransferable *pTransferable = NULL;
 		if ( aContents.is() )
-			pTransferable = static_cast< DTransTransferable* >( aContents.get() );
+			pTransferable = (DTransTransferable *)aContents.get();
 
 		if ( pTransferable )
 			pTransferable->flush();
@@ -100,17 +100,23 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw()
 
 // ------------------------------------------------------------------------
 
-uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw()
+uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContents() throw( uno::RuntimeException, std::exception )
 {
 	MutexGuard aGuard( maMutex );
 
 	uno::Reference< datatransfer::XTransferable > aContents( maContents );
 
-	if ( mbSystemClipboard && !mbPrivateClipboard )
+	// Don't send any changedContents notifications to listeners if this is
+	// a private clipboard as it will cause Calc's Edit > Paste menus to be
+	// disabled when another application has ownership of the system clipboard
+	if ( mbPrivateClipboard )
+		return aContents;
+
+	if ( mbSystemClipboard )
 	{
-		DTransTransferable *pTransferable = nullptr;
+		DTransTransferable *pTransferable = NULL;
 		if ( maContents.is() )
-			pTransferable = static_cast< DTransTransferable* >( maContents.get() );
+			pTransferable = (DTransTransferable *)maContents.get();
 
 		if ( pTransferable && pTransferable->hasOwnership() )
 		{
@@ -123,44 +129,54 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 		else
 		{
 			uno::Reference< datatransfer::XTransferable > aOldContents( maContents );
+			NSInteger nOldChangeCount = -1;
 			if ( pTransferable )
+			{
+				nOldChangeCount = pTransferable->getChangeCount();
 				aOldContents = pTransferable->getTransferable();
+			}
+
+			NSInteger nChangeCount = -1;
 			pTransferable = DTransClipboard::getContents();
 			if ( pTransferable )
+			{
+				nChangeCount = pTransferable->getChangeCount();
 				maContents = uno::Reference< datatransfer::XTransferable >( pTransferable );
+			}
 			else
+			{
 				maContents = uno::Reference< datatransfer::XTransferable >();
+			}
 
 			uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
 			maOwner = uno::Reference< datatransfer::clipboard::XClipboardOwner >();
 
 			aContents = maContents;
 
-			// Fix bug 3650 by not sending lost ownership notifications to
+			// Fix bug 3650 by not sending lostOwnership notifications to
 			// transferables that were never pushed to the system clipboard
-			// by our application
-			if ( aOldContents.is() )
+			// by our application. Fix Edit menu update failure when the system
+			// clipboard is changed in another application by sending
+			// changedContents notifications when the system clipboard's change
+			// count has changed.
+			if ( nOldChangeCount != nChangeCount )
 			{
-				pTransferable = static_cast< DTransTransferable* >( aOldContents.get() );
-				if ( pTransferable && pTransferable->getChangeCount() >= 0 )
+				::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
+
+				maMutex.release();
+
+				if ( aOldOwner.is() )
+					aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
+
+				datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
+				while ( listeners.begin() != listeners.end() )
 				{
-					::std::list< uno::Reference< datatransfer::clipboard::XClipboardListener > > listeners( maListeners );
-
-					maMutex.release();
-
-					if ( aOldOwner.is() )
-						aOldOwner->lostOwnership( static_cast< datatransfer::clipboard::XClipboard* >( this ), aOldContents );
-
-					datatransfer::clipboard::ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
-					while ( listeners.begin() != listeners.end() )
-					{
-						if( listeners.front().is() )
-							listeners.front()->changedContents( aEvent );
-						listeners.pop_front();
-					}
-
-					maMutex.acquire();
+					if( listeners.front().is() )
+						listeners.front()->changedContents( aEvent );
+					listeners.pop_front();
 				}
+
+				maMutex.acquire();
 			}
 		}
 	}
@@ -170,7 +186,7 @@ uno::Reference< datatransfer::XTransferable > SAL_CALL JavaClipboard::getContent
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw()
+void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XTransferable >& xTransferable, const uno::Reference< datatransfer::clipboard::XClipboardOwner >& xClipboardOwner ) throw( uno::RuntimeException, std::exception )
 {
 	ClearableMutexGuard aGuard( maMutex );
 
@@ -180,11 +196,17 @@ void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XT
 	uno::Reference< datatransfer::clipboard::XClipboardOwner > aOldOwner( maOwner );
 	maOwner = xClipboardOwner;
 
-	if ( mbSystemClipboard && !mbPrivateClipboard )
+	// Don't send any changedContents notifications to listeners if this is
+	// a private clipboard as it will cause Calc's Edit > Paste menus to be
+	// disabled when another application has ownership of the system clipboard
+	if ( mbPrivateClipboard )
+		return;
+
+	if ( mbSystemClipboard )
 	{
-		DTransTransferable *pTransferable = nullptr;
+		DTransTransferable *pTransferable = NULL;
 		if ( aOldContents.is() )
-			pTransferable = static_cast< DTransTransferable* >( aOldContents.get() );
+			pTransferable = (DTransTransferable *)aOldContents.get();
 		if ( pTransferable )
 			aOldContents = pTransferable->getTransferable();
 		else
@@ -215,21 +237,21 @@ void SAL_CALL JavaClipboard::setContents( const uno::Reference< datatransfer::XT
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getName() throw()
+OUString SAL_CALL JavaClipboard::getName() throw( uno::RuntimeException, std::exception )
 {
 	return OUString();
 }
 
 // ------------------------------------------------------------------------
 
-sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw()
+sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( uno::RuntimeException, std::exception )
 {
 	return datatransfer::clipboard::RenderingCapabilities::Delayed;
 }
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw()
+void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException, std::exception )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -238,7 +260,7 @@ void SAL_CALL JavaClipboard::addClipboardListener( const uno::Reference< datatra
 
 // ------------------------------------------------------------------------
 
-void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw()
+void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< datatransfer::clipboard::XClipboardListener >& listener ) throw( uno::RuntimeException, std::exception )
 {
 	MutexGuard aGuard( maMutex );
 
@@ -247,14 +269,14 @@ void SAL_CALL JavaClipboard::removeClipboardListener( const uno::Reference< data
 
 // ------------------------------------------------------------------------
 
-OUString SAL_CALL JavaClipboard::getImplementationName() throw()
+OUString SAL_CALL JavaClipboard::getImplementationName() throw( uno::RuntimeException, std::exception )
 {
 	return "com.sun.star.datatransfer.clipboard.AquaClipboard";
 }
 
 // ------------------------------------------------------------------------
 
-sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw()
+sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) throw( uno::RuntimeException, std::exception )
 {
 	uno::Sequence < OUString > aSupportedServicesNames = JavaClipboard_getSupportedServiceNames();
 
@@ -267,7 +289,7 @@ sal_Bool SAL_CALL JavaClipboard::supportsService( const OUString& ServiceName ) 
 
 // ------------------------------------------------------------------------
 
-uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw()
+uno::Sequence< OUString > SAL_CALL JavaClipboard::getSupportedServiceNames() throw( uno::RuntimeException, std::exception )
 {
 	return JavaClipboard_getSupportedServiceNames();
 }
@@ -295,15 +317,8 @@ void JavaClipboard::setPrivateClipboard( sal_Bool bPrivateClipboard )
 		}
 		else
 		{
-			DTransTransferable *pTransferable = nullptr;
-			if ( maPrivateContents.is() )
-				pTransferable = static_cast< DTransTransferable* >( maPrivateContents.get() );
-
-			if ( pTransferable && pTransferable->hasOwnership() )
-			{
-				maContents = maPrivateContents;
-				maOwner = maPrivateOwner;
-			}
+			maContents = maPrivateContents;
+			maOwner = maPrivateOwner;
 
 			maPrivateContents.clear();
 			maPrivateOwner.clear();

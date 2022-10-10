@@ -122,7 +122,7 @@ static void lcl_GetDataArea( const Reference<XSpreadsheet>& xSheet, sal_Int32& r
         //  If the used area is larger than the contiguous cell area, find non-empty
         //  cells in that area.
 
-        xUsed->gotoEndOfUsedArea( false );
+        xUsed->gotoEndOfUsedArea( sal_False );
         CellRangeAddress aUsedAddr = xRange->getRangeAddress();
 
         if ( aUsedAddr.EndColumn > aRegionAddr.EndColumn )
@@ -323,6 +323,7 @@ static void lcl_GetColumnInfo( const Reference<XSpreadsheet>& xSheet, const Refe
 }
 
 
+
 static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& xSheet,
                     sal_Int32 nStartCol, sal_Int32 nStartRow, bool bHasHeaders,
                     const ::Date& rNullDate,
@@ -367,7 +368,8 @@ static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& x
                 {
                     ::Date aDate( rNullDate );
                     aDate += (long)::rtl::math::approxFloor( xCell->getValue() );
-                    rValue = aDate.GetUNODate();
+                    ::com::sun::star::util::Date aDateStruct( aDate.GetDay(), aDate.GetMonth(), aDate.GetYear() );
+                    rValue = aDateStruct;
                 }
                 else
                     rValue.setNull();
@@ -380,7 +382,7 @@ static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& x
                     sal_Int64 nIntTime = static_cast<sal_Int64>(rtl::math::round( fTime * static_cast<double>(::tools::Time::nanoSecPerDay) ));
                     if ( nIntTime ==  ::tools::Time::nanoSecPerDay)
                         nIntTime = 0;                       // 23:59:59.9999999995 and above is 00:00:00.00
-                    css::util::Time aTime;
+                    ::com::sun::star::util::Time aTime;
                     aTime.NanoSeconds = (sal_uInt32)( nIntTime % ::tools::Time::nanoSecPerSec );
                     nIntTime /= ::tools::Time::nanoSecPerSec;
                     aTime.Seconds = (sal_uInt16)( nIntTime % 60 );
@@ -408,7 +410,7 @@ static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& x
                         ++nIntDays;                         // (next day)
                     }
 
-                    css::util::DateTime aDateTime;
+                    ::com::sun::star::util::DateTime aDateTime;
 
                     aDateTime.NanoSeconds = (sal_uInt16)( nIntTime % ::tools::Time::nanoSecPerSec );
                     nIntTime /= ::tools::Time::nanoSecPerSec;
@@ -435,6 +437,7 @@ static void lcl_SetValue( ORowSetValue& rValue, const Reference<XSpreadsheet>& x
 
 //  rValue.setTypeKind(nType);
 }
+
 
 
 static OUString lcl_GetColumnStr( sal_Int32 nColumn )
@@ -478,7 +481,10 @@ void OCalcTable::fillColumns()
         switch ( eType )
         {
             case DataType::VARCHAR:
-                aTypeName = "VARCHAR";
+                {
+                    static const OUString s_sType("VARCHAR");
+                    aTypeName = s_sType;
+                }
                 break;
             case DataType::DECIMAL:
                 aTypeName = "DECIMAL";
@@ -497,7 +503,7 @@ void OCalcTable::fillColumns()
                 break;
             default:
                 SAL_WARN( "connectivity.drivers","missing type name");
-                aTypeName.clear();
+                aTypeName = "";
         }
 
         // check if the column name already exists
@@ -525,16 +531,16 @@ void OCalcTable::fillColumns()
 
 
 OCalcTable::OCalcTable(sdbcx::OCollection* _pTables,OCalcConnection* _pConnection,
-                    const OUString& Name,
-                    const OUString& Type,
-                    const OUString& Description ,
-                    const OUString& SchemaName,
-                    const OUString& CatalogName
-                ) : OCalcTable_BASE(_pTables,_pConnection,Name,
-                                  Type,
-                                  Description,
-                                  SchemaName,
-                                  CatalogName)
+                    const OUString& _Name,
+                    const OUString& _Type,
+                    const OUString& _Description ,
+                    const OUString& _SchemaName,
+                    const OUString& _CatalogName
+                ) : OCalcTable_BASE(_pTables,_pConnection,_Name,
+                                  _Type,
+                                  _Description,
+                                  _SchemaName,
+                                  _CatalogName)
                 ,m_pConnection(_pConnection)
                 ,m_nStartCol(0)
                 ,m_nStartRow(0)
@@ -614,7 +620,7 @@ void OCalcTable::construct()
         Reference<XPropertySet> xProp( xDoc, UNO_QUERY );
         if (xProp.is())
         {
-            css::util::Date aDateStruct;
+            ::com::sun::star::util::Date aDateStruct;
             if ( xProp->getPropertyValue("NullDate") >>= aDateStruct )
                 m_aNullDate = ::Date( aDateStruct.Day, aDateStruct.Month, aDateStruct.Year );
         }
@@ -649,21 +655,21 @@ void OCalcTable::refreshIndexes()
 }
 
 
-void SAL_CALL OCalcTable::disposing()
+void SAL_CALL OCalcTable::disposing(void)
 {
     OFileTable::disposing();
     ::osl::MutexGuard aGuard(m_aMutex);
-    m_aColumns = nullptr;
+    m_aColumns = NULL;
     if ( m_pConnection )
         m_pConnection->releaseDoc();
-    m_pConnection = nullptr;
+    m_pConnection = NULL;
 
 }
 
-Sequence< Type > SAL_CALL OCalcTable::getTypes(  )
+Sequence< Type > SAL_CALL OCalcTable::getTypes(  ) throw(RuntimeException, std::exception)
 {
     Sequence< Type > aTypes = OTable_TYPEDEF::getTypes();
-    std::vector<Type> aOwnTypes;
+    ::std::vector<Type> aOwnTypes;
     aOwnTypes.reserve(aTypes.getLength());
 
     const Type* pBegin = aTypes.getConstArray();
@@ -677,13 +683,14 @@ Sequence< Type > SAL_CALL OCalcTable::getTypes(  )
                 *pBegin == cppu::UnoType<XDataDescriptorFactory>::get()))
             aOwnTypes.push_back(*pBegin);
     }
-    aOwnTypes.push_back(cppu::UnoType<css::lang::XUnoTunnel>::get());
+    aOwnTypes.push_back(cppu::UnoType<com::sun::star::lang::XUnoTunnel>::get());
 
-    return Sequence< Type >(aOwnTypes.data(), aOwnTypes.size());
+    const Type* pAttrs = aOwnTypes.empty() ? 0 : &aOwnTypes[0];
+    return Sequence< Type >(pAttrs, aOwnTypes.size());
 }
 
 
-Any SAL_CALL OCalcTable::queryInterface( const Type & rType )
+Any SAL_CALL OCalcTable::queryInterface( const Type & rType ) throw(RuntimeException, std::exception)
 {
     if( rType == cppu::UnoType<XKeysSupplier>::get()||
         rType == cppu::UnoType<XIndexesSupplier>::get()||
@@ -692,14 +699,14 @@ Any SAL_CALL OCalcTable::queryInterface( const Type & rType )
         rType == cppu::UnoType<XDataDescriptorFactory>::get())
         return Any();
 
-    const Any aRet = ::cppu::queryInterface(rType,static_cast< css::lang::XUnoTunnel*> (this));
+    const Any aRet = ::cppu::queryInterface(rType,static_cast< ::com::sun::star::lang::XUnoTunnel*> (this));
     return aRet.hasValue() ? aRet : OTable_TYPEDEF::queryInterface(rType);
 }
 
 
 Sequence< sal_Int8 > OCalcTable::getUnoTunnelImplementationId()
 {
-    static ::cppu::OImplementationId * pId = nullptr;
+    static ::cppu::OImplementationId * pId = 0;
     if (! pId)
     {
         ::osl::MutexGuard aGuard( ::osl::Mutex::getGlobalMutex() );
@@ -712,9 +719,9 @@ Sequence< sal_Int8 > OCalcTable::getUnoTunnelImplementationId()
     return pId->getImplementationId();
 }
 
-// css::lang::XUnoTunnel
+// com::sun::star::lang::XUnoTunnel
 
-sal_Int64 OCalcTable::getSomething( const Sequence< sal_Int8 > & rId )
+sal_Int64 OCalcTable::getSomething( const Sequence< sal_Int8 > & rId ) throw (RuntimeException, std::exception)
 {
     return (rId.getLength() == 16 && 0 == memcmp(getUnoTunnelImplementationId().getConstArray(),  rId.getConstArray(), 16 ) )
                 ? reinterpret_cast< sal_Int64 >( this )
@@ -750,8 +757,8 @@ bool OCalcTable::seekRow(IResultSetHelper::Movement eCursorPosition, sal_Int32 n
             m_nFilePos = nNumberOfRecords;
             break;
         case IResultSetHelper::RELATIVE1:
-            m_nFilePos = (m_nFilePos + nOffset < 0) ? 0L
-                            : (sal_uInt32)(m_nFilePos + nOffset);
+            m_nFilePos = (((sal_Int32)m_nFilePos) + nOffset < 0) ? 0L
+                            : (sal_uInt32)(((sal_Int32)m_nFilePos) + nOffset);
             break;
         case IResultSetHelper::ABSOLUTE1:
         case IResultSetHelper::BOOKMARK:
@@ -798,7 +805,7 @@ End:
 }
 
 bool OCalcTable::fetchRow( OValueRefRow& _rRow, const OSQLColumns & _rCols,
-                           bool bRetrieveData )
+                           bool _bUseTableDefs, bool bRetrieveData )
 {
     // read the bookmark
 
@@ -819,7 +826,12 @@ bool OCalcTable::fetchRow( OValueRefRow& _rRow, const OSQLColumns & _rCols,
     {
         if ( (_rRow->get())[i]->isBound() )
         {
-            sal_Int32 nType = m_aTypes[i-1];
+            sal_Int32 nType = 0;
+            if ( _bUseTableDefs )
+                nType = m_aTypes[i-1];
+            else
+                (*aIter)->getPropertyValue(OMetaConnection::getPropMap().getNameByIndex(PROPERTY_ID_TYPE)) >>= nType;
+
 
             lcl_SetValue( (_rRow->get())[i]->get(), m_xSheet, m_nStartCol, m_nStartRow, m_bHasHeaders,
                                 m_aNullDate, m_nFilePos, i, nType );

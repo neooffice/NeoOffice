@@ -36,18 +36,15 @@
 #include <unistd.h>
 #include <sys/syslimits.h>
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-#undef check
-
 #include <comphelper/processfactory.hxx>
+#include <osl/objcutils.h>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <tools/resmgr.hxx>
 #include <tools/simplerm.hxx>
+#include <tools/solarmutex.hxx>
+#include <vcl/apptypes.hxx>
 #include <vcl/ctrl.hxx>
 #include <vcl/floatwin.hxx>
-#include <vcl/inputtypes.hxx>
 #include <vcl/salbtype.hxx>
 #include <vcl/settings.hxx>
 #include <com/sun/star/frame/XDispatchHelper.hpp>
@@ -88,7 +85,8 @@ public:
 
 static bool bInUnitTest = false;
 static bool bAllowReleaseYieldMutex = false;
-static sal_Bool bInNativeDragPrint = sal_False;
+static sal_uLong nInNativeDragPrint = 0;
+static sal_uLong nWaitingToAcquireNativeDragPrint = 0;
 static SalYieldMutex aEventQueueMutex;
 static sal_uLong nCurrentTimeout = 0;
 static NSMutableArray *pObjectsRetainedDuringDragPrintLock = nil;
@@ -102,7 +100,7 @@ using namespace vcl;
 static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rScreenPoint )
 {
 	if ( !pFrame || !pFrame->mbVisible )
-		return nullptr;
+		return NULL;
 
 	// Iterate through children
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
@@ -113,14 +111,14 @@ static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rSc
 			return pRet;
 	}
 
-	if ( pFrame->IsFloatingFrame() && ! ( pFrame->mnStyle & SalFrameStyleFlags::TOOLTIP ) )
+	if ( pFrame->IsFloatingFrame() && ! ( pFrame->mnStyle & SAL_FRAME_STYLE_TOOLTIP ) )
 	{
-		tools::Rectangle aBounds( Point( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration ), Size( pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration + pFrame->maGeometry.nRightDecoration, pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration + pFrame->maGeometry.nBottomDecoration ) );
+		Rectangle aBounds( Point( pFrame->maGeometry.nX - pFrame->maGeometry.nLeftDecoration, pFrame->maGeometry.nY - pFrame->maGeometry.nTopDecoration ), Size( pFrame->maGeometry.nWidth + pFrame->maGeometry.nLeftDecoration + pFrame->maGeometry.nRightDecoration, pFrame->maGeometry.nHeight + pFrame->maGeometry.nTopDecoration + pFrame->maGeometry.nBottomDecoration ) );
 		if ( aBounds.IsInside( rScreenPoint ) )
 			return pFrame;
 	}
 
-	return nullptr;
+	return NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -171,7 +169,7 @@ static void AcquireEventQueueMutex( sal_uLong nCount )
 static JavaSalFrame *FindValidFrame( JavaSalFrame *pFrame )
 {
 	if ( !pFrame )
-		return nullptr;
+		return NULL;
 
 	SalData *pSalData = GetSalData();
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -185,14 +183,21 @@ static JavaSalFrame *FindValidFrame( JavaSalFrame *pFrame )
 		}
 	}
 
-	return nullptr;
+	return NULL;
 }
 
 // ============================================================================
 
 sal_Bool VCLInstance_isInDragPrintLock()
 {
-	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && bInNativeDragPrint );
+	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && nInNativeDragPrint );
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool VCLInstance_isInOrAcquiringDragPrintLock()
+{
+	return ( CFRunLoopGetCurrent() == CFRunLoopGetMain() && ( nInNativeDragPrint || nWaitingToAcquireNativeDragPrint ) );
 }
 
 // ----------------------------------------------------------------------------
@@ -201,7 +206,7 @@ sal_Bool VCLInstance_retainIfInDragPrintLock( id aObject )
 {
 	sal_Bool bRet = sal_False;
 
-	if ( !aObject || CFRunLoopGetCurrent() != CFRunLoopGetMain() || !bInNativeDragPrint )
+	if ( !aObject || CFRunLoopGetCurrent() != CFRunLoopGetMain() || !nInNativeDragPrint )
 		return bRet;
 
 	if ( !pObjectsRetainedDuringDragPrintLock )
@@ -231,13 +236,14 @@ sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 
 	if ( bLock )
 	{
-		if ( !Application::IsShutDown() && !bInNativeDragPrint )
+		nWaitingToAcquireNativeDragPrint++;
+		if ( !Application::IsShutDown() )
 		{
 			comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();
-			if ( !Application::IsShutDown() && !bInNativeDragPrint )
+			if ( !Application::IsShutDown() )
 			{	
-				bInNativeDragPrint = sal_True;
+				nInNativeDragPrint++;
 				bRet = sal_True;
 			}
 			else
@@ -246,12 +252,17 @@ sal_Bool VCLInstance_setDragPrintLock( sal_Bool bLock )
 				return bRet;
 			}
 		}
+		nWaitingToAcquireNativeDragPrint--;
 	}
-	else if ( bInNativeDragPrint )
+	else if ( nInNativeDragPrint )
 	{
-		bInNativeDragPrint = sal_False;
-		if ( pObjectsRetainedDuringDragPrintLock )
-			[pObjectsRetainedDuringDragPrintLock removeAllObjects];
+		nInNativeDragPrint--;
+		if ( !nInNativeDragPrint )
+		{
+			if ( pObjectsRetainedDuringDragPrintLock )
+				[pObjectsRetainedDuringDragPrintLock removeAllObjects];
+		}
+
 		comphelper::SolarMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.release();
 		bRet = sal_True;
@@ -267,20 +278,29 @@ sal_Bool VCLInstance_updateNativeMenus()
 	sal_Bool bRet = sal_False;
 
 	// If no application mutex exists yet, queue event as we are likely to
-	// crash. Check if ImplSVData exists first since Application::IsShutDown()
-	// uses it.
-	if ( !ImplGetSVData() || !ImplGetSVData()->mpDefInst || Application::IsShutDown() )
+	// crash
+	if ( !ImplApplicationIsRunning() )
 		return bRet;
 
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing.
-	if ( bInNativeDragPrint || NSApplication_getModalWindow() )
+	if ( nInNativeDragPrint || NSApplication_getModalWindow() )
 		return bRet;
 
 	// Fix bug 2783 by cancelling menu actions if the input method if the
 	// there is any marked text in the key window
 	if ( NSWindow_hasMarkedText( nil ) )
 		return bRet;
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	NSMenu *pMainMenu = nil;
+	NSArray<NSMenuItem *> *pOldMainMenuItems = nil;
+	if ( pApp )
+	{
+		pMainMenu = [pApp mainMenu];
+		if ( pMainMenu )
+			pOldMainMenuItems = [pMainMenu itemArray];
+	}
 
 	// Make sure that any events fetched from the queue while the application
 	// mutex was unlocked are already dispatched before we try to lock the
@@ -310,7 +330,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 
 	// Dispatch pending VCL events until the queue is clear
 	while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
-		pSalData->mpFirstInstance->DoYield( false, true, 0 );
+		pSalData->mpFirstInstance->Yield( false, true );
 
 	// Fix bug 3451 by not updating menus when there is a modal dialog
 	bRet = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSVData->maWinData.mpLastExecuteDlg );
@@ -324,7 +344,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
 			while ( pFrame && pFrame->mbVisible )
 			{
-				UpdateMenusForFrame( pFrame, nullptr, true );
+				UpdateMenusForFrame( pFrame, NULL, true );
 				pFrame = pFrame->mpParent;
 			}
 		}
@@ -336,7 +356,7 @@ sal_Bool VCLInstance_updateNativeMenus()
 			{
 				// Fix bug 3571 by only cancelling when at least one visible
 				// non-backing, non-floating, and non-floating frame
-				if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->GetState() != WindowStateState::Minimized )
+				if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->GetState() != WINDOWSTATE_STATE_MINIMIZED )
 				{
 					bRet = sal_False;
 					break;
@@ -349,9 +369,10 @@ sal_Bool VCLInstance_updateNativeMenus()
 			// Close all popups but return false to cancel menu tracking
 			// since any shutdown event dispatched after this will cause a
 			// crash when a second level popup menu is open
-			if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FloatWinPopupFlags::NoAppFocusClose) )
+			static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+			if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
 			{
-				pSVData->maWinData.mpFirstFloat->EndPopupMode( FloatWinPopupEndFlags::CloseAll );
+				pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
 				bRet = sal_False;
 			}
 		}
@@ -361,14 +382,29 @@ sal_Bool VCLInstance_updateNativeMenus()
 		if ( bRet && pSalData->maFrameList.size() != nFrames )
 			bRet = sal_False;
 
+		if ( bRet )
+			VCLMenu_updateNativeWindowsMenu();
+
 		// We need to let any timers run that were added by any menu
 		// changes. Otherwise, some menus will be drawn in the state
 		// that they were in before we updated the menus.
-		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+		CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 	}
 
 	rSolarMutex.release();
 	aEventQueueMutex.release();
+
+	if ( bRet )
+	{
+		NSArray<NSMenuItem *> *pMainMenuItems = nil;
+		if ( pMainMenu )
+			pMainMenuItems = [pMainMenu itemArray];
+
+		// Just to be safe, cancel menu tracking if any of the menu items in
+		// main menu have changed
+		if ( !pMainMenuItems || !pOldMainMenuItems || ![pMainMenuItems isEqualToArray:pOldMainMenuItems] )
+			bRet = sal_False;
+	}
 
 	return bRet;
 }
@@ -381,8 +417,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 {
 	sal_Bool bRet = sal_False;
 
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 	{
 		Application::GetSolarMutex().acquire();
 		bRet = sal_True;
@@ -397,8 +432,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool Application_acquireSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 {
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 		Application::GetSolarMutex().release();
 }
 
@@ -408,8 +442,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT void Application_releaseSolarMutex()
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT void Application_acquireAllSolarMutex( sal_uLong nCount )
 {
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 		Application::AcquireSolarMutex( nCount );
 }
 
@@ -421,8 +454,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT sal_uLong Application_releaseAllSolarMutex()
 {
 	sal_uLong nRet = 0;
 
-	// Check if ImplSVData exists first since Application::IsShutDown() uses it
-	if ( ImplGetSVData() && ImplGetSVData()->mpDefInst && !Application::IsShutDown() )
+	if ( ImplApplicationIsRunning() )
 		nRet = Application::ReleaseSolarMutex();
 
 	return nRet;
@@ -461,7 +493,7 @@ void InitSalData()
 void DeInitSalData()
 {
 	SalData *pSalData = GetSalData();
-	SetSalData( nullptr );
+	SetSalData( NULL );
 	delete pSalData;
 }
 
@@ -501,7 +533,7 @@ void DestroySalInstance( SalInstance* pInst )
 	SalData *pSalData = GetSalData();
 
 	if ( pSalData->mpFirstInstance == pInst )
-		pSalData->mpFirstInstance = nullptr;
+		pSalData->mpFirstInstance = NULL;
 
 	if ( pInst )
 		delete pInst;
@@ -513,14 +545,14 @@ JavaSalInstance::JavaSalInstance() :
 	mpSalYieldMutex( new SalYieldMutex() )
 {
 	mpSalYieldMutex->acquire();
-    ::comphelper::SolarMutex::setSolarMutex( mpSalYieldMutex );
+	::tools::SolarMutex::SetSolarMutex( mpSalYieldMutex );
 }
 
 // -----------------------------------------------------------------------
 
 JavaSalInstance::~JavaSalInstance()
 {
-    ::comphelper::SolarMutex::setSolarMutex( nullptr );
+	::tools::SolarMutex::SetSolarMutex( NULL );
 	if ( mpSalYieldMutex )
 	{
 		mpSalYieldMutex->release();
@@ -563,7 +595,7 @@ bool JavaSalInstance::CheckYieldMutex()
 
 // -----------------------------------------------------------------------
 
-SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvents, sal_uLong /* nReleased */ )
+void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
 	sal_uLong nCount = 0;
 	SalData *pSalData = GetSalData();
@@ -575,7 +607,7 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler
 		if ( pSalData->maNativeEventCondition.check() )
-			NSApplication_dispatchPendingEvents( bInNativeDragPrint, bWait );
+			NSApplication_dispatchPendingEvents( nInNativeDragPrint, bWait );
 	}
 	else
 	{
@@ -586,21 +618,18 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		AcquireYieldMutex( nCount );
 	}
 
-	JavaSalEvent *pEvent = nullptr;
+	JavaSalEvent *pEvent = NULL;
 
 	// Dispatch next pending non-AWT event. Also dispatch events if
 	// Desktop::doShutdown() displays a modal dialog.
 	ImplSVData *pSVData = ImplGetSVData();
-	if ( ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != nullptr )
+	if ( ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( 0, sal_False ) ) != NULL )
 	{
 		pEvent->dispatch();
 		pEvent->release();
 		if ( !bMainEventLoop )
 			aEventQueueMutex.release();
-
-		JavaSalFrame::FlushAllFrames();
-
-		return SalYieldResult::EVENT;
+		return;
 	}
 
 	// Dispatch the next pending document event
@@ -612,10 +641,7 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		pEvent->release();
 		if ( !bMainEventLoop )
 			aEventQueueMutex.release();
-
-		JavaSalFrame::FlushAllFrames();
-
-		return SalYieldResult::EVENT;
+		return;
 	}
 
 	if ( !bMainEventLoop && pSalData->maNativeEventCondition.check() )
@@ -631,15 +657,14 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 	if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
 	{
 		timeval aCurrentTime;
-		gettimeofday( &aCurrentTime, nullptr );
-		// Fix cursor drawing failure in Writer by firing timer if timer is
-		// within the blink rate away from expiring
-		aCurrentTime += Application::GetSettings().GetStyleSettings().GetCursorBlinkTime();
+		gettimeofday( &aCurrentTime, NULL );
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
-			gettimeofday( &pSalData->maTimeout, nullptr );
+			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
-			pSVData->mpSalTimer->CallCallback( true );
+			pSVData->mpSalTimer->CallCallback();
+
+			JavaSalFrame::FlushAllFrames();
 
 			// Reduce noticeable pause when opening a new document by delaying
 			// update of submenus until next available timer timeout.
@@ -652,17 +677,14 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		}
 	}
 
-	JavaSalFrame::FlushAllFrames();
-
 	// Determine timeout
-	SalYieldResult nRet = SalYieldResult::TIMEOUT;
 	sal_uLong nTimeout = 0;
 	if ( !bMainEventLoop && bWait && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
 		if ( pSalData->mnTimerInterval )
 		{
 			timeval aTimeout;
-			gettimeofday( &aTimeout, nullptr );
+			gettimeofday( &aTimeout, NULL );
 			if ( pSalData->maTimeout > aTimeout )
 			{
 				aTimeout = pSalData->maTimeout - aTimeout;
@@ -696,42 +718,42 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 	// Desktop::doShutdown() displays a modal dialog.
 	size_t nFrames = pSalData->maFrameList.size();
 	bool bContinue = true;
-	while ( bContinue && ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != nullptr )
+	bool bFlushAllFrames = false;
+	while ( bContinue && ( !Application::IsShutDown() || pSVData->maWinData.mpLastExecuteDlg ) && ( pEvent = JavaSalEventQueue::getNextCachedEvent( nTimeout, sal_True ) ) != NULL )
 	{
-		nRet = SalYieldResult::EVENT;
 		nTimeout = 0;
 		nCurrentTimeout = 0;
 
 		AcquireYieldMutex( nCount );
 		nCount = 0;
 
-		SalEvent nID = pEvent->getID();
+		sal_uInt16 nID = pEvent->getID();
 		pEvent->dispatch();
 		switch ( nID )
 		{
-			case SalEvent::Close:
+			case SALEVENT_CLOSE:
 				// Fix bug 1971 by breaking after closing a window
 				bContinue = false;
 				break;
-			case SalEvent::KeyInput:
-			case SalEvent::MouseButtonDown:
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_MOUSEBUTTONDOWN:
 				// Fix bugs 437 and 2264 by ensuring that if the next
 				// event is a matching event, it will be dispatched before
 				// the painting timer runs.
 				Thread::yield();
 				break;
-			case SalEvent::KeyUp:
+			case SALEVENT_KEYUP:
 				// Fix bug 3390 by letting any timers run when releasing
 				// a Command-key event
 				if ( pEvent->getModifiers() & KEY_MOD1 )
 					bContinue = false;
 				break;
-			case SalEvent::MouseMove:
+			case SALEVENT_MOUSEMOVE:
 				// Make highlighting by dragging more responsive
                 if ( pEvent->getModifiers() & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
 					bContinue = false;
 				break;
-			case SalEvent::WheelMouse:
+			case SALEVENT_WHEELMOUSE:
 				// Make scroll wheel and swipes more responsive
 				bContinue = false;
 				break;
@@ -745,6 +767,8 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 		}
 		pEvent->release();
 
+		bFlushAllFrames = true;
+
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed
 		if ( bContinue && pSalData->maFrameList.size() != nFrames )
@@ -753,12 +777,29 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 
 	nCurrentTimeout = 0;
 
+	if ( bFlushAllFrames )
+	{
+		// Check timer
+		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
+		{
+			// Reduce flicker in native controls by only flushing if timer is
+			// more than 100 milliseconds away from expiring
+			timeval aCurrentTime;
+			gettimeofday( &aCurrentTime, NULL );
+			aCurrentTime += 100;
+			if ( pSalData->maTimeout > aCurrentTime )
+				JavaSalFrame::FlushAllFrames();
+		}
+		else
+		{
+			JavaSalFrame::FlushAllFrames();
+		}
+	}
+
 	AcquireYieldMutex( nCount );
 
 	if ( !bMainEventLoop )
 		aEventQueueMutex.release();
-
-	JavaSalFrame::FlushAllFrames();
 
 	// Update all objects
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -767,17 +808,15 @@ SalYieldResult JavaSalInstance::DoYield( bool bWait, bool bHandleAllCurrentEvent
 	// Allow main event loop to proceed
 	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
 		pSalData->maNativeEventCondition.set();
-
-	return nRet;
 }
 
 // -----------------------------------------------------------------------
 
-bool JavaSalInstance::AnyInput( VclInputFlags nType )
+bool JavaSalInstance::AnyInput( sal_uInt16 nType )
 {
 	bool bRet = false;
 
-	if ( nType & VclInputFlags::TIMER )
+	if ( nType & VCL_INPUT_TIMER )
 	{
 		// Check timer
 		SalData *pSalData = GetSalData();
@@ -785,7 +824,7 @@ bool JavaSalInstance::AnyInput( VclInputFlags nType )
 		if ( pSVData && pSVData->mpSalTimer && pSalData->mnTimerInterval )
 		{
 			timeval aCurrentTime;
-			gettimeofday( &aCurrentTime, nullptr );
+			gettimeofday( &aCurrentTime, NULL );
 			if ( aCurrentTime >= pSalData->maTimeout )
 				bRet = true;
 		}
@@ -799,27 +838,27 @@ bool JavaSalInstance::AnyInput( VclInputFlags nType )
 
 // -----------------------------------------------------------------------
 
-SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* /* pParent */, SalFrameStyleFlags /* nStyle */ )
+SalFrame* JavaSalInstance::CreateChildFrame( SystemParentData* /* pSystemParentData */, sal_uLong /* nSalFrameStyle */ )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalInstance::CreateChildFrame not implemented\n" );
 #endif
-	return nullptr;
+	return NULL;
 }
 
 // -----------------------------------------------------------------------
 
-SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, SalFrameStyleFlags nSalFrameStyle )
+SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, sal_uLong nSalFrameStyle )
 {
-	JavaSalFrame *pFrame = new JavaSalFrame( nSalFrameStyle, static_cast< JavaSalFrame* >( pParent ) );
+	JavaSalFrame *pFrame = new JavaSalFrame( nSalFrameStyle, (JavaSalFrame *)pParent );
 	if ( !pFrame->mpWindow )
 	{
 		delete pFrame;
-		return nullptr;
+		return NULL;
 	}
 
 	// Get work area of the parent window or, if no parent, the main screen
-	tools::Rectangle aWorkArea( Point( 0, 0 ), Size( 0, 0 ) );
+	Rectangle aWorkArea( Point( 0, 0 ), Size( 0, 0 ) );
 	pFrame->GetWorkArea( aWorkArea );
 
 	// Set default window size based on style
@@ -827,21 +866,21 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, SalFrameStyleFlags nS
 	long nY = aWorkArea.Top();
 	long nWidth = aWorkArea.GetWidth();
 	long nHeight = aWorkArea.GetHeight();
-	if ( nSalFrameStyle & SalFrameStyleFlags::FLOAT )
+	if ( nSalFrameStyle & SAL_FRAME_STYLE_FLOAT )
 	{
 		nWidth = 10;
 		nHeight = 10;
 	}
 	else
 	{
-		if ( nSalFrameStyle & SalFrameStyleFlags::SIZEABLE && nSalFrameStyle & SalFrameStyleFlags::MOVEABLE )
+		if ( nSalFrameStyle & SAL_FRAME_STYLE_SIZEABLE && nSalFrameStyle & SAL_FRAME_STYLE_MOVEABLE )
 		{
-			nWidth = static_cast< long >( nWidth * 0.8 );
-			nHeight = static_cast< long >( nHeight * 0.8 );
+			nWidth = (long)( nWidth * 0.8 );
+			nHeight = (long)( nHeight * 0.8 );
 
 			// Don't let width be too much wider than height as it can look too
 			// wide on many LCD screens
-			long nMaxWidth = static_cast< long >( nHeight * 4 / 3 );
+			long nMaxWidth = (long)( nHeight * 4 / 3 );
 			if ( nWidth > nMaxWidth )
 				nWidth = nMaxWidth;
 		}
@@ -850,7 +889,7 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, SalFrameStyleFlags nS
 			SalData *pSalData = GetSalData();
 
 			// Find the next document window if any exist
-			JavaSalFrame* pNextFrame = nullptr;
+			JavaSalFrame* pNextFrame = NULL;
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				// Fix bug that sets window to 1 pixel square after launching
@@ -861,8 +900,8 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, SalFrameStyleFlags nS
 				if ( (*it) && (*it) != pFrame &&
 					! (*it)->mpParent &&
 					! (*it)->mbShowOnlyMenus &&
-					(*it)->mnStyle != SalFrameStyleFlags::DEFAULT &&
-					(*it)->mnStyle & SalFrameStyleFlags::SIZEABLE &&
+					(*it)->mnStyle != SAL_FRAME_STYLE_DEFAULT &&
+					(*it)->mnStyle & SAL_FRAME_STYLE_SIZEABLE &&
 					(*it)->GetGeometry().nWidth &&
 					(*it)->GetGeometry().nHeight )
 						pNextFrame = *it;
@@ -924,7 +963,7 @@ void JavaSalInstance::GetPrinterQueueInfo( ImplPrnQueueList* pList )
 	// Create a dummy queue for our dummy default printer
 	SalPrinterQueueInfo *pInfo = new SalPrinterQueueInfo();
 	pInfo->maPrinterName = GetDefaultPrinter();
-	pInfo->mpSysData = nullptr;
+	pInfo->mpSysData = NULL;
 	pList->Add( pInfo );
 }
 
@@ -948,14 +987,16 @@ SalInfoPrinter* JavaSalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueI
                                                 ImplJobSetup* pSetupData )
 {
 	// Populate data
-	if ( pSetupData )
-	{
-		pSetupData->SetSystem( JOBSETUP_SYSTEM_MAC );
-		pSetupData->SetPrinterName( pQueueInfo->maPrinterName );
-		pSetupData->SetDriver( pQueueInfo->maDriver );
+	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
+	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
+	pSetupData->maDriver = pQueueInfo->maDriver;
 
-		// Changing the driver data won't free it so set its length to zero
-		pSetupData->SetDriverDataLen( 0 );
+	// Clear driver data
+	if ( pSetupData->mpDriverData )
+	{
+		rtl_freeMemory( pSetupData->mpDriverData );
+		pSetupData->mpDriverData = NULL;
+		pSetupData->mnDriverDataLen = 0;
 	}
 
 	// Create a dummy printer configuration for our dummy printer
@@ -993,7 +1034,7 @@ OUString JavaSalInstance::GetDefaultPrinter()
 
 SalPrinter* JavaSalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
-	return new JavaSalPrinter( static_cast< JavaSalInfoPrinter* >( pInfoPrinter ) );
+	return new JavaSalPrinter( (JavaSalInfoPrinter *)pInfoPrinter );
 }
 
 // -----------------------------------------------------------------------
@@ -1008,10 +1049,10 @@ void JavaSalInstance::DestroyPrinter( SalPrinter* pPrinter )
 
 SalVirtualDevice* JavaSalInstance::CreateVirtualDevice( SalGraphics* /* pGraphics */,
                                                     long& rDX, long& rDY,
-                                                    DeviceFormat /* eFormat - ignore as Mac OS X bit count is always 32 */,
+                                                    sal_uInt16 /* nBitCount - ignore as Mac OS X bit count is always 32 */,
                                                     const SystemGraphicsData* /* pData */ )
 {
-	JavaSalVirtualDevice *pDevice = nullptr;
+	JavaSalVirtualDevice *pDevice = NULL;
 
 	pDevice = new JavaSalVirtualDevice();
 	if ( pDevice->SetSize( rDX, rDY ) )
@@ -1024,7 +1065,7 @@ SalVirtualDevice* JavaSalInstance::CreateVirtualDevice( SalGraphics* /* pGraphic
 		rDX = 0;
 		rDY = 0;
 		delete pDevice;
-		pDevice = nullptr;
+		pDevice = NULL;
 	}
 
    	return pDevice;
@@ -1055,14 +1096,7 @@ SalBitmap* JavaSalInstance::CreateSalBitmap()
 
 SalSession* JavaSalInstance::CreateSalSession()
 {
-	return nullptr;
-}
-
-// -----------------------------------------------------------------------
-
-OpenGLContext* JavaSalInstance::CreateOpenGLContext()
-{
-	return nullptr;
+	return NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -1074,9 +1108,11 @@ SalSystem* JavaSalInstance::CreateSalSystem()
 
 // -----------------------------------------------------------------------
 
-OUString JavaSalInstance::GetConnectionIdentifier()
+void* JavaSalInstance::GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes )
 {
-	return OUString();
+	rReturnedBytes = 1;
+	rReturnedType = AsciiCString;
+	return (void *)"";
 }
 
 // -----------------------------------------------------------------------
@@ -1095,6 +1131,7 @@ SalYieldMutex::SalYieldMutex() :
 	mnReacquireThreadId( 0 )
 {
 	maMainThreadCondition.set();
+	maMainThreadWaitingCondition.set();
 	maReacquireThreadCondition.set();
 }
 
@@ -1116,9 +1153,10 @@ void SalYieldMutex::acquire()
 		}
 		else if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		{
+			maMainThreadWaitingCondition.reset();
+
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
-			sal_uInt16 nIterationsSinceLastWakeUpEvent = 0;
 			while ( !Application::IsShutDown() )
 			{
 				// Fix hanging in bug 3503 by posting a dummy event to wakeup
@@ -1126,30 +1164,25 @@ void SalYieldMutex::acquire()
 				// a potentially long wait. Fix hanging when selecting a menu
 				// while Writer is doing a background spellcheck run by posting
 				// a wake up event so that
-				// JavaSalInstance::AnyEvent( VclInputFlags::OTHER ) will eventually
+				// JavaSalInstance::AnyEvent( VCL_INPUT_OTHER ) will eventually
 				// succeed.
-				if ( ++nIterationsSinceLastWakeUpEvent % 10000 == 0 || nCurrentTimeout > 100 )
-				{
-					nIterationsSinceLastWakeUpEvent = 0;
+				TimeValue aDelay;
+				aDelay.Seconds = 0;
+				aDelay.Nanosec = 10000;
+				maMainThreadCondition.reset();
+				Application_postWakeUpEvent();
+				if ( !maMainThreadCondition.check() )
+					maMainThreadCondition.wait( &aDelay );
+				maMainThreadCondition.set();
 
-					TimeValue aDelay;
-					aDelay.Seconds = 0;
-					aDelay.Nanosec = 10000;
-					maMainThreadCondition.reset();
-					Application_postWakeUpEvent();
-					if ( !maMainThreadCondition.check() )
-						maMainThreadCondition.wait( &aDelay );
-					maMainThreadCondition.set();
-				}
-
-				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+				CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 
 				// Fix hanging that occurs when the native Open dialog and the 
 				// the OOo "Enter password" dialogs are both displayed and the
 				// OOo dialog is closed first by dispatching any pending
-				// NSModalPanelRunLoopMode events
-				if ( NSApplication_getModalWindow() )
-					NSApplication_dispatchPendingEvents( bInNativeDragPrint, sal_False );
+				// NSModalPanelRunLoopMode events. Don't check if there is a
+				// modal window as that check is very slow on macOS 11 Big Sur.
+				NSApplication_dispatchPendingEvents( nInNativeDragPrint, sal_False );
 
 				// Fix crashing bug when quitting by checking if another thread
 				// has started shutting down the application to avoid using this
@@ -1157,6 +1190,8 @@ void SalYieldMutex::acquire()
 				if ( Application::IsShutDown() || tryToAcquire() )
 					break;
 			}
+
+			maMainThreadWaitingCondition.set();
 
 			return;
 		}
@@ -1178,6 +1213,8 @@ void SalYieldMutex::acquire()
 
 void SalYieldMutex::release()
 {
+	bool bNotifyMainThread = false;
+
 	if ( mnThreadId == Thread::getCurrentIdentifier() )
 	{
 		if ( mnCount == 1 )
@@ -1186,15 +1223,24 @@ void SalYieldMutex::release()
 		if ( mnCount )
 			mnCount--;
 
-		// Notify main thread that it can grab the mutex
-		if ( !mnCount && !maMainThreadCondition.check() )
-		{
-			maMainThreadCondition.set();
-			Thread::yield();
-		}
+		if ( !mnCount && CFRunLoopGetCurrent() != CFRunLoopGetMain() )
+			bNotifyMainThread = true;
 	}
 
 	maMutex.release();
+
+	// Notify main thread that it can grab the mutex
+	if ( bNotifyMainThread && !maMainThreadWaitingCondition.check() )
+	{
+		maMainThreadCondition.set();
+
+		// Fix excessive slowness in menubar updates by waiting so that the
+		// main thread has a chance to acquire the mutex
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10000;
+		maMainThreadWaitingCondition.wait( &aDelay );
+	}
 }
 
 // -------------------------------------------------------------------------
@@ -1228,7 +1274,7 @@ sal_uLong SalYieldMutex::ReleaseAcquireCount()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( ( ( !bAllowReleaseYieldMutex && !bInUnitTest ) || bInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+	if ( ( ( !bAllowReleaseYieldMutex && !bInUnitTest ) || nInNativeDragPrint ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return nRet;
 
 	if ( mnThreadId == Thread::getCurrentIdentifier() )
@@ -1276,7 +1322,7 @@ void SalYieldMutex::WaitForReacquireThread()
 
 // =========================================================================
 
-JavaSalEvent::JavaSalEvent( SalEvent nID, JavaSalFrame *pFrame, void *pData, const OString& rPath, sal_uLong nCommittedCharacters, sal_uLong nCursorPosition ) :
+JavaSalEvent::JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, const OString& rPath, sal_uLong nCommittedCharacters, sal_uLong nCursorPosition ) :
 	mnID( nID  ),
 	mpFrame( pFrame ),
 	mbNative( false ),
@@ -1288,28 +1334,25 @@ JavaSalEvent::JavaSalEvent( SalEvent nID, JavaSalFrame *pFrame, void *pData, con
 {
 	switch ( mnID )
 	{
-		case SalEvent::Close:
-		case SalEvent::EndExtTextInput:
-		case SalEvent::ExtTextInput:
-		case SalEvent::ExtTextInputPos:
-		case SalEvent::GetFocus:
-		case SalEvent::LoseFocus:
-		case SalEvent::KeyInput:
-		case SalEvent::KeyModChange:
-		case SalEvent::KeyUp:
-		case SalEvent::MouseButtonDown:
-		case SalEvent::MouseButtonUp:
-		case SalEvent::MouseLeave:
-		case SalEvent::MouseMove:
-		case SalEvent::Move:
-		case SalEvent::MoveResize:
-		case SalEvent::Paint:
-		case SalEvent::Resize:
-		case SalEvent::WheelMouse:
+		case SALEVENT_CLOSE:
+		case SALEVENT_ENDEXTTEXTINPUT:
+		case SALEVENT_EXTTEXTINPUT:
+		case SALEVENT_EXTTEXTINPUTPOS:
+		case SALEVENT_GETFOCUS:
+		case SALEVENT_LOSEFOCUS:
+		case SALEVENT_KEYINPUT:
+		case SALEVENT_KEYMODCHANGE:
+		case SALEVENT_KEYUP:
+		case SALEVENT_MOUSEBUTTONDOWN:
+		case SALEVENT_MOUSEBUTTONUP:
+		case SALEVENT_MOUSELEAVE:
+		case SALEVENT_MOUSEMOVE:
+		case SALEVENT_MOVE:
+		case SALEVENT_MOVERESIZE:
+		case SALEVENT_PAINT:
+		case SALEVENT_RESIZE:
+		case SALEVENT_WHEELMOUSE:
 			mbNative = true;
-			break;
-		default:
-			break;
 	}
 
 	maPath = OUString( rPath.getStr(), rPath.getLength(), RTL_TEXTENCODING_UTF8 );
@@ -1323,67 +1366,73 @@ JavaSalEvent::~JavaSalEvent()
 	{
 		switch ( mnID )
 		{
-			case SalEvent::EndExtTextInput:
-			case SalEvent::ExtTextInput:
+			case SALEVENT_ENDEXTTEXTINPUT:
+			case SALEVENT_EXTTEXTINPUT:
 			{
-				SalExtTextInputEvent *pInputEvent = static_cast< SalExtTextInputEvent* >( mpData );
+				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 				if ( pInputEvent->mpTextAttr )
-					rtl_freeMemory( const_cast< ExtTextInputAttr* >( pInputEvent->mpTextAttr ) );
+					rtl_freeMemory( (sal_uInt16 *)pInputEvent->mpTextAttr );
 				delete pInputEvent;
 				break;
 			}
-			case SalEvent::ExtTextInputPos:
+			case SALEVENT_EXTTEXTINPUTPOS:
 			{
-				SalExtTextInputPosEvent *pInputPosEvent = static_cast< SalExtTextInputPosEvent* >( mpData );
+				SalExtTextInputPosEvent *pInputPosEvent = (SalExtTextInputPosEvent *)mpData;
 				delete pInputPosEvent;
 				break;
 			}
-			case SalEvent::KeyInput:
-			case SalEvent::KeyUp:
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYUP:
 			{
-				SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				delete pKeyEvent;
 				break;
 			}
-			case SalEvent::KeyModChange:
+			case SALEVENT_KEYMODCHANGE:
 			{
-				SalKeyModEvent *pKeyModEvent = static_cast< SalKeyModEvent* >( mpData );
+				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				delete pKeyModEvent;
 				break;
 			}
-			case SalEvent::MouseButtonDown:
-			case SalEvent::MouseButtonUp:
-			case SalEvent::MouseLeave:
-			case SalEvent::MouseMove:
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
 			{
-				SalMouseEvent *pMouseEvent = static_cast< SalMouseEvent* >( mpData );
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				delete pMouseEvent;
 				break;
 			}
-			case SalEvent::Move:
-			case SalEvent::MoveResize:
-			case SalEvent::Resize:
+			case SALEVENT_MOVE:
+			case SALEVENT_MOVERESIZE:
+			case SALEVENT_RESIZE:
 			{
-				tools::Rectangle *pPosSize = static_cast< tools::Rectangle* >( mpData );
+				Rectangle *pPosSize = (Rectangle *)mpData;
 				delete pPosSize;
 				break;
 			}
-			case SalEvent::Paint:
+			case SALEVENT_PAINT:
 			{
-				SalPaintEvent *pPaintEvent = static_cast< SalPaintEvent* >( mpData );
+				SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
 				delete pPaintEvent;
 				break;
 			}
-			case SalEvent::WheelMouse:
+			case SALEVENT_WHEELMOUSE:
 			{
-				SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				delete pWheelMouseEvent;
 				break;
 			}
-			case SalEvent::CommandMediaData:
+			case SALEVENT_COMMANDMEDIADATA:
 			{
-				CommandMediaData *pCommandMediaData = static_cast< CommandMediaData* >( mpData );
+				CommandMediaData *pCommandMediaData = (CommandMediaData *)mpData;
 				delete pCommandMediaData;
+				break;
+			}
+			case SALEVENT_DELETEREFWRAPPER:
+			{
+				ReferenceWrapper *pReferenceWrapper = (ReferenceWrapper *)mpData;
+				delete pReferenceWrapper;
 				break;
 			}
 			default:
@@ -1403,9 +1452,9 @@ JavaSalEvent::~JavaSalEvent()
 
 void JavaSalEvent::addRepeatCount( sal_uInt16 nCount )
 {
-	if ( mpData && mnID == SalEvent::KeyInput )
+	if ( mpData && mnID == SALEVENT_KEYINPUT )
 	{
-		SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		pKeyEvent->mnRepeat += nCount;
 	}
 }
@@ -1414,7 +1463,7 @@ void JavaSalEvent::addRepeatCount( sal_uInt16 nCount )
 
 void JavaSalEvent::addOriginalKeyEvent( JavaSalEvent *pEvent )
 {
-	if ( pEvent && ( mnID == SalEvent::KeyInput || mnID == SalEvent::KeyUp ) )
+	if ( pEvent && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
 	{
 		pEvent->reference();
 		maOriginalKeyEvents.push_back( pEvent );
@@ -1423,14 +1472,14 @@ void JavaSalEvent::addOriginalKeyEvent( JavaSalEvent *pEvent )
 
 // -------------------------------------------------------------------------
 
-void JavaSalEvent::addUpdateRect( const tools::Rectangle& rRect )
+void JavaSalEvent::addUpdateRect( const Rectangle& rRect )
 {
-	if ( mpData && mnID == SalEvent::Paint )
+	if ( mpData && mnID == SALEVENT_PAINT )
 	{
-		tools::Rectangle aUpdateRect( getUpdateRect() );
+		Rectangle aUpdateRect( getUpdateRect() );
 		aUpdateRect.Justify();
 		
-		tools::Rectangle aRect( rRect );
+		Rectangle aRect( rRect );
 		aRect.Justify();
 
 		if ( aRect.GetWidth() > 0 && aRect.GetHeight() > 0 )
@@ -1438,7 +1487,7 @@ void JavaSalEvent::addUpdateRect( const tools::Rectangle& rRect )
 			if ( aUpdateRect.GetWidth() > 0 && aUpdateRect.GetHeight() > 0 )
 				aRect = aRect.GetUnion( aUpdateRect );
 
-			SalPaintEvent *pPaintEvent = static_cast< SalPaintEvent* >( mpData );
+			SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
 			pPaintEvent->mnBoundX = aRect.Left();
 			pPaintEvent->mnBoundY = aRect.Top();
 			pPaintEvent->mnBoundWidth = aRect.GetWidth();
@@ -1453,9 +1502,9 @@ bool JavaSalEvent::addWheelRotationAndScrollLines( long nRotation, sal_uLong nSc
 {
 	bool bRet = false;
 
-	if ( mpData && mnID == SalEvent::WheelMouse && nScrollLines != SAL_WHEELMOUSE_EVENT_PAGESCROLL )
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE && nScrollLines != SAL_WHEELMOUSE_EVENT_PAGESCROLL )
 	{
-		SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 		if ( pWheelMouseEvent->mbHorz == bHorizontal )
 		{
 			// Suppress excessive magnification but not adding rotation for
@@ -1475,7 +1524,7 @@ bool JavaSalEvent::addWheelRotationAndScrollLines( long nRotation, sal_uLong nSc
 
 void JavaSalEvent::cancelShutdown()
 {
-	if ( mnID == SalEvent::Shutdown )
+	if ( mnID == SALEVENT_SHUTDOWN )
 		mbShutdownCancelled = sal_True;
 }
 
@@ -1483,17 +1532,17 @@ void JavaSalEvent::cancelShutdown()
 
 void JavaSalEvent::dispatch()
 {
-	SalEvent nID = mnID;
+	sal_uInt16 nID = mnID;
 	SalData *pSalData = GetSalData();
 
 	// Handle events that do not need a JavaSalFrame pointer
 	switch ( nID )
 	{
-		case SalEvent::Shutdown:
+		case SALEVENT_SHUTDOWN:
 		{
 			bool bCancelShutdown = true;
 
-			// Ignore SalEvent::Shutdown events when recursing into this
+			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
 			if ( !isShutdownCancelled() )
 			{
@@ -1508,7 +1557,7 @@ void JavaSalEvent::dispatch()
 				if ( pSVData && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() && pSVData->maAppData.mnDispatchLevel < 3 )
 				{
 					JavaSalFrame *pFrame = pSalData->maFrameList.front();
-					if ( pFrame && !pFrame->CallCallback( nID, nullptr ) )
+					if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
 						bCancelShutdown = false;
 				}
 			}
@@ -1523,17 +1572,17 @@ void JavaSalEvent::dispatch()
 
 			return;
 		}
-		case SalEvent::OpenDocument:
-		case SalEvent::PrintDocument:
+		case SALEVENT_OPENDOCUMENT:
+		case SALEVENT_PRINTDOCUMENT:
 		{
-			// Fix bug 168 && 607 by reposting SalEvent::*DOCUMENT events when
+			// Fix bug 168 && 607 by reposting SALEVENT_*DOCUMENT events when
 			// recursing into this method while opening a document
 			ImplSVData *pSVData = ImplGetSVData();
 			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 			{
 				std::vector< OUString > aAppEvtData;
 				aAppEvtData.push_back( getPath() );
-				ApplicationEvent aAppEvt( nID == SalEvent::OpenDocument ? ApplicationEvent::Type::Open : ApplicationEvent::Type::Print, aAppEvtData );
+				ApplicationEvent aAppEvt( nID == SALEVENT_OPENDOCUMENT ? ApplicationEvent::TYPE_OPEN : ApplicationEvent::TYPE_PRINT, aAppEvtData );
 				pSVData->mpApp->AppEvent( aAppEvt );
 			}
 			else
@@ -1543,7 +1592,7 @@ void JavaSalEvent::dispatch()
 			}
 			return;
 		}
-		case SalEvent::ScreenParamsChanged:
+		case SALEVENT_SCREENPARAMSCHANGED:
 		{
 			bool bChangedResolution = false;
 			for ( std::list< JavaSalVirtualDevice * >::const_iterator it = pSalData->maVirDevList.begin(); it != pSalData->maVirDevList.end(); ++it )
@@ -1555,32 +1604,41 @@ void JavaSalEvent::dispatch()
 			{
 				if ( (*it)->ScreenParamsChanged() )
 					bChangedResolution = true;
- 			}
+			}
 
 			// Force complete redraw of all windows if any windows or virtual
 			// devices changed resolution
 			if ( bChangedResolution )
 			{
-				JavaSalEvent aEvent( SalEvent::SystemColorsChanged, nullptr, nullptr );
+				JavaSalEvent aEvent( SALEVENT_SYSTEMCOLORSCHANGED, NULL, NULL );
 				aEvent.dispatch();
 			}
+
 			return;
 		}
-		case SalEvent::SystemColorsChanged:
+		case SALEVENT_SYSTEMCOLORSCHANGED:
 		{
 			ImplSVData *pSVData = ImplGetSVData();
 			if ( pSVData )
 			{
 				// Reset the radio button and checkbox images
-				pSVData->maCtrlData.maRadioImgList.clear();
-				pSVData->maCtrlData.maCheckImgList.clear();
+				if ( pSVData->maCtrlData.mpRadioImgList )
+				{
+					delete pSVData->maCtrlData.mpRadioImgList;
+					pSVData->maCtrlData.mpRadioImgList = NULL;
+				}
+				if ( pSVData->maCtrlData.mpCheckImgList )
+				{
+					delete pSVData->maCtrlData.mpCheckImgList;
+					pSVData->maCtrlData.mpCheckImgList = NULL;
+				}
 
 				// Dispatch a settings changed event as it appears to more
 				// thoroughly propagate system color changes when changing
 				// to or from macOS Dark Mode
 				JavaSalFrame *pFrame = pSalData->maFrameList.front();
 				if ( pFrame )
-					pFrame->CallCallback( SalEvent::SettingsChanged, nullptr );
+					pFrame->CallCallback( SALEVENT_SETTINGSCHANGED, NULL );
 
 				// Invalidate all top level windows just to be safe
 				Window *pWindow = Application::GetFirstTopLevelWindow();
@@ -1592,9 +1650,9 @@ void JavaSalEvent::dispatch()
 			}
 			return;
 		}
-		case SalEvent::CommandMediaData:
+		case SALEVENT_COMMANDMEDIADATA:
 		{
-			Window *pWindow = nullptr;
+			Window *pWindow = NULL;
 			if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
 				pWindow = pSalData->mpPresentationFrame->GetWindow();
 			if ( !pWindow && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
@@ -1602,22 +1660,22 @@ void JavaSalEvent::dispatch()
 			if ( !pWindow )
 				pWindow = Application::GetFirstTopLevelWindow();
 
-			CommandMediaData *pCommandMediaData = static_cast< CommandMediaData* >( mpData );
+			CommandMediaData *pCommandMediaData = (CommandMediaData *)mpData;
 			if ( pWindow && pCommandMediaData )
 			{
-				MediaCommand nCommand = pCommandMediaData->GetMediaId();
-				if ( nCommand == MediaCommand::Play && pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
-					nCommand = MediaCommand::PlayPause;
+				sal_Int16 nCommand = pCommandMediaData->GetMediaId();
+				if ( nCommand == MEDIA_COMMAND_PLAY && pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
+					nCommand = MEDIA_COMMAND_PLAY_PAUSE;
 				CommandMediaData aModifiedCommandMediaData( nCommand );
-				CommandEvent aCommandEvent( Point(), CommandEventId::Media, false, &aModifiedCommandMediaData );
-				NotifyEvent aNotifyEvent( MouseNotifyEvent::COMMAND, pWindow, &aCommandEvent );
+				CommandEvent aCommandEvent( Point(), COMMAND_MEDIA, false, &aModifiedCommandMediaData );
+				NotifyEvent aNotifyEvent( EVENT_COMMAND, pWindow, &aCommandEvent );
 				if ( !ImplCallPreNotify( aNotifyEvent ) )
 					pWindow->Command( aCommandEvent );
 			}
 
 			return;
 		}
-		case SalEvent::About:
+		case SALEVENT_ABOUT:
 		{
 			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
 			if ( pFrame && pFrame->mbVisible )
@@ -1626,21 +1684,21 @@ void JavaSalEvent::dispatch()
 				// window
 				while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 					pFrame = pFrame->mpParent;
-				pFrame->CallCallback( SalEvent::ShowDialog, reinterpret_cast< void* >( ShowDialogId::About ) );
+				pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_ABOUT ) );
 			}
 			else
 			{
 				ImplSVData *pSVData = ImplGetSVData();
 				if ( pSVData )
 				{
-					ApplicationEvent aAppEvent( ApplicationEvent::Type::ShowDialog, "ABOUT" );
+					ApplicationEvent aAppEvent( ApplicationEvent::TYPE_SHOWDIALOG, "ABOUT" );
 					pSVData->mpApp->AppEvent( aAppEvent );
 				}
 			}
 
 			return;
 		}
-		case SalEvent::Preferences:
+		case SALEVENT_PREFS:
 		{
 			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
 			if ( pFrame && pFrame->mbVisible )
@@ -1649,26 +1707,24 @@ void JavaSalEvent::dispatch()
 				// window
 				while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 					pFrame = pFrame->mpParent;
-				pFrame->CallCallback( SalEvent::ShowDialog, reinterpret_cast< void* >( ShowDialogId::Preferences ) );
+				pFrame->CallCallback( SALEVENT_SHOWDIALOG, reinterpret_cast< void* >( SHOWDIALOG_ID_PREFERENCES ) );
 			}
 			else
 			{
 				ImplSVData *pSVData = ImplGetSVData();
 				if ( pSVData )
 				{
-					ApplicationEvent aAppEvent( ApplicationEvent::Type::ShowDialog, "PREFERENCES" );
+					ApplicationEvent aAppEvent( ApplicationEvent::TYPE_SHOWDIALOG, "PREFERENCES" );
 					pSVData->mpApp->AppEvent( aAppEvent );
 				}
 			}
 
 			return;
 		}
-		case SalEvent::WakeUp:
+		case SALEVENT_WAKEUP:
 		{
 			return;
 		}
-		default:
-			break;
 	}
 	
 	// Handle events that require a JavaSalFrame pointer
@@ -1680,7 +1736,7 @@ void JavaSalEvent::dispatch()
 		// like bounds change or paint events. Fix bug 3429 by only forcing
 		// a focus change if there is not a native modal window showing.
 		if ( NSApplication_isActive() )
-			pSalData->mpNativeModalSheetFrame->ToTop( SalFrameToTop::RestoreWhenMin | SalFrameToTop::GrabFocus );
+			pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 
 		// Fix document lockup bug reported in the following NeoOffice forum
 		// topic by dispatching bounds change, paint events, and user events
@@ -1688,11 +1744,11 @@ void JavaSalEvent::dispatch()
 		// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=8527
 		switch ( nID )
 		{
-			case SalEvent::Move:
-			case SalEvent::MoveResize:
-			case SalEvent::Paint:
-			case SalEvent::Resize:
-			case SalEvent::UserEvent:
+			case SALEVENT_MOVE:
+			case SALEVENT_MOVERESIZE:
+			case SALEVENT_PAINT:
+			case SALEVENT_RESIZE:
+			case SALEVENT_USEREVENT:
 				break;
 			default:
 				return;
@@ -1701,13 +1757,13 @@ void JavaSalEvent::dispatch()
 
 	switch ( nID )
 	{
-		case SalEvent::Close:
+		case SALEVENT_CLOSE:
 		{
 			if ( pFrame && pFrame->mbVisible )
-				pFrame->CallCallback( nID, nullptr );
+				pFrame->CallCallback( nID, NULL );
 			break;
 		}
-		case SalEvent::Deminimized:
+		case SALEVENT_DEMINIMIZED:
 		{
 			// Fix bug 3649 by not hiding any windows when minimizing. Also,
 			// Update the window's layer in case the native window has changed.
@@ -1715,7 +1771,7 @@ void JavaSalEvent::dispatch()
 				pFrame->UpdateLayer();
 			break;
 		}
-		case SalEvent::Minimized:
+		case SALEVENT_MINIMIZED:
 		{
 			// Fix bug 3649 by not hiding any windows when minimizing. Fix bug
 			// reported in the following NeoOffice forum post where selecting
@@ -1728,16 +1784,16 @@ void JavaSalEvent::dispatch()
 				// Update menus before giving up focus otherwise the window
 				// list in the windows menu will not include other minimized
 				// windows
-				UpdateMenusForFrame( pFrame, nullptr, true );
-				JavaSalEvent aEvent( SalEvent::LoseFocus, pFrame, nullptr );
+				UpdateMenusForFrame( pFrame, NULL, true );
+				JavaSalEvent aEvent( SALEVENT_LOSEFOCUS, pFrame, NULL );
 				aEvent.dispatch();
 			}
 			break;
 		}
-		case SalEvent::FullScreenEntered:
-		case SalEvent::FullScreenExited:
+		case SALEVENT_FULLSCREENENTERED:
+		case SALEVENT_FULLSCREENEXITED:
 		{
-			sal_Bool bFullScreen = ( nID == SalEvent::FullScreenEntered ? sal_True : sal_False );
+			sal_Bool bFullScreen = ( nID == SALEVENT_FULLSCREENENTERED ? sal_True : sal_False );
 			if ( pFrame && !pFrame->mbInShowFullScreen && bFullScreen != pFrame->mbFullScreen )
 			{
 				Window *pWindow = Application::GetFirstTopLevelWindow();
@@ -1807,43 +1863,45 @@ void JavaSalEvent::dispatch()
 				{
 					pFrame->mbFullScreen = bFullScreen;
 
-					JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SalEvent::MoveResize, pFrame, nullptr );
+					JavaSalEvent *pMoveResizeEvent = new JavaSalEvent( SALEVENT_MOVERESIZE, pFrame, NULL );
 					JavaSalEventQueue::postCachedEvent( pMoveResizeEvent );
 					pMoveResizeEvent->release();
 				}
 			}
 			break;
 		}
-		case SalEvent::EndExtTextInput:
+		case SALEVENT_ENDEXTTEXTINPUT:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalExtTextInputEvent *pInputEvent = static_cast< SalExtTextInputEvent* >( mpData );
+				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 
 				// Fix bug 1158 by resetting the focus to whichever window is
 				// receiving key events
 				if ( pFrame != pSalData->mpFocusFrame )
 				{
-					JavaSalEvent aEvent( SalEvent::GetFocus, pFrame, nullptr );
+					JavaSalEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
 				pFrame->CallCallback( nID, pInputEvent );
 			}
 			break;
 		}
-		case SalEvent::ExtTextInput:
+		case SALEVENT_EXTTEXTINPUT:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalExtTextInputEvent *pInputEvent = static_cast< SalExtTextInputEvent* >( mpData );
+				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 				sal_uLong nCommitted = getCommittedCharacterCount();
 				if ( !pInputEvent )
 				{
 					sal_uLong nCursorPos = getCursorPosition();
 					pInputEvent = new SalExtTextInputEvent();
+					pInputEvent->mnTime = getWhen();
 					pInputEvent->maText = getText();
 					pInputEvent->mpTextAttr = getTextAttributes();
 					pInputEvent->mnCursorPos = nCursorPos > nCommitted ? nCursorPos : nCommitted;
+					pInputEvent->mbOnlyCursor = false;
 					pInputEvent->mnCursorFlags = 0;
 
 					mpData = pInputEvent;
@@ -1852,38 +1910,38 @@ void JavaSalEvent::dispatch()
 				// receiving key events
 				if ( pFrame != pSalData->mpFocusFrame )
 				{
-					JavaSalEvent aEvent( SalEvent::GetFocus, pFrame, nullptr );
+					JavaSalEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
 				pFrame->CallCallback( nID, pInputEvent );
 				pFrame = FindValidFrame( pFrame );
 				// If there is no text, the character is committed
-				if ( pFrame && static_cast< sal_uLong >( pInputEvent->maText.getLength() ) == nCommitted )
-					pFrame->CallCallback( SalEvent::EndExtTextInput, nullptr );
+				if ( pFrame && (sal_uLong)pInputEvent->maText.getLength() == nCommitted )
+					pFrame->CallCallback( SALEVENT_ENDEXTTEXTINPUT, NULL );
 			}
 			break;
 		}
-		case SalEvent::ExtTextInputPos:
+		case SALEVENT_EXTTEXTINPUTPOS:
 		{
-			SalExtTextInputPosEvent *pInputPosEvent = static_cast< SalExtTextInputPosEvent* >( mpData );
+			SalExtTextInputPosEvent *pInputPosEvent = (SalExtTextInputPosEvent *)mpData;
 			if ( pInputPosEvent && pFrame && pFrame->mbVisible )
-				pFrame->CallCallback( SalEvent::ExtTextInputPos, pInputPosEvent );
+				pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void *)pInputPosEvent );
 			break;
 		}
-		case SalEvent::GetFocus:
+		case SALEVENT_GETFOCUS:
 		{
 			// Ignore focus events for floating windows
 			if ( pFrame != pSalData->mpFocusFrame )
 			{
 				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-					pSalData->mpFocusFrame->CallCallback( SalEvent::LoseFocus, nullptr );
-				pSalData->mpFocusFrame = nullptr;
+					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
+				pSalData->mpFocusFrame = NULL;
 			}
 
 			if ( pFrame && pFrame->mbVisible && !pFrame->IsFloatingFrame() )
 			{
 				pSalData->mpFocusFrame = pFrame;
-				pFrame->CallCallback( nID, nullptr );
+				pFrame->CallCallback( nID, NULL );
 				pFrame = FindValidFrame( pFrame );
 				JavaSalMenu::SetMenuBarToFocusFrame();
 
@@ -1901,12 +1959,12 @@ void JavaSalEvent::dispatch()
 			}
 			break;
 		}
-		case SalEvent::LoseFocus:
+		case SALEVENT_LOSEFOCUS:
 		{
 			if ( pFrame && pFrame == pSalData->mpFocusFrame )
 			{
-				pSalData->mpFocusFrame = nullptr;
-				pFrame->CallCallback( nID, nullptr );
+				pSalData->mpFocusFrame = NULL;
+				pFrame->CallCallback( nID, NULL );
 				pFrame = FindValidFrame( pFrame );
 				JavaSalMenu::SetMenuBarToFocusFrame();
 			}
@@ -1917,7 +1975,7 @@ void JavaSalEvent::dispatch()
 				// visible flag set to true
 				for ( ::std::list< JavaSalFrame* >::const_iterator cit = pFrame->maChildren.begin(); cit != pFrame->maChildren.end(); ++cit )
 				{
-					if ( (*cit)->mbVisible && (*cit)->mnStyle & SalFrameStyleFlags::TOOLTIP )
+					if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
 						(*cit)->SetVisible( sal_False, sal_False );
 				}
 
@@ -1931,12 +1989,12 @@ void JavaSalEvent::dispatch()
 			}
 			break;
 		}
-		case SalEvent::KeyInput:
-		case SalEvent::KeyUp:
+		case SALEVENT_KEYINPUT:
+		case SALEVENT_KEYUP:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				if ( !pKeyEvent )
 				{
 					pKeyEvent = new SalKeyEvent();
@@ -1959,7 +2017,7 @@ void JavaSalEvent::dispatch()
 				// receiving key events
 				if ( pFrame != pSalData->mpFocusFrame )
 				{
-					JavaSalEvent aEvent( SalEvent::GetFocus, pFrame, nullptr );
+					JavaSalEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
 				// Pass all potential menu shortcuts received by a utility
@@ -1979,7 +2037,7 @@ void JavaSalEvent::dispatch()
 					// If the key event fails and this is a command event,
 					// dispatch the original events
 					JavaSalEvent *pEvent;
-					while ( ( pEvent = getNextOriginalKeyEvent() ) != nullptr )
+					while ( ( pEvent = getNextOriginalKeyEvent() ) != NULL )
 					{
 						pEvent->dispatch();
 						pEvent->release();
@@ -1988,17 +2046,17 @@ void JavaSalEvent::dispatch()
 			}
 			break;
 		}
-		case SalEvent::KeyModChange:
+		case SALEVENT_KEYMODCHANGE:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalKeyModEvent *pKeyModEvent = static_cast< SalKeyModEvent* >( mpData );
+				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				if ( !pKeyModEvent )
 				{
 					pKeyModEvent = new SalKeyModEvent();
 					pKeyModEvent->mnTime = getWhen();
 					pKeyModEvent->mnCode = getModifiers();
-					pKeyModEvent->mnModKeyCode = ModKeyFlags::NONE;
+					pKeyModEvent->mnModKeyCode = 0;
 
 					mpData = pKeyModEvent;
 				}
@@ -2006,14 +2064,14 @@ void JavaSalEvent::dispatch()
 			}
 			break;
 		}
-		case SalEvent::MouseButtonDown:
-		case SalEvent::MouseButtonUp:
-		case SalEvent::MouseLeave:
-		case SalEvent::MouseMove:
+		case SALEVENT_MOUSEBUTTONDOWN:
+		case SALEVENT_MOUSEBUTTONUP:
+		case SALEVENT_MOUSELEAVE:
+		case SALEVENT_MOUSEMOVE:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalMouseEvent *pMouseEvent = static_cast< SalMouseEvent* >( mpData );
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				if ( !pMouseEvent )
 				{
 					sal_uInt16 nModifiers = getModifiers();
@@ -2022,7 +2080,7 @@ void JavaSalEvent::dispatch()
 					pMouseEvent->mnX = getX();
 					pMouseEvent->mnY = getY();
 					pMouseEvent->mnCode = nModifiers;
-					if ( nID == SalEvent::MouseLeave || nID == SalEvent::MouseMove )
+					if ( nID == SALEVENT_MOUSELEAVE || nID == SALEVENT_MOUSEMOVE )
 						pMouseEvent->mnButton = 0;
 					else
 						pMouseEvent->mnButton = nModifiers & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
@@ -2031,7 +2089,7 @@ void JavaSalEvent::dispatch()
 				}
 
 				sal_uInt16 nButtons = pMouseEvent->mnCode & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
-				if ( nID == SalEvent::MouseMove )
+				if ( nID == SALEVENT_MOUSEMOVE )
 				{
 					if ( nButtons && !pSalData->mpLastDragFrame )
 						pSalData->mpLastDragFrame = pFrame;
@@ -2051,7 +2109,7 @@ void JavaSalEvent::dispatch()
 						pFrame = pSalData->mpCaptureFrame;
 					}
 				}
-				else if ( nID != SalEvent::MouseLeave )
+				else if ( nID != SALEVENT_MOUSELEAVE )
 				{
 					JavaSalFrame *pMouseFrame = FindMouseEventFrame( pFrame, aScreenPoint );
 					if ( pMouseFrame && pMouseFrame != pFrame && pMouseFrame->mbVisible )
@@ -2064,14 +2122,14 @@ void JavaSalEvent::dispatch()
 
 				// If we are releasing after dragging, send the event to the
 				// last dragged frame
-				if ( pSalData->mpLastDragFrame && ( nID == SalEvent::MouseButtonUp || nID == SalEvent::MouseMove ) )
+				if ( pSalData->mpLastDragFrame && ( nID == SALEVENT_MOUSEBUTTONUP || nID == SALEVENT_MOUSEMOVE ) )
 				{
  					if ( pSalData->mpLastDragFrame != pFrame && pSalData->mpLastDragFrame->mbVisible )
 					{
 						// If dragging and there are floating windows visible,
 						// don't let the mouse fall through to a non-floating
 						// window
-						if ( nID == SalEvent::MouseButtonUp || ( pFrame == pOriginalFrame && !pFrame->IsFloatingFrame() ) )
+						if ( nID == SALEVENT_MOUSEBUTTONUP || ( pFrame == pOriginalFrame && !pFrame->IsFloatingFrame() ) )
 						{
 							pMouseEvent->mnX = aScreenPoint.X() - pSalData->mpLastDragFrame->maGeometry.nX;
 							pMouseEvent->mnY = aScreenPoint.Y() - pSalData->mpLastDragFrame->maGeometry.nY;
@@ -2082,17 +2140,17 @@ void JavaSalEvent::dispatch()
 					if ( nButtons )
 						pSalData->mpLastDragFrame = pFrame;
 					else
-						pSalData->mpLastDragFrame = nullptr;
+						pSalData->mpLastDragFrame = NULL;
 				}
 
 				// Create a synthetic mouse leave event when a mouse move event
 				// resolves to a different window than the last mouse move event
 				// or mouse position is outside of the window's content area
-				if ( pSalData->mpLastMouseMoveFrame && nID == SalEvent::MouseMove && !nButtons )
+				if ( pSalData->mpLastMouseMoveFrame && nID == SALEVENT_MOUSEMOVE && !nButtons )
 				{
 					if ( pSalData->mpLastMouseMoveFrame != pFrame )
 					{
-						nID = SalEvent::MouseLeave;
+						nID = SALEVENT_MOUSELEAVE;
 						pMouseEvent->mnX = aScreenPoint.X() - pSalData->mpLastMouseMoveFrame->maGeometry.nX;
 						pMouseEvent->mnY = aScreenPoint.Y() - pSalData->mpLastMouseMoveFrame->maGeometry.nY;
 
@@ -2102,25 +2160,26 @@ void JavaSalEvent::dispatch()
 					}
 					else
 					{
-						tools::Rectangle aBounds( Point( pFrame->maGeometry.nX, pFrame->maGeometry.nY ), Size( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
+						Rectangle aBounds( Point( pFrame->maGeometry.nX, pFrame->maGeometry.nY ), Size( pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight ) );
 						if ( !aBounds.IsInside( aScreenPoint ) )
-							nID = SalEvent::MouseLeave;
+							nID = SALEVENT_MOUSELEAVE;
 
 					}
 				}
 				else
 				{
-					pSalData->mpLastMouseMoveFrame = nullptr;
+					pSalData->mpLastMouseMoveFrame = NULL;
 				}
 
 				// Check if we are not clicking on a floating window
-				FloatingWindow *pPopupWindow = nullptr;
-    			if ( nID == SalEvent::MouseButtonDown )
+				FloatingWindow *pPopupWindow = NULL;
+    			if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
 					ImplSVData *pSVData = ImplGetSVData();
 					if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
 					{
-						if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FloatWinPopupFlags::NoAppFocusClose) )
+						static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+						if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
 							pPopupWindow = pSVData->maWinData.mpFirstFloat;
 					}
 				}
@@ -2140,25 +2199,25 @@ void JavaSalEvent::dispatch()
 				{
 					ImplSVData *pSVData = ImplGetSVData();
 					if ( pSVData && pSVData->maWinData.mpFirstFloat == pPopupWindow )
-						pPopupWindow->EndPopupMode( FloatWinPopupEndFlags::CloseAll );
+						pPopupWindow->EndPopupMode( FLOATWIN_POPUPMODEEND_CLOSEALL );
 				}
 			}
 			break;
 		}
-		case SalEvent::Move:
-		case SalEvent::MoveResize:
-		case SalEvent::Resize:
+		case SALEVENT_MOVE:
+		case SALEVENT_MOVERESIZE:
+		case SALEVENT_RESIZE:
 		{
 			if ( pFrame )
 			{
-				tools::Rectangle *pPosSize = static_cast< tools::Rectangle* >( mpData );
+				Rectangle *pPosSize = (Rectangle *)mpData;
 
 				// Update size
 				sal_Bool bInLiveResize = sal_False;
 				sal_Bool bInFullScreenMode = sal_False;
 				if ( !pPosSize )
 				{
-					pPosSize = new tools::Rectangle( pFrame->GetBounds( &bInLiveResize, &bInFullScreenMode ) );
+					pPosSize = new Rectangle( pFrame->GetBounds( &bInLiveResize, &bInFullScreenMode ) );
 					mpData = pPosSize;
 				}
 
@@ -2167,7 +2226,7 @@ void JavaSalEvent::dispatch()
 				if ( bInLiveResize )
 				{
 					timeval aCurrentTime;
-					gettimeofday( &aCurrentTime, nullptr );
+					gettimeofday( &aCurrentTime, NULL );
 					if ( pSalData->mpLastResizeFrame == pFrame && pSalData->maLastResizeTime >= aCurrentTime )
 						bSkipEvent = true;
 				}
@@ -2176,17 +2235,17 @@ void JavaSalEvent::dispatch()
 				// event, skip it and repost this event
 				if ( bSkipEvent )
 				{
-					JavaSalEvent *pEvent = new JavaSalEvent( nID, pFrame, nullptr );
+					JavaSalEvent *pEvent = new JavaSalEvent( nID, pFrame, NULL );
 					JavaSalEventQueue::postCachedEvent( pEvent );
 					pEvent->release();
 				}
 				else
 				{
 					// Update resize timer
-					pSalData->mpLastResizeFrame = ( bInLiveResize ? pFrame : nullptr );
+					pSalData->mpLastResizeFrame = ( bInLiveResize ? pFrame : NULL );
 					if ( pSalData->mpLastResizeFrame )
 					{
-						gettimeofday( &pSalData->maLastResizeTime, nullptr );
+						gettimeofday( &pSalData->maLastResizeTime, NULL );
 						pSalData->maLastResizeTime += 100;
 					}
 
@@ -2199,7 +2258,7 @@ void JavaSalEvent::dispatch()
 					bool bForceResize = false;
 					if ( pFrame->mbInShow )
 					{
-						tools::Rectangle aRect( *pPosSize );
+						Rectangle aRect( *pPosSize );
 						pFrame->GetWorkArea( aRect );
 						if ( ( aRect.Left() == pPosSize->Left() && aRect.GetWidth() == pPosSize->GetWidth() ) || ( aRect.Top() == pPosSize->Top() && aRect.GetHeight() == pPosSize->GetHeight() ) )
 							bForceResize = true;
@@ -2251,11 +2310,11 @@ void JavaSalEvent::dispatch()
 					if ( bForceResize || bPosChanged || bSizeChanged )
 					{
 						if ( bPosChanged && bSizeChanged )
-							nID = SalEvent::MoveResize;
+							nID = SALEVENT_MOVERESIZE;
 						else if ( bPosChanged )
-							nID = SalEvent::Move;
+							nID = SALEVENT_MOVE;
 						else
-							nID = SalEvent::Resize;
+							nID = SALEVENT_RESIZE;
 
 						if ( bForceResize || bSizeChanged )
 							pFrame->UpdateLayer();
@@ -2267,34 +2326,34 @@ void JavaSalEvent::dispatch()
 							NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 							SalMouseEvent *pMouseEvent = new SalMouseEvent();
-							pMouseEvent->mnTime = static_cast< sal_uLong >( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+							pMouseEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
 							pMouseEvent->mnX = pSalData->maLastPointerState.maPos.X() - pFrame->maGeometry.nX;
 							pMouseEvent->mnY = pSalData->maLastPointerState.maPos.Y() - pFrame->maGeometry.nY;
 							pMouseEvent->mnCode = pSalData->maLastPointerState.mnState;
 							pMouseEvent->mnButton = 0;
 
-							JavaSalEvent *pMouseDraggedEvent = new JavaSalEvent( SalEvent::MouseMove, pFrame, pMouseEvent );
+							JavaSalEvent *pMouseDraggedEvent = new JavaSalEvent( SALEVENT_MOUSEMOVE, pFrame, pMouseEvent );
 							JavaSalEventQueue::postCachedEvent( pMouseDraggedEvent );
 							pMouseDraggedEvent->release();
 
 							[pPool release];
 						}
 
-						pFrame->CallCallback( nID, nullptr );
+						pFrame->CallCallback( nID, NULL );
 					}
 				}
 			}
 			break;
 		}
-		case SalEvent::Paint:
+		case SALEVENT_PAINT:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalPaintEvent *pPaintEvent = static_cast< SalPaintEvent* >( mpData );
+				SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
 				if ( !pPaintEvent )
 				{
 					// Get paint region
-					tools::Rectangle aUpdateRect( getUpdateRect() );
+					Rectangle aUpdateRect( getUpdateRect() );
 					pPaintEvent = new SalPaintEvent( aUpdateRect.Left(), aUpdateRect.Top(), aUpdateRect.GetWidth(), aUpdateRect.GetHeight() );
 
 					mpData = pPaintEvent;
@@ -2307,17 +2366,17 @@ void JavaSalEvent::dispatch()
 			}
 			break;
 		}
-		case SalEvent::UserEvent:
+		case SALEVENT_USEREVENT:
 		{
 			if ( pFrame )
 				pFrame->CallCallback( nID, mpData );
 			break;
 		}
-		case SalEvent::WheelMouse:
+		case SALEVENT_WHEELMOUSE:
 		{
 			if ( pFrame && pFrame->mbVisible )
 			{
-				SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				if ( !pWheelMouseEvent )
 				{
 					long nWheelRotation = getWheelRotation();
@@ -2349,7 +2408,7 @@ void JavaSalEvent::dispatch()
 					pMouseEvent->mnCode = pWheelMouseEvent->mnCode;
 					pMouseEvent->mnButton = 0;
 
-					JavaSalEvent aEvent( SalEvent::MouseMove, pFrame, pMouseEvent );
+					JavaSalEvent aEvent( SALEVENT_MOUSEMOVE, pFrame, pMouseEvent );
 					aEvent.dispatch();
 
 					// Check if frame is still valid
@@ -2364,15 +2423,15 @@ void JavaSalEvent::dispatch()
 			}
 			break;
 		}
-		case SalEvent::MenuActivate:
-		case SalEvent::MenuCommand:
-		case SalEvent::MenuDeactivate:
+		case SALEVENT_MENUACTIVATE:
+		case SALEVENT_MENUCOMMAND:
+		case SALEVENT_MENUDEACTIVATE:
 		{
 			// Fix crash when pressing the Command-W keys in an unmodified
 			// document that has a modal sheet
 			if ( pFrame && pFrame->mbVisible && ( !pSalData->mbInNativeModalSheet || pFrame != pSalData->mpNativeModalSheetFrame ) )
 			{
-				SalMenuEvent *pMenuEvent = static_cast< SalMenuEvent* >( mpData );
+				SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
 				if ( !pMenuEvent )
 				{
 					pMenuEvent = new SalMenuEvent( getMenuID(), getMenuCookie() );
@@ -2382,7 +2441,7 @@ void JavaSalEvent::dispatch()
 
 				// Pass all menu selections received by a utility window to
 				// its parent window
-				if ( nID == SalEvent::MenuCommand )
+				if ( nID == SALEVENT_MENUCOMMAND )
 				{
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
@@ -2390,9 +2449,15 @@ void JavaSalEvent::dispatch()
 
 				// Check that the OOo code has not deleted the menu after we
 				// posted this event
-				if ( Menu::IsValidMenu( static_cast< Menu* >( pMenuEvent->mpMenu ) ) )
+				if ( Menu::IsValidMenu( (Menu *)pMenuEvent->mpMenu ) )
 					pFrame->CallCallback( nID, pMenuEvent );
 			}
+			break;
+		}
+		case SALEVENT_DELETEREFWRAPPER:
+		{
+			// Nothing to do as this event is only used to delete the event's
+			// data pointer
 			break;
 		}
 		default:
@@ -2410,7 +2475,7 @@ sal_uLong JavaSalEvent::getCommittedCharacterCount()
 {
 	sal_uLong nRet = 0;
 
-	if ( mnID == SalEvent::ExtTextInput )
+	if ( mnID == SALEVENT_EXTTEXTINPUT )
 		nRet = mnCommittedCharacters;
 
 	return nRet;
@@ -2422,7 +2487,7 @@ sal_uLong JavaSalEvent::getCursorPosition()
 {
 	sal_uLong nRet = 0;
 
-	if ( mnID == SalEvent::ExtTextInput )
+	if ( mnID == SALEVENT_EXTTEXTINPUT )
 		nRet = mnCursorPosition;
 
 	return nRet;
@@ -2441,9 +2506,9 @@ sal_uInt16 JavaSalEvent::getKeyChar()
 {
 	sal_uInt16 nRet = 0;
 
-	if ( mpData && ( mnID == SalEvent::KeyInput || mnID == SalEvent::KeyUp ) )
+	if ( mpData && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
 	{
-		SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		nRet = pKeyEvent->mnCharCode;
 	}
 
@@ -2456,9 +2521,9 @@ sal_uInt16 JavaSalEvent::getKeyCode()
 {
 	sal_uInt16 nRet = 0;
 
-	if ( mpData && ( mnID == SalEvent::KeyInput || mnID == SalEvent::KeyUp ) )
+	if ( mpData && ( mnID == SALEVENT_KEYINPUT || mnID == SALEVENT_KEYUP ) )
 	{
-		SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		nRet = pKeyEvent->mnCode & ~( KEY_MOD1 | KEY_MOD2 | KEY_MOD3 | KEY_SHIFT | MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT );
 	}
 
@@ -2467,7 +2532,7 @@ sal_uInt16 JavaSalEvent::getKeyCode()
 
 // -------------------------------------------------------------------------
 
-SalEvent JavaSalEvent::getID()
+sal_uInt16 JavaSalEvent::getID()
 {
 	return mnID;
 }
@@ -2482,31 +2547,31 @@ sal_uInt16 JavaSalEvent::getModifiers()
 	{
 		switch ( mnID )
 		{
-			case SalEvent::KeyInput:
-			case SalEvent::KeyUp:
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYUP:
 			{
-				SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				nRet = pKeyEvent->mnCode;
 				break;
 			}
-			case SalEvent::KeyModChange:
+			case SALEVENT_KEYMODCHANGE:
 			{
-				SalKeyModEvent *pKeyModEvent = static_cast< SalKeyModEvent* >( mpData );
+				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				nRet = pKeyModEvent->mnCode;
 				break;
 			}
-			case SalEvent::MouseButtonDown:
-			case SalEvent::MouseButtonUp:
-			case SalEvent::MouseLeave:
-			case SalEvent::MouseMove:
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
 			{
-				SalMouseEvent *pMouseEvent = static_cast< SalMouseEvent* >( mpData );
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnCode;
 				break;
 			}
-			case SalEvent::WheelMouse:
+			case SALEVENT_WHEELMOUSE:
 			{
-				SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnCode;
 				break;
 			}
@@ -2522,7 +2587,7 @@ sal_uInt16 JavaSalEvent::getModifiers()
 
 JavaSalEvent *JavaSalEvent::getNextOriginalKeyEvent()
 {
-	JavaSalEvent *pRet = nullptr;
+	JavaSalEvent *pRet = NULL;
 
 	if ( maOriginalKeyEvents.size() )
 	{
@@ -2546,9 +2611,9 @@ sal_uInt16 JavaSalEvent::getRepeatCount()
 {
 	sal_uInt16 nRet = 0;
 
-	if ( mpData && mnID == SalEvent::KeyInput )
+	if ( mpData && mnID == SALEVENT_KEYINPUT )
 	{
-		SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+		SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 		nRet = pKeyEvent->mnRepeat;
 	}
 
@@ -2561,9 +2626,9 @@ OUString JavaSalEvent::getText()
 {
 	OUString aRet;
 
-	if ( mpData && mnID == SalEvent::ExtTextInput )
+	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
 	{
-		SalExtTextInputEvent *pInputEvent = static_cast< SalExtTextInputEvent* >( mpData );
+		SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 		aRet = pInputEvent->maText;
 	}
 
@@ -2572,13 +2637,13 @@ OUString JavaSalEvent::getText()
 
 // -------------------------------------------------------------------------
 
-const ExtTextInputAttr *JavaSalEvent::getTextAttributes()
+const sal_uInt16 *JavaSalEvent::getTextAttributes()
 {
-	const ExtTextInputAttr *pRet = 0;
+	const sal_uInt16 *pRet = 0;
 
-	if ( mpData && mnID == SalEvent::ExtTextInput )
+	if ( mpData && mnID == SALEVENT_EXTTEXTINPUT )
 	{
-		SalExtTextInputEvent *pInputEvent = static_cast< SalExtTextInputEvent* >( mpData );
+		SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
 		pRet = pInputEvent->mpTextAttr;
 	}
 
@@ -2587,14 +2652,14 @@ const ExtTextInputAttr *JavaSalEvent::getTextAttributes()
 
 // -------------------------------------------------------------------------
 
-const tools::Rectangle JavaSalEvent::getUpdateRect()
+const Rectangle JavaSalEvent::getUpdateRect()
 {
-	tools::Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
+	Rectangle aRet( Point( 0, 0 ), Size( 0, 0 ) );
 
-	if ( mpData && mnID == SalEvent::Paint )
+	if ( mpData && mnID == SALEVENT_PAINT )
 	{
-		SalPaintEvent *pPaintEvent = static_cast< SalPaintEvent* >( mpData );
-		aRet = tools::Rectangle( Point( pPaintEvent->mnBoundX, pPaintEvent->mnBoundY ), Size( pPaintEvent->mnBoundWidth, pPaintEvent->mnBoundHeight ) );
+		SalPaintEvent *pPaintEvent = (SalPaintEvent *)mpData;
+		aRet = Rectangle( Point( pPaintEvent->mnBoundX, pPaintEvent->mnBoundY ), Size( pPaintEvent->mnBoundWidth, pPaintEvent->mnBoundHeight ) );
 	}
 
 	return aRet;
@@ -2610,31 +2675,38 @@ sal_uLong JavaSalEvent::getWhen()
 	{
 		switch ( mnID )
 		{
-			case SalEvent::KeyInput:
-			case SalEvent::KeyUp:
+			case SALEVENT_ENDEXTTEXTINPUT:
+			case SALEVENT_EXTTEXTINPUT:
 			{
-				SalKeyEvent *pKeyEvent = static_cast< SalKeyEvent* >( mpData );
+				SalExtTextInputEvent *pInputEvent = (SalExtTextInputEvent *)mpData;
+				nRet = pInputEvent->mnTime;
+				break;
+			}
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYUP:
+			{
+				SalKeyEvent *pKeyEvent = (SalKeyEvent *)mpData;
 				nRet = pKeyEvent->mnTime;
 				break;
 			}
-			case SalEvent::KeyModChange:
+			case SALEVENT_KEYMODCHANGE:
 			{
-				SalKeyModEvent *pKeyModEvent = static_cast< SalKeyModEvent* >( mpData );
+				SalKeyModEvent *pKeyModEvent = (SalKeyModEvent *)mpData;
 				nRet = pKeyModEvent->mnCode;
 				break;
 			}
-			case SalEvent::MouseButtonDown:
-			case SalEvent::MouseButtonUp:
-			case SalEvent::MouseLeave:
-			case SalEvent::MouseMove:
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
 			{
-				SalMouseEvent *pMouseEvent = static_cast< SalMouseEvent* >( mpData );
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnTime;
 				break;
 			}
-			case SalEvent::WheelMouse:
+			case SALEVENT_WHEELMOUSE:
 			{
-				SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnTime;
 				break;
 			}
@@ -2656,18 +2728,18 @@ long JavaSalEvent::getX()
 	{
 		switch ( mnID )
 		{
-			case SalEvent::MouseButtonDown:
-			case SalEvent::MouseButtonUp:
-			case SalEvent::MouseLeave:
-			case SalEvent::MouseMove:
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
 			{
-				SalMouseEvent *pMouseEvent = static_cast< SalMouseEvent* >( mpData );
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnX;
 				break;
 			}
-			case SalEvent::WheelMouse:
+			case SALEVENT_WHEELMOUSE:
 			{
-				SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnX;
 				break;
 			}
@@ -2689,18 +2761,18 @@ long JavaSalEvent::getY()
 	{
 		switch ( mnID )
 		{
-			case SalEvent::MouseButtonDown:
-			case SalEvent::MouseButtonUp:
-			case SalEvent::MouseLeave:
-			case SalEvent::MouseMove:
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEMOVE:
 			{
-				SalMouseEvent *pMouseEvent = static_cast< SalMouseEvent* >( mpData );
+				SalMouseEvent *pMouseEvent = (SalMouseEvent *)mpData;
 				nRet = pMouseEvent->mnY;
 				break;
 			}
-			case SalEvent::WheelMouse:
+			case SALEVENT_WHEELMOUSE:
 			{
-				SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+				SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 				nRet = pWheelMouseEvent->mnY;
 				break;
 			}
@@ -2718,9 +2790,9 @@ short JavaSalEvent::getMenuID()
 {
 	short nRet = 0;
 
-	if ( mpData && ( mnID == SalEvent::MenuActivate || mnID == SalEvent::MenuCommand || mnID == SalEvent::MenuDeactivate ) )
+	if ( mpData && ( mnID == SALEVENT_MENUACTIVATE || mnID == SALEVENT_MENUCOMMAND || mnID == SALEVENT_MENUDEACTIVATE ) )
 	{
-		SalMenuEvent *pMenuEvent = static_cast< SalMenuEvent* >( mpData );
+		SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
 		nRet = pMenuEvent->mnId;
 	}
 
@@ -2731,11 +2803,11 @@ short JavaSalEvent::getMenuID()
 
 void *JavaSalEvent::getMenuCookie()
 {
-	void *pRet = nullptr;
+	void *pRet = NULL;
 
-	if ( mpData && ( mnID == SalEvent::MenuActivate || mnID == SalEvent::MenuCommand || mnID == SalEvent::MenuDeactivate ) )
+	if ( mpData && ( mnID == SALEVENT_MENUACTIVATE || mnID == SALEVENT_MENUCOMMAND || mnID == SALEVENT_MENUDEACTIVATE ) )
 	{
-		SalMenuEvent *pMenuEvent = static_cast< SalMenuEvent* >( mpData );
+		SalMenuEvent *pMenuEvent = (SalMenuEvent *)mpData;
 		pRet = pMenuEvent->mpMenu;
 	}
 
@@ -2748,9 +2820,9 @@ long JavaSalEvent::getScrollAmount()
 {
 	long nRet = 0;
 
-	if ( mpData && mnID == SalEvent::WheelMouse )
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
-		SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 		nRet = pWheelMouseEvent->mnScrollLines;
 	}
 
@@ -2763,9 +2835,9 @@ long JavaSalEvent::getWheelRotation()
 {
 	long nRet = 0;
 
-	if ( mpData && mnID == SalEvent::WheelMouse )
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
-		SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
 		nRet = pWheelMouseEvent->mnDelta;
 	}
 
@@ -2778,10 +2850,10 @@ sal_Bool JavaSalEvent::isHorizontal()
 {
 	sal_Bool bRet = sal_False;
 
-	if ( mpData && mnID == SalEvent::WheelMouse )
+	if ( mpData && mnID == SALEVENT_WHEELMOUSE )
 	{
-		SalWheelMouseEvent *pWheelMouseEvent = static_cast< SalWheelMouseEvent* >( mpData );
-		bRet = static_cast< sal_Bool >( pWheelMouseEvent->mbHorz );
+		SalWheelMouseEvent *pWheelMouseEvent = (SalWheelMouseEvent *)mpData;
+		bRet = (sal_Bool)pWheelMouseEvent->mbHorz;
 	}
 
 	return bRet;
@@ -2826,7 +2898,7 @@ JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std:
 	mpEvent( pEvent ),
 	mpEventQueue( pEventQueue ),
 	mbRemove( false ),
-	mnType( VclInputFlags::NONE )
+	mnType( 0 )
 {
 	if ( mpEvent )
 	{
@@ -2835,24 +2907,24 @@ JavaSalEventQueueItem::JavaSalEventQueueItem( JavaSalEvent *pEvent, const ::std:
 		// Set event type
 		switch ( mpEvent->getID() )
 		{
-			case SalEvent::ExtTextInput:
-			case SalEvent::KeyInput:
-			case SalEvent::KeyModChange:
-			case SalEvent::KeyUp:
-				mnType = VclInputFlags::KEYBOARD;
+			case SALEVENT_EXTTEXTINPUT:
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_KEYMODCHANGE:
+			case SALEVENT_KEYUP:
+				mnType = VCL_INPUT_KEYBOARD;
 				break;
-			case SalEvent::MouseMove:
-			case SalEvent::MouseLeave:
-			case SalEvent::MouseButtonUp:
-			case SalEvent::MouseButtonDown:
-			case SalEvent::WheelMouse:
-				mnType = VclInputFlags::MOUSE;
+			case SALEVENT_MOUSEMOVE:
+			case SALEVENT_MOUSELEAVE:
+			case SALEVENT_MOUSEBUTTONUP:
+			case SALEVENT_MOUSEBUTTONDOWN:
+			case SALEVENT_WHEELMOUSE:
+				mnType = VCL_INPUT_MOUSE;
 				break;
-			case SalEvent::Paint:
-				mnType = VclInputFlags::PAINT;
+			case SALEVENT_PAINT:
+				mnType = VCL_INPUT_PAINT;
 				break;
 			default:
-				mnType = VclInputFlags::OTHER;
+				mnType = VCL_INPUT_OTHER;
 				break;
 		}
 	}
@@ -2892,15 +2964,15 @@ double JavaSalEventQueue::mfLastNativeEventTime = 0;
 
 // -------------------------------------------------------------------------
 
-JavaSalEventQueueItem* JavaSalEventQueue::mpKeyInputItem = nullptr;
+JavaSalEventQueueItem* JavaSalEventQueue::mpKeyInputItem = NULL;
 
 // -------------------------------------------------------------------------
 
-JavaSalEventQueueItem* JavaSalEventQueue::mpMoveResizeItem = nullptr;
+JavaSalEventQueueItem* JavaSalEventQueue::mpMoveResizeItem = NULL;
 
 // -------------------------------------------------------------------------
 
-JavaSalEventQueueItem* JavaSalEventQueue::mpPaintItem = nullptr;
+JavaSalEventQueueItem* JavaSalEventQueue::mpPaintItem = NULL;
 
 // -------------------------------------------------------------------------
 
@@ -2919,11 +2991,11 @@ void JavaSalEventQueue::purgeRemovedEventsFromFront( ::std::list< JavaSalEventQu
 			JavaSalEventQueueItem *pItem = pEventQueue->front();
 			pEventQueue->pop_front();
 			if ( mpKeyInputItem == pItem )
-				mpKeyInputItem = nullptr;
+				mpKeyInputItem = NULL;
 			if ( mpMoveResizeItem == pItem )
-				mpMoveResizeItem = nullptr;
+				mpMoveResizeItem = NULL;
 			if ( mpPaintItem == pItem )
-				mpPaintItem = nullptr;
+				mpPaintItem = NULL;
 			delete pItem;
 		}
 	}
@@ -2931,7 +3003,7 @@ void JavaSalEventQueue::purgeRemovedEventsFromFront( ::std::list< JavaSalEventQu
 
 // -------------------------------------------------------------------------
 
-sal_Bool JavaSalEventQueue::anyCachedEvent( VclInputFlags nType )
+sal_Bool JavaSalEventQueue::anyCachedEvent( sal_uInt16 nType )
 {
 	sal_Bool bRet = sal_False;
 
@@ -2968,7 +3040,7 @@ sal_Bool JavaSalEventQueue::anyCachedEvent( VclInputFlags nType )
 void JavaSalEventQueue::dispatchNextEvent()
 {
 	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
-		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+		CFRunLoopRunInMode( JAVA_AWT_RUNLOOPMODE, 0, false );
 }
 
 // -------------------------------------------------------------------------
@@ -2982,7 +3054,7 @@ double JavaSalEventQueue::getLastNativeEventTime()
 
 JavaSalEvent *JavaSalEventQueue::getNextCachedEvent( sal_uLong nTimeout, sal_Bool bNativeEvents )
 {
-	JavaSalEvent *pRet = nullptr;
+	JavaSalEvent *pRet = NULL;
 
 	ClearableGuard< Mutex > aGuard( maMutex );
 
@@ -3057,11 +3129,11 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 		if ( pNewEvent )
 		{
 			JavaSalFrame *pFrame = pNewEvent->getFrame();
-			SalEvent nID = pNewEvent->getID();
+			sal_uInt16 nID = pNewEvent->getID();
 			switch ( nID )
 			{
-				case SalEvent::Close:
-				case SalEvent::WakeUp:
+				case SALEVENT_CLOSE:
+				case SALEVENT_WAKEUP:
 				{
 					for ( ::std::list< JavaSalEventQueueItem* >::const_iterator it = pEventQueue->begin(); it != pEventQueue->end(); ++it )
 					{
@@ -3075,7 +3147,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 
 					break;
 				}
-				case SalEvent::ExtTextInput:
+				case SALEVENT_EXTTEXTINPUT:
 				{
 					// Reduce flicker when backspacing through uncommitted text
 					if ( pEventQueue->size() )
@@ -3087,7 +3159,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 
 					break;
 				}
-				case SalEvent::KeyInput:
+				case SALEVENT_KEYINPUT:
 				{
 					if ( mpKeyInputItem )
 					{
@@ -3102,12 +3174,12 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 					mpKeyInputItem = pQueueItem;
 					break;
 				}
-				case SalEvent::KeyUp:
+				case SALEVENT_KEYUP:
 				{
-					mpKeyInputItem = nullptr;
+					mpKeyInputItem = NULL;
 					break;
 				}
-				case SalEvent::MouseMove:
+				case SALEVENT_MOUSEMOVE:
 				{
 					if ( pEventQueue->size() )
 					{
@@ -3118,7 +3190,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 
 					break;
 				}
-				case SalEvent::WheelMouse:
+				case SALEVENT_WHEELMOUSE:
 				{
 					// Fix lag when swiping while automatic spell checking is
 					// enabled by coalescing all queued mouse wheel events
@@ -3134,7 +3206,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 
 					break;
 				}
-				case SalEvent::MoveResize:
+				case SALEVENT_MOVERESIZE:
 				{
 					if ( mpMoveResizeItem )
 					{
@@ -3146,7 +3218,7 @@ void JavaSalEventQueue::postCachedEvent( JavaSalEvent *pEvent )
 					mpMoveResizeItem = pQueueItem;
 					break;
 				}
-				case SalEvent::Paint:
+				case SALEVENT_PAINT:
 				{
 					if ( mpPaintItem )
 					{
@@ -3222,7 +3294,7 @@ void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 		for ( ; it != maNativeEventQueue.end(); ++it )
 		{
 			JavaSalEvent *pEvent = (*it)->getEvent();
-			if ( pEvent && pEvent->getID() == SalEvent::Shutdown )
+			if ( pEvent && pEvent->getID() == SALEVENT_SHUTDOWN )
 				pEvent->cancelShutdown();
 		}
 
@@ -3232,7 +3304,7 @@ void JavaSalEventQueue::setShutdownDisabled( sal_Bool bShutdownDisabled )
 		for ( ; it != maNonNativeEventQueue.end(); ++it )
 		{
 			JavaSalEvent *pEvent = (*it)->getEvent();
-			if ( pEvent && pEvent->getID() == SalEvent::Shutdown )
+			if ( pEvent && pEvent->getID() == SALEVENT_SHUTDOWN )
 				pEvent->cancelShutdown();
 		}
 

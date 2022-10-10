@@ -24,6 +24,7 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <tools/rc.h>
 #include <vcl/decoview.hxx>
 #include <vcl/event.hxx>
 #include <vcl/cursor.hxx>
@@ -33,7 +34,6 @@
 #include <vcl/layout.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/settings.hxx>
-#include <vcl/uitest/uiobject.hxx>
 
 #include <window.h>
 #include <svdata.hxx>
@@ -72,17 +72,16 @@
 #include <vcl/unohelp2.hxx>
 
 #include <officecfg/Office/Common.hxx>
-
-#include <memory>
+#include <boost/scoped_array.hpp>
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 
 // - Redo
-// - if Tracking-Cancel recreate DefaultSelection
+// - Bei Tracking-Cancel DefaultSelection wieder herstellen
 
-static FncGetSpecialChars pImplFncGetSpecialChars = nullptr;
+static FncGetSpecialChars pImplFncGetSpecialChars = NULL;
 
 #define EDIT_ALIGN_LEFT             1
 #define EDIT_ALIGN_CENTER           2
@@ -119,53 +118,73 @@ struct DDInfo
 struct Impl_IMEInfos
 {
     OUString      aOldTextAfterStartPos;
-    std::unique_ptr<ExtTextInputAttr[]>
-                  pAttribs;
+    sal_uInt16*   pAttribs;
     sal_Int32     nPos;
     sal_Int32     nLen;
     bool          bCursor;
     bool          bWasCursorOverwrite;
 
     Impl_IMEInfos(sal_Int32 nPos, const OUString& rOldTextAfterStartPos);
+    ~Impl_IMEInfos();
 
-    void        CopyAttribs(const ExtTextInputAttr* pA, sal_Int32 nL);
+    void        CopyAttribs(const sal_uInt16* pA, sal_Int32 nL);
     void        DestroyAttribs();
 };
 
 Impl_IMEInfos::Impl_IMEInfos(sal_Int32 nP, const OUString& rOldTextAfterStartPos)
-    : aOldTextAfterStartPos(rOldTextAfterStartPos),
-    pAttribs(nullptr),
-    nPos(nP),
-    nLen(0),
-    bCursor(true),
-    bWasCursorOverwrite(false)
+    : aOldTextAfterStartPos(rOldTextAfterStartPos)
 {
+    nPos = nP;
+    nLen = 0;
+    bCursor = true;
+    pAttribs = NULL;
+    bWasCursorOverwrite = false;
 }
 
-void Impl_IMEInfos::CopyAttribs(const ExtTextInputAttr* pA, sal_Int32 nL)
+Impl_IMEInfos::~Impl_IMEInfos()
+{
+    delete[] pAttribs;
+}
+
+void Impl_IMEInfos::CopyAttribs(const sal_uInt16* pA, sal_Int32 nL)
 {
     nLen = nL;
-    pAttribs.reset(new ExtTextInputAttr[ nL ]);
-    memcpy( pAttribs.get(), pA, nL*sizeof(ExtTextInputAttr) );
+    delete[] pAttribs;
+    pAttribs = new sal_uInt16[ nL ];
+    memcpy( pAttribs, pA, nL*sizeof(sal_uInt16) );
 }
 
 void Impl_IMEInfos::DestroyAttribs()
 {
-    pAttribs.reset();
+    delete[] pAttribs;
+    pAttribs = NULL;
     nLen = 0;
 }
 
-Edit::Edit( WindowType nType )
-    : Control( nType )
+Edit::Edit( WindowType nType ) :
+    Control( nType )
 {
     ImplInitEditData();
 }
 
-Edit::Edit( vcl::Window* pParent, WinBits nStyle )
-    : Control( WindowType::EDIT )
+Edit::Edit( vcl::Window* pParent, WinBits nStyle ) :
+    Control( WINDOW_EDIT )
 {
     ImplInitEditData();
     ImplInit( pParent, nStyle );
+}
+
+Edit::Edit( vcl::Window* pParent, const ResId& rResId ) :
+    Control( WINDOW_EDIT )
+{
+    rResId.SetRT( RSC_EDIT );
+    WinBits nStyle = ImplInitRes( rResId );
+    ImplInitEditData();
+    ImplInit( pParent, nStyle );
+    ImplLoadRes( rResId );
+
+    if ( !(nStyle & WB_HIDE) )
+        Show();
 }
 
 void Edit::SetWidthInChars(sal_Int32 nWidthInChars)
@@ -186,7 +205,7 @@ void Edit::setMaxWidthChars(sal_Int32 nWidth)
     }
 }
 
-bool Edit::set_property(const OString &rKey, const OUString &rValue)
+bool Edit::set_property(const OString &rKey, const OString &rValue)
 {
     if (rKey == "width-chars")
         SetWidthInChars(rValue.toInt32());
@@ -219,7 +238,7 @@ bool Edit::set_property(const OString &rKey, const OUString &rValue)
         SetStyle(nBits);
     }
     else if (rKey == "placeholder-text")
-        SetPlaceholderText(rValue);
+        SetPlaceholderText(OStringToOUString(rValue, RTL_TEXTENCODING_UTF8));
     else
         return Control::set_property(rKey, rValue);
     return true;
@@ -227,28 +246,17 @@ bool Edit::set_property(const OString &rKey, const OUString &rValue)
 
 Edit::~Edit()
 {
-    disposeOnce();
-}
-
-void Edit::dispose()
-{
-    mpUIBuilder.reset();
-
     delete mpDDInfo;
-    mpDDInfo = nullptr;
-
     vcl::Cursor* pCursor = GetCursor();
     if ( pCursor )
     {
-        SetCursor( nullptr );
+        SetCursor( NULL );
         delete pCursor;
     }
 
     delete mpIMEInfos;
-    mpIMEInfos = nullptr;
 
     delete mpUpdateDataTimer;
-    mpUpdateDataTimer = nullptr;
 
     if ( mxDnDListener.is() )
     {
@@ -265,25 +273,22 @@ void Edit::dispose()
 
         uno::Reference< lang::XEventListener> xEL( mxDnDListener, uno::UNO_QUERY );
         xEL->disposing( lang::EventObject() );  // #95154# #96585# Empty Source means it's the Client
-        mxDnDListener.clear();
     }
 
-    SetType(WindowType::WINDOW);
-
-    mpSubEdit.disposeAndClear();
-    Control::dispose();
+    SetType(WINDOW_WINDOW);
 }
 
 void Edit::ImplInitEditData()
 {
-    mpSubEdit               = VclPtr<Edit>();
-    mpUpdateDataTimer       = nullptr;
-    mpFilterText            = nullptr;
+    mpSubEdit               = NULL;
+    mpUpdateDataTimer       = NULL;
+    mpFilterText            = NULL;
     mnXOffset               = 0;
     mnAlign                 = EDIT_ALIGN_LEFT;
     mnMaxTextLen            = EDIT_NOLIMIT;
     mnWidthInChars          = -1;
     mnMaxWidthChars         = -1;
+    meAutocompleteAction    = AUTOCOMPLETE_KEYINPUT;
     mbModified              = false;
     mbInternModified        = false;
     mbReadOnly              = false;
@@ -292,11 +297,11 @@ void Edit::ImplInitEditData()
     mbActivePopup           = false;
     mbIsSubEdit             = false;
     mbInMBDown              = false;
-    mpDDInfo                = nullptr;
-    mpIMEInfos              = nullptr;
+    mpDDInfo                = NULL;
+    mpIMEInfos              = NULL;
     mcEchoChar              = 0;
 
-    // no default mirroring for Edit controls
+    // --- RTL --- no default mirroring for Edit controls
     // note: controls that use a subedit will revert this (SpinField, ComboBox)
     EnableRTL( false );
 
@@ -304,36 +309,34 @@ void Edit::ImplInitEditData()
     mxDnDListener = pDnDWrapper;
 }
 
-bool Edit::ImplUseNativeBorder(vcl::RenderContext& rRenderContext, WinBits nStyle)
+bool Edit::ImplUseNativeBorder( WinBits nStyle )
 {
-    bool bRet = rRenderContext.IsNativeControlSupported(ImplGetNativeControlType(),
-                                                        ControlPart::HasBackgroundTexture)
-                                 && ((nStyle & WB_BORDER) && !(nStyle & WB_NOBORDER));
-    if (!bRet && mbIsSubEdit)
+    bool bRet =
+        IsNativeControlSupported(ImplGetNativeControlType(), HAS_BACKGROUND_TEXTURE)
+                                 && ((nStyle&WB_BORDER) && !(nStyle&WB_NOBORDER));
+    if( ! bRet && mbIsSubEdit )
     {
         vcl::Window* pWindow = GetParent();
         nStyle = pWindow->GetStyle();
-        bRet = pWindow->IsNativeControlSupported(ImplGetNativeControlType(),
-                                                 ControlPart::HasBackgroundTexture)
-               && ((nStyle & WB_BORDER) && !(nStyle & WB_NOBORDER));
+        bRet = pWindow->IsNativeControlSupported(ImplGetNativeControlType(), HAS_BACKGROUND_TEXTURE)
+               && ((nStyle&WB_BORDER) && !(nStyle&WB_NOBORDER));
     }
     return bRet;
 }
 
-void Edit::ImplInit(vcl::Window* pParent, WinBits nStyle)
+void Edit::ImplInit( vcl::Window* pParent, WinBits nStyle )
 {
-    nStyle = ImplInitStyle(nStyle);
-
-    if (!(nStyle & (WB_CENTER | WB_RIGHT)))
+    nStyle = ImplInitStyle( nStyle );
+    if ( !(nStyle & (WB_CENTER | WB_RIGHT)) )
         nStyle |= WB_LEFT;
 
-    Control::ImplInit(pParent, nStyle, nullptr);
+    Control::ImplInit( pParent, nStyle, NULL );
 
     mbReadOnly = (nStyle & WB_READONLY) != 0;
 
     mnAlign = EDIT_ALIGN_LEFT;
 
-    // hack: right align until keyinput and cursor travelling works
+    // --- RTL --- hack: right align until keyinput and cursor travelling works
     if( IsRTLEnabled() )
         mnAlign = EDIT_ALIGN_RIGHT;
 
@@ -344,7 +347,8 @@ void Edit::ImplInit(vcl::Window* pParent, WinBits nStyle)
 
     SetCursor( new vcl::Cursor );
 
-    SetPointer( Pointer( PointerStyle::Text ) );
+    SetPointer( Pointer( POINTER_TEXT ) );
+    ImplInitSettings( true, true, true );
 
     uno::Reference< datatransfer::dnd::XDragGestureListener> xDGL( mxDnDListener, uno::UNO_QUERY );
     uno::Reference< datatransfer::dnd::XDragGestureRecognizer > xDGR = GetDragGestureRecognizer();
@@ -384,39 +388,49 @@ void Edit::ImplModified()
     Modify();
 }
 
-void Edit::ApplySettings(vcl::RenderContext& rRenderContext)
+void Edit::ImplInitSettings( bool bFont, bool bForeground, bool bBackground )
 {
-    Control::ApplySettings(rRenderContext);
+    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
 
-    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
-
-    const vcl::Font& aFont = rStyleSettings.GetFieldFont();
-    ApplyControlFont(rRenderContext, aFont);
-
-    ImplClearLayoutData();
-
-    Color aTextColor = rStyleSettings.GetFieldTextColor();
-    ApplyControlForeground(rRenderContext, aTextColor);
-
-    if (ImplUseNativeBorder(rRenderContext, GetStyle()) || IsPaintTransparent())
+    if ( bFont )
     {
-        // Transparent background
-        rRenderContext.SetBackground();
-        rRenderContext.SetFillColor();
+        vcl::Font aFont = rStyleSettings.GetFieldFont();
+        if ( IsControlFont() )
+            aFont.Merge( GetControlFont() );
+        SetZoomedPointFont( aFont );
+        ImplClearLayoutData();
     }
-    else if (IsControlBackground())
+
+    if ( bFont || bForeground )
     {
-        rRenderContext.SetBackground(GetControlBackground());
-        rRenderContext.SetFillColor(GetControlBackground());
+        Color aTextColor = rStyleSettings.GetFieldTextColor();
+        if ( IsControlForeground() )
+            aTextColor = GetControlForeground();
+        SetTextColor( aTextColor );
     }
-    else
+
+    if ( bBackground )
     {
-        rRenderContext.SetBackground(rStyleSettings.GetFieldColor());
-        rRenderContext.SetFillColor(rStyleSettings.GetFieldColor());
+        if ( ImplUseNativeBorder( GetStyle() ) || IsPaintTransparent() )
+        {
+            // Transparent background
+            SetBackground();
+            SetFillColor();
+        }
+        else if ( IsControlBackground() )
+        {
+            SetBackground( GetControlBackground() );
+            SetFillColor( GetControlBackground() );
+        }
+        else
+        {
+            SetBackground( rStyleSettings.GetFieldColor() );
+            SetFillColor( rStyleSettings.GetFieldColor() );
+        }
     }
 }
 
-long Edit::ImplGetExtraXOffset() const
+long Edit::ImplGetExtraOffset() const
 {
     // MT 09/2002: nExtraOffsetX should become a member, instead of checking every time,
     // but I need an incompatible update for this...
@@ -444,18 +458,6 @@ long Edit::ImplGetExtraXOffset() const
     return nExtraOffset;
 }
 
-long Edit::ImplGetExtraYOffset() const
-{
-    long nExtraOffset = 0;
-    ControlType eCtrlType = ImplGetNativeControlType();
-    if (eCtrlType != ControlType::EditboxNoBorder)
-    {
-        // add some space between text entry and border
-        nExtraOffset = 2;
-    }
-    return nExtraOffset;
-}
-
 OUString Edit::ImplGetText() const
 {
     if ( mcEchoChar || (GetStyle() & WB_PASSWORD) )
@@ -464,7 +466,7 @@ OUString Edit::ImplGetText() const
         if ( mcEchoChar )
             cEchoChar = mcEchoChar;
         else
-            cEchoChar = u'\x2022';
+            cEchoChar = '*';
         OUStringBuffer aText;
         comphelper::string::padToLength(aText, maText.getLength(), cEchoChar);
         return aText.makeStringAndClear();
@@ -489,15 +491,15 @@ void Edit::ImplInvalidateOrRepaint()
 #endif	// !USE_JAVA
     }
     else
-        Invalidate();
+        ImplRepaint();
 }
 
 long Edit::ImplGetTextYPosition() const
 {
     if ( GetStyle() & WB_TOP )
-        return ImplGetExtraXOffset();
+        return ImplGetExtraOffset();
     else if ( GetStyle() & WB_BOTTOM )
-        return GetOutputSizePixel().Height() - GetTextHeight() - ImplGetExtraXOffset();
+        return GetOutputSizePixel().Height() - GetTextHeight() - ImplGetExtraOffset();
 #ifdef USE_JAVA
     // Round up for y coordinate so that text trends toward the bottom
     return ( GetOutputSizePixel().Height() - GetTextHeight() + 1 ) / 2;
@@ -506,252 +508,268 @@ long Edit::ImplGetTextYPosition() const
 #endif	// USE_JAVA
 }
 
-void Edit::ImplRepaint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRectangle)
+void Edit::ImplRepaint(bool bLayout)
 {
-    if (!IsReallyVisible())
+    if ( !IsReallyVisible() )
         return;
 
-    ApplySettings(rRenderContext);
+    OUString aText = ImplGetText();
+    sal_Int32 nLen = aText.getLength();
 
-    const OUString aText = ImplGetText();
-    const sal_Int32 nLen = aText.getLength();
+    long   nDXBuffer[256];
+    boost::scoped_array<long> pDXBuffer;
+    long*  pDX = nDXBuffer;
 
-    long nDXBuffer[256];
-    std::unique_ptr<long[]> pDXBuffer;
-    long* pDX = nDXBuffer;
-
-    if (nLen)
+    if( !aText.isEmpty() )
     {
-        if ((size_t) (2 * nLen) > SAL_N_ELEMENTS(nDXBuffer))
+        if( (size_t) (2*aText.getLength()) > SAL_N_ELEMENTS(nDXBuffer) )
         {
-            pDXBuffer.reset(new long[2 * (nLen + 1)]);
+            pDXBuffer.reset(new long[2*(aText.getLength()+1)]);
             pDX = pDXBuffer.get();
         }
 
-        GetCaretPositions(aText, pDX, 0, nLen);
+        GetCaretPositions( aText, pDX, 0, nLen );
     }
 
-    long nTH = GetTextHeight();
-    Point aPos(mnXOffset, ImplGetTextYPosition());
+    long    nTH = GetTextHeight();
+    Point   aPos( mnXOffset, ImplGetTextYPosition() );
 
 #ifdef USE_JAVA
     // Fix bug reported in the following NeoOffice forum post by clipping out
     // the focus ring:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64501#64501
     vcl::Region aEditBoxClipRgn;
-    if ( ImplGetNativeControlType() == ControlType::Editbox )
-        aEditBoxClipRgn = vcl::Region( tools::Rectangle( Point( ImplGetExtraXOffset(), 0 ), Size( GetOutputSize().Width() - ( ImplGetExtraXOffset() * 2 ), GetOutputSize().Height() ) ) );
+    if ( ImplGetNativeControlType() == CTRL_EDITBOX )
+        aEditBoxClipRgn = vcl::Region( Rectangle( Point( ImplGetExtraOffset(), 0 ), Size( GetOutputSize().Width() - ( ImplGetExtraOffset() * 2 ), GetOutputSize().Height() ) ) );
 #endif	// USE_JAVA
+
+    if( bLayout )
+    {
+        aPos.X() = mnXOffset + ImplGetExtraOffset();
+
+        MetricVector* pVector = &mpControlData->mpLayoutData->m_aUnicodeBoundRects;
+        OUString* pDisplayText = &mpControlData->mpLayoutData->m_aDisplayText;
+
+#ifdef USE_JAVA
+        Push( PushFlags::CLIPREGION );
+        if ( !aEditBoxClipRgn.IsEmpty() )
+            IntersectClipRegion( aEditBoxClipRgn );
+#endif	// USE_JAVA
+        DrawText( aPos, aText, 0, nLen, pVector, pDisplayText );
+#ifdef USE_JAVA
+        Pop();
+#endif	// USE_JAVA
+
+        return;
+    }
 
     vcl::Cursor* pCursor = GetCursor();
     bool bVisCursor = pCursor && pCursor->IsVisible();
-    if (pCursor)
+    if ( pCursor )
         pCursor->Hide();
 
-    ImplClearBackground(rRenderContext, rRectangle, 0, GetOutputSizePixel().Width()-1);
+    ImplClearBackground( 0, GetOutputSizePixel().Width() );
 
     bool bPaintPlaceholderText = aText.isEmpty() && !maPlaceholderText.isEmpty();
 
-    const StyleSettings& rStyleSettings = rRenderContext.GetSettings().GetStyleSettings();
-
-    if (!IsEnabled() || bPaintPlaceholderText)
-        rRenderContext.SetTextColor(rStyleSettings.GetDisableColor());
+    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
+    if ( IsEnabled() )
+        ImplInitSettings( false, true, false );
+    if ( !IsEnabled() || bPaintPlaceholderText )
+        SetTextColor( rStyleSettings.GetDisableColor() );
 
     // Set background color of the normal text
-    if ((GetStyle() & WB_FORCECTRLBACKGROUND) != 0 && IsControlBackground())
+    if( (GetStyle() & WB_FORCECTRLBACKGROUND) != 0 && IsControlBackground() )
     {
         // check if we need to set ControlBackground even in NWF case
-        rRenderContext.Push(PushFlags::FILLCOLOR | PushFlags::LINECOLOR);
-        rRenderContext.SetLineColor();
-        rRenderContext.SetFillColor(GetControlBackground());
-        rRenderContext.DrawRect(tools::Rectangle(aPos, Size(GetOutputSizePixel().Width() - 2 * mnXOffset, GetOutputSizePixel().Height())));
-        rRenderContext.Pop();
+        Push( PushFlags::FILLCOLOR | PushFlags::LINECOLOR );
+        SetLineColor();
+        SetFillColor( GetControlBackground() );
+        DrawRect( Rectangle( aPos, Size( GetOutputSizePixel().Width() - 2*mnXOffset, GetOutputSizePixel().Height() ) ) );
+        Pop();
 
-        rRenderContext.SetTextFillColor(GetControlBackground());
+        SetTextFillColor( GetControlBackground() );
     }
-    else if (IsPaintTransparent() || ImplUseNativeBorder(rRenderContext, GetStyle()))
-        rRenderContext.SetTextFillColor();
+    else if( IsPaintTransparent() || ImplUseNativeBorder( GetStyle() ) )
+        SetTextFillColor();
     else
-        rRenderContext.SetTextFillColor(IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor());
+        SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
 
-    ImplPaintBorder(rRenderContext, 0, GetOutputSizePixel().Width());
+    ImplPaintBorder( 0, GetOutputSizePixel().Width() );
 
-    bool bDrawSelection = maSelection.Len() && (HasFocus() || (GetStyle() & WB_NOHIDESELECTION) || mbActivePopup);
+    bool bDrawSelection = maSelection.Len() && ( HasFocus() || ( GetStyle() & WB_NOHIDESELECTION ) || mbActivePopup );
 
-    aPos.X() = mnXOffset + ImplGetExtraXOffset();
-    if (bPaintPlaceholderText)
+    aPos.X() = mnXOffset + ImplGetExtraOffset();
+    if ( bPaintPlaceholderText )
     {
-        rRenderContext.DrawText(aPos, maPlaceholderText);
+        DrawText( aPos, maPlaceholderText );
     }
-    else if (!bDrawSelection && !mpIMEInfos)
+    else if ( !bDrawSelection && !mpIMEInfos )
     {
 #ifdef USE_JAVA
-        rRenderContext.Push( PushFlags::CLIPREGION );
+        Push( PushFlags::CLIPREGION );
         if ( !aEditBoxClipRgn.IsEmpty() )
-            rRenderContext.IntersectClipRegion( aEditBoxClipRgn );
+            IntersectClipRegion( aEditBoxClipRgn );
 #endif	// USE_JAVA
-        rRenderContext.DrawText(aPos, aText, 0, nLen);
+        DrawText( aPos, aText, 0, nLen );
 #ifdef USE_JAVA
-        rRenderContext.Pop();
+        Pop();
 #endif	// USE_JAVA
     }
     else
     {
         // save graphics state
-        rRenderContext.Push();
-        // first calculate highlighted and non highlighted clip regions
-        vcl::Region aHighlightClipRegion;
+        Push();
+        // first calculate higlighted and non highlighted clip regions
+        vcl::Region aHiglightClipRegion;
         vcl::Region aNormalClipRegion;
-        Selection aTmpSel(maSelection);
+        Selection aTmpSel( maSelection );
         aTmpSel.Justify();
         // selection is highlighted
-        for(sal_Int32 i = 0; i < nLen; ++i)
+        int i;
+        for( i = 0; i < aText.getLength(); i++ )
         {
-            tools::Rectangle aRect(aPos, Size(10, nTH));
-            aRect.Left() = pDX[2 * i] + mnXOffset + ImplGetExtraXOffset();
-            aRect.Right() = pDX[2 * i + 1] + mnXOffset + ImplGetExtraXOffset();
+            Rectangle aRect( aPos, Size( 10, nTH ) );
+            aRect.Left() = pDX[2*i] + mnXOffset + ImplGetExtraOffset();
+            aRect.Right() = pDX[2*i+1] + mnXOffset + ImplGetExtraOffset();
             aRect.Justify();
             bool bHighlight = false;
-            if (i >= aTmpSel.Min() && i < aTmpSel.Max())
+            if( i >= aTmpSel.Min() && i < aTmpSel.Max() )
                 bHighlight = true;
 
-            if (mpIMEInfos && mpIMEInfos->pAttribs &&
-                i >= mpIMEInfos->nPos && i < (mpIMEInfos->nPos+mpIMEInfos->nLen) &&
-                (mpIMEInfos->pAttribs[i - mpIMEInfos->nPos] & ExtTextInputAttr::Highlight))
-            {
+            if( mpIMEInfos && mpIMEInfos->pAttribs &&
+                i >= mpIMEInfos->nPos && i < (mpIMEInfos->nPos+mpIMEInfos->nLen ) &&
+                ( mpIMEInfos->pAttribs[i-mpIMEInfos->nPos] & EXTTEXTINPUT_ATTR_HIGHLIGHT) )
                 bHighlight = true;
-            }
 
-            if (bHighlight)
-                aHighlightClipRegion.Union(aRect);
+            if( bHighlight )
+                aHiglightClipRegion.Union( aRect );
             else
-                aNormalClipRegion.Union(aRect);
+                aNormalClipRegion.Union( aRect );
         }
         // draw normal text
-        Color aNormalTextColor = rRenderContext.GetTextColor();
-        rRenderContext.SetClipRegion(aNormalClipRegion);
+        Color aNormalTextColor = GetTextColor();
+        SetClipRegion( aNormalClipRegion );
 #ifdef USE_JAVA
         if ( !aEditBoxClipRgn.IsEmpty() )
-            rRenderContext.IntersectClipRegion( aEditBoxClipRgn );
+            IntersectClipRegion( aEditBoxClipRgn );
 #endif	// USE_JAVA
 
-        if (IsPaintTransparent())
-            rRenderContext.SetTextFillColor();
+        if( IsPaintTransparent() )
+            SetTextFillColor();
         else
         {
             // Set background color when part of the text is selected
-            if (ImplUseNativeBorder(rRenderContext, GetStyle()))
+            if ( ImplUseNativeBorder( GetStyle() ) )
             {
                 if( (GetStyle() & WB_FORCECTRLBACKGROUND) != 0 && IsControlBackground() )
-                    rRenderContext.SetTextFillColor(GetControlBackground());
+                    SetTextFillColor( GetControlBackground() );
                 else
-                    rRenderContext.SetTextFillColor();
+                    SetTextFillColor();
             }
             else
-            {
-                rRenderContext.SetTextFillColor(IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor());
-            }
+                SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
         }
-        rRenderContext.DrawText(aPos, aText, 0, nLen);
+        DrawText( aPos, aText, 0, nLen );
 
         // draw highlighted text
-        rRenderContext.SetClipRegion(aHighlightClipRegion);
+        SetClipRegion( aHiglightClipRegion );
 #ifdef USE_JAVA
         if ( !aEditBoxClipRgn.IsEmpty() )
-            rRenderContext.IntersectClipRegion( aEditBoxClipRgn );
+            IntersectClipRegion( aEditBoxClipRgn );
 #endif	// USE_JAVA
-        rRenderContext.SetTextColor(rStyleSettings.GetHighlightTextColor());
-        rRenderContext.SetTextFillColor(rStyleSettings.GetHighlightColor());
-        rRenderContext.DrawText(aPos, aText, 0, nLen);
+        SetTextColor( rStyleSettings.GetHighlightTextColor() );
+        SetTextFillColor( rStyleSettings.GetHighlightColor() );
+        DrawText( aPos, aText, 0, nLen );
 
         // if IME info exists loop over portions and output different font attributes
-        if (mpIMEInfos && mpIMEInfos->pAttribs)
+        if( mpIMEInfos && mpIMEInfos->pAttribs )
         {
-            for(int n = 0; n < 2; n++)
+            for( int n = 0; n < 2; n++ )
             {
                 vcl::Region aRegion;
-                if (n == 0)
+                if( n == 0 )
                 {
-                    rRenderContext.SetTextColor(aNormalTextColor);
-                    if (IsPaintTransparent())
-                        rRenderContext.SetTextFillColor();
+                    SetTextColor( aNormalTextColor );
+                    if( IsPaintTransparent() )
+                        SetTextFillColor();
                     else
-                        rRenderContext.SetTextFillColor(IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor());
+                        SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
                     aRegion = aNormalClipRegion;
                 }
                 else
                 {
-                    rRenderContext.SetTextColor(rStyleSettings.GetHighlightTextColor());
-                    rRenderContext.SetTextFillColor(rStyleSettings.GetHighlightColor());
-                    aRegion = aHighlightClipRegion;
+                    SetTextColor( rStyleSettings.GetHighlightTextColor() );
+                    SetTextFillColor( rStyleSettings.GetHighlightColor() );
+                    aRegion = aHiglightClipRegion;
                 }
 
-                for(int i = 0; i < mpIMEInfos->nLen; )
+                for( i = 0; i < mpIMEInfos->nLen; )
                 {
-                    ExtTextInputAttr nAttr = mpIMEInfos->pAttribs[i];
+                    sal_uInt16 nAttr = mpIMEInfos->pAttribs[i];
                     vcl::Region aClip;
                     int nIndex = i;
-                    while (nIndex < mpIMEInfos->nLen && mpIMEInfos->pAttribs[nIndex] == nAttr)  // #112631# check nIndex before using it
+                    while( nIndex < mpIMEInfos->nLen && mpIMEInfos->pAttribs[nIndex] == nAttr)  // #112631# check nIndex before using it
                     {
-                        tools::Rectangle aRect( aPos, Size( 10, nTH ) );
-                        aRect.Left() = pDX[2 * (nIndex + mpIMEInfos->nPos)] + mnXOffset + ImplGetExtraXOffset();
-                        aRect.Right() = pDX[2 * (nIndex + mpIMEInfos->nPos) + 1] + mnXOffset + ImplGetExtraXOffset();
+                        Rectangle aRect( aPos, Size( 10, nTH ) );
+                        aRect.Left() = pDX[2*(nIndex+mpIMEInfos->nPos)] + mnXOffset + ImplGetExtraOffset();
+                        aRect.Right() = pDX[2*(nIndex+mpIMEInfos->nPos)+1] + mnXOffset + ImplGetExtraOffset();
                         aRect.Justify();
-                        aClip.Union(aRect);
+                        aClip.Union( aRect );
                         nIndex++;
                     }
                     i = nIndex;
                     aClip.Intersect(aRegion);
-                    if (!aClip.IsEmpty() && nAttr != ExtTextInputAttr::NONE)
+                    if( !aClip.IsEmpty() && nAttr )
                     {
-                        vcl::Font aFont = rRenderContext.GetFont();
-                        if (nAttr & ExtTextInputAttr::Underline)
-                            aFont.SetUnderline(LINESTYLE_SINGLE);
-                        else if (nAttr & ExtTextInputAttr::BoldUnderline)
-                            aFont.SetUnderline( LINESTYLE_BOLD);
-                        else if (nAttr & ExtTextInputAttr::DottedUnderline)
-                            aFont.SetUnderline( LINESTYLE_DOTTED);
-                        else if (nAttr & ExtTextInputAttr::DashDotUnderline)
-                            aFont.SetUnderline( LINESTYLE_DASHDOT);
-                        else if (nAttr & ExtTextInputAttr::GrayWaveline)
+                        vcl::Font aFont = GetFont();
+                        if ( nAttr & EXTTEXTINPUT_ATTR_UNDERLINE )
+                            aFont.SetUnderline( UNDERLINE_SINGLE );
+                        else if ( nAttr & EXTTEXTINPUT_ATTR_BOLDUNDERLINE )
+                            aFont.SetUnderline( UNDERLINE_BOLD );
+                        else if ( nAttr & EXTTEXTINPUT_ATTR_DOTTEDUNDERLINE )
+                            aFont.SetUnderline( UNDERLINE_DOTTED );
+                        else if ( nAttr & EXTTEXTINPUT_ATTR_DASHDOTUNDERLINE )
+                            aFont.SetUnderline( UNDERLINE_DASHDOT );
+                        else if ( nAttr & EXTTEXTINPUT_ATTR_GRAYWAVELINE )
                         {
-                            aFont.SetUnderline(LINESTYLE_WAVE);
-                            rRenderContext.SetTextLineColor(Color(COL_LIGHTGRAY));
+                            aFont.SetUnderline( UNDERLINE_WAVE );
+                            SetTextLineColor( Color( COL_LIGHTGRAY ) );
                         }
-                        rRenderContext.SetFont(aFont);
+                        SetFont( aFont );
 
-                        if (nAttr & ExtTextInputAttr::RedText)
-                            rRenderContext.SetTextColor(Color(COL_RED));
-                        else if (nAttr & ExtTextInputAttr::HalfToneText)
-                            rRenderContext.SetTextColor(Color(COL_LIGHTGRAY));
+                        if ( nAttr & EXTTEXTINPUT_ATTR_REDTEXT )
+                            SetTextColor( Color( COL_RED ) );
+                        else if ( nAttr & EXTTEXTINPUT_ATTR_HALFTONETEXT )
+                            SetTextColor( Color( COL_LIGHTGRAY ) );
 
-                        rRenderContext.SetClipRegion(aClip);
+                        SetClipRegion( aClip );
 #ifdef USE_JAVA
                         if ( !aEditBoxClipRgn.IsEmpty() )
-                            rRenderContext.IntersectClipRegion( aEditBoxClipRgn );
+                            IntersectClipRegion( aEditBoxClipRgn );
 #endif	// USE_JAVA
-                        rRenderContext.DrawText(aPos, aText, 0, nLen);
+                        DrawText( aPos, aText, 0, nLen );
                     }
                 }
             }
         }
 
         // restore graphics state
-        rRenderContext.Pop();
+        Pop();
     }
 
-    if (bVisCursor && (!mpIMEInfos || mpIMEInfos->bCursor))
+    if ( bVisCursor && ( !mpIMEInfos || mpIMEInfos->bCursor ) )
         pCursor->Show();
 }
 
 void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uInt8 nMode )
 {
-    const sal_Int32 nTextLen = ImplGetText().getLength();
+    OUString aText = ImplGetText();
 
     // loeschen moeglich?
     if ( !rSelection.Len() &&
          (((rSelection.Min() == 0) && (nDirection == EDIT_DEL_LEFT)) ||
-          ((rSelection.Max() == nTextLen) && (nDirection == EDIT_DEL_RIGHT))) )
+          ((rSelection.Max() == aText.getLength()) && (nDirection == EDIT_DEL_RIGHT))) )
         return;
 
     ImplClearLayoutData();
@@ -794,7 +812,7 @@ void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uI
             }
             else if ( nMode == EDIT_DELMODE_RESTOFCONTENT )
             {
-                aSelection.Max() = nTextLen;
+                aSelection.Max() = aText.getLength();
             }
             else
             {
@@ -812,15 +830,16 @@ void Edit::ImplDelete( const Selection& rSelection, sal_uInt8 nDirection, sal_uI
     mbInternModified = true;
 }
 
-OUString Edit::ImplGetValidString( const OUString& rString )
+OUString Edit::ImplGetValidString( const OUString& rString ) const
 {
     OUString aValidString( rString );
-    aValidString = aValidString.replaceAll("\n", "").replaceAll("\r", "");
+    aValidString = comphelper::string::remove(aValidString, '\n');
+    aValidString = comphelper::string::remove(aValidString, '\r');
     aValidString = aValidString.replace('\t', ' ');
     return aValidString;
 }
 
-uno::Reference < i18n::XBreakIterator > Edit::ImplGetBreakIterator()
+uno::Reference < i18n::XBreakIterator > Edit::ImplGetBreakIterator() const
 {
     //!! since we don't want to become incompatible in the next minor update
     //!! where this code will get integrated into, xISC will be a local
@@ -829,7 +848,7 @@ uno::Reference < i18n::XBreakIterator > Edit::ImplGetBreakIterator()
     return i18n::BreakIterator::create(xContext);
 }
 
-uno::Reference < i18n::XExtendedInputSequenceChecker > const & Edit::ImplGetInputSequenceChecker()
+uno::Reference < i18n::XExtendedInputSequenceChecker > Edit::ImplGetInputSequenceChecker()
 {
     if ( !mxISC.is() )
     {
@@ -844,8 +863,8 @@ void Edit::ShowTruncationWarning( vcl::Window* pParent )
     ResMgr* pResMgr = ImplGetResMgr();
     if( pResMgr )
     {
-        ScopedVclPtrInstance< MessageDialog > aBox( pParent, ResId(SV_EDIT_WARNING_STR, *pResMgr), VclMessageType::Warning );
-        aBox->Execute();
+        MessageDialog aBox(pParent, ResId(SV_EDIT_WARNING_STR, *pResMgr), VCL_MESSAGE_WARNING);
+        aBox.Execute();
     }
 }
 
@@ -879,7 +898,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
     // take care of input-sequence-checking now
     if (bIsUserInput && !rStr.isEmpty())
     {
-        SAL_WARN_IF( rStr.getLength() != 1, "vcl", "unexpected string length. User input is expected to provide 1 char only!" );
+        DBG_ASSERT( rStr.getLength() == 1, "unexpected string length. User input is expected to providse 1 char only!" );
 
         // determine if input-sequence-checking should be applied or not
 
@@ -900,7 +919,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
 
             // the text that needs to be checked is only the one
             // before the current cursor position
-            const OUString aOldText( maText.getStr(), nTmpPos);
+            OUString aOldText( maText.getStr(), nTmpPos);
             OUString aTmpText( aOldText );
             if (officecfg::Office::Common::I18N::CTL::CTLSequenceCheckingTypeAndReplace::get())
             {
@@ -916,7 +935,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
                         pOldTxt[nChgPos] == pTmpTxt[nChgPos] )
                     ++nChgPos;
 
-                const OUString aChgText( aTmpText.copy( nChgPos ) );
+                OUString aChgText( aTmpText.copy( nChgPos ) );
 
                 // remove text from first pos to be changed to current pos
                 maText.remove( nChgPos, nTmpPos - nChgPos );
@@ -927,13 +946,13 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
                     aSelection.Min() = nChgPos; // position for new text to be inserted
                 }
                 else
-                    aNewText.clear();
+                    aNewText = "";
             }
             else
             {
                 // should the character be ignored (i.e. not get inserted) ?
                 if (!xISC->checkInputSequence( aOldText, nTmpPos - 1, cChar, nCheckMode ))
-                    aNewText.clear();
+                    aNewText = "";
             }
         }
 
@@ -964,7 +983,7 @@ void Edit::ImplInsertText( const OUString& rStr, const Selection* pNewSel, bool 
     // Modifying text with the border erase will result in spinner arrows
     // being redrawn by the border win. Fix bug 1880 by adding in an invalidate
     // to redraw the parent.
-    if ( ImplGetNativeControlType() == ControlType::Spinbox && IsNativeControlSupported( ControlType::Spinbox, ControlPart::Entire ) )
+    if ( ImplGetNativeControlType() == CTRL_SPINBOX && IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
         ImplInvalidateOutermostBorder( GetParent() );
 #endif	// USE_JAVA
 }
@@ -1002,128 +1021,117 @@ void Edit::ImplSetText( const OUString& rText, const Selection* pNewSelection )
         // Modifying text with the border erase will result in spinner arrows
         // being redrawn by the border win. Fix bug 1880 by adding in an
         // invalidate to redraw the parent to avoid cheap whore effect.
-        if ( ImplGetNativeControlType() == ControlType::Spinbox && IsNativeControlSupported( ControlType::Spinbox, ControlPart::Entire ) )
+        if ( ImplGetNativeControlType() == CTRL_SPINBOX && IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
             ImplInvalidateOutermostBorder( GetParent() );
 #endif	// USE_JAVA
 
-        CallEventListeners( VclEventId::EditModify );
+        ImplCallEventListeners( VCLEVENT_EDIT_MODIFY );
     }
 }
 
-ControlType Edit::ImplGetNativeControlType() const
+int Edit::ImplGetNativeControlType() const
 {
-    ControlType nCtrl = ControlType::Generic;
-    const vcl::Window* pControl = mbIsSubEdit ? GetParent() : this;
+    int nCtrl = 0;
+    const vcl::Window *pControl = mbIsSubEdit ? GetParent() : this;
 
-    switch (pControl->GetType())
+    switch( pControl->GetType() )
     {
-        case WindowType::COMBOBOX:
-        case WindowType::PATTERNBOX:
-        case WindowType::NUMERICBOX:
-        case WindowType::METRICBOX:
-        case WindowType::CURRENCYBOX:
-        case WindowType::DATEBOX:
-        case WindowType::TIMEBOX:
-        case WindowType::LONGCURRENCYBOX:
-            nCtrl = ControlType::Combobox;
+        case WINDOW_COMBOBOX:
+        case WINDOW_PATTERNBOX:
+        case WINDOW_NUMERICBOX:
+        case WINDOW_METRICBOX:
+        case WINDOW_CURRENCYBOX:
+        case WINDOW_DATEBOX:
+        case WINDOW_TIMEBOX:
+        case WINDOW_LONGCURRENCYBOX:
+            nCtrl = CTRL_COMBOBOX;
             break;
 
-        case WindowType::MULTILINEEDIT:
-            if ( GetWindow( GetWindowType::Border ) != this )
-                nCtrl = ControlType::MultilineEditbox;
+        case WINDOW_MULTILINEEDIT:
+            if ( GetWindow( WINDOW_BORDER ) != this )
+                nCtrl = CTRL_MULTILINE_EDITBOX;
             else
-                nCtrl = ControlType::EditboxNoBorder;
+                nCtrl = CTRL_EDITBOX_NOBORDER;
             break;
 
-        case WindowType::EDIT:
-        case WindowType::PATTERNFIELD:
-        case WindowType::METRICFIELD:
-        case WindowType::CURRENCYFIELD:
-        case WindowType::DATEFIELD:
-        case WindowType::TIMEFIELD:
-        case WindowType::LONGCURRENCYFIELD:
-        case WindowType::NUMERICFIELD:
-        case WindowType::SPINFIELD:
-            if (pControl->GetStyle() & WB_SPIN)
-                nCtrl = ControlType::Spinbox;
+        case WINDOW_EDIT:
+        case WINDOW_PATTERNFIELD:
+        case WINDOW_METRICFIELD:
+        case WINDOW_CURRENCYFIELD:
+        case WINDOW_DATEFIELD:
+        case WINDOW_TIMEFIELD:
+        case WINDOW_LONGCURRENCYFIELD:
+        case WINDOW_NUMERICFIELD:
+        case WINDOW_SPINFIELD:
+            if( pControl->GetStyle() & WB_SPIN )
+                nCtrl = CTRL_SPINBOX;
             else
             {
-                if (GetWindow(GetWindowType::Border) != this)
-                    nCtrl = ControlType::Editbox;
+                if ( GetWindow( WINDOW_BORDER ) != this )
+                    nCtrl = CTRL_EDITBOX;
                 else
-                    nCtrl = ControlType::EditboxNoBorder;
+                    nCtrl = CTRL_EDITBOX_NOBORDER;
             }
             break;
 
         default:
-            nCtrl = ControlType::Editbox;
+            nCtrl = CTRL_EDITBOX;
     }
     return nCtrl;
 }
 
-void Edit::ImplClearBackground(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRectangle, long nXStart, long nXEnd )
+void Edit::ImplClearBackground( long nXStart, long nXEnd )
 {
     /*
     * note: at this point the cursor must be switched off already
     */
     Point aTmpPoint;
-    tools::Rectangle aRect(aTmpPoint, GetOutputSizePixel());
+    Rectangle aRect( aTmpPoint, GetOutputSizePixel() );
     aRect.Left() = nXStart;
     aRect.Right() = nXEnd;
 
-    if( !(ImplUseNativeBorder(rRenderContext, GetStyle()) || IsPaintTransparent()))
-        rRenderContext.Erase(aRect);
-    else if (SupportsDoubleBuffering() && mbIsSubEdit)
-    {
-        // ImplPaintBorder() is a NOP, we have a native border, and this is a sub-edit of a control.
-        // That means we have to draw the parent native widget to paint the edit area to clear our background.
-        PaintBufferGuard g(ImplGetWindowImpl()->mpFrameData, GetParent());
-        GetParent()->Paint(rRenderContext, rRectangle);
-    }
+    if( !(ImplUseNativeBorder( GetStyle() ) || IsPaintTransparent()) )
+        Erase( aRect );
 }
 
-void Edit::ImplPaintBorder(vcl::RenderContext& rRenderContext, long nXStart, long nXEnd)
+void Edit::ImplPaintBorder( long nXStart, long nXEnd )
 {
-    // this is not needed when double-buffering
-    if (SupportsDoubleBuffering())
-        return;
-
     Point aTmpPoint;
-    tools::Rectangle aRect(aTmpPoint, GetOutputSizePixel());
+    Rectangle aRect( aTmpPoint, GetOutputSizePixel() );
     aRect.Left() = nXStart;
     aRect.Right() = nXEnd;
 
-    if (ImplUseNativeBorder(rRenderContext, GetStyle()) || IsPaintTransparent())
+    if( ImplUseNativeBorder( GetStyle() ) || IsPaintTransparent() )
     {
         // draw the inner part by painting the whole control using its border window
-        vcl::Window* pBorder = GetWindow(GetWindowType::Border);
-        if (pBorder == this)
+        vcl::Window *pBorder = GetWindow( WINDOW_BORDER );
+        if( pBorder == this )
         {
             // we have no border, use parent
-            vcl::Window* pControl = mbIsSubEdit ? GetParent() : this;
-            pBorder = pControl->GetWindow(GetWindowType::Border);
-            if (pBorder == this)
+            vcl::Window *pControl = mbIsSubEdit ? GetParent() : this;
+            pBorder = pControl->GetWindow( WINDOW_BORDER );
+            if( pBorder == this )
                 pBorder = GetParent();
         }
 
-        if (pBorder)
+        if( pBorder )
         {
             // set proper clipping region to not overdraw the whole control
             vcl::Region aClipRgn = GetPaintRegion();
 #ifdef USE_JAVA
             ControlType nControlType = ImplGetNativeControlType();
-            if ( ( nControlType == ControlType::Editbox || nControlType == ControlType::Spinbox ) )
+            if ( ( nControlType == CTRL_EDITBOX || nControlType == CTRL_SPINBOX ) )
             {
                 ImplControlValue aControlValue;
 
                 // use the full extent of the control's border window
                 Point aBorderOffs = pBorder->ScreenToOutputPixel( OutputToScreenPixel( Point() ) );
                 Point aPoint( aBorderOffs.X() * -1, aBorderOffs.Y() * - 1 );
-                tools::Rectangle aCtrlRegion( aPoint, pBorder->GetOutputSizePixel() );
-                tools::Rectangle aBoundingRgn, aContentRgn;
+                Rectangle aCtrlRegion( aPoint, pBorder->GetOutputSizePixel() );
+                Rectangle aBoundingRgn, aContentRgn;
 
                 // adjust position and size of the edit field
-                if ( GetNativeControlRegion( nControlType, ControlPart::SubEdit, aCtrlRegion, ControlState::NONE, aControlValue, aBoundingRgn, aContentRgn ) )
+                if ( GetNativeControlRegion( nControlType, PART_SUB_EDIT, aCtrlRegion, 0, aControlValue, OUString(), aBoundingRgn, aContentRgn ) )
                 {
                    if( aClipRgn.IsNull() )
                         aClipRgn = aBoundingRgn;
@@ -1133,42 +1141,41 @@ void Edit::ImplPaintBorder(vcl::RenderContext& rRenderContext, long nXStart, lon
             }
 #endif	// USE_JAVA
 
-            if (!aClipRgn.IsNull())
+            if( !aClipRgn.IsNull() )
             {
                 // transform clipping region to border window's coordinate system
-                if (IsRTLEnabled() != pBorder->IsRTLEnabled() && AllSettings::GetLayoutRTL())
+                if( IsRTLEnabled() != pBorder->IsRTLEnabled() && Application::GetSettings().GetLayoutRTL() )
                 {
                     // need to mirror in case border is not RTL but edit is (or vice versa)
 
                     // mirror
-                    tools::Rectangle aBounds(aClipRgn.GetBoundRect());
+                    Rectangle aBounds( aClipRgn.GetBoundRect() );
                     int xNew = GetOutputSizePixel().Width() - aBounds.GetWidth() - aBounds.Left();
-                    aClipRgn.Move(xNew - aBounds.Left(), 0);
+                    aClipRgn.Move( xNew - aBounds.Left(), 0 );
 
                     // move offset of border window
                     Point aBorderOffs;
-                    aBorderOffs = pBorder->ScreenToOutputPixel(OutputToScreenPixel(aBorderOffs));
-                    aClipRgn.Move(aBorderOffs.X(), aBorderOffs.Y());
+                    aBorderOffs = pBorder->ScreenToOutputPixel( OutputToScreenPixel( aBorderOffs ) );
+                    aClipRgn.Move( aBorderOffs.X(), aBorderOffs.Y() );
                 }
                 else
                 {
                     // normal case
                     Point aBorderOffs;
-                    aBorderOffs = pBorder->ScreenToOutputPixel(OutputToScreenPixel(aBorderOffs));
-                    aClipRgn.Move(aBorderOffs.X(), aBorderOffs.Y());
+                    aBorderOffs = pBorder->ScreenToOutputPixel( OutputToScreenPixel( aBorderOffs ) );
+                    aClipRgn.Move( aBorderOffs.X(), aBorderOffs.Y() );
                 }
 
-                vcl::Region oldRgn(pBorder->GetClipRegion());
-                pBorder->SetClipRegion(aClipRgn);
+                vcl::Region oldRgn( pBorder->GetClipRegion() );
+                pBorder->SetClipRegion( aClipRgn );
 
-                pBorder->Paint(*pBorder, tools::Rectangle());
+                pBorder->Paint( Rectangle() );
 
-                pBorder->SetClipRegion(oldRgn);
+                pBorder->SetClipRegion( oldRgn );
             }
             else
-            {
-                pBorder->Paint(*pBorder, tools::Rectangle());
-            }
+                pBorder->Paint( Rectangle() );
+
         }
     }
 }
@@ -1184,7 +1191,7 @@ void Edit::ImplShowCursor( bool bOnlyIfVisible )
     long nTextPos = 0;
 
     long   nDXBuffer[256];
-    std::unique_ptr<long[]> pDXBuffer;
+    boost::scoped_array<long> pDXBuffer;
     long*  pDX = nDXBuffer;
 
     if( !aText.isEmpty() )
@@ -1206,7 +1213,7 @@ void Edit::ImplShowCursor( bool bOnlyIfVisible )
     long nCursorWidth = 0;
     if ( !mbInsertMode && !maSelection.Len() && (maSelection.Max() < aText.getLength()) )
         nCursorWidth = GetTextWidth(aText, maSelection.Max(), 1);
-    long nCursorPosX = nTextPos + mnXOffset + ImplGetExtraXOffset();
+    long nCursorPosX = nTextPos + mnXOffset + ImplGetExtraOffset();
 
     // cursor should land in visible area
     const Size aOutSize = GetOutputSizePixel();
@@ -1216,7 +1223,7 @@ void Edit::ImplShowCursor( bool bOnlyIfVisible )
     // edge:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=64501#64501
     ControlType nControlType = ImplGetNativeControlType();
-    if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) || (nControlType == ControlType::Editbox && (nCursorPosX < ImplGetExtraXOffset() || nCursorPosX >= aOutSize.Width()-ImplGetExtraXOffset())) )
+    if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) || (nControlType == CTRL_EDITBOX && (nCursorPosX < ImplGetExtraOffset() || nCursorPosX >= aOutSize.Width()-ImplGetExtraOffset())) )
 #else	// USE_JAVA
     if ( (nCursorPosX < 0) || (nCursorPosX >= aOutSize.Width()) )
 #endif	// USE_JAVA
@@ -1224,7 +1231,7 @@ void Edit::ImplShowCursor( bool bOnlyIfVisible )
         long nOldXOffset = mnXOffset;
 
 #ifdef USE_JAVA
-        if ( nCursorPosX < 0 || (nControlType == ControlType::Editbox && nCursorPosX < ImplGetExtraXOffset()) )
+        if ( nCursorPosX < 0 || (nControlType == CTRL_EDITBOX && nCursorPosX < ImplGetExtraOffset()) )
 #else	// USE_JAVA
         if ( nCursorPosX < 0 )
 #endif	// USE_JAVA
@@ -1236,13 +1243,13 @@ void Edit::ImplShowCursor( bool bOnlyIfVisible )
                 mnXOffset = nMaxX;
         }
 #ifdef USE_JAVA
-        else if ( nControlType == ControlType::Editbox )
+        else if ( nControlType == CTRL_EDITBOX )
         {
-            mnXOffset = (aOutSize.Width()-(ImplGetExtraXOffset()*2)) - nTextPos;
+            mnXOffset = (aOutSize.Width()-(ImplGetExtraOffset()*2)) - nTextPos;
             // Etwas mehr?
-            if ( (aOutSize.Width()-(ImplGetExtraXOffset()*2)) < nTextPos )
+            if ( (aOutSize.Width()-(ImplGetExtraOffset()*2)) < nTextPos )
             {
-                long nMaxNegX = (aOutSize.Width()-(ImplGetExtraXOffset()*2)) - GetTextWidth( aText );
+                long nMaxNegX = (aOutSize.Width()-(ImplGetExtraOffset()*2)) - GetTextWidth( aText );
                 mnXOffset -= aOutSize.Width() / 5;
                 if ( mnXOffset < nMaxNegX )  // beides negativ...
                     mnXOffset = nMaxNegX;
@@ -1251,37 +1258,47 @@ void Edit::ImplShowCursor( bool bOnlyIfVisible )
 #endif	// USE_JAVA
         else
         {
-            mnXOffset = (aOutSize.Width()-ImplGetExtraXOffset()) - nTextPos;
-            // Something more?
-            if ( (aOutSize.Width()-ImplGetExtraXOffset()) < nTextPos )
+            mnXOffset = (aOutSize.Width()-ImplGetExtraOffset()) - nTextPos;
+            // Etwas mehr?
+            if ( (aOutSize.Width()-ImplGetExtraOffset()) < nTextPos )
             {
-                long nMaxNegX = (aOutSize.Width()-ImplGetExtraXOffset()) - GetTextWidth( aText );
+                long nMaxNegX = (aOutSize.Width()-ImplGetExtraOffset()) - GetTextWidth( aText );
                 mnXOffset -= aOutSize.Width() / 5;
-                if ( mnXOffset < nMaxNegX )  // both negativ...
+                if ( mnXOffset < nMaxNegX )  // beides negativ...
                     mnXOffset = nMaxNegX;
             }
         }
 
-        nCursorPosX = nTextPos + mnXOffset + ImplGetExtraXOffset();
+        nCursorPosX = nTextPos + mnXOffset + ImplGetExtraOffset();
 #ifdef USE_JAVA
-        if ( nCursorPosX == aOutSize.Width() || (nControlType == ControlType::Editbox && nCursorPosX == aOutSize.Width()-ImplGetExtraXOffset()) )  // then invisible...
+        if ( nCursorPosX == aOutSize.Width() || (nControlType == CTRL_EDITBOX && nCursorPosX == aOutSize.Width()-ImplGetExtraOffset()) )  // dann nicht sichtbar...
 #else	// USE_JAVA
-        if ( nCursorPosX == aOutSize.Width() )  // then invisible...
+        if ( nCursorPosX == aOutSize.Width() )  // dann nicht sichtbar...
 #endif	// USE_JAVA
             nCursorPosX--;
 
         if ( mnXOffset != nOldXOffset )
+#ifdef USE_JAVA
+        {
+            // Fix failure to repaint background in font combobox when changing
+            // the selection or cursor position of the font in the font
+            // combobox using the mouse and the font name is wider than the
+            // edit box by invalidating the parent
+            if ( ImplGetNativeControlType() == CTRL_COMBOBOX && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+                GetParent()->Invalidate();
+            else
+#endif	// USE_JAVA
             ImplInvalidateOrRepaint();
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
     }
 
     const long nTextHeight = GetTextHeight();
     const long nCursorPosY = ImplGetTextYPosition();
-    if (pCursor)
-    {
-        pCursor->SetPos( Point( nCursorPosX, nCursorPosY ) );
-        pCursor->SetSize( Size( nCursorWidth, nTextHeight ) );
-        pCursor->Show();
-    }
+    pCursor->SetPos( Point( nCursorPosX, nCursorPosY ) );
+    pCursor->SetSize( Size( nCursorWidth, nTextHeight ) );
+    pCursor->Show();
 }
 
 void Edit::ImplAlign()
@@ -1297,7 +1314,7 @@ void Edit::ImplAlign()
     }
     else if ( mnAlign == EDIT_ALIGN_RIGHT )
     {
-        long nMinXOffset = nOutWidth - nTextWidth - 1 - ImplGetExtraXOffset();
+        long nMinXOffset = nOutWidth - nTextWidth - 1 - ImplGetExtraOffset();
         bool bRTL = IsRTLEnabled();
         if( mbIsSubEdit && GetParent() )
             bRTL = GetParent()->IsRTLEnabled();
@@ -1334,7 +1351,7 @@ sal_Int32 Edit::ImplGetCharPos( const Point& rWindowPos ) const
     OUString aText = ImplGetText();
 
     long   nDXBuffer[256];
-    std::unique_ptr<long[]> pDXBuffer;
+    boost::scoped_array<long> pDXBuffer;
     long*  pDX = nDXBuffer;
     if( (size_t) (2*aText.getLength()) > SAL_N_ELEMENTS(nDXBuffer) )
     {
@@ -1343,8 +1360,8 @@ sal_Int32 Edit::ImplGetCharPos( const Point& rWindowPos ) const
     }
 
     GetCaretPositions( aText, pDX, 0, aText.getLength() );
-    long nX = rWindowPos.X() - mnXOffset - ImplGetExtraXOffset();
-    for (sal_Int32 i = 0; i < aText.getLength(); aText.iterateCodePoints(&i))
+    long nX = rWindowPos.X() - mnXOffset - ImplGetExtraOffset();
+    for( sal_Int32 i = 0; i < aText.getLength(); i++ )
     {
         if( (pDX[2*i] >= nX && pDX[2*i+1] <= nX) ||
             (pDX[2*i+1] >= nX && pDX[2*i] <= nX))
@@ -1353,12 +1370,12 @@ sal_Int32 Edit::ImplGetCharPos( const Point& rWindowPos ) const
             if( pDX[2*i] < pDX[2*i+1] )
             {
                 if( nX > (pDX[2*i]+pDX[2*i+1])/2 )
-                    aText.iterateCodePoints(&nIndex);
+                    nIndex++;
             }
             else
             {
                 if( nX < (pDX[2*i]+pDX[2*i+1])/2 )
-                    aText.iterateCodePoints(&nIndex);
+                    nIndex++;
             }
             break;
         }
@@ -1366,14 +1383,8 @@ sal_Int32 Edit::ImplGetCharPos( const Point& rWindowPos ) const
     if( nIndex == EDIT_NOLIMIT )
     {
         nIndex = 0;
-        sal_Int32 nFinalIndex = 0;
         long nDiff = std::abs( pDX[0]-nX );
-        sal_Int32 i = 0;
-        if (!aText.isEmpty())
-        {
-            aText.iterateCodePoints(&i);    //skip the first character
-        }
-        while (i < aText.getLength())
+        for( sal_Int32 i = 1; i < aText.getLength(); i++ )
         {
             long nNewDiff = std::abs( pDX[2*i]-nX );
 
@@ -1382,12 +1393,8 @@ sal_Int32 Edit::ImplGetCharPos( const Point& rWindowPos ) const
                 nIndex = i;
                 nDiff = nNewDiff;
             }
-
-            nFinalIndex = i;
-
-            aText.iterateCodePoints(&i);
         }
-        if (nIndex == nFinalIndex && std::abs( pDX[2*nIndex+1] - nX ) < nDiff)
+        if( nIndex == aText.getLength()-1 && std::abs( pDX[2*nIndex+1] - nX ) < nDiff )
             nIndex = EDIT_NOLIMIT;
     }
 
@@ -1403,18 +1410,27 @@ void Edit::ImplSetCursorPos( sal_Int32 nChar, bool bSelect )
     ImplSetSelection( aSelection );
 }
 
+void Edit::ImplLoadRes( const ResId& rResId )
+{
+    Control::ImplLoadRes( rResId );
+
+    sal_uInt16 nTextLength = ReadShortRes();
+    if ( nTextLength )
+        SetMaxTextLen( nTextLength );
+}
+
 void Edit::ImplCopyToSelectionClipboard()
 {
     if ( GetSelection().Len() )
     {
-        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aSelection(GetPrimarySelection());
+        ::com::sun::star::uno::Reference<com::sun::star::datatransfer::clipboard::XClipboard> aSelection(GetPrimarySelection());
         ImplCopy( aSelection );
     }
 }
 
 void Edit::ImplCopy( uno::Reference< datatransfer::clipboard::XClipboard >& rxClipboard )
 {
-    vcl::unohelper::TextDataObject::CopyStringTo( GetSelected(), rxClipboard );
+    ::vcl::unohelper::TextDataObject::CopyStringTo( GetSelected(), rxClipboard );
 }
 
 void Edit::ImplPaste( uno::Reference< datatransfer::clipboard::XClipboard >& rxClipboard )
@@ -1423,29 +1439,32 @@ void Edit::ImplPaste( uno::Reference< datatransfer::clipboard::XClipboard >& rxC
     {
         uno::Reference< datatransfer::XTransferable > xDataObj;
 
+        const sal_uInt32 nRef = Application::ReleaseSolarMutex();
+
         try
-            {
-                SolarMutexReleaser aReleaser;
-                xDataObj = rxClipboard->getContents();
-            }
-        catch( const css::uno::Exception& )
-            {
-            }
+        {
+            xDataObj = rxClipboard->getContents();
+        }
+        catch( const ::com::sun::star::uno::Exception& )
+        {
+        }
+
+        Application::AcquireSolarMutex( nRef );
 
         if ( xDataObj.is() )
         {
             datatransfer::DataFlavor aFlavor;
-            SotExchange::GetFormatDataFlavor( SotClipboardFormatId::STRING, aFlavor );
+            SotExchange::GetFormatDataFlavor( SOT_FORMAT_STRING, aFlavor );
             try
             {
                 uno::Any aData = xDataObj->getTransferData( aFlavor );
                 OUString aText;
                 aData >>= aText;
                 if( ImplTruncateToMaxLen( aText, maSelection.Len() ) )
-                    ShowTruncationWarning( this );
+                    ShowTruncationWarning( const_cast<Edit*>(this) );
                 ReplaceSelected( aText );
             }
-            catch( const css::uno::Exception& )
+            catch( const ::com::sun::star::uno::Exception& )
             {
             }
         }
@@ -1487,7 +1506,7 @@ void Edit::MouseButtonDown( const MouseEvent& rMEvt )
             ImplSetCursorPos( nCharPos, rMEvt.IsShift() );
 
         if ( !mbClickedInSelection && rMEvt.IsLeft() && ( rMEvt.GetClicks() == 1 ) )
-            StartTracking( StartTrackingFlags::ScrollRepeat );
+            StartTracking( STARTTRACK_SCROLLREPEAT );
     }
 
     mbInMBDown = true;  // then do not select all in GetFocus
@@ -1504,9 +1523,9 @@ void Edit::MouseButtonUp( const MouseEvent& rMEvt )
         mbClickedInSelection = false;
     }
     else if ( rMEvt.IsMiddle() && !mbReadOnly &&
-              ( GetSettings().GetMouseSettings().GetMiddleButtonAction() == MouseMiddleButtonAction::PasteSelection ) )
+              ( GetSettings().GetMouseSettings().GetMiddleButtonAction() == MOUSE_MIDDLE_PASTESELECTION ) )
     {
-        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aSelection(Window::GetPrimarySelection());
+        ::com::sun::star::uno::Reference<com::sun::star::datatransfer::clipboard::XClipboard> aSelection(Window::GetPrimarySelection());
         ImplPaste( aSelection );
         ImplModified();
     }
@@ -1626,7 +1645,7 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
     {
         switch ( nCode )
         {
-            case css::awt::Key::SELECT_ALL:
+            case com::sun::star::awt::Key::SELECT_ALL:
             {
                 ImplSetSelection( Selection( 0, maText.getLength() ) );
                 bDone = true;
@@ -1637,22 +1656,22 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
             case KEY_RIGHT:
             case KEY_HOME:
             case KEY_END:
-            case css::awt::Key::MOVE_WORD_FORWARD:
-            case css::awt::Key::SELECT_WORD_FORWARD:
-            case css::awt::Key::MOVE_WORD_BACKWARD:
-            case css::awt::Key::SELECT_WORD_BACKWARD:
-            case css::awt::Key::MOVE_TO_BEGIN_OF_LINE:
-            case css::awt::Key::MOVE_TO_END_OF_LINE:
-            case css::awt::Key::SELECT_TO_BEGIN_OF_LINE:
-            case css::awt::Key::SELECT_TO_END_OF_LINE:
-            case css::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
-            case css::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
-            case css::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
-            case css::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
-            case css::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
-            case css::awt::Key::MOVE_TO_END_OF_DOCUMENT:
-            case css::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
-            case css::awt::Key::SELECT_TO_END_OF_DOCUMENT:
+            case com::sun::star::awt::Key::MOVE_WORD_FORWARD:
+            case com::sun::star::awt::Key::SELECT_WORD_FORWARD:
+            case com::sun::star::awt::Key::MOVE_WORD_BACKWARD:
+            case com::sun::star::awt::Key::SELECT_WORD_BACKWARD:
+            case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_LINE:
+            case com::sun::star::awt::Key::MOVE_TO_END_OF_LINE:
+            case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_LINE:
+            case com::sun::star::awt::Key::SELECT_TO_END_OF_LINE:
+            case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
+            case com::sun::star::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
+            case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
+            case com::sun::star::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
+            case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
+            case com::sun::star::awt::Key::MOVE_TO_END_OF_DOCUMENT:
+            case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
+            case com::sun::star::awt::Key::SELECT_TO_END_OF_DOCUMENT:
             {
                 if ( !rKEvt.GetKeyCode().IsMod2() )
                 {
@@ -1669,31 +1688,31 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
 
                     switch( nCode )
                     {
-                    case css::awt::Key::MOVE_WORD_FORWARD:
+                    case com::sun::star::awt::Key::MOVE_WORD_FORWARD:
                         bGoRight = bWord = true;break;
-                    case css::awt::Key::SELECT_WORD_FORWARD:
+                    case com::sun::star::awt::Key::SELECT_WORD_FORWARD:
                         bGoRight = bSelect = bWord = true;break;
-                    case css::awt::Key::MOVE_WORD_BACKWARD:
+                    case com::sun::star::awt::Key::MOVE_WORD_BACKWARD:
                         bGoLeft = bWord = true;break;
-                    case css::awt::Key::SELECT_WORD_BACKWARD:
+                    case com::sun::star::awt::Key::SELECT_WORD_BACKWARD:
                         bGoLeft = bSelect = bWord = true;break;
-                    case css::awt::Key::SELECT_TO_BEGIN_OF_LINE:
-                    case css::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
-                    case css::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
+                    case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_LINE:
+                    case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_PARAGRAPH:
+                    case com::sun::star::awt::Key::SELECT_TO_BEGIN_OF_DOCUMENT:
                         bSelect = true;
-                        SAL_FALLTHROUGH;
-                    case css::awt::Key::MOVE_TO_BEGIN_OF_LINE:
-                    case css::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
-                    case css::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
+                        // fallthrough intended
+                    case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_LINE:
+                    case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_PARAGRAPH:
+                    case com::sun::star::awt::Key::MOVE_TO_BEGIN_OF_DOCUMENT:
                         bGoHome = true;break;
-                    case css::awt::Key::SELECT_TO_END_OF_LINE:
-                    case css::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
-                    case css::awt::Key::SELECT_TO_END_OF_DOCUMENT:
+                    case com::sun::star::awt::Key::SELECT_TO_END_OF_LINE:
+                    case com::sun::star::awt::Key::SELECT_TO_END_OF_PARAGRAPH:
+                    case com::sun::star::awt::Key::SELECT_TO_END_OF_DOCUMENT:
                         bSelect = true;
-                        SAL_FALLTHROUGH;
-                    case css::awt::Key::MOVE_TO_END_OF_LINE:
-                    case css::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
-                    case css::awt::Key::MOVE_TO_END_OF_DOCUMENT:
+                        // fallthrough intended
+                    case com::sun::star::awt::Key::MOVE_TO_END_OF_LINE:
+                    case com::sun::star::awt::Key::MOVE_TO_END_OF_PARAGRAPH:
+                    case com::sun::star::awt::Key::MOVE_TO_END_OF_DOCUMENT:
                         bGoEnd = true;break;
                     default:
                         break;
@@ -1751,11 +1770,12 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                         ImplCopyToSelectionClipboard();
                     }
 
-                    if (bGoEnd && maAutocompleteHdl.IsSet() && !rKEvt.GetKeyCode().GetModifier())
+                    if ( bGoEnd && !autocompleteSignal.empty() && !rKEvt.GetKeyCode().GetModifier() )
                     {
                         if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.getLength()) )
                         {
-                            maAutocompleteHdl.Call(*this);
+                            meAutocompleteAction = AUTOCOMPLETE_KEYINPUT;
+                            autocompleteSignal( this );
                         }
                     }
 
@@ -1764,10 +1784,10 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
             }
             break;
 
-            case css::awt::Key::DELETE_WORD_BACKWARD:
-            case css::awt::Key::DELETE_WORD_FORWARD:
-            case css::awt::Key::DELETE_TO_BEGIN_OF_LINE:
-            case css::awt::Key::DELETE_TO_END_OF_LINE:
+            case com::sun::star::awt::Key::DELETE_WORD_BACKWARD:
+            case com::sun::star::awt::Key::DELETE_WORD_FORWARD:
+            case com::sun::star::awt::Key::DELETE_TO_BEGIN_OF_LINE:
+            case com::sun::star::awt::Key::DELETE_TO_END_OF_LINE:
             case KEY_BACKSPACE:
             case KEY_DELETE:
             {
@@ -1779,19 +1799,19 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                         nMode = EDIT_DELMODE_RESTOFCONTENT;
                     switch( nCode )
                     {
-                    case css::awt::Key::DELETE_WORD_BACKWARD:
+                    case com::sun::star::awt::Key::DELETE_WORD_BACKWARD:
                         nDel = EDIT_DEL_LEFT;
                         nMode = EDIT_DELMODE_RESTOFWORD;
                         break;
-                    case css::awt::Key::DELETE_WORD_FORWARD:
+                    case com::sun::star::awt::Key::DELETE_WORD_FORWARD:
                         nDel = EDIT_DEL_RIGHT;
                         nMode = EDIT_DELMODE_RESTOFWORD;
                         break;
-                    case css::awt::Key::DELETE_TO_BEGIN_OF_LINE:
+                    case com::sun::star::awt::Key::DELETE_TO_BEGIN_OF_LINE:
                         nDel = EDIT_DEL_LEFT;
                         nMode = EDIT_DELMODE_RESTOFCONTENT;
                         break;
-                    case css::awt::Key::DELETE_TO_END_OF_LINE:
+                    case com::sun::star::awt::Key::DELETE_TO_END_OF_LINE:
                         nDel = EDIT_DEL_RIGHT;
                         nMode = EDIT_DELMODE_RESTOFCONTENT;
                         break;
@@ -1816,6 +1836,32 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
             }
             break;
 
+            /* #i101255# disable autocomplete tab forward/backward
+               users expect tab/shif-tab to move the focus to other controls
+               not suddenly to cycle the autocompletion
+            case KEY_TAB:
+            {
+                if ( !mbReadOnly && !autocompleteSignal.empty() &&
+                     maSelection.Min() && (maSelection.Min() == maText.Len()) &&
+                     !rKEvt.GetKeyCode().IsMod1() && !rKEvt.GetKeyCode().IsMod2() )
+                {
+                    // Kein Autocomplete wenn alles Selektiert oder Edit leer, weil dann
+                    // keine vernuenftige Tab-Steuerung!
+                    if ( rKEvt.GetKeyCode().IsShift() )
+                        meAutocompleteAction = AUTOCOMPLETE_TABBACKWARD;
+                    else
+                        meAutocompleteAction = AUTOCOMPLETE_TABFORWARD;
+
+                    autocompleteSignal( this );
+
+                    // Wurde nichts veraendert, dann TAB fuer DialogControl
+                    if ( GetSelection().Len() )
+                        bDone = true;
+                }
+            }
+            break;
+            */
+
             default:
             {
                 if ( IsCharInput( rKEvt ) )
@@ -1823,12 +1869,13 @@ bool Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
                     bDone = true;   // read characters also when in ReadOnly
                     if ( !mbReadOnly )
                     {
-                        ImplInsertText(OUString(rKEvt.GetCharCode()), nullptr, true);
-                        if (maAutocompleteHdl.IsSet())
+                        ImplInsertText(OUString(rKEvt.GetCharCode()), 0, true);
+                        if ( !autocompleteSignal.empty() )
                         {
                             if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.getLength()) )
                             {
-                                maAutocompleteHdl.Call(*this);
+                                meAutocompleteAction = AUTOCOMPLETE_KEYINPUT;
+                                autocompleteSignal( this );
                             }
                         }
                     }
@@ -1854,14 +1901,14 @@ void Edit::KeyInput( const KeyEvent& rKEvt )
 
 void Edit::FillLayoutData() const
 {
-    mpControlData->mpLayoutData.reset( new vcl::ControlLayoutData );
-    const_cast<Edit*>(this)->Invalidate();
+    mpControlData->mpLayoutData = new vcl::ControlLayoutData();
+    const_cast<Edit*>(this)->ImplRepaint(true);
 }
 
-void Edit::Paint(vcl::RenderContext& rRenderContext, const tools::Rectangle& rRectangle)
+void Edit::Paint( const Rectangle& )
 {
-    if (!mpSubEdit)
-        ImplRepaint(rRenderContext, rRectangle);
+    if ( !mpSubEdit )
+        ImplRepaint();
 }
 
 void Edit::Resize()
@@ -1877,9 +1924,9 @@ void Edit::Resize()
     }
 }
 
-void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags )
+void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong nFlags )
 {
-    ApplySettings(*pDev);
+    ImplInitSettings( true, true, true );
 
     Point aPos = pDev->LogicToPixel( rPos );
     Size aSize = pDev->LogicToPixel( rSize );
@@ -1894,11 +1941,11 @@ void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawF
     // Border/Background
     pDev->SetLineColor();
     pDev->SetFillColor();
-    bool bBorder = !(nFlags & DrawFlags::NoBorder ) && (GetStyle() & WB_BORDER);
-    bool bBackground = !(nFlags & DrawFlags::NoBackground) && IsControlBackground();
+    bool bBorder = !(nFlags & WINDOW_DRAW_NOBORDER ) && (GetStyle() & WB_BORDER);
+    bool bBackground = !(nFlags & WINDOW_DRAW_NOBACKGROUND) && IsControlBackground();
     if ( bBorder || bBackground )
     {
-        tools::Rectangle aRect( aPos, aSize );
+        Rectangle aRect( aPos, aSize );
         if ( bBorder )
         {
             ImplDrawFrame( pDev, aRect );
@@ -1911,11 +1958,11 @@ void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawF
     }
 
     // Inhalt
-    if ( ( nFlags & DrawFlags::Mono ) || ( eOutDevType == OUTDEV_PRINTER ) )
+    if ( ( nFlags & WINDOW_DRAW_MONO ) || ( eOutDevType == OUTDEV_PRINTER ) )
         pDev->SetTextColor( Color( COL_BLACK ) );
     else
     {
-        if ( !(nFlags & DrawFlags::NoDisable ) && !IsEnabled() )
+        if ( !(nFlags & WINDOW_DRAW_NODISABLE ) && !IsEnabled() )
         {
             const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
             pDev->SetTextColor( rStyleSettings.GetDisableColor() );
@@ -1926,24 +1973,11 @@ void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawF
         }
     }
 
-    const long nOnePixel = GetDrawPixel( pDev, 1 );
-    const long nOffX = 3*nOnePixel;
-    DrawTextFlags nTextStyle = DrawTextFlags::VCenter;
-    tools::Rectangle aTextRect( aPos, aSize );
-
-    if ( GetStyle() & WB_CENTER )
-        nTextStyle |= DrawTextFlags::Center;
-    else if ( GetStyle() & WB_RIGHT )
-        nTextStyle |= DrawTextFlags::Right;
-    else
-        nTextStyle |= DrawTextFlags::Left;
-
-    aTextRect.Left() += nOffX;
-    aTextRect.Right() -= nOffX;
-
     OUString    aText = ImplGetText();
     long        nTextHeight = pDev->GetTextHeight();
     long        nTextWidth = pDev->GetTextWidth( aText );
+    long        nOnePixel = GetDrawPixel( pDev, 1 );
+    long        nOffX = 3*nOnePixel;
     long        nOffY = (aSize.Height() - nTextHeight) / 2;
 
     // Clipping?
@@ -1951,13 +1985,24 @@ void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawF
          ((nOffY+nTextHeight) > aSize.Height()) ||
          ((nOffX+nTextWidth) > aSize.Width()) )
     {
-        tools::Rectangle aClip( aPos, aSize );
+        Rectangle aClip( aPos, aSize );
         if ( nTextHeight > aSize.Height() )
             aClip.Bottom() += nTextHeight-aSize.Height()+1;  // prevent HP printers from 'optimizing'
         pDev->IntersectClipRegion( aClip );
     }
 
-    pDev->DrawText( aTextRect, aText, nTextStyle );
+    if ( GetStyle() & WB_CENTER )
+    {
+        aPos.X() += (aSize.Width() - nTextWidth) / 2;
+        nOffX = 0;
+    }
+    else if ( GetStyle() & WB_RIGHT )
+    {
+        aPos.X() += aSize.Width() - nTextWidth;
+        nOffX = -nOffX;
+    }
+
+    pDev->DrawText( Point( aPos.X() + nOffX, aPos.Y() + nOffY ), aText );
     pDev->Pop();
 
     if ( GetSubEdit() )
@@ -1970,13 +2015,13 @@ void Edit::ImplInvalidateOutermostBorder( vcl::Window* pWin )
 {
     // allow control to show focused state
     vcl::Window *pInvalWin = pWin, *pBorder = pWin;
-    while( ( pBorder = pInvalWin->GetWindow( GetWindowType::Border ) ) != pInvalWin && pBorder &&
+    while( ( pBorder = pInvalWin->GetWindow( WINDOW_BORDER ) ) != pInvalWin && pBorder &&
            pInvalWin->ImplGetFrame() == pBorder->ImplGetFrame() )
     {
         pInvalWin = pBorder;
     }
 
-    pInvalWin->Invalidate( InvalidateFlags::Children | InvalidateFlags::Update );
+    pInvalWin->Invalidate( INVALIDATE_CHILDREN | INVALIDATE_UPDATE );
 }
 
 void Edit::GetFocus()
@@ -1987,11 +2032,11 @@ void Edit::GetFocus()
     {
         maUndoText = maText.toString();
 
-        SelectionOptions nSelOptions = GetSettings().GetStyleSettings().GetSelectionOptions();
+        sal_uLong nSelOptions = GetSettings().GetStyleSettings().GetSelectionOptions();
         if ( !( GetStyle() & (WB_NOHIDESELECTION|WB_READONLY) )
-                && ( GetGetFocusFlags() & (GetFocusFlags::Init|GetFocusFlags::Tab|GetFocusFlags::CURSOR|GetFocusFlags::Mnemonic) ) )
+                && ( GetGetFocusFlags() & (GETFOCUS_INIT|GETFOCUS_TAB|GETFOCUS_CURSOR|GETFOCUS_MNEMONIC) ) )
         {
-            if ( nSelOptions & SelectionOptions::ShowFirst )
+            if ( nSelOptions & SELECTION_OPTION_SHOWFIRST )
             {
                 maSelection.Min() = maText.getLength();
                 maSelection.Max() = 0;
@@ -2002,13 +2047,13 @@ void Edit::GetFocus()
                 maSelection.Max() = maText.getLength();
             }
             if ( mbIsSubEdit )
-                static_cast<Edit*>(GetParent())->CallEventListeners( VclEventId::EditSelectionChanged );
+                static_cast<Edit*>(GetParent())->ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
             else
-                CallEventListeners( VclEventId::EditSelectionChanged );
+                ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
         }
 
 #ifdef USE_JAVA
-        if ( ImplGetNativeControlType() == ControlType::Editbox && IsNativeControlSupported( ControlType::Editbox, ControlPart::Entire ) )
+        if ( ImplGetNativeControlType() == CTRL_EDITBOX && IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
             ImplInvalidateOutermostBorder( this );
 #endif	// USE_JAVA
 
@@ -2018,7 +2063,7 @@ void Edit::GetFocus()
         // check for other platforms that need similar handling
         if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
             IsNativeWidgetEnabled() &&
-            IsNativeControlSupported( ControlType::Editbox, ControlPart::Entire ) )
+            IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
         {
             ImplInvalidateOutermostBorder( mbIsSubEdit ? GetParent() : this );
         }
@@ -2031,10 +2076,18 @@ void Edit::GetFocus()
                 Invalidate();
         }
 
-        SetInputContext( InputContext( GetFont(), !IsReadOnly() ? InputContextFlags::Text|InputContextFlags::ExtText : InputContextFlags::NONE ) );
+        SetInputContext( InputContext( GetFont(), !IsReadOnly() ? INPUTCONTEXT_TEXT|INPUTCONTEXT_EXTTEXTINPUT : 0 ) );
     }
 
     Control::GetFocus();
+}
+
+vcl::Window* Edit::GetPreferredKeyInputWindow()
+{
+    if ( mpSubEdit )
+        return mpSubEdit->GetPreferredKeyInputWindow();
+    else
+        return this;
 }
 
 void Edit::LoseFocus()
@@ -2043,7 +2096,7 @@ void Edit::LoseFocus()
     {
         //notify an update latest when the focus is lost
         mpUpdateDataTimer->Stop();
-        mpUpdateDataTimer->Invoke();
+        mpUpdateDataTimer->Timeout();
     }
 
     if ( !mpSubEdit )
@@ -2052,7 +2105,7 @@ void Edit::LoseFocus()
         // check for other platforms that need similar handling
         if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
             IsNativeWidgetEnabled() &&
-            IsNativeControlSupported( ControlType::Editbox, ControlPart::Entire ) )
+            IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
         {
             ImplInvalidateOutermostBorder( mbIsSubEdit ? GetParent() : this );
         }
@@ -2064,124 +2117,113 @@ void Edit::LoseFocus()
     Control::LoseFocus();
 
 #ifdef USE_JAVA
-    if ( ImplGetNativeControlType() == ControlType::Editbox && IsNativeControlSupported( ControlType::Editbox, ControlPart::Entire ) )
+    if ( ImplGetNativeControlType() == CTRL_EDITBOX && IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
         ImplInvalidateOutermostBorder( this );
 #endif	// USE_JAVA
 }
 
 void Edit::Command( const CommandEvent& rCEvt )
 {
-    if ( rCEvt.GetCommand() == CommandEventId::ContextMenu )
+    if ( rCEvt.GetCommand() == COMMAND_CONTEXTMENU )
     {
-        VclPtr<PopupMenu> pPopup = Edit::CreatePopupMenu();
-
-        bool bEnableCut = true;
-        bool bEnableCopy = true;
-        bool bEnableDelete = true;
-        bool bEnablePaste = true;
-        bool bEnableSpecialChar = true;
+        PopupMenu* pPopup = Edit::CreatePopupMenu();
 
         if ( !maSelection.Len() )
         {
-            bEnableCut = false;
-            bEnableCopy = false;
-            bEnableDelete = false;
+            pPopup->EnableItem( SV_MENU_EDIT_CUT, false );
+            pPopup->EnableItem( SV_MENU_EDIT_COPY, false );
+            pPopup->EnableItem( SV_MENU_EDIT_DELETE, false );
         }
 
         if ( IsReadOnly() )
         {
-            bEnableCut = false;
-            bEnablePaste = false;
-            bEnableDelete = false;
-            bEnableSpecialChar = false;
+            pPopup->EnableItem( SV_MENU_EDIT_CUT, false );
+            pPopup->EnableItem( SV_MENU_EDIT_PASTE, false );
+            pPopup->EnableItem( SV_MENU_EDIT_DELETE, false );
+            pPopup->EnableItem( SV_MENU_EDIT_INSERTSYMBOL, false );
         }
         else
         {
             // only paste if text available in clipboard
             bool bData = false;
             uno::Reference< datatransfer::clipboard::XClipboard > xClipboard = GetClipboard();
-
             if ( xClipboard.is() )
             {
-                uno::Reference< datatransfer::XTransferable > xDataObj;
-                {
-                    SolarMutexReleaser aReleaser;
-                    xDataObj = xClipboard->getContents();
-                }
+                const sal_uInt32 nRef = Application::ReleaseSolarMutex();
+                uno::Reference< datatransfer::XTransferable > xDataObj = xClipboard->getContents();
+                Application::AcquireSolarMutex( nRef );
                 if ( xDataObj.is() )
                 {
                     datatransfer::DataFlavor aFlavor;
-                    SotExchange::GetFormatDataFlavor( SotClipboardFormatId::STRING, aFlavor );
+                    SotExchange::GetFormatDataFlavor( SOT_FORMAT_STRING, aFlavor );
                     bData = xDataObj->isDataFlavorSupported( aFlavor );
                 }
             }
-            bEnablePaste = bData;
+            pPopup->EnableItem( SV_MENU_EDIT_PASTE, bData );
         }
 
-        pPopup->EnableItem(pPopup->GetItemId("cut"), bEnableCut);
-        pPopup->EnableItem(pPopup->GetItemId("copy"), bEnableCopy);
-        pPopup->EnableItem(pPopup->GetItemId("delete"), bEnableDelete);
-        pPopup->EnableItem(pPopup->GetItemId("paste"), bEnablePaste);
-        pPopup->EnableItem(pPopup->GetItemId("specialchar"), bEnableSpecialChar);
-        pPopup->EnableItem(pPopup->GetItemId("undo"), maUndoText != maText.getStr());
-        bool bAllSelected = maSelection.Min() == 0 && maSelection.Max() == maText.getLength();
-        pPopup->EnableItem(pPopup->GetItemId("selectall"), !bAllSelected);
-        pPopup->ShowItem(pPopup->GetItemId("specialchar"), pImplFncGetSpecialChars);
+        if ( maUndoText == maText.getStr() )
+            pPopup->EnableItem( SV_MENU_EDIT_UNDO, false );
+        if ( ( maSelection.Min() == 0 ) && ( maSelection.Max() == maText.getLength() ) )
+            pPopup->EnableItem( SV_MENU_EDIT_SELECTALL, false );
+        if ( !pImplFncGetSpecialChars )
+        {
+            sal_uInt16 nPos = pPopup->GetItemPos( SV_MENU_EDIT_INSERTSYMBOL );
+            pPopup->RemoveItem( nPos );
+            pPopup->RemoveItem( nPos-1 );
+        }
 
         mbActivePopup = true;
         Selection aSaveSel = GetSelection(); // if someone changes selection in Get/LoseFocus, e.g. URL bar
         Point aPos = rCEvt.GetMousePosPixel();
         if ( !rCEvt.IsMouseEvent() )
         {
-            // Show menu eventually centered in selection
+            // Show menu enventually centered in selection
             Size aSize = GetOutputSizePixel();
             aPos = Point( aSize.Width()/2, aSize.Height()/2 );
         }
         sal_uInt16 n = pPopup->Execute( this, aPos );
+        Edit::DeletePopupMenu( pPopup );
         SetSelection( aSaveSel );
-        OString sCommand = pPopup->GetItemIdent(n);
-        if (sCommand == "undo")
+        switch ( n )
         {
-            Undo();
-            ImplModified();
-        }
-        else if (sCommand == "cut")
-        {
-            Cut();
-            ImplModified();
-        }
-        else if (sCommand == "copy")
-        {
-            Copy();
-        }
-        else if (sCommand == "paste")
-        {
-            Paste();
-            ImplModified();
-        }
-        else if (sCommand == "delete")
-        {
-            DeleteSelected();
-            ImplModified();
-        }
-        else if (sCommand == "selectall")
-        {
-            ImplSetSelection( Selection( 0, maText.getLength() ) );
-        }
-        else if (sCommand == "specialchar" && pImplFncGetSpecialChars)
-        {
-            OUString aChars = pImplFncGetSpecialChars( this, GetFont() );
-            SetSelection( aSaveSel );
-            if (!aChars.isEmpty())
-            {
-                ImplInsertText( aChars );
+            case SV_MENU_EDIT_UNDO:
+                Undo();
                 ImplModified();
-            }
+                break;
+            case SV_MENU_EDIT_CUT:
+                Cut();
+                ImplModified();
+                break;
+            case SV_MENU_EDIT_COPY:
+                Copy();
+                break;
+            case SV_MENU_EDIT_PASTE:
+                Paste();
+                ImplModified();
+                break;
+            case SV_MENU_EDIT_DELETE:
+                DeleteSelected();
+                ImplModified();
+                break;
+            case SV_MENU_EDIT_SELECTALL:
+                ImplSetSelection( Selection( 0, maText.getLength() ) );
+                break;
+            case SV_MENU_EDIT_INSERTSYMBOL:
+                {
+                    OUString aChars = pImplFncGetSpecialChars( this, GetFont() );
+                    SetSelection( aSaveSel );
+                    if ( !aChars.isEmpty() )
+                    {
+                        ImplInsertText( aChars );
+                        ImplModified();
+                    }
+                }
+                break;
         }
-        pPopup.clear();
         mbActivePopup = false;
     }
-    else if ( rCEvt.GetCommand() == CommandEventId::StartExtTextInput )
+    else if ( rCEvt.GetCommand() == COMMAND_STARTEXTTEXTINPUT )
     {
         DeleteSelected();
         delete mpIMEInfos;
@@ -2189,27 +2231,30 @@ void Edit::Command( const CommandEvent& rCEvt )
         mpIMEInfos = new Impl_IMEInfos( nPos, OUString(maText.getStr() + nPos ) );
         mpIMEInfos->bWasCursorOverwrite = !IsInsertMode();
     }
-    else if ( rCEvt.GetCommand() == CommandEventId::EndExtTextInput )
+    else if ( rCEvt.GetCommand() == COMMAND_ENDEXTTEXTINPUT )
     {
         bool bInsertMode = !mpIMEInfos->bWasCursorOverwrite;
         delete mpIMEInfos;
-        mpIMEInfos = nullptr;
+        mpIMEInfos = NULL;
 
-        SetInsertMode(bInsertMode);
+        // set font without attributes, because it will not be re-initialised in Repaint anymore
+        ImplInitSettings( true, false, false );
+
+        SetInsertMode( bInsertMode );
+
         ImplModified();
 
-        Invalidate();
-
         // #i25161# call auto complete handler for ext text commit also
-        if (maAutocompleteHdl.IsSet())
+        if ( autocompleteSignal.empty() )
         {
             if ( (maSelection.Min() == maSelection.Max()) && (maSelection.Min() == maText.getLength()) )
             {
-                maAutocompleteHdl.Call(*this);
+                meAutocompleteAction = AUTOCOMPLETE_KEYINPUT;
+                autocompleteSignal( this );
             }
         }
     }
-    else if ( rCEvt.GetCommand() == CommandEventId::ExtTextInput )
+    else if ( rCEvt.GetCommand() == COMMAND_EXTTEXTINPUT )
     {
         const CommandExtTextInputData* pData = rCEvt.GetExtTextInputData();
 
@@ -2217,20 +2262,22 @@ void Edit::Command( const CommandEvent& rCEvt )
         maText.insert( mpIMEInfos->nPos, pData->GetText() );
         if ( mpIMEInfos->bWasCursorOverwrite )
         {
-            const sal_Int32 nOldIMETextLen = mpIMEInfos->nLen;
-            const sal_Int32 nNewIMETextLen = pData->GetText().getLength();
+            sal_Int32 nOldIMETextLen = mpIMEInfos->nLen;
+            sal_Int32 nNewIMETextLen = pData->GetText().getLength();
             if ( ( nOldIMETextLen > nNewIMETextLen ) &&
                  ( nNewIMETextLen < mpIMEInfos->aOldTextAfterStartPos.getLength() ) )
             {
                 // restore old characters
-                const sal_Int32 nRestore = nOldIMETextLen - nNewIMETextLen;
+                sal_Int32 nRestore = nOldIMETextLen - nNewIMETextLen;
                 maText.insert( mpIMEInfos->nPos + nNewIMETextLen, mpIMEInfos->aOldTextAfterStartPos.copy( nNewIMETextLen, nRestore ) );
             }
             else if ( ( nOldIMETextLen < nNewIMETextLen ) &&
                       ( nOldIMETextLen < mpIMEInfos->aOldTextAfterStartPos.getLength() ) )
             {
-                const sal_Int32 nOverwrite = ( nNewIMETextLen > mpIMEInfos->aOldTextAfterStartPos.getLength()
-                    ? mpIMEInfos->aOldTextAfterStartPos.getLength() : nNewIMETextLen ) - nOldIMETextLen;
+                // overwrite
+                sal_uInt16 nOverwrite = nNewIMETextLen - nOldIMETextLen;
+                if ( ( nOldIMETextLen + nOverwrite ) > mpIMEInfos->aOldTextAfterStartPos.getLength() )
+                    nOverwrite = mpIMEInfos->aOldTextAfterStartPos.getLength() - nOldIMETextLen;
                 maText.remove( mpIMEInfos->nPos + nNewIMETextLen, nOverwrite );
             }
         }
@@ -2255,31 +2302,31 @@ void Edit::Command( const CommandEvent& rCEvt )
         else
             GetCursor()->Hide();
     }
-    else if ( rCEvt.GetCommand() == CommandEventId::CursorPos )
+    else if ( rCEvt.GetCommand() == COMMAND_CURSORPOS )
     {
         if ( mpIMEInfos )
         {
             sal_Int32 nCursorPos = GetSelection().Max();
-            SetCursorRect( nullptr, GetTextWidth( maText.toString(), nCursorPos, mpIMEInfos->nPos+mpIMEInfos->nLen-nCursorPos ) );
+            SetCursorRect( NULL, GetTextWidth( maText.toString(), nCursorPos, mpIMEInfos->nPos+mpIMEInfos->nLen-nCursorPos ) );
         }
         else
         {
             SetCursorRect();
         }
     }
-    else if ( rCEvt.GetCommand() == CommandEventId::SelectionChange )
+    else if ( rCEvt.GetCommand() == COMMAND_SELECTIONCHANGE )
     {
         const CommandSelectionChangeData *pData = rCEvt.GetSelectionChangeData();
         Selection aSelection( pData->GetStart(), pData->GetEnd() );
         SetSelection(aSelection);
     }
-    else if ( rCEvt.GetCommand() == CommandEventId::QueryCharPosition )
+    else if ( rCEvt.GetCommand() == COMMAND_QUERYCHARPOSITION )
     {
         if (mpIMEInfos && mpIMEInfos->nLen > 0)
         {
             OUString aText = ImplGetText();
             long   nDXBuffer[256];
-            std::unique_ptr<long[]> pDXBuffer;
+            boost::scoped_array<long> pDXBuffer;
             long*  pDX = nDXBuffer;
 
             if( !aText.isEmpty() )
@@ -2295,11 +2342,11 @@ void Edit::Command( const CommandEvent& rCEvt )
             long    nTH = GetTextHeight();
             Point   aPos( mnXOffset, ImplGetTextYPosition() );
 
-            std::unique_ptr<tools::Rectangle[]> aRects(new tools::Rectangle[ mpIMEInfos->nLen ]);
+            boost::scoped_array<Rectangle> aRects(new Rectangle[ mpIMEInfos->nLen ]);
             for ( int nIndex = 0; nIndex < mpIMEInfos->nLen; ++nIndex )
             {
-                tools::Rectangle aRect( aPos, Size( 10, nTH ) );
-                aRect.Left() = pDX[2*(nIndex+mpIMEInfos->nPos)] + mnXOffset + ImplGetExtraXOffset();
+                Rectangle aRect( aPos, Size( 10, nTH ) );
+                aRect.Left() = pDX[2*(nIndex+mpIMEInfos->nPos)] + mnXOffset + ImplGetExtraOffset();
                 aRects[ nIndex ] = aRect;
             }
             SetCompositionCharRect( aRects.get(), mpIMEInfos->nLen );
@@ -2311,113 +2358,114 @@ void Edit::Command( const CommandEvent& rCEvt )
 
 void Edit::StateChanged( StateChangedType nType )
 {
-    if (nType == StateChangedType::InitShow)
+    if ( nType == StateChangedType::INITSHOW )
     {
-        if (!mpSubEdit)
+        if ( !mpSubEdit )
         {
             mnXOffset = 0;  // if GrabFocus before while size was still wrong
             ImplAlign();
-            if (!mpSubEdit)
-                ImplShowCursor(false);
-            Invalidate();
+            if ( !mpSubEdit )
+                ImplShowCursor( false );
         }
+        // update background (eventual SetPaintTransparent)
+        ImplInitSettings( false, false, true );
     }
-    else if (nType == StateChangedType::Enable)
+    else if ( nType == StateChangedType::ENABLE )
     {
-        if (!mpSubEdit)
+        if ( !mpSubEdit )
         {
             // change text color only
             ImplInvalidateOrRepaint();
         }
     }
-    else if (nType == StateChangedType::Style || nType == StateChangedType::Mirroring)
+    else if ( nType == StateChangedType::STYLE || nType == StateChangedType::MIRRORING )
     {
         WinBits nStyle = GetStyle();
-        if (nType == StateChangedType::Style)
+        if( nType == StateChangedType::STYLE )
         {
-            nStyle = ImplInitStyle(GetStyle());
-            SetStyle(nStyle);
+            nStyle = ImplInitStyle( GetStyle() );
+            SetStyle( nStyle );
         }
 
         sal_uInt16 nOldAlign = mnAlign;
         mnAlign = EDIT_ALIGN_LEFT;
 
-        // hack: right align until keyinput and cursor travelling works
+        // --- RTL --- hack: right align until keyinput and cursor travelling works
         // edits are always RTL disabled
         // however the parent edits contain the correct setting
-        if (mbIsSubEdit && GetParent()->IsRTLEnabled())
+        if( mbIsSubEdit && GetParent()->IsRTLEnabled() )
         {
-            if (GetParent()->GetStyle() & WB_LEFT)
+            if( GetParent()->GetStyle() & WB_LEFT )
                 mnAlign = EDIT_ALIGN_RIGHT;
-            if (nType == StateChangedType::Mirroring)
-                SetLayoutMode(ComplexTextLayoutFlags::BiDiRtl | ComplexTextLayoutFlags::TextOriginLeft);
+            if ( nType == StateChangedType::MIRRORING )
+                SetLayoutMode( TEXT_LAYOUT_BIDI_RTL | TEXT_LAYOUT_TEXTORIGIN_LEFT );
         }
-        else if (mbIsSubEdit && !GetParent()->IsRTLEnabled())
+        else if( mbIsSubEdit && !GetParent()->IsRTLEnabled() )
         {
-            if (nType == StateChangedType::Mirroring)
-                SetLayoutMode(ComplexTextLayoutFlags::TextOriginLeft);
+            if ( nType == StateChangedType::MIRRORING )
+                SetLayoutMode( TEXT_LAYOUT_TEXTORIGIN_LEFT );
         }
 
-        if (nStyle & WB_RIGHT)
+        if ( nStyle & WB_RIGHT )
             mnAlign = EDIT_ALIGN_RIGHT;
-        else if (nStyle & WB_CENTER)
+        else if ( nStyle & WB_CENTER )
             mnAlign = EDIT_ALIGN_CENTER;
-        if (!maText.isEmpty() && (mnAlign != nOldAlign))
+        if ( !maText.isEmpty() && ( mnAlign != nOldAlign ) )
         {
             ImplAlign();
             Invalidate();
         }
 
     }
-    else if (nType == StateChangedType::Zoom)
+    else if ( nType == StateChangedType::ZOOM )
     {
-        if (!mpSubEdit)
+        if ( !mpSubEdit )
         {
-            ApplySettings(*this);
+            ImplInitSettings( true, false, false );
+            ImplShowCursor( true );
+            Invalidate();
+        }
+    }
+    else if ( nType == StateChangedType::CONTROLFONT )
+    {
+        if ( !mpSubEdit )
+        {
+            ImplInitSettings( true, false, false );
             ImplShowCursor();
             Invalidate();
         }
     }
-    else if (nType == StateChangedType::ControlFont)
+    else if ( nType == StateChangedType::CONTROLFOREGROUND )
     {
-        if (!mpSubEdit)
+        if ( !mpSubEdit )
         {
-            ApplySettings(*this);
-            ImplShowCursor();
+            ImplInitSettings( false, true, false );
             Invalidate();
         }
     }
-    else if (nType == StateChangedType::ControlForeground)
+    else if ( nType == StateChangedType::CONTROLBACKGROUND )
     {
-        if (!mpSubEdit)
+        if ( !mpSubEdit )
         {
-            ApplySettings(*this);
-            Invalidate();
-        }
-    }
-    else if (nType == StateChangedType::ControlBackground)
-    {
-        if (!mpSubEdit)
-        {
-            ApplySettings(*this);
+            ImplInitSettings( false, false, true );
             Invalidate();
         }
     }
 
-    Control::StateChanged(nType);
+    Control::StateChanged( nType );
 }
 
 void Edit::DataChanged( const DataChangedEvent& rDCEvt )
 {
-    if ( (rDCEvt.GetType() == DataChangedEventType::FONTS) ||
-         (rDCEvt.GetType() == DataChangedEventType::FONTSUBSTITUTION) ||
-         ((rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
-          (rDCEvt.GetFlags() & AllSettingsFlags::STYLE)) )
+    if ( (rDCEvt.GetType() == DATACHANGED_FONTS) ||
+         (rDCEvt.GetType() == DATACHANGED_FONTSUBSTITUTION) ||
+         ((rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
+          (rDCEvt.GetFlags() & SETTINGS_STYLE)) )
     {
         if ( !mpSubEdit )
         {
-            ApplySettings(*this);
-            ImplShowCursor();
+            ImplInitSettings( true, true, true );
+            ImplShowCursor( true );
             Invalidate();
         }
     }
@@ -2427,11 +2475,11 @@ void Edit::DataChanged( const DataChangedEvent& rDCEvt )
 
 void Edit::ImplShowDDCursor()
 {
-    if (!mpDDInfo->bVisCursor)
+    if ( !mpDDInfo->bVisCursor )
     {
         long nTextWidth = GetTextWidth( maText.toString(), 0, mpDDInfo->nDropPos );
         long nTextHeight = GetTextHeight();
-        tools::Rectangle aCursorRect( Point( nTextWidth + mnXOffset, (GetOutputSize().Height()-nTextHeight)/2 ), Size( 2, nTextHeight ) );
+        Rectangle aCursorRect( Point( nTextWidth + mnXOffset, (GetOutputSize().Height()-nTextHeight)/2 ), Size( 2, nTextHeight ) );
         mpDDInfo->aCursor.SetWindow( this );
         mpDDInfo->aCursor.SetPos( aCursorRect.TopLeft() );
         mpDDInfo->aCursor.SetSize( aCursorRect.GetSize() );
@@ -2461,9 +2509,9 @@ TextFilter::~TextFilter()
 OUString TextFilter::filter(const OUString &rText)
 {
     OUString sTemp(rText);
-    for (sal_Int32 i = 0; i < sForbiddenChars.getLength(); ++i)
+    for (sal_uInt16 i = 0; i < sForbiddenChars.getLength(); ++i)
     {
-        sTemp = sTemp.replaceAll(OUStringLiteral1(sForbiddenChars[i]), "");
+        sTemp = comphelper::string::remove(sTemp, sForbiddenChars[i]);
     }
     return sTemp;
 }
@@ -2471,8 +2519,8 @@ OUString TextFilter::filter(const OUString &rText)
 void Edit::filterText()
 {
     Selection aSel = GetSelection();
-    const OUString sOrig = GetText();
-    const OUString sNew = mpFilterText->filter(GetText());
+    OUString sOrig = GetText();
+    OUString sNew = mpFilterText->filter(GetText());
     if (sOrig != sNew)
     {
         sal_Int32 nDiff = sOrig.getLength() - sNew.getLength();
@@ -2500,17 +2548,17 @@ void Edit::Modify()
         if ( mpUpdateDataTimer )
             mpUpdateDataTimer->Start();
 
-        if ( ImplCallEventListenersAndHandler( VclEventId::EditModify, [this] () { maModifyHdl.Call(*this); } ) )
+        if ( ImplCallEventListenersAndHandler( VCLEVENT_EDIT_MODIFY, maModifyHdl, this ) )
             // have been destroyed while calling into the handlers
             return;
 
         // #i13677# notify edit listeners about caret position change
-        CallEventListeners( VclEventId::EditCaretChanged );
+        ImplCallEventListeners( VCLEVENT_EDIT_CARETCHANGED );
         // FIXME: this is currently only on OS X
         // check for other platforms that need similar handling
         if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
             IsNativeWidgetEnabled() &&
-            IsNativeControlSupported( ControlType::Editbox, ControlPart::Entire ) )
+            IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
         {
             ImplInvalidateOutermostBorder( this );
         }
@@ -2519,12 +2567,13 @@ void Edit::Modify()
 
 void Edit::UpdateData()
 {
-    maUpdateDataHdl.Call( *this );
+    maUpdateDataHdl.Call( this );
 }
 
-IMPL_LINK_NOARG(Edit, ImplUpdateDataHdl, Timer *, void)
+IMPL_LINK_NOARG(Edit, ImplUpdateDataHdl)
 {
     UpdateData();
+    return 0;
 }
 
 void Edit::EnableUpdateData( sal_uLong nTimeout )
@@ -2535,19 +2584,12 @@ void Edit::EnableUpdateData( sal_uLong nTimeout )
     {
         if ( !mpUpdateDataTimer )
         {
-            mpUpdateDataTimer = new Timer("UpdateDataTimer");
-            mpUpdateDataTimer->SetInvokeHandler( LINK( this, Edit, ImplUpdateDataHdl ) );
-            mpUpdateDataTimer->SetDebugName( "vcl::Edit mpUpdateDataTimer" );
+            mpUpdateDataTimer = new Timer;
+            mpUpdateDataTimer->SetTimeoutHdl( LINK( this, Edit, ImplUpdateDataHdl ) );
         }
 
         mpUpdateDataTimer->SetTimeout( nTimeout );
     }
-}
-
-void Edit::DisableUpdateData()
-{
-    delete mpUpdateDataTimer;
-    mpUpdateDataTimer = nullptr;
 }
 
 void Edit::SetEchoChar( sal_Unicode c )
@@ -2565,7 +2607,7 @@ void Edit::SetReadOnly( bool bReadOnly )
         if ( mpSubEdit )
             mpSubEdit->SetReadOnly( bReadOnly );
 
-        CompatStateChanged( StateChangedType::ReadOnly );
+        StateChanged( StateChangedType::READONLY );
     }
 }
 
@@ -2655,22 +2697,22 @@ void Edit::ImplSetSelection( const Selection& rSelection, bool bPaint )
                 if (bSelection)
                 {
                     if ( mbIsSubEdit )
-                        static_cast<Edit*>(GetParent())->CallEventListeners( VclEventId::EditSelectionChanged );
+                        static_cast<Edit*>(GetParent())->ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
                     else
-                        CallEventListeners( VclEventId::EditSelectionChanged );
+                        ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
                 }
 
                 if (bCaret)
                 {
                     if ( mbIsSubEdit )
-                        static_cast<Edit*>(GetParent())->CallEventListeners( VclEventId::EditCaretChanged );
+                        static_cast<Edit*>(GetParent())->ImplCallEventListeners( VCLEVENT_EDIT_CARETCHANGED );
                     else
-                        CallEventListeners( VclEventId::EditCaretChanged );
+                        ImplCallEventListeners( VCLEVENT_EDIT_CARETCHANGED );
                 }
 
                 // #103511# notify combobox listeners of deselection
-                if( !maSelection && GetParent() && GetParent()->GetType() == WindowType::COMBOBOX )
-                    static_cast<Edit*>(GetParent())->CallEventListeners( VclEventId::ComboboxDeselect );
+                if( !maSelection && GetParent() && GetParent()->GetType() == WINDOW_COMBOBOX )
+                    static_cast<Edit*>(GetParent())->ImplCallEventListeners( VCLEVENT_COMBOBOX_DESELECT );
             }
         }
     }
@@ -2728,14 +2770,14 @@ void Edit::Copy()
 {
     if ( !(GetStyle() & WB_PASSWORD ) )
     {
-        css::uno::Reference<css::datatransfer::clipboard::XClipboard> aClipboard(GetClipboard());
+        ::com::sun::star::uno::Reference<com::sun::star::datatransfer::clipboard::XClipboard> aClipboard(GetClipboard());
         ImplCopy( aClipboard );
     }
 }
 
 void Edit::Paste()
 {
-    css::uno::Reference<css::datatransfer::clipboard::XClipboard> aClipboard(GetClipboard());
+        ::com::sun::star::uno::Reference<com::sun::star::datatransfer::clipboard::XClipboard> aClipboard(GetClipboard());
     ImplPaste( aClipboard );
 }
 
@@ -2745,7 +2787,7 @@ void Edit::Undo()
         mpSubEdit->Undo();
     else
     {
-        const OUString aText( maText.toString() );
+        OUString aText( maText.toString() );
         ImplDelete( Selection( 0, aText.getLength() ), EDIT_DEL_RIGHT, EDIT_DELMODE_SIMPLE );
         ImplInsertText( maUndoText );
         ImplSetSelection( Selection( 0, maUndoText.getLength() ) );
@@ -2756,7 +2798,7 @@ void Edit::Undo()
 void Edit::SetText( const OUString& rStr )
 {
     if ( mpSubEdit )
-        mpSubEdit->SetText( rStr ); // not directly ImplSetText if SetText overridden
+        mpSubEdit->SetText( rStr );     // not directly ImplSetText if SetText overloaded
     else
     {
         Selection aNewSel( 0, 0 );  // prevent scrolling
@@ -2778,10 +2820,6 @@ OUString Edit::GetText() const
         return mpSubEdit->GetText();
     else
         return maText.toString();
-}
-
-void Edit::SetCursorAtLast(){
-    ImplSetCursorPos( GetText().getLength(), false );
 }
 
 void Edit::SetPlaceholderText( const OUString& rStr )
@@ -2820,24 +2858,22 @@ void Edit::ClearModifyFlag()
         mbModified = false;
 }
 
-void Edit::SetSubEdit(Edit* pEdit)
+void Edit::SetSubEdit( Edit* pEdit )
 {
-    mpSubEdit.disposeAndClear();
-    mpSubEdit.set(pEdit);
-
-    if (mpSubEdit)
+    mpSubEdit = pEdit;
+    if ( mpSubEdit )
     {
-        SetPointer(PointerStyle::Arrow);    // Only SubEdit has the BEAM...
+        SetPointer( POINTER_ARROW );    // Nur das SubEdit hat den BEAM...
         mpSubEdit->mbIsSubEdit = true;
 
-        mpSubEdit->SetReadOnly(mbReadOnly);
-        mpSubEdit->maAutocompleteHdl = maAutocompleteHdl;
+        mpSubEdit->SetReadOnly( mbReadOnly );
+        mpSubEdit->autocompleteSignal.connect( autocompleteSignal );
     }
 }
 
 Size Edit::CalcMinimumSizeForText(const OUString &rString) const
 {
-    ControlType eCtrlType = ImplGetNativeControlType();
+    int eCtrlType = ImplGetNativeControlType();
 
     Size aSize;
     if (mnWidthInChars != -1)
@@ -2856,7 +2892,7 @@ Size Edit::CalcMinimumSizeForText(const OUString &rString) const
 
         aSize.Height() = GetTextHeight();
         aSize.Width() = GetTextWidth(aString);
-        aSize.Width() += ImplGetExtraXOffset() * 2;
+        aSize.Width() += ImplGetExtraOffset() * 2;
 
         // do not create edit fields in which one cannot enter anything
         // a default minimum width should exist for at least 3 characters
@@ -2868,18 +2904,23 @@ Size Edit::CalcMinimumSizeForText(const OUString &rString) const
             aSize.Width() = aMinSize.Width();
     }
 
-    aSize.Height() += ImplGetExtraYOffset() * 2;
+    if (eCtrlType != CTRL_EDITBOX_NOBORDER)
+    {
+        // add some space between text entry and border
+        aSize.Height() += 4;
+    }
 
     aSize = CalcWindowSize( aSize );
 
     // ask NWF what if it has an opinion, too
     ImplControlValue aControlValue;
-    tools::Rectangle aRect( Point( 0, 0 ), aSize );
-    tools::Rectangle aContent, aBound;
-    if (GetNativeControlRegion(eCtrlType, ControlPart::Entire, aRect, ControlState::NONE,
-                               aControlValue, aBound, aContent))
+    Rectangle aRect( Point( 0, 0 ), aSize );
+    Rectangle aContent, aBound;
+    if( GetNativeControlRegion(
+                   eCtrlType, PART_ENTIRE_CONTROL,
+                   aRect, 0, aControlValue, OUString(), aBound, aContent) )
     {
-        if (aBound.GetHeight() > aSize.Height())
+        if( aBound.GetHeight() > aSize.Height() )
             aSize.Height() = aBound.GetHeight();
     }
     return aSize;
@@ -2893,8 +2934,8 @@ Size Edit::CalcMinimumSize() const
 Size Edit::GetMinimumEditSize()
 {
     vcl::Window* pDefWin = ImplGetDefaultWindow();
-    ScopedVclPtrInstance< Edit > aEdit(  pDefWin, WB_BORDER  );
-    Size aSize( aEdit->CalcMinimumSize() );
+    Edit aEdit( pDefWin, WB_BORDER );
+    Size aSize( aEdit.CalcMinimumSize() );
     return aSize;
 }
 
@@ -2907,9 +2948,9 @@ Size Edit::CalcSize(sal_Int32 nChars) const
 {
     // width for N characters, independent from content.
     // works only correct for fixed fonts, average otherwise
-    Size aSz( GetTextWidth( "x" ), GetTextHeight() );
+    Size aSz( GetTextWidth( OUString('x') ), GetTextHeight() );
     aSz.Width() *= nChars;
-    aSz.Width() += ImplGetExtraXOffset() * 2;
+    aSz.Width() += ImplGetExtraOffset() * 2;
     aSz = CalcWindowSize( aSz );
     return aSz;
 }
@@ -2918,7 +2959,7 @@ sal_Int32 Edit::GetMaxVisChars() const
 {
     const vcl::Window* pW = mpSubEdit ? mpSubEdit : this;
     sal_Int32 nOutWidth = pW->GetOutputSizePixel().Width();
-    sal_Int32 nCharWidth = GetTextWidth( "x" );
+    sal_Int32 nCharWidth = GetTextWidth( OUString('x') );
     return nCharWidth ? nOutWidth/nCharWidth : 0;
 }
 
@@ -2937,39 +2978,48 @@ FncGetSpecialChars Edit::GetGetSpecialCharsFunction()
     return pImplFncGetSpecialChars;
 }
 
-VclPtr<PopupMenu> Edit::CreatePopupMenu()
+PopupMenu* Edit::CreatePopupMenu()
 {
-    if (!mpUIBuilder)
-        mpUIBuilder.reset(new VclBuilder(nullptr, VclBuilderContainer::getUIRootDir(), "vcl/ui/editmenu.ui", ""));
-    VclPtr<PopupMenu> pPopup = mpUIBuilder->get_menu("menu");
+    ResMgr* pResMgr = ImplGetResMgr();
+    if( ! pResMgr )
+        return new PopupMenu();
+
+    PopupMenu* pPopup = new PopupMenu( ResId( SV_RESID_MENU_EDIT, *pResMgr ) );
     const StyleSettings& rStyleSettings = Application::GetSettings().GetStyleSettings();
-    if (rStyleSettings.GetHideDisabledMenuItems())
-        pPopup->SetMenuFlags( MenuFlags::HideDisabledEntries );
+    if ( rStyleSettings.GetHideDisabledMenuItems() )
+        pPopup->SetMenuFlags( MENU_FLAG_HIDEDISABLEDENTRIES );
     else
-        pPopup->SetMenuFlags ( MenuFlags::AlwaysShowDisabledEntries );
-    if (rStyleSettings.GetContextMenuShortcuts())
+        pPopup->SetMenuFlags ( MENU_FLAG_ALWAYSSHOWDISABLEDENTRIES );
+    if ( rStyleSettings.GetAcceleratorsInContextMenus() )
     {
-        pPopup->SetAccelKey(pPopup->GetItemId("undo"), vcl::KeyCode( KeyFuncType::UNDO));
-        pPopup->SetAccelKey(pPopup->GetItemId("cut"), vcl::KeyCode( KeyFuncType::CUT));
-        pPopup->SetAccelKey(pPopup->GetItemId("copy"), vcl::KeyCode( KeyFuncType::COPY));
-        pPopup->SetAccelKey(pPopup->GetItemId("paste"), vcl::KeyCode( KeyFuncType::PASTE));
-        pPopup->SetAccelKey(pPopup->GetItemId("delete"), vcl::KeyCode( KeyFuncType::DELETE));
+        pPopup->SetAccelKey( SV_MENU_EDIT_UNDO, vcl::KeyCode( KeyFuncType::UNDO ) );
+        pPopup->SetAccelKey( SV_MENU_EDIT_CUT, vcl::KeyCode( KeyFuncType::CUT ) );
+        pPopup->SetAccelKey( SV_MENU_EDIT_COPY, vcl::KeyCode( KeyFuncType::COPY ) );
+        pPopup->SetAccelKey( SV_MENU_EDIT_PASTE, vcl::KeyCode( KeyFuncType::PASTE ) );
+        pPopup->SetAccelKey( SV_MENU_EDIT_DELETE, vcl::KeyCode( KeyFuncType::DELETE ) );
+        pPopup->SetAccelKey( SV_MENU_EDIT_SELECTALL, vcl::KeyCode( KEY_A, false, true, false, false ) );
+        pPopup->SetAccelKey( SV_MENU_EDIT_INSERTSYMBOL, vcl::KeyCode( KEY_S, true, true, false, false ) );
     }
     return pPopup;
 }
 
-// css::datatransfer::dnd::XDragGestureListener
-void Edit::dragGestureRecognized( const css::datatransfer::dnd::DragGestureEvent& rDGE )
+void Edit::DeletePopupMenu( PopupMenu* pMenu )
+{
+    delete pMenu;
+}
+
+// ::com::sun::star::datatransfer::dnd::XDragGestureListener
+void Edit::dragGestureRecognized( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& rDGE ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aVclGuard;
 
     if ( !IsTracking() && maSelection.Len() &&
-         !(GetStyle() & WB_PASSWORD) && (!mpDDInfo || !mpDDInfo->bStarterOfDD) ) // no repeated D&D
+         !(GetStyle() & WB_PASSWORD) && (!mpDDInfo || mpDDInfo->bStarterOfDD == false) ) // Kein Mehrfach D&D
     {
         Selection aSel( maSelection );
         aSel.Justify();
 
-        // only if mouse in the selection...
+        // Nur wenn Maus in der Selektion...
         Point aMousePos( rDGE.DragOriginX, rDGE.DragOriginY );
         sal_Int32 nCharPos = ImplGetCharPos( aMousePos );
         if ( (nCharPos >= aSel.Min()) && (nCharPos < aSel.Max()) )
@@ -2981,9 +3031,9 @@ void Edit::dragGestureRecognized( const css::datatransfer::dnd::DragGestureEvent
             mpDDInfo->aDndStartSel = aSel;
 
             if ( IsTracking() )
-                EndTracking();  // before D&D disable tracking
+                EndTracking();  // Vor D&D Tracking ausschalten
 
-            vcl::unohelper::TextDataObject* pDataObj = new vcl::unohelper::TextDataObject( GetSelected() );
+            ::vcl::unohelper::TextDataObject* pDataObj = new ::vcl::unohelper::TextDataObject( GetSelected() );
             sal_Int8 nActions = datatransfer::dnd::DNDConstants::ACTION_COPY;
             if ( !IsReadOnly() )
                 nActions |= datatransfer::dnd::DNDConstants::ACTION_MOVE;
@@ -2995,12 +3045,12 @@ void Edit::dragGestureRecognized( const css::datatransfer::dnd::DragGestureEvent
     }
 }
 
-// css::datatransfer::dnd::XDragSourceListener
-void Edit::dragDropEnd( const css::datatransfer::dnd::DragSourceDropEvent& rDSDE )
+// ::com::sun::star::datatransfer::dnd::XDragSourceListener
+void Edit::dragDropEnd( const ::com::sun::star::datatransfer::dnd::DragSourceDropEvent& rDSDE ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aVclGuard;
 
-    if (rDSDE.DropSuccess && (rDSDE.DropAction & datatransfer::dnd::DNDConstants::ACTION_MOVE) && mpDDInfo)
+    if ( rDSDE.DropSuccess && ( rDSDE.DropAction & datatransfer::dnd::DNDConstants::ACTION_MOVE ) )
     {
         Selection aSel( mpDDInfo->aDndStartSel );
         if ( mpDDInfo->bDroppedInMe )
@@ -3018,11 +3068,11 @@ void Edit::dragDropEnd( const css::datatransfer::dnd::DragSourceDropEvent& rDSDE
 
     ImplHideDDCursor();
     delete mpDDInfo;
-    mpDDInfo = nullptr;
+    mpDDInfo = NULL;
 }
 
-// css::datatransfer::dnd::XDropTargetListener
-void Edit::drop( const css::datatransfer::dnd::DropTargetDropEvent& rDTDE )
+// ::com::sun::star::datatransfer::dnd::XDropTargetListener
+void Edit::drop( const ::com::sun::star::datatransfer::dnd::DropTargetDropEvent& rDTDE ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aVclGuard;
 
@@ -3047,7 +3097,7 @@ void Edit::drop( const css::datatransfer::dnd::DropTargetDropEvent& rDTDE )
         if ( xDataObj.is() )
         {
             datatransfer::DataFlavor aFlavor;
-            SotExchange::GetFormatDataFlavor( SotClipboardFormatId::STRING, aFlavor );
+            SotExchange::GetFormatDataFlavor( SOT_FORMAT_STRING, aFlavor );
             if ( xDataObj->isDataFlavorSupported( aFlavor ) )
             {
                 uno::Any aData = xDataObj->getTransferData( aFlavor );
@@ -3062,27 +3112,27 @@ void Edit::drop( const css::datatransfer::dnd::DropTargetDropEvent& rDTDE )
         if ( !mpDDInfo->bStarterOfDD )
         {
             delete mpDDInfo;
-            mpDDInfo = nullptr;
+            mpDDInfo = NULL;
         }
     }
 
     rDTDE.Context->dropComplete( bChanges );
 }
 
-void Edit::dragEnter( const css::datatransfer::dnd::DropTargetDragEnterEvent& rDTDE )
+void Edit::dragEnter( const ::com::sun::star::datatransfer::dnd::DropTargetDragEnterEvent& rDTDE ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     if ( !mpDDInfo )
     {
         mpDDInfo = new DDInfo;
     }
     // search for string data type
-    const Sequence< css::datatransfer::DataFlavor >& rFlavors( rDTDE.SupportedDataFlavors );
+    const Sequence< com::sun::star::datatransfer::DataFlavor >& rFlavors( rDTDE.SupportedDataFlavors );
     sal_Int32 nEle = rFlavors.getLength();
     mpDDInfo->bIsStringSupported = false;
     for( sal_Int32 i = 0; i < nEle; i++ )
     {
         sal_Int32 nIndex = 0;
-        const OUString aMimetype = rFlavors[i].MimeType.getToken( 0, ';', nIndex );
+        OUString aMimetype = rFlavors[i].MimeType.getToken( 0, ';', nIndex );
         if ( aMimetype == "text/plain" )
         {
             mpDDInfo->bIsStringSupported = true;
@@ -3091,14 +3141,14 @@ void Edit::dragEnter( const css::datatransfer::dnd::DropTargetDragEnterEvent& rD
     }
 }
 
-void Edit::dragExit( const css::datatransfer::dnd::DropTargetEvent& )
+void Edit::dragExit( const ::com::sun::star::datatransfer::dnd::DropTargetEvent& ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aVclGuard;
 
     ImplHideDDCursor();
 }
 
-void Edit::dragOver( const css::datatransfer::dnd::DropTargetDragEvent& rDTDE )
+void Edit::dragOver( const ::com::sun::star::datatransfer::dnd::DropTargetDragEvent& rDTDE ) throw (::com::sun::star::uno::RuntimeException, std::exception)
 {
     SolarMutexGuard aVclGuard;
 
@@ -3147,11 +3197,6 @@ OUString Edit::GetSurroundingText() const
 Selection Edit::GetSurroundingTextSelection() const
 {
   return GetSelection();
-}
-
-FactoryFunction Edit::GetUITestFactory() const
-{
-    return EditUIObject::create;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

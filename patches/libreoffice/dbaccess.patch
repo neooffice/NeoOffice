@@ -1,0 +1,69 @@
+--- qa/unit/firebird.cxx	2015-11-25 07:55:38.000000000 -0500
++++ qa/unit/firebird.cxx	2020-12-22 07:09:49.000000000 -0500
+@@ -65,7 +65,7 @@
+ void FirebirdTest::testIntegerDatabase()
+ {
+     uno::Reference< XOfficeDatabaseDocument > xDocument =
+-        getDocumentForFileName("firebird_integer_x64le.odb");
++        getDocumentForFileName("firebird_integer_ods12.odb");
+ 
+     uno::Reference< XConnection > xConnection =
+         getConnectionForDocument(xDocument);
+--- source/ui/inc/charsets.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/inc/charsets.hxx	2021-05-11 16:57:38.000000000 -0400
+@@ -99,8 +99,6 @@
+         base_iterator               m_aPosition;
+ 
+     public:
+-        ExtendedCharsetIterator(const ExtendedCharsetIterator& _rSource);
+-
+         CharsetDisplayDerefHelper operator*() const;
+ 
+         /// prefix increment
+--- source/ui/misc/charsets.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/misc/charsets.cxx	2021-05-11 16:58:45.000000000 -0400
+@@ -103,12 +103,6 @@
+         OSL_ENSURE(m_pContainer, "OCharsetDisplay::ExtendedCharsetIterator::ExtendedCharsetIterator : invalid container!");
+     }
+ 
+-    OCharsetDisplay::ExtendedCharsetIterator::ExtendedCharsetIterator(const ExtendedCharsetIterator& _rSource)
+-        :m_pContainer( _rSource.m_pContainer )
+-        ,m_aPosition( _rSource.m_aPosition )
+-    {
+-    }
+-
+     CharsetDisplayDerefHelper OCharsetDisplay::ExtendedCharsetIterator::operator*() const
+     {
+         OSL_ENSURE( m_aPosition != m_pContainer->OCharsetDisplay_Base::end(), "OCharsetDisplay::ExtendedCharsetIterator::operator* : invalid position!");
+--- source/ui/dlg/dbfindex.hxx	2015-11-25 07:55:38.000000000 -0500
++++ source/ui/dlg/dbfindex.hxx	2021-05-11 16:59:50.000000000 -0400
+@@ -40,7 +40,6 @@
+ 
+ public:
+     OTableIndex() { }
+-    OTableIndex( const OTableIndex& _rSource) : aIndexFileName(_rSource.aIndexFileName) { }
+     OTableIndex( const OUString& rFileName ) : aIndexFileName( rFileName ) { }
+ 
+     void SetIndexFileName( const OUString& rFileName ) { aIndexFileName = rFileName; }
+--- Module_dbaccess.mk	2015-11-25 07:55:38.000000000 -0500
++++ Module_dbaccess.mk	2022-03-28 09:20:22.000000000 -0400
+@@ -41,15 +41,15 @@
+ endif
+ 
+ $(eval $(call gb_Module_add_check_targets,dbaccess,\
+-	CppunitTest_dbaccess_dialog_save \
+-	CppunitTest_dbaccess_empty_stdlib_save \
+-	CppunitTest_dbaccess_nolib_save \
++	$(if $(filter-out MACOSX,$(OS)),CppunitTest_dbaccess_dialog_save) \
++	$(if $(filter-out MACOSX,$(OS)),CppunitTest_dbaccess_empty_stdlib_save) \
++	$(if $(filter-out MACOSX,$(OS)),CppunitTest_dbaccess_nolib_save) \
+ 	CppunitTest_dbaccess_macros_test \
+ ))
+ 
+ ifeq ($(ENABLE_JAVA),TRUE)
+ $(eval $(call gb_Module_add_check_targets,dbaccess,\
+-    CppunitTest_dbaccess_hsqldb_test \
++	$(if $(filter-out macosx_arm64,$(PLATFORMID)),CppunitTest_dbaccess_hsqldb_test) \
+ ))
+ endif
+ 

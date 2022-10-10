@@ -33,11 +33,8 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
-
 #include <osl/file.hxx>
+#include <osl/objcutils.h>
 
 #import "cmdmailsuppl.hxx"
 #import "cmdmailsuppl_cocoa.h"
@@ -101,25 +98,47 @@ using namespace com::sun::star::uno;
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 	if ( pWorkspace && mpURLs && [mpURLs count] )
 	{
-		if ( mpAppID && [mpAppID length] )
-			mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:mpAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-		if ( !mbResult )
+		NSMutableArray *pAppURLs = [NSMutableArray arrayWithCapacity:3];
+		if ( pAppURLs )
 		{
-			NSURL *pDefaultMailApp = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
-			if ( pDefaultMailApp )
+			NSURL *pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:@"com.apple.mail"];
+			if ( pAppURL )
+				[pAppURLs addObject:pAppURL];
+			pAppURL = [pWorkspace URLForApplicationToOpenURL:[NSURL URLWithString:@"mailto://"]];
+			if ( pAppURL )
+				[pAppURLs addObject:pAppURL];
+			if ( mpAppID && [mpAppID length] )
 			{
-				NSBundle *pBundle = [NSBundle bundleWithURL:pDefaultMailApp];
-				if ( pBundle )
-				{
-					NSString *pDefaultMailAppID = [pBundle bundleIdentifier];
-					if ( pDefaultMailAppID && [pDefaultMailAppID length] )
-						mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:pDefaultMailAppID options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
-				}
+				pAppURL = [pWorkspace URLForApplicationWithBundleIdentifier:mpAppID];
+				if ( pAppURL )
+					[pAppURLs addObject:pAppURL];
+			}
+
+			NSWorkspaceOpenConfiguration *pConfiguration = [NSWorkspaceOpenConfiguration configuration];
+			if ( [pAppURLs count] && pConfiguration )
+			{
+				pAppURL = [pAppURLs lastObject];
+				[pAppURLs removeLastObject];
+				[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:^(NSRunningApplication *pApp, NSError *pError) {
+					(void)pError;
+					if ( !pApp && [pAppURLs count] )
+					{
+						NSURL *pAppURL = [pAppURLs lastObject];
+						[pAppURLs removeLastObject];
+						[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:^(NSRunningApplication *pApp, NSError *pError) {
+							(void)pError;
+							if ( !pApp && [pAppURLs count] )
+							{
+								NSURL *pAppURL = [pAppURLs lastObject];
+								[pAppURLs removeLastObject];
+								[pWorkspace openURLs:mpURLs withApplicationAtURL:pAppURL configuration:pConfiguration completionHandler:nil];
+							}
+						}];
+					}
+				}];
+				mbResult = YES;
 			}
 		}
-
-		if ( !mbResult )
-			mbResult = [pWorkspace openURLs:mpURLs withAppBundleIdentifier:@"com.apple.mail" options:NSWorkspaceLaunchDefault additionalEventParamDescriptor:nil launchIdentifiers:nil];
 	}
 }
 
@@ -149,7 +168,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, 
 			OUString aSystemPath;
 			if ( ::osl::FileBase::E_None == ::osl::FileBase::getSystemPathFromFileURL( rStringList[ i ], aSystemPath ) )
 			{
-				NSString *pAttachPath = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aSystemPath.getStr() ) length:aSystemPath.getLength()];
+				NSString *pAttachPath = [NSString stringWithCharacters:aSystemPath.getStr() length:aSystemPath.getLength()];
 				if ( pAttachPath )
 				{
 					NSURL *pAttachURL = [NSURL fileURLWithPath:pAttachPath];
@@ -164,7 +183,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, 
 			NSString *pAppID = nil;
 			if ( aMailerPath.getLength() )
 			{
-				NSString *pMailerPath = [NSString stringWithCharacters:reinterpret_cast< const unichar* >( aMailerPath.getStr() ) length:aMailerPath.getLength()];
+				NSString *pMailerPath = [NSString stringWithCharacters:aMailerPath.getStr() length:aMailerPath.getLength()];
 				if ( pMailerPath )
 				{
 					NSBundle *pBundle = [NSBundle bundleWithPath:pMailerPath];
@@ -187,8 +206,7 @@ sal_Bool CmdMailSuppl_sendSimpleMailMessage( Sequence< OUString > &rStringList, 
 			}
 
 			CmdMailSupplOpenURLs *pCmdMailSupplOpenURLs = [CmdMailSupplOpenURLs createWithURLs:pURLs appID:pAppID];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pCmdMailSupplOpenURLs performSelectorOnMainThread:@selector(openURLs:) withObject:pCmdMailSupplOpenURLs waitUntilDone:YES modes:pModes];
+			osl_performSelectorOnMainThread( pCmdMailSupplOpenURLs, @selector(openURLs:), pCmdMailSupplOpenURLs, YES );
 			bRet = [pCmdMailSupplOpenURLs result];
 		}
 	}

@@ -37,7 +37,7 @@
 #include <rtl/ustrbuf.hxx>
 
 #include <cppuhelper/bootstrap.hxx>
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase1.hxx>
 
 #include <com/sun/star/lang/XMain.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
@@ -101,9 +101,9 @@ static const char arUsingText[] =
 "    [--quiet]\n"
 "    [-- Argument1 Argument2 ...]\n";
 
-/// @throws RuntimeException
 static bool readOption( OUString * pValue, const sal_Char * pOpt,
                         sal_uInt32 * pnIndex, const OUString & aArg)
+    throw (RuntimeException)
 {
     const OUString dash("-");
     if(!aArg.startsWith(dash))
@@ -126,7 +126,13 @@ static bool readOption( OUString * pValue, const sal_Char * pOpt,
         }
         else
         {
-            SAL_INFO("cpputools.unoexe", "> identified option -" << pOpt << " = " << aArg);
+#if OSL_DEBUG_LEVEL > 1
+            out( "\n> identified option -" );
+            out( pOpt );
+            out( " = " );
+            OString tmp = OUStringToOString(aArg, RTL_TEXTENCODING_ASCII_US);
+              out( tmp.getStr() );
+#endif
             ++(*pnIndex);
             return true;
         }
@@ -134,7 +140,13 @@ static bool readOption( OUString * pValue, const sal_Char * pOpt,
       else if (aArg.indexOf(aOpt) == 1)
     {
         *pValue = aArg.copy(1 + aOpt.getLength());
-        SAL_INFO("cpputools.unoexe", "> identified option -" << pOpt << " = " << aArg);
+#if OSL_DEBUG_LEVEL > 1
+        out( "\n> identified option -" );
+        out( pOpt );
+        out( " = " );
+        OString tmp = OUStringToOString(aArg.copy(aOpt.getLength()), RTL_TEXTENCODING_ASCII_US);
+        out( tmp.getStr() );
+#endif
         ++(*pnIndex);
 
         return true;
@@ -145,24 +157,28 @@ static bool readOption( OUString * pValue, const sal_Char * pOpt,
 static bool readOption( bool * pbOpt, const sal_Char * pOpt,
                         sal_uInt32 * pnIndex, const OUString & aArg)
 {
+    const OUString dashdash("--");
     OUString aOpt = OUString::createFromAscii(pOpt);
 
-    if(aArg.startsWith("--") && aOpt.equals(aArg.copy(2)))
+    if(aArg.startsWith(dashdash) && aOpt.equals(aArg.copy(2)))
     {
         ++(*pnIndex);
         *pbOpt = true;
-        SAL_INFO("cpputools.unoexe", "> identified option --" << pOpt);
+#if OSL_DEBUG_LEVEL > 1
+        out( "\n> identified option --" );
+        out( pOpt );
+#endif
         return true;
     }
     return false;
 }
 
-/// @throws Exception
 template< class T >
 void createInstance(
     Reference< T > & rxOut,
     const Reference< XComponentContext > & xContext,
     const OUString & rServiceName )
+    throw (Exception)
 {
     Reference< XMultiComponentFactory > xMgr( xContext->getServiceManager() );
     Reference< XInterface > x( xMgr->createInstanceWithContext( rServiceName, xContext ) );
@@ -172,13 +188,21 @@ void createInstance(
         throw RuntimeException( "cannot get service instance \"" + rServiceName + "\"!" );
     }
 
-    rxOut.set( x, UNO_QUERY_THROW );
+    rxOut = Reference< T >::query( x );
+    if (! rxOut.is())
+    {
+        const Type & rType = ::getCppuType( (const Reference< T > *)0 );
+        throw RuntimeException(
+            "service instance \"" + rServiceName +
+            "\" does not support demanded interface \"" +
+            rType.getTypeName() + "\"!" );
+    }
 }
 
-/// @throws Exception
 static Reference< XInterface > loadComponent(
     const Reference< XComponentContext > & xContext,
     const OUString & rImplName, const OUString & rLocation )
+    throw (Exception)
 {
     // determine loader to be used
     sal_Int32 nDot = rLocation.lastIndexOf( '.' );
@@ -188,15 +212,19 @@ static Reference< XInterface > loadComponent(
 
         OUString aExt( rLocation.copy( nDot +1 ) );
 
-        if (aExt == "dll" || aExt == "exe" || aExt == "dylib" || aExt == "so")
+        if (aExt.equalsAscii( "dll" ) ||
+            aExt.equalsAscii( "exe" ) ||
+            aExt.equalsAscii( "dylib" ) ||
+            aExt.equalsAscii( "so" ) )
         {
             createInstance(
-                xLoader, xContext, "com.sun.star.loader.SharedLibrary" );
+                xLoader, xContext, OUString("com.sun.star.loader.SharedLibrary") );
         }
-        else if (aExt == "jar" || aExt == "class")
+        else if (aExt.equalsAscii( "jar" ) ||
+                 aExt.equalsAscii( "class" ) )
         {
             createInstance(
-                xLoader, xContext, "com.sun.star.loader.Java" );
+                xLoader, xContext, OUString("com.sun.star.loader.Java") );
         }
         else
         {
@@ -221,7 +249,7 @@ static Reference< XInterface > loadComponent(
                 Reference< XSingleServiceFactory > xSFac( xFactory, UNO_QUERY );
                 if (xSFac.is())
                 {
-                    out( "\n> warning: ignoring context for implementation \"" );
+                    out( "\n> warning: ignroing context for implementation \"" );
                     out( rImplName );
                     out( "\"!" );
                     xInstance = xSFac->createInstance();
@@ -245,7 +273,7 @@ static Reference< XInterface > loadComponent(
 }
 
 class OInstanceProvider
-    : public WeakImplHelper< XInstanceProvider >
+    : public WeakImplHelper1< XInstanceProvider >
 {
     Reference< XComponentContext > _xContext;
 
@@ -260,8 +288,7 @@ class OInstanceProvider
 
     OUString                          _aInstanceName;
 
-    /// @throws Exception
-    inline Reference< XInterface > createInstance();
+    inline Reference< XInterface > createInstance() throw (Exception);
 
 public:
     OInstanceProvider( const Reference< XComponentContext > & xContext,
@@ -278,10 +305,12 @@ public:
         {}
 
     // XInstanceProvider
-    virtual Reference< XInterface > SAL_CALL getInstance( const OUString & rName ) override;
+    virtual Reference< XInterface > SAL_CALL getInstance( const OUString & rName )
+        throw (NoSuchElementException, RuntimeException, std::exception) SAL_OVERRIDE;
 };
 
 inline Reference< XInterface > OInstanceProvider::createInstance()
+    throw (Exception)
 {
     Reference< XInterface > xRet;
     if (!_aImplName.isEmpty()) // manually via loader
@@ -298,6 +327,7 @@ inline Reference< XInterface > OInstanceProvider::createInstance()
 }
 
 Reference< XInterface > OInstanceProvider::getInstance( const OUString & rName )
+    throw (NoSuchElementException, RuntimeException, std::exception)
 {
     try
     {
@@ -339,24 +369,26 @@ Reference< XInterface > OInstanceProvider::getInstance( const OUString & rName )
         "no such element \"" + rName + "\"!" );
 }
 
-struct ODisposingListener : public WeakImplHelper< XEventListener >
+struct ODisposingListener : public WeakImplHelper1< XEventListener >
 {
     Condition cDisposed;
 
     // XEventListener
-    virtual void SAL_CALL disposing( const EventObject & rEvt ) override;
+    virtual void SAL_CALL disposing( const EventObject & rEvt )
+        throw (RuntimeException, std::exception) SAL_OVERRIDE;
 
     static void waitFor( const Reference< XComponent > & xComp );
 };
 
 void ODisposingListener::disposing( const EventObject & )
+    throw (RuntimeException, std::exception)
 {
     cDisposed.set();
 }
 
 void ODisposingListener::waitFor( const Reference< XComponent > & xComp )
 {
-    ODisposingListener * pListener = new ODisposingListener;
+    ODisposingListener * pListener = new ODisposingListener();
     Reference< XEventListener > xListener( pListener );
 
     xComp->addEventListener( xListener );
@@ -417,7 +449,8 @@ SAL_IMPLEMENT_MAIN()
 
             rtl_getAppCommandArg(nPos, &arg.pData);
 
-            if (arg == "--")
+            const OUString dashdash("--");
+            if (dashdash == arg)
             {
                 ++nPos;
                 break;
@@ -487,7 +520,7 @@ SAL_IMPLEMENT_MAIN()
             Any * pInitParams = aInitParams.getArray();
             for ( sal_Int32 i = aParams.getLength(); i--; )
             {
-                pInitParams[i] <<= p[i];
+                pInitParams[i] = makeAny( p[i] );
             }
 
             // instance provider
@@ -510,7 +543,7 @@ SAL_IMPLEMENT_MAIN()
                 Reference< XBridgeFactory > xBridgeFactory;
                 createInstance(
                     xBridgeFactory, xContext,
-                    "com.sun.star.bridge.BridgeFactory" );
+                    OUString("com.sun.star.bridge.BridgeFactory") );
 
                 // bridge
                 Reference< XBridge > xBridge( xBridgeFactory->createBridge(
@@ -519,7 +552,9 @@ SAL_IMPLEMENT_MAIN()
 
                 if (bSingleAccept)
                 {
-                    Reference< XComponent > xComp( xBridge, UNO_QUERY_THROW );
+                    Reference< XComponent > xComp( xBridge, UNO_QUERY );
+                    if (! xComp.is())
+                        throw RuntimeException( "bridge factory does not export interface \"com.sun.star.lang.XComponent\"!" );
                     ODisposingListener::waitFor( xComp );
                     xComp->dispose();
                         // explicitly dispose the remote bridge so that it joins
@@ -548,7 +583,7 @@ SAL_IMPLEMENT_MAIN()
                 Reference< XComponent > xComp( xInstance, UNO_QUERY );
                 if (xComp.is())
                     xComp->dispose();
-                throw RuntimeException( "component does not export interface \"com.sun.star.lang.XMain\"!" );
+                throw RuntimeException( "component does not export interface interface \"com.sun.star.lang.XMain\"!" );
             }
         }
     }
@@ -565,6 +600,9 @@ SAL_IMPLEMENT_MAIN()
     if (xComp.is())
         xComp->dispose();
 
+#if OSL_DEBUG_LEVEL > 1
+    out( "\n" );
+#endif
     return nRet;
 }
 

@@ -17,34 +17,33 @@
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  */
 
-#include <svgdocumenthandler.hxx>
-#include <svgtoken.hxx>
-#include <svgsvgnode.hxx>
-#include <svggnode.hxx>
-#include <svganode.hxx>
-#include <svgnode.hxx>
-#include <svgpathnode.hxx>
-#include <svgrectnode.hxx>
-#include <svggradientnode.hxx>
-#include <svggradientstopnode.hxx>
-#include <svgsymbolnode.hxx>
-#include <svgusenode.hxx>
-#include <svgcirclenode.hxx>
-#include <svgellipsenode.hxx>
-#include <svglinenode.hxx>
-#include <svgpolynode.hxx>
-#include <svgtextnode.hxx>
-#include <svgcharacternode.hxx>
-#include <svgtspannode.hxx>
-#include <svgtrefnode.hxx>
-#include <svgtextpathnode.hxx>
-#include <svgstylenode.hxx>
-#include <svgimagenode.hxx>
-#include <svgclippathnode.hxx>
-#include <svgmasknode.hxx>
-#include <svgmarkernode.hxx>
-#include <svgpatternnode.hxx>
-#include <svgtitledescnode.hxx>
+#include <svgio/svgreader/svgdocumenthandler.hxx>
+#include <svgio/svgreader/svgtoken.hxx>
+#include <svgio/svgreader/svgsvgnode.hxx>
+#include <svgio/svgreader/svggnode.hxx>
+#include <svgio/svgreader/svgnode.hxx>
+#include <svgio/svgreader/svgpathnode.hxx>
+#include <svgio/svgreader/svgrectnode.hxx>
+#include <svgio/svgreader/svggradientnode.hxx>
+#include <svgio/svgreader/svggradientstopnode.hxx>
+#include <svgio/svgreader/svgsymbolnode.hxx>
+#include <svgio/svgreader/svgusenode.hxx>
+#include <svgio/svgreader/svgcirclenode.hxx>
+#include <svgio/svgreader/svgellipsenode.hxx>
+#include <svgio/svgreader/svglinenode.hxx>
+#include <svgio/svgreader/svgpolynode.hxx>
+#include <svgio/svgreader/svgtextnode.hxx>
+#include <svgio/svgreader/svgcharacternode.hxx>
+#include <svgio/svgreader/svgtspannode.hxx>
+#include <svgio/svgreader/svgtrefnode.hxx>
+#include <svgio/svgreader/svgtextpathnode.hxx>
+#include <svgio/svgreader/svgstylenode.hxx>
+#include <svgio/svgreader/svgimagenode.hxx>
+#include <svgio/svgreader/svgclippathnode.hxx>
+#include <svgio/svgreader/svgmasknode.hxx>
+#include <svgio/svgreader/svgmarkernode.hxx>
+#include <svgio/svgreader/svgpatternnode.hxx>
+#include <svgio/svgreader/svgtitledescnode.hxx>
 
 using namespace com::sun::star;
 
@@ -102,7 +101,7 @@ namespace
                                     }
                                 }
 
-                                // remember new last corrected character node
+                                // remember new last corected character node
                                 pLast = pCharNode;
                             }
                             break;
@@ -130,13 +129,14 @@ namespace
 }
 
 
+
 namespace svgio
 {
     namespace svgreader
     {
         SvgDocHdl::SvgDocHdl(const OUString& aAbsolutePath)
         :   maDocument(aAbsolutePath),
-            mpTarget(nullptr),
+            mpTarget(0),
             maCssContents(),
             bSkip(false)
         {
@@ -164,19 +164,19 @@ namespace svgio
 #endif	// DBG_UTIL || !NO_LIBO_SVGNODE_LEAK_FIX
         }
 
-        void SvgDocHdl::startDocument(  )
+        void SvgDocHdl::startDocument(  ) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
             OSL_ENSURE(!mpTarget, "Already a target at document start (!)");
             OSL_ENSURE(!maCssContents.size(), "SvgDocHdl startDocument with active css style stack entry (!)");
         }
 
-        void SvgDocHdl::endDocument(  )
+        void SvgDocHdl::endDocument(  ) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
             OSL_ENSURE(!mpTarget, "Still a target at document end (!)");
             OSL_ENSURE(!maCssContents.size(), "SvgDocHdl endDocument with active css style stack entry (!)");
         }
 
-        void SvgDocHdl::startElement( const OUString& aName, const uno::Reference< xml::sax::XAttributeList >& xAttribs )
+        void SvgDocHdl::startElement( const OUString& aName, const uno::Reference< xml::sax::XAttributeList >& xAttribs ) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
             if (bSkip)
                 return;
@@ -214,13 +214,6 @@ namespace svgio
                     {
                         /// new node for Use
                         mpTarget = new SvgUseNode(maDocument, mpTarget);
-                        mpTarget->parseAttributes(xAttribs);
-                        break;
-                    }
-                    case SVGTokenA:
-                    {
-                        /// new node for A
-                        mpTarget = new SvgANode(maDocument, mpTarget);
                         mpTarget->parseAttributes(xAttribs);
                         break;
                     }
@@ -411,7 +404,10 @@ namespace svgio
                     {
                         /// invalid token, ignore
 #ifdef DBG_UTIL
-                        myAssert( "Unknown Base SvgToken <" + aName + "> (!)" );
+                        myAssert(
+                            OUString("Unknown Base SvgToken <") +
+                            aName +
+                            OUString("> (!)") );
 #endif
                         break;
                     }
@@ -419,14 +415,14 @@ namespace svgio
             }
         }
 
-        void SvgDocHdl::endElement( const OUString& aName )
+        void SvgDocHdl::endElement( const OUString& aName ) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
             if(!aName.isEmpty())
             {
                 const SVGToken aSVGToken(StrToSVGToken(aName, false));
-                SvgNode* pWhitespaceCheck(SVGTokenText == aSVGToken ? mpTarget : nullptr);
-                SvgStyleNode* pCssStyle(SVGTokenStyle == aSVGToken ? static_cast< SvgStyleNode* >(mpTarget) : nullptr);
-                SvgTitleDescNode* pSvgTitleDescNode(SVGTokenTitle == aSVGToken || SVGTokenDesc == aSVGToken ? static_cast< SvgTitleDescNode* >(mpTarget) : nullptr);
+                SvgNode* pWhitespaceCheck(SVGTokenText == aSVGToken ? mpTarget : 0);
+                SvgStyleNode* pCssStyle(SVGTokenStyle == aSVGToken ? static_cast< SvgStyleNode* >(mpTarget) : 0);
+                SvgTitleDescNode* pSvgTitleDescNode(SVGTokenTitle == aSVGToken || SVGTokenDesc == aSVGToken ? static_cast< SvgTitleDescNode* >(mpTarget) : 0);
 
                 // if we are in skipping mode and we reach the flowRoot end tag: stop skipping mode
                 if(bSkip && aSVGToken == SVGTokenFlowRoot)
@@ -445,7 +441,6 @@ namespace svgio
                     case SVGTokenSvg:
                     case SVGTokenSymbol:
                     case SVGTokenUse:
-                    case SVGTokenA:
 
                     /// shape elements
                     case SVGTokenCircle:
@@ -555,12 +550,12 @@ namespace svgio
                 if(pWhitespaceCheck)
                 {
                     // cleanup read strings
-                    whiteSpaceHandling(pWhitespaceCheck, nullptr);
+                    whiteSpaceHandling(pWhitespaceCheck, 0);
                 }
             }
         }
 
-        void SvgDocHdl::characters( const OUString& aChars )
+        void SvgDocHdl::characters( const OUString& aChars ) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
             const sal_uInt32 nLength(aChars.getLength());
 
@@ -573,7 +568,7 @@ namespace svgio
                     case SVGTokenTextPath:
                     {
                         const SvgNodeVector& rChilds = mpTarget->getChildren();
-                        SvgCharacterNode* pTarget = nullptr;
+                        SvgCharacterNode* pTarget = 0;
 
                         if(rChilds.size())
                         {
@@ -635,15 +630,15 @@ namespace svgio
             }
         }
 
-        void SvgDocHdl::ignorableWhitespace(const OUString& /*aWhitespaces*/)
+        void SvgDocHdl::ignorableWhitespace(const OUString& /*aWhitespaces*/) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
         }
 
-        void SvgDocHdl::processingInstruction(const OUString& /*aTarget*/, const OUString& /*aData*/)
+        void SvgDocHdl::processingInstruction(const OUString& /*aTarget*/, const OUString& /*aData*/) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
         }
 
-        void SvgDocHdl::setDocumentLocator(const uno::Reference< xml::sax::XLocator >& /*xLocator*/)
+        void SvgDocHdl::setDocumentLocator(const uno::Reference< xml::sax::XLocator >& /*xLocator*/) throw (xml::sax::SAXException, uno::RuntimeException, std::exception)
         {
         }
     } // end of namespace svgreader

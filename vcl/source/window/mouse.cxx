@@ -44,9 +44,8 @@
 #include <salobj.hxx>
 #include <salgdi.hxx>
 #include <salframe.hxx>
-
-#include "dndlistenercontainer.hxx"
-#include "dndeventdispatcher.hxx"
+#include <dndlcon.hxx>
+#include <dndevdis.hxx>
 
 #include <com/sun/star/datatransfer/dnd/XDragSource.hpp>
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
@@ -57,29 +56,30 @@ using namespace ::com::sun::star::uno;
 
 namespace vcl {
 
-WindowHitTest Window::ImplHitTest( const Point& rFramePos )
+sal_uInt16 Window::ImplHitTest( const Point& rFramePos )
 {
     Point aFramePos( rFramePos );
     if( ImplIsAntiparallel() )
     {
+        // - RTL - re-mirror frame pos at this window
         const OutputDevice *pOutDev = GetOutDev();
         pOutDev->ReMirror( aFramePos );
     }
-    tools::Rectangle aRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
+    Rectangle aRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
     if ( !aRect.IsInside( aFramePos ) )
-        return WindowHitTest::NONE;
+        return 0;
     if ( mpWindowImpl->mbWinRegion )
     {
         Point aTempPos = aFramePos;
         aTempPos.X() -= mnOutOffX;
         aTempPos.Y() -= mnOutOffY;
         if ( !mpWindowImpl->maWinRegion.IsInside( aTempPos ) )
-            return WindowHitTest::NONE;
+            return 0;
     }
 
-    WindowHitTest nHitTest = WindowHitTest::Inside;
+    sal_uInt16 nHitTest = WINDOW_HITTEST_INSIDE;
     if ( mpWindowImpl->mbMouseTransparent )
-        nHitTest |= WindowHitTest::Transparent;
+        nHitTest |= WINDOW_HITTEST_TRANSPARENT;
     return nHitTest;
 }
 
@@ -90,8 +90,11 @@ bool Window::ImplTestMousePointerSet()
         return true;
 
     // if the mouse is over the window, switch it
-    tools::Rectangle aClientRect( Point( 0, 0 ), GetOutputSizePixel() );
-    return aClientRect.IsInside( GetPointerPosPixel() );
+    Rectangle aClientRect( Point( 0, 0 ), GetOutputSizePixel() );
+    if ( aClientRect.IsInside( GetPointerPosPixel() ) )
+        return true;
+
+    return false;
 }
 
 PointerStyle Window::ImplGetMousePointer() const
@@ -102,7 +105,7 @@ PointerStyle Window::ImplGetMousePointer() const
     if ( IsEnabled() && IsInputEnabled() && ! IsInModalMode() )
         ePointerStyle = GetPointer().GetStyle();
     else
-        ePointerStyle = PointerStyle::Arrow;
+        ePointerStyle = POINTER_ARROW;
 
     const vcl::Window* pWindow = this;
     do
@@ -110,13 +113,13 @@ PointerStyle Window::ImplGetMousePointer() const
         // when the pointer is not visible stop the search, as
         // this status should not be overwritten
         if ( pWindow->mpWindowImpl->mbNoPtrVisible )
-            return PointerStyle::Null;
+            return POINTER_NULL;
 
         if ( !bWait )
         {
             if ( pWindow->mpWindowImpl->mnWaitCount )
             {
-                ePointerStyle = PointerStyle::Wait;
+                ePointerStyle = POINTER_WAIT;
                 bWait = true;
             }
             else
@@ -140,34 +143,36 @@ void Window::ImplCallMouseMove( sal_uInt16 nMouseCode, bool bModChanged )
 {
     if ( mpWindowImpl->mpFrameData->mbMouseIn && mpWindowImpl->mpFrameWindow->mpWindowImpl->mbReallyVisible )
     {
-        sal_uInt64 nTime   = tools::Time::GetSystemTicks();
+        sal_uLong   nTime   = tools::Time::GetSystemTicks();
         long    nX      = mpWindowImpl->mpFrameData->mnLastMouseX;
         long    nY      = mpWindowImpl->mpFrameData->mnLastMouseY;
         sal_uInt16  nCode   = nMouseCode;
         MouseEventModifiers nMode = mpWindowImpl->mpFrameData->mnMouseMode;
         bool    bLeave;
         // check for MouseLeave
-        bLeave = ((nX < 0) || (nY < 0) ||
-                  (nX >= mpWindowImpl->mpFrameWindow->mnOutWidth) ||
-                  (nY >= mpWindowImpl->mpFrameWindow->mnOutHeight)) &&
-                 !ImplGetSVData()->maWinData.mpCaptureWin;
+        if ( ((nX < 0) || (nY < 0) ||
+              (nX >= mpWindowImpl->mpFrameWindow->mnOutWidth) ||
+              (nY >= mpWindowImpl->mpFrameWindow->mnOutHeight)) &&
+             !ImplGetSVData()->maWinData.mpCaptureWin )
+            bLeave = true;
+        else
+            bLeave = false;
         nMode |= MouseEventModifiers::SYNTHETIC;
         if ( bModChanged )
             nMode |= MouseEventModifiers::MODIFIERCHANGED;
-        ImplHandleMouseEvent( mpWindowImpl->mpFrameWindow, MouseNotifyEvent::MOUSEMOVE, bLeave, nX, nY, nTime, nCode, nMode );
+        ImplHandleMouseEvent( mpWindowImpl->mpFrameWindow, EVENT_MOUSEMOVE, bLeave, nX, nY, nTime, nCode, nMode );
     }
 }
 
 void Window::ImplGenerateMouseMove()
 {
-    if ( mpWindowImpl && mpWindowImpl->mpFrameData &&
-         !mpWindowImpl->mpFrameData->mnMouseMoveId )
-        mpWindowImpl->mpFrameData->mnMouseMoveId = Application::PostUserEvent( LINK( mpWindowImpl->mpFrameWindow, Window, ImplGenerateMouseMoveHdl ), nullptr, true );
+    if ( !mpWindowImpl->mpFrameData->mnMouseMoveId )
+        mpWindowImpl->mpFrameData->mnMouseMoveId = Application::PostUserEvent( LINK( mpWindowImpl->mpFrameWindow, Window, ImplGenerateMouseMoveHdl ) );
 }
 
-IMPL_LINK_NOARG(Window, ImplGenerateMouseMoveHdl, void*, void)
+IMPL_LINK_NOARG(Window, ImplGenerateMouseMoveHdl)
 {
-    mpWindowImpl->mpFrameData->mnMouseMoveId = nullptr;
+    mpWindowImpl->mpFrameData->mnMouseMoveId = 0;
     vcl::Window* pCaptureWin = ImplGetSVData()->maWinData.mpCaptureWin;
     if( ! pCaptureWin ||
         (pCaptureWin->mpWindowImpl && pCaptureWin->mpWindowImpl->mpFrame == mpWindowImpl->mpFrame)
@@ -175,11 +180,12 @@ IMPL_LINK_NOARG(Window, ImplGenerateMouseMoveHdl, void*, void)
     {
         ImplCallMouseMove( mpWindowImpl->mpFrameData->mnMouseCode );
     }
+    return 0;
 }
 
-void Window::ImplInvertFocus( const tools::Rectangle& rRect )
+void Window::ImplInvertFocus( const Rectangle& rRect )
 {
-    InvertTracking( rRect, ShowTrackFlags::Small | ShowTrackFlags::TrackWindow );
+    InvertTracking( rRect, SHOWTRACK_SMALL | SHOWTRACK_WINDOW );
 }
 
 static bool IsWindowFocused(const WindowImpl& rWinImpl)
@@ -196,15 +202,19 @@ static bool IsWindowFocused(const WindowImpl& rWinImpl)
     return false;
 }
 
-void Window::ImplGrabFocus( GetFocusFlags nFlags )
+void Window::ImplGrabFocus( sal_uInt16 nFlags )
 {
     // #143570# no focus for destructing windows
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
+    if( mpWindowImpl->mbInDtor )
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
     if( !mpWindowImpl || mpWindowImpl->mbInDispose )
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
         return;
 
     // some event listeners do really bad stuff
     // => prepare for the worst
-    VclPtr<vcl::Window> xWindow( this );
+    ImplDelData aDogTag( this );
 
     // Currently the client window should always get the focus
     // Should the border window at some point be focusable
@@ -216,8 +226,8 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         // For a lack of design we need a little hack here to
         // ensure that dialogs on close pass the focus back to
         // the correct window
-        if ( mpWindowImpl->mpLastFocusWindow && (mpWindowImpl->mpLastFocusWindow.get() != this) &&
-             !(mpWindowImpl->mnDlgCtrlFlags & DialogControlFlags::WantFocus) &&
+        if ( mpWindowImpl->mpLastFocusWindow && (mpWindowImpl->mpLastFocusWindow != this) &&
+             !(mpWindowImpl->mnDlgCtrlFlags & WINDOW_DLGCTRL_WANTFOCUS) &&
              mpWindowImpl->mpLastFocusWindow->IsEnabled() &&
              mpWindowImpl->mpLastFocusWindow->IsInputEnabled() &&
              ! mpWindowImpl->mpLastFocusWindow->IsInModalMode()
@@ -232,8 +242,8 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         // For a lack of design we need a little hack here to
         // ensure that dialogs on close pass the focus back to
         // the correct window
-        if ( mpWindowImpl->mpLastFocusWindow && (mpWindowImpl->mpLastFocusWindow.get() != this) &&
-             !(mpWindowImpl->mnDlgCtrlFlags & DialogControlFlags::WantFocus) &&
+        if ( mpWindowImpl->mpLastFocusWindow && (mpWindowImpl->mpLastFocusWindow != this) &&
+             !(mpWindowImpl->mnDlgCtrlFlags & WINDOW_DLGCTRL_WANTFOCUS) &&
              mpWindowImpl->mpLastFocusWindow->IsEnabled() &&
              mpWindowImpl->mpLastFocusWindow->IsInputEnabled() &&
              ! mpWindowImpl->mpLastFocusWindow->IsInModalMode()
@@ -245,11 +255,11 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
     }
 
     // If the Window is disabled, then we don't change the focus
-    if ( !IsEnabled() || !IsInputEnabled() || IsInModalMode() )
+    if ( !IsEnabled() || !IsInputEnabled() || IsInModalNonRefMode() )
         return;
 
     // we only need to set the focus if it is not already set
-    // note: if some other frame is waiting for an asynchronous focus event
+    // note: if some other frame is waiting for an asynchrounous focus event
     // we also have to post an asynchronous focus event for this frame
     // which is done using ToTop
     ImplSVData* pSVData = ImplGetSVData();
@@ -258,7 +268,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
     vcl::Window *pFrame = pSVData->maWinData.mpFirstFrame;
     while( pFrame  )
     {
-        if( pFrame != mpWindowImpl->mpFrameWindow.get() && pFrame->mpWindowImpl->mpFrameData->mnFocusId )
+        if( pFrame != mpWindowImpl->mpFrameWindow && pFrame->mpWindowImpl->mpFrameData->mnFocusId )
         {
             bAsyncFocusWaiting = true;
             break;
@@ -274,7 +284,9 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
     vcl::Window *pParent = this;
     while( pParent )
     {
-        if ((pParent->GetStyle() & WB_SYSTEMFLOATWIN) && !(pParent->GetStyle() & WB_MOVEABLE))
+        // #102158#, ignore grabfocus only if the floating parent grabs keyboard focus by itself (GrabsFocus())
+        // otherwise we cannot set the focus in a floating toolbox
+        if( ( (pParent->mpWindowImpl->mbFloatWin && static_cast<FloatingWindow*>(pParent)->GrabsFocus()) || ( pParent->GetStyle() & WB_SYSTEMFLOATWIN ) ) && !( pParent->GetStyle() & WB_MOVEABLE ) )
         {
             bMustNotGrabFocus = true;
             break;
@@ -282,14 +294,18 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         pParent = pParent->mpWindowImpl->mpParent;
     }
 
-    if ( ( pSVData->maWinData.mpFocusWin.get() != this &&
-           !mpWindowImpl->mbInDispose ) ||
+#ifdef NO_LIBO_DISPOSED_WINDOW_FIX
+    if ( ( pSVData->maWinData.mpFocusWin != this && ! mpWindowImpl->mbInDtor ) || ( bAsyncFocusWaiting && !bHasFocus && !bMustNotGrabFocus ) )
+#else	// NO_LIBO_DISPOSED_WINDOW_FIX
+    if ( ( pSVData->maWinData.mpFocusWin != this &&
+           mpWindowImpl && !mpWindowImpl->mbInDispose ) ||
          ( bAsyncFocusWaiting && !bHasFocus && !bMustNotGrabFocus ) )
+#endif	// NO_LIBO_DISPOSED_WINDOW_FIX
     {
         // EndExtTextInput if it is not the same window
         if ( pSVData->maWinData.mpExtTextInputWin &&
-             (pSVData->maWinData.mpExtTextInputWin.get() != this) )
-            pSVData->maWinData.mpExtTextInputWin->EndExtTextInput();
+             (pSVData->maWinData.mpExtTextInputWin != this) )
+            pSVData->maWinData.mpExtTextInputWin->EndExtTextInput( EXTTEXTINPUT_END_COMPLETE );
 
         // mark this windows as the last FocusWindow
         vcl::Window* pOverlapWindow = ImplGetFirstOverlapWindow();
@@ -306,12 +322,14 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
             {
                 // here we already switch focus as ToTop()
                 // should not give focus to another window
-                mpWindowImpl->mpFrame->ToTop( SalFrameToTop::GrabFocus | SalFrameToTop::GrabFocusOnly );
+                //DBG_WARNING( "Window::GrabFocus() - Frame doesn't have the focus" );
+                mpWindowImpl->mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
                 return;
             }
         }
 
-        VclPtr<vcl::Window> pOldFocusWindow = pSVData->maWinData.mpFocusWin;
+        vcl::Window* pOldFocusWindow = pSVData->maWinData.mpFocusWin;
+        ImplDelData aOldFocusDel( pOldFocusWindow );
 
         pSVData->maWinData.mpFocusWin = this;
 
@@ -319,7 +337,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         {
             // Cursor hidden
             if ( pOldFocusWindow->mpWindowImpl->mpCursor )
-                pOldFocusWindow->mpWindowImpl->mpCursor->ImplHide();
+                pOldFocusWindow->mpWindowImpl->mpCursor->ImplHide( true );
         }
 
         // !!!!! due to old SV-Office Activate/Deactivate handling
@@ -346,18 +364,18 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
         }
 
         // call Get- and LoseFocus
-        if ( pOldFocusWindow && ! pOldFocusWindow->IsDisposed() )
+        if ( pOldFocusWindow && ! aOldFocusDel.IsDead() )
         {
             if ( pOldFocusWindow->IsTracking() &&
-                 (pSVData->maWinData.mnTrackFlags & StartTrackingFlags::FocusCancel) )
-                pOldFocusWindow->EndTracking( TrackingEventFlags::Cancel | TrackingEventFlags::Focus );
-            NotifyEvent aNEvt( MouseNotifyEvent::LOSEFOCUS, pOldFocusWindow );
+                 (pSVData->maWinData.mnTrackFlags & STARTTRACK_FOCUSCANCEL) )
+                pOldFocusWindow->EndTracking( ENDTRACK_CANCEL | ENDTRACK_FOCUS );
+            NotifyEvent aNEvt( EVENT_LOSEFOCUS, pOldFocusWindow );
             if ( !ImplCallPreNotify( aNEvt ) )
-                pOldFocusWindow->CompatLoseFocus();
+                pOldFocusWindow->LoseFocus();
             pOldFocusWindow->ImplCallDeactivateListeners( this );
         }
 
-        if ( pSVData->maWinData.mpFocusWin.get() == this )
+        if ( pSVData->maWinData.mpFocusWin == this )
         {
             if ( mpWindowImpl->mpSysObj )
             {
@@ -366,7 +384,7 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
                     mpWindowImpl->mpSysObj->GrabFocus();
             }
 
-            if ( pSVData->maWinData.mpFocusWin.get() == this )
+            if ( pSVData->maWinData.mpFocusWin == this )
             {
                 if ( mpWindowImpl->mpCursor )
                     mpWindowImpl->mpCursor->ImplShow();
@@ -376,34 +394,35 @@ void Window::ImplGrabFocus( GetFocusFlags nFlags )
                 // notify the new focus window so it can restore the inner focus
                 // eg, toolboxes can select their recent active item
                 if( pOldFocusWindow &&
-                    ! pOldFocusWindow->IsDisposed() &&
-                    ( pOldFocusWindow->GetDialogControlFlags() & DialogControlFlags::FloatWinPopupModeEndCancel ) )
-                    mpWindowImpl->mnGetFocusFlags |= GetFocusFlags::FloatWinPopupModeEndCancel;
-                NotifyEvent aNEvt( MouseNotifyEvent::GETFOCUS, this );
-                if ( !ImplCallPreNotify( aNEvt ) && !xWindow->IsDisposed() )
-                    CompatGetFocus();
-                if( !xWindow->IsDisposed() )
-                    ImplCallActivateListeners( (pOldFocusWindow && ! pOldFocusWindow->IsDisposed()) ? pOldFocusWindow : nullptr );
-                if( !xWindow->IsDisposed() )
+                    ! aOldFocusDel.IsDead() &&
+                    ( pOldFocusWindow->GetDialogControlFlags() & WINDOW_DLGCTRL_FLOATWIN_POPUPMODEEND_CANCEL ) )
+                    mpWindowImpl->mnGetFocusFlags |= GETFOCUS_FLOATWIN_POPUPMODEEND_CANCEL;
+                NotifyEvent aNEvt( EVENT_GETFOCUS, this );
+                if ( !ImplCallPreNotify( aNEvt ) && !aDogTag.IsDead() )
+                    GetFocus();
+                if( !aDogTag.IsDead() )
+                    ImplCallActivateListeners( (pOldFocusWindow && ! aOldFocusDel.IsDead()) ? pOldFocusWindow : NULL );
+                if( !aDogTag.IsDead() )
                 {
-                    mpWindowImpl->mnGetFocusFlags = GetFocusFlags::NONE;
+                    mpWindowImpl->mnGetFocusFlags = 0;
                     mpWindowImpl->mbInFocusHdl = false;
                 }
             }
         }
 
+        GetpApp()->FocusChanged();
         ImplNewInputContext();
     }
 }
 
-void Window::ImplGrabFocusToDocument( GetFocusFlags nFlags )
+void Window::ImplGrabFocusToDocument( sal_uInt16 nFlags )
 {
     vcl::Window *pWin = this;
     while( pWin )
     {
         if( !pWin->GetParent() )
         {
-            pWin->ImplGetFrameWindow()->GetWindow( GetWindowType::Client )->ImplGrabFocus(nFlags);
+            pWin->ImplGetFrameWindow()->GetWindow( WINDOW_CLIENT )->ImplGrabFocus(nFlags);
             return;
         }
         pWin = pWin->GetParent();
@@ -412,22 +431,22 @@ void Window::ImplGrabFocusToDocument( GetFocusFlags nFlags )
 
 void Window::MouseMove( const MouseEvent& rMEvt )
 {
-    NotifyEvent aNEvt( MouseNotifyEvent::MOUSEMOVE, this, &rMEvt );
-    if (!EventNotify(aNEvt))
+    NotifyEvent aNEvt( EVENT_MOUSEMOVE, this, &rMEvt );
+    if ( !Notify( aNEvt ) )
         mpWindowImpl->mbMouseMove = true;
 }
 
 void Window::MouseButtonDown( const MouseEvent& rMEvt )
 {
-    NotifyEvent aNEvt( MouseNotifyEvent::MOUSEBUTTONDOWN, this, &rMEvt );
-    if (!EventNotify(aNEvt))
+    NotifyEvent aNEvt( EVENT_MOUSEBUTTONDOWN, this, &rMEvt );
+    if ( !Notify( aNEvt ) )
         mpWindowImpl->mbMouseButtonDown = true;
 }
 
 void Window::MouseButtonUp( const MouseEvent& rMEvt )
 {
-    NotifyEvent aNEvt( MouseNotifyEvent::MOUSEBUTTONUP, this, &rMEvt );
-    if (!EventNotify(aNEvt))
+    NotifyEvent aNEvt( EVENT_MOUSEBUTTONUP, this, &rMEvt );
+    if ( !Notify( aNEvt ) )
         mpWindowImpl->mbMouseButtonUp = true;
 }
 
@@ -449,13 +468,13 @@ void Window::CaptureMouse()
     ImplSVData* pSVData = ImplGetSVData();
 
     // possibly stop tracking
-    if ( pSVData->maWinData.mpTrackWin.get() != this )
+    if ( pSVData->maWinData.mpTrackWin != this )
     {
         if ( pSVData->maWinData.mpTrackWin )
-            pSVData->maWinData.mpTrackWin->EndTracking( TrackingEventFlags::Cancel );
+            pSVData->maWinData.mpTrackWin->EndTracking( ENDTRACK_CANCEL );
     }
 
-    if ( pSVData->maWinData.mpCaptureWin.get() != this )
+    if ( pSVData->maWinData.mpCaptureWin != this )
     {
         pSVData->maWinData.mpCaptureWin = this;
         mpWindowImpl->mpFrame->CaptureMouse( true );
@@ -464,10 +483,15 @@ void Window::CaptureMouse()
 
 void Window::ReleaseMouse()
 {
-    if (IsMouseCaptured())
+
+    ImplSVData* pSVData = ImplGetSVData();
+
+    DBG_ASSERTWARNING( pSVData->maWinData.mpCaptureWin == this,
+                       "Window::ReleaseMouse(): window doesn't have the mouse capture" );
+
+    if ( pSVData->maWinData.mpCaptureWin == this )
     {
-        ImplSVData* pSVData = ImplGetSVData();
-        pSVData->maWinData.mpCaptureWin = nullptr;
+        pSVData->maWinData.mpCaptureWin = NULL;
         mpWindowImpl->mpFrame->CaptureMouse( false );
         ImplGenerateMouseMove();
     }
@@ -475,11 +499,13 @@ void Window::ReleaseMouse()
 
 bool Window::IsMouseCaptured() const
 {
+
     return (this == ImplGetSVData()->maWinData.mpCaptureWin);
 }
 
 void Window::SetPointer( const Pointer& rPointer )
 {
+
     if ( mpWindowImpl->maPointer == rPointer )
         return;
 
@@ -511,6 +537,7 @@ void Window::SetPointerPosPixel( const Point& rPos )
     {
         if( !IsRTLEnabled() )
         {
+            // --- RTL --- (re-mirror mouse pos at this window)
             pOutDev->ReMirror( aPos );
         }
         // mirroring is required here, SetPointerPos bypasses SalGraphics
@@ -523,21 +550,13 @@ void Window::SetPointerPosPixel( const Point& rPos )
     mpWindowImpl->mpFrame->SetPointerPos( aPos.X(), aPos.Y() );
 }
 
-void Window::SetLastMousePos(const Point& rPos)
-{
-    // Do this conversion, so when GetPointerPosPixel() calls
-    // ImplFrameToOutput(), we get back the original position.
-    Point aPos = ImplOutputToFrame(rPos);
-    mpWindowImpl->mpFrameData->mnLastMouseX = aPos.X();
-    mpWindowImpl->mpFrameData->mnLastMouseY = aPos.Y();
-}
-
 Point Window::GetPointerPosPixel()
 {
 
     Point aPos( mpWindowImpl->mpFrameData->mnLastMouseX, mpWindowImpl->mpFrameData->mnLastMouseY );
     if( ImplIsAntiparallel() )
     {
+        // --- RTL --- (re-mirror mouse pos at this window)
         const OutputDevice *pOutDev = GetOutDev();
         pOutDev->ReMirror( aPos );
     }
@@ -550,6 +569,7 @@ Point Window::GetLastPointerPosPixel()
     Point aPos( mpWindowImpl->mpFrameData->mnBeforeLastMouseX, mpWindowImpl->mpFrameData->mnBeforeLastMouseY );
     if( ImplIsAntiparallel() )
     {
+        // --- RTL --- (re-mirror mouse pos at this window)
         const OutputDevice *pOutDev = GetOutDev();
         pOutDev->ReMirror( aPos );
     }
@@ -581,6 +601,7 @@ Window::PointerState Window::GetPointerState()
         aSalPointerState = mpWindowImpl->mpFrame->GetPointerState();
         if( ImplIsAntiparallel() )
         {
+            // --- RTL --- (re-mirror mouse pos at this window)
             const OutputDevice *pOutDev = GetOutDev();
             pOutDev->ReMirror( aSalPointerState.maPos );
         }
@@ -645,8 +666,6 @@ void Window::ImplStartDnd()
 
 Reference< css::datatransfer::dnd::XDropTarget > Window::GetDropTarget()
 {
-    if( !mpWindowImpl )
-        return Reference< css::datatransfer::dnd::XDropTarget >();
 
     if( ! mpWindowImpl->mxDNDListenerContainer.is() )
     {
@@ -657,7 +676,7 @@ Reference< css::datatransfer::dnd::XDropTarget > Window::GetDropTarget()
             if( ! mpWindowImpl->mpFrameData->mxDropTarget.is() )
             {
                 // initialization is done in GetDragSource
-                GetDragSource();
+                Reference< css::datatransfer::dnd::XDragSource > xDragSource = GetDragSource();
             }
 
             if( mpWindowImpl->mpFrameData->mxDropTarget.is() )
@@ -721,11 +740,11 @@ Reference< css::datatransfer::dnd::XDragSource > Window::GetDragSource()
                 {
                     Sequence< Any > aDragSourceAL( 2 ), aDropTargetAL( 2 );
                     OUString aDragSourceSN, aDropTargetSN;
-#if defined(_WIN32)
+#if defined WNT
                     aDragSourceSN = "com.sun.star.datatransfer.dnd.OleDragSource";
                     aDropTargetSN = "com.sun.star.datatransfer.dnd.OleDropTarget";
-                    aDragSourceAL[ 1 ] <<= static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->hWnd) );
-                    aDropTargetAL[ 0 ] <<= static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->hWnd) );
+                    aDragSourceAL[ 1 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->hWnd) ) );
+                    aDropTargetAL[ 0 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->hWnd) ) );
 #elif defined MACOSX
             /* FIXME: Mac OS X specific dnd interface does not exist! *
              * Using Windows based dnd as a temporary solution        */
@@ -737,17 +756,16 @@ Reference< css::datatransfer::dnd::XDragSource > Window::GetDragSource()
                     aDropTargetAL[ 0 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->mpNSView) ) );
                     aDropTargetAL[ 1 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(this) ) );
 #else	// USE_JAVA
-                    aDragSourceAL[ 1 ] <<= static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->mpNSView) );
-                    aDropTargetAL[ 0 ] <<= static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->mpNSView) );
+                    aDragSourceAL[ 1 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->mpNSView) ) );
+                    aDropTargetAL[ 0 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->mpNSView) ) );
 #endif	// USE_JAVA
 #elif HAVE_FEATURE_X11
                     aDragSourceSN = "com.sun.star.datatransfer.dnd.X11DragSource";
                     aDropTargetSN = "com.sun.star.datatransfer.dnd.X11DropTarget";
 
-                    aDragSourceAL[ 0 ] <<= Application::GetDisplayConnection();
-                    aDragSourceAL[ 1 ] <<= static_cast<sal_IntPtr>(pEnvData->aShellWindow);
-                    aDropTargetAL[ 0 ] <<= Application::GetDisplayConnection();
-                    aDropTargetAL[ 1 ] <<= static_cast<sal_IntPtr>(pEnvData->aShellWindow);
+                    aDragSourceAL[ 0 ] = makeAny( Application::GetDisplayConnection() );
+                    aDropTargetAL[ 0 ] = makeAny( Application::GetDisplayConnection() );
+                    aDropTargetAL[ 1 ] = makeAny( (sal_Size)(pEnvData->aShellWindow) );
 #endif
                     if( !aDragSourceSN.isEmpty() )
                         mpWindowImpl->mpFrameData->mxDragSource.set(

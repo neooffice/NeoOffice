@@ -24,28 +24,22 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <memory>
-#include <cassert>
-
 #include <tools/poly.hxx>
 
 #include <vcl/gradient.hxx>
-#include <vcl/settings.hxx>
-#include <vcl/outdev.hxx>
 #include <vcl/virdev.hxx>
-#include <vcl/window.hxx>
+#include <vcl/outdev.hxx>
+#include <vcl/settings.hxx>
 
 #include "salgdi.hxx"
 
 #define GRADIENT_DEFAULT_STEPCOUNT  0
 
-void OutputDevice::DrawGradient( const tools::Rectangle& rRect,
+void OutputDevice::DrawGradient( const Rectangle& rRect,
                                  const Gradient& rGradient )
 {
-    assert(!is_double_buffered_window());
-
     // Convert rectangle to a tools::PolyPolygon by first converting to a Polygon
-    tools::Polygon aPolygon ( rRect );
+    Polygon aPolygon ( rRect );
     tools::PolyPolygon aPolyPoly ( aPolygon );
 
     DrawGradient ( aPolyPoly, rGradient );
@@ -54,9 +48,7 @@ void OutputDevice::DrawGradient( const tools::Rectangle& rRect,
 void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
                                  const Gradient& rGradient )
 {
-    assert(!is_double_buffered_window());
-
-    if ( mnDrawMode & DrawModeFlags::NoGradient )
+    if ( mnDrawMode & DRAWMODE_NOGRADIENT )
         return;     // nothing to draw!
 
     if ( mbInitClipRegion )
@@ -67,7 +59,7 @@ void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
 
     if ( rPolyPoly.Count() && rPolyPoly[ 0 ].GetSize() )
     {
-        if ( mnDrawMode & ( DrawModeFlags::BlackGradient | DrawModeFlags::WhiteGradient | DrawModeFlags::SettingsGradient) )
+        if ( mnDrawMode & ( DRAWMODE_BLACKGRADIENT | DRAWMODE_WHITEGRADIENT | DRAWMODE_SETTINGSGRADIENT) )
         {
             Color aColor = GetSingleColorGradientFill();
 
@@ -81,7 +73,7 @@ void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
 
         Gradient aGradient( rGradient );
 
-        if ( mnDrawMode & ( DrawModeFlags::GrayGradient | DrawModeFlags::GhostedGradient ) )
+        if ( mnDrawMode & ( DRAWMODE_GRAYGRADIENT | DRAWMODE_GHOSTEDGRADIENT ) )
         {
             SetGrayscaleColors( aGradient );
         }
@@ -92,18 +84,18 @@ void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
             return;
 
         // Clip and then draw the gradient
-        if( !tools::Rectangle( PixelToLogic( Point() ), GetOutputSize() ).IsEmpty() )
+        if( !Rectangle( PixelToLogic( Point() ), GetOutputSize() ).IsEmpty() )
         {
-            const tools::Rectangle aBoundRect( rPolyPoly.GetBoundRect() );
+            const Rectangle aBoundRect( rPolyPoly.GetBoundRect() );
 
             // convert rectangle to pixels
-            tools::Rectangle aRect( ImplLogicToDevicePixel( aBoundRect ) );
+            Rectangle aRect( ImplLogicToDevicePixel( aBoundRect ) );
             aRect.Justify();
 
             // do nothing if the rectangle is empty
             if ( !aRect.IsEmpty() )
             {
-                tools::PolyPolygon aClixPolyPoly( ImplLogicToDevicePixel( rPolyPoly ) );
+                tools::PolyPolygon aClipPolyPoly( ImplLogicToDevicePixel( rPolyPoly ) );
                 bool bDrawn = false;
 
                 if( !mpGraphics && !AcquireGraphics() )
@@ -117,7 +109,7 @@ void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
                     InitClipRegion();
 
                 // try to draw gradient natively
-                bDrawn = mpGraphics->DrawGradient( aClixPolyPoly, aGradient );
+                bDrawn = mpGraphics->DrawGradient( aClipPolyPoly, aGradient, this );
 
                 if( !bDrawn && !mbOutputClipped )
                 {
@@ -146,10 +138,10 @@ void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
 
                     // if the clipping polypolygon is a rectangle, then it's the same size as the bounding of the
                     // polypolygon, so pass in a NULL for the clipping parameter
-                    if( aGradient.GetStyle() == GradientStyle::Linear || rGradient.GetStyle() == GradientStyle::Axial )
-                        DrawLinearGradient( aRect, aGradient, aClixPolyPoly.IsRect() ? nullptr : &aClixPolyPoly );
+                    if( aGradient.GetStyle() == GradientStyle_LINEAR || rGradient.GetStyle() == GradientStyle_AXIAL )
+                        DrawLinearGradient( aRect, aGradient, aClipPolyPoly.IsRect() ? NULL : &aClipPolyPoly );
                     else
-                        DrawComplexGradient( aRect, aGradient, aClixPolyPoly.IsRect() ? nullptr : &aClixPolyPoly );
+                        DrawComplexGradient( aRect, aGradient, aClipPolyPoly.IsRect() ? NULL : &aClipPolyPoly );
                 }
 
                 Pop();
@@ -163,7 +155,7 @@ void OutputDevice::DrawGradient( const tools::PolyPolygon& rPolyPoly,
 
 void OutputDevice::ClipAndDrawGradientMetafile ( const Gradient &rGradient, const tools::PolyPolygon &rPolyPoly )
 {
-    const tools::Rectangle aBoundRect( rPolyPoly.GetBoundRect() );
+    const Rectangle aBoundRect( rPolyPoly.GetBoundRect() );
     const bool  bOldOutput = IsOutputEnabled();
 
     EnableOutput( false );
@@ -172,12 +164,12 @@ void OutputDevice::ClipAndDrawGradientMetafile ( const Gradient &rGradient, cons
     DrawGradient( aBoundRect, rGradient );
 #else	// USE_JAVA && MACOSX
     Push( PushFlags::RASTEROP );
-    SetRasterOp( RasterOp::Xor );
+    SetRasterOp( ROP_XOR );
     DrawGradient( aBoundRect, rGradient );
     SetFillColor( COL_BLACK );
-    SetRasterOp( RasterOp::N0 );
+    SetRasterOp( ROP_0 );
     DrawPolyPolygon( rPolyPoly );
-    SetRasterOp( RasterOp::Xor );
+    SetRasterOp( ROP_XOR );
     DrawGradient( aBoundRect, rGradient );
     Pop();
 #endif	// USE_JAVA && MACOSX
@@ -187,8 +179,6 @@ void OutputDevice::ClipAndDrawGradientMetafile ( const Gradient &rGradient, cons
 void OutputDevice::DrawGradientToMetafile ( const tools::PolyPolygon& rPolyPoly,
                                             const Gradient& rGradient )
 {
-    assert(!is_double_buffered_window());
-
     if ( !mpMetaFile )
         return;
 
@@ -196,12 +186,12 @@ void OutputDevice::DrawGradientToMetafile ( const tools::PolyPolygon& rPolyPoly,
     {
         Gradient aGradient( rGradient );
 
-        if ( mnDrawMode & ( DrawModeFlags::GrayGradient | DrawModeFlags::GhostedGradient ) )
+        if ( mnDrawMode & ( DRAWMODE_GRAYGRADIENT | DRAWMODE_GHOSTEDGRADIENT ) )
         {
             SetGrayscaleColors( aGradient );
         }
 
-        const tools::Rectangle aBoundRect( rPolyPoly.GetBoundRect() );
+        const Rectangle aBoundRect( rPolyPoly.GetBoundRect() );
 
         if ( rPolyPoly.IsRect() )
         {
@@ -237,10 +227,10 @@ void OutputDevice::DrawGradientToMetafile ( const tools::PolyPolygon& rPolyPoly,
             return;
 
         // Clip and then draw the gradient
-        if( !tools::Rectangle( PixelToLogic( Point() ), GetOutputSize() ).IsEmpty() )
+        if( !Rectangle( PixelToLogic( Point() ), GetOutputSize() ).IsEmpty() )
         {
             // convert rectangle to pixels
-            tools::Rectangle aRect( ImplLogicToDevicePixel( aBoundRect ) );
+            Rectangle aRect( ImplLogicToDevicePixel( aBoundRect ) );
             aRect.Justify();
 
             // do nothing if the rectangle is empty
@@ -264,7 +254,7 @@ void OutputDevice::DrawGradientToMetafile ( const tools::PolyPolygon& rPolyPoly,
 
                     // if the clipping polypolygon is a rectangle, then it's the same size as the bounding of the
                     // polypolygon, so pass in a NULL for the clipping parameter
-                    if( aGradient.GetStyle() == GradientStyle::Linear || rGradient.GetStyle() == GradientStyle::Axial )
+                    if( aGradient.GetStyle() == GradientStyle_LINEAR || rGradient.GetStyle() == GradientStyle_AXIAL )
                         DrawLinearGradientToMetafile( aRect, aGradient );
                     else
                         DrawComplexGradientToMetafile( aRect, aGradient );
@@ -287,29 +277,27 @@ namespace
     }
 }
 
-void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
+void OutputDevice::DrawLinearGradient( const Rectangle& rRect,
                                        const Gradient& rGradient,
-                                       const tools::PolyPolygon* pClixPolyPoly )
+                                       const tools::PolyPolygon* pClipPolyPoly )
 {
-    assert(!is_double_buffered_window());
-
     // get BoundRect of rotated rectangle
-    tools::Rectangle aRect;
+    Rectangle aRect;
     Point     aCenter;
     sal_uInt16    nAngle = rGradient.GetAngle() % 3600;
 
     rGradient.GetBoundRect( rRect, aRect, aCenter );
 
 #if defined USE_JAVA && defined MACOSX
-    tools::Rectangle aFullRect = aRect;
+    Rectangle aFullRect = aRect;
 #endif	// USE_JAVA && MACOSX
-    bool bLinear = (rGradient.GetStyle() == GradientStyle::Linear);
+    bool bLinear = (rGradient.GetStyle() == GradientStyle_LINEAR);
     double fBorder = rGradient.GetBorder() * aRect.GetHeight() / 100.0;
     if ( !bLinear )
     {
         fBorder /= 2.0;
     }
-    tools::Rectangle aMirrorRect = aRect; // used in style axial
+    Rectangle aMirrorRect = aRect; // used in style axial
     aMirrorRect.Top() = ( aRect.Top() + aRect.Bottom() ) / 2;
     if ( !bLinear )
     {
@@ -354,8 +342,8 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
     sal_uInt8   nBlue;
 
     // Create border
-    tools::Rectangle aBorderRect = aRect;
-    tools::Polygon aPoly( 4 );
+    Rectangle aBorderRect = aRect;
+    Polygon     aPoly( 4 );
     if (fBorder > 0.0)
     {
         nRed        = (sal_uInt8)nStartRed;
@@ -372,7 +360,7 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
         // Fix printing bug reported in the following NeoOffice forum post by
         // underlapping all successive stripes with the current color:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-        if ( meRasterOp == RasterOp::OverPaint )
+        if ( meRasterOp == ROP_OVERPAINT )
         {
             aPoly[2] = aFullRect.BottomRight();
             aPoly[3] = aFullRect.BottomLeft();
@@ -387,7 +375,7 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
 #endif	// USE_JAVA && MACOSX
         aPoly.Rotate( aCenter, nAngle );
 
-        ImplDrawPolygon( aPoly, pClixPolyPoly );
+        ImplDrawPolygon( aPoly, pClipPolyPoly );
 
         if ( !bLinear)
         {
@@ -400,7 +388,7 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
             aPoly[3] = aBorderRect.BottomLeft();
             aPoly.Rotate( aCenter, nAngle );
 
-            ImplDrawPolygon( aPoly, pClixPolyPoly );
+            ImplDrawPolygon( aPoly, pClipPolyPoly );
         }
     }
 
@@ -424,7 +412,9 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
     double fGradientLine = (double)aRect.Top();
     double fMirrorGradientLine = (double) aMirrorRect.Bottom();
 
+    double fAlpha = 0.0;
     const double fStepsMinus1 = ((double)nSteps) - 1.0;
+    double fTempColor;
     if ( !bLinear)
     {
         nSteps -= 1; // draw middle polygons as one polygon after loop to avoid gap
@@ -432,8 +422,8 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
     for ( long i = 0; i < nSteps; i++ )
     {
         // linear interpolation of color
-        const double fAlpha = ((double)i) / fStepsMinus1;
-        double fTempColor = ((double)nStartRed) * (1.0-fAlpha) + ((double)nEndRed) * fAlpha;
+        fAlpha = ((double)i) / fStepsMinus1;
+        fTempColor = ((double)nStartRed) * (1.0-fAlpha) + ((double)nEndRed) * fAlpha;
         nRed = GetGradientColorValue((long)fTempColor);
         fTempColor = ((double)nStartGreen) * (1.0-fAlpha) + ((double)nEndGreen) * fAlpha;
         nGreen = GetGradientColorValue((long)fTempColor);
@@ -451,7 +441,7 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
         // Fix printing bug reported in the following NeoOffice forum post by
         // underlapping all successive stripes with the current color:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-        if ( meRasterOp == RasterOp::OverPaint )
+        if ( meRasterOp == ROP_OVERPAINT )
         {
             if ( bLinear )
             {
@@ -460,8 +450,8 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
             }
             else
             {
-                aMirrorRect.Bottom() = static_cast< long >( fMirrorGradientLine - ((double) i) * fScanInc );
-                aMirrorRect.Top() = static_cast< long >( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
+                aMirrorRect.Bottom() = (long)( fMirrorGradientLine - ((double) i) * fScanInc );
+                aMirrorRect.Top() = (long)( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
                 aPoly[2] = aMirrorRect.BottomRight();
                 aPoly[3] = aMirrorRect.BottomLeft();
             }
@@ -476,7 +466,7 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
 #endif	// USE_JAVA && MACOSX
         aPoly.Rotate( aCenter, nAngle );
 
-        ImplDrawPolygon( aPoly, pClixPolyPoly );
+        ImplDrawPolygon( aPoly, pClipPolyPoly );
 
         if ( !bLinear )
         {
@@ -488,7 +478,7 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
             aPoly[3] = aMirrorRect.BottomLeft();
             aPoly.Rotate( aCenter, nAngle );
 
-            ImplDrawPolygon( aPoly, pClixPolyPoly );
+            ImplDrawPolygon( aPoly, pClipPolyPoly );
         }
     }
     if ( !bLinear)
@@ -508,30 +498,22 @@ void OutputDevice::DrawLinearGradient( const tools::Rectangle& rRect,
         aPoly[3] = aRect.BottomLeft();
         aPoly.Rotate( aCenter, nAngle );
 
-        ImplDrawPolygon( aPoly, pClixPolyPoly );
+        ImplDrawPolygon( aPoly, pClipPolyPoly );
     }
 }
 
-bool OutputDevice::is_double_buffered_window() const
-{
-    const vcl::Window *pWindow = dynamic_cast<const vcl::Window*>(this);
-    return pWindow && pWindow->SupportsDoubleBuffering();
-}
-
-void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
+void OutputDevice::DrawComplexGradient( const Rectangle& rRect,
                                         const Gradient& rGradient,
-                                        const tools::PolyPolygon* pClixPolyPoly )
+                                        const tools::PolyPolygon* pClipPolyPoly )
 {
-    assert(!is_double_buffered_window());
-
     // Determine if we output via Polygon or PolyPolygon
     // For all rasteroperations other then Overpaint always use PolyPolygon,
     // as we will get wrong results if we output multiple times on top of each other.
     // Also for printers always use PolyPolygon, as not all printers
     // can print polygons on top of each other.
 
-    std::unique_ptr<tools::PolyPolygon> xPolyPoly;
-    tools::Rectangle       aRect;
+    boost::scoped_ptr<tools::PolyPolygon> pPolyPoly;
+    Rectangle       aRect;
     Point           aCenter;
     Color           aStartCol( rGradient.GetStartColor() );
     Color           aEndCol( rGradient.GetEndColor() );
@@ -549,7 +531,7 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
     rGradient.GetBoundRect( rRect, aRect, aCenter );
 
     if ( UsePolyPolygonForComplexGradient() )
-        xPolyPoly.reset(new tools::PolyPolygon( 2 ));
+        pPolyPoly.reset(new tools::PolyPolygon( 2 ));
 
     bool bMtf = false;
     bool bComplex = true;
@@ -570,7 +552,7 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
         nSteps = 1;
 
     // determine output limits and stepsizes for all directions
-    tools::Polygon aPoly;
+    Polygon aPoly;
     double  fScanLeft = aRect.Left();
     double  fScanTop = aRect.Top();
     double  fScanRight = aRect.Right();
@@ -581,7 +563,7 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
     // all gradients are rendered as nested rectangles which shrink
     // equally in each dimension - except for 'square' gradients
     // which shrink to a central vertex but are not per-se square.
-    if( rGradient.GetStyle() != GradientStyle::Square )
+    if( rGradient.GetStyle() != GradientStyle_SQUARE )
     {
         fScanIncY = std::min( fScanIncY, fScanIncX );
         fScanIncX = fScanIncY;
@@ -591,10 +573,10 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
 
     mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
 
-    if( xPolyPoly )
+    if( pPolyPoly )
     {
-        xPolyPoly->Insert( aPoly = rRect );
-        xPolyPoly->Insert( aPoly );
+        pPolyPoly->Insert( aPoly = rRect );
+        pPolyPoly->Insert( aPoly );
 
 #if defined USE_JAVA && defined MACOSX
         // Fix bug when drawing radial gradients to the printer or exporting to
@@ -602,21 +584,21 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
         // drawing the starting color to the intersection of the gradient and
         // clip regions:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63684#63684
-        if ( meRasterOp == RasterOp::OverPaint )
-            ImplDrawPolygon( aPoly, pClixPolyPoly );
+        if ( meRasterOp == ROP_OVERPAINT )
+            ImplDrawPolygon( aPoly, pClipPolyPoly );
 #endif	// USE_JAVA && MACOSX
     }
     else
     {
         // extend rect, to avoid missing bounding line
-        tools::Rectangle aExtRect( rRect );
+        Rectangle aExtRect( rRect );
 
         aExtRect.Left() -= 1;
         aExtRect.Top() -= 1;
         aExtRect.Right() += 1;
         aExtRect.Bottom() += 1;
 
-        ImplDrawPolygon( aPoly = aExtRect, pClixPolyPoly );
+        ImplDrawPolygon( aPoly = aExtRect, pClipPolyPoly );
     }
 
     // loop to output Polygone/PolyPolygone sequentially
@@ -631,46 +613,46 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
         if( ( aRect.GetWidth() < 2 ) || ( aRect.GetHeight() < 2 ) )
             break;
 
-        if( rGradient.GetStyle() == GradientStyle::Radial || rGradient.GetStyle() == GradientStyle::Elliptical )
-            aPoly = tools::Polygon( aRect.Center(), aRect.GetWidth() >> 1, aRect.GetHeight() >> 1 );
+        if( rGradient.GetStyle() == GradientStyle_RADIAL || rGradient.GetStyle() == GradientStyle_ELLIPTICAL )
+            aPoly = Polygon( aRect.Center(), aRect.GetWidth() >> 1, aRect.GetHeight() >> 1 );
         else
-            aPoly = tools::Polygon( aRect );
+            aPoly = Polygon( aRect );
 
         aPoly.Rotate( aCenter, nAngle );
 
         // adapt colour accordingly
-        const long nStepIndex = ( ( xPolyPoly ) ? i : ( i + 1 ) );
+        const long nStepIndex = ( ( pPolyPoly ) ? i : ( i + 1 ) );
         nRed = GetGradientColorValue( nStartRed + ( ( nRedSteps * nStepIndex ) / nSteps ) );
         nGreen = GetGradientColorValue( nStartGreen + ( ( nGreenSteps * nStepIndex ) / nSteps ) );
         nBlue = GetGradientColorValue( nStartBlue + ( ( nBlueSteps * nStepIndex ) / nSteps ) );
 
-        // either slow tools::PolyPolygon output or fast Polygon-Painting
-        if( xPolyPoly )
+        // either slow tools::PolyPolygon output or fast Polygon-Paiting
+        if( pPolyPoly )
         {
             bPaintLastPolygon = true; // #107349# Paint last polygon only if loop has generated any output
 
-            xPolyPoly->Replace( xPolyPoly->GetObject( 1 ), 0 );
-            xPolyPoly->Replace( aPoly, 1 );
+            pPolyPoly->Replace( pPolyPoly->GetObject( 1 ), 0 );
+            pPolyPoly->Replace( aPoly, 1 );
 
 #if defined USE_JAVA && defined MACOSX
             // Fix printing bug reported in the following NeoOffice forum post
             // by drawing entire polygon so that there are no gaps between
             // bands in elliptical or radial gradients:
             // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-            if ( meRasterOp == RasterOp::OverPaint )
+            if ( meRasterOp == ROP_OVERPAINT )
             {
-                ImplDrawPolygon( aPoly, pClixPolyPoly );
+                ImplDrawPolygon( aPoly, pClipPolyPoly );
             }
             else
             {
 #endif	// USE_JAVA && MACOSX
-            ImplDrawPolyPolygon( *xPolyPoly, pClixPolyPoly );
+            ImplDrawPolyPolygon( *pPolyPoly, pClipPolyPoly );
 #if defined USE_JAVA && defined MACOSX
             }
 #endif	// USE_JAVA && MACOSX
 
             // #107349# Set fill color _after_ geometry painting:
-            // xPolyPoly's geometry is the band from last iteration's
+            // pPolyPoly's geometry is the band from last iteration's
             // aPoly to current iteration's aPoly. The window outdev
             // path (see else below), on the other hand, paints the
             // full aPoly. Thus, here, we're painting the band before
@@ -683,14 +665,14 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
             // #107349# Set fill color _before_ geometry painting
             mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
 
-            ImplDrawPolygon( aPoly, pClixPolyPoly );
+            ImplDrawPolygon( aPoly, pClipPolyPoly );
         }
     }
 
     // we should draw last inner Polygon if we output PolyPolygon
-    if( xPolyPoly )
+    if( pPolyPoly )
     {
-        const tools::Polygon& rPoly = xPolyPoly->GetObject( 1 );
+        const Polygon& rPoly = pPolyPoly->GetObject( 1 );
 
         if( !rPoly.GetBoundRect().IsEmpty() )
         {
@@ -705,33 +687,31 @@ void OutputDevice::DrawComplexGradient( const tools::Rectangle& rRect,
             }
 
             mpGraphics->SetFillColor( MAKE_SALCOLOR( nRed, nGreen, nBlue ) );
-            ImplDrawPolygon( rPoly, pClixPolyPoly );
+            ImplDrawPolygon( rPoly, pClipPolyPoly );
         }
     }
 }
 
-void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
+void OutputDevice::DrawLinearGradientToMetafile( const Rectangle& rRect,
                                                  const Gradient& rGradient )
 {
-    assert(!is_double_buffered_window());
-
     // get BoundRect of rotated rectangle
-    tools::Rectangle aRect;
+    Rectangle aRect;
     Point     aCenter;
     sal_uInt16    nAngle = rGradient.GetAngle() % 3600;
 
     rGradient.GetBoundRect( rRect, aRect, aCenter );
 
 #if defined USE_JAVA && defined MACOSX
-    tools::Rectangle aFullRect = aRect;
+    Rectangle aFullRect = aRect;
 #endif	// USE_JAVA && MACOSX
-    bool bLinear = (rGradient.GetStyle() == GradientStyle::Linear);
+    bool bLinear = (rGradient.GetStyle() == GradientStyle_LINEAR);
     double fBorder = rGradient.GetBorder() * aRect.GetHeight() / 100.0;
     if ( !bLinear )
     {
         fBorder /= 2.0;
     }
-    tools::Rectangle aMirrorRect = aRect; // used in style axial
+    Rectangle aMirrorRect = aRect; // used in style axial
     aMirrorRect.Top() = ( aRect.Top() + aRect.Bottom() ) / 2;
     if ( !bLinear )
     {
@@ -776,8 +756,8 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
     sal_uInt8   nBlue;
 
     // Create border
-    tools::Rectangle aBorderRect = aRect;
-    tools::Polygon aPoly( 4 );
+    Rectangle aBorderRect = aRect;
+    Polygon     aPoly( 4 );
     if (fBorder > 0.0)
     {
         nRed        = (sal_uInt8)nStartRed;
@@ -794,7 +774,7 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
         // Fix printing bug reported in the following NeoOffice forum post by
         // underlapping all successive stripes with the current color:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-        if ( meRasterOp == RasterOp::OverPaint )
+        if ( meRasterOp == ROP_OVERPAINT )
         {
             aPoly[2] = aFullRect.BottomRight();
             aPoly[3] = aFullRect.BottomLeft();
@@ -845,7 +825,9 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
     double fGradientLine = (double)aRect.Top();
     double fMirrorGradientLine = (double) aMirrorRect.Bottom();
 
+    double fAlpha = 0.0;
     const double fStepsMinus1 = ((double)nSteps) - 1.0;
+    double fTempColor;
     if ( !bLinear)
     {
         nSteps -= 1; // draw middle polygons as one polygon after loop to avoid gap
@@ -853,8 +835,8 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
     for ( long i = 0; i < nSteps; i++ )
     {
         // linear interpolation of color
-        double fAlpha = ((double)i) / fStepsMinus1;
-        double fTempColor = ((double)nStartRed) * (1.0-fAlpha) + ((double)nEndRed) * fAlpha;
+        fAlpha = ((double)i) / fStepsMinus1;
+        fTempColor = ((double)nStartRed) * (1.0-fAlpha) + ((double)nEndRed) * fAlpha;
         nRed = GetGradientColorValue((long)fTempColor);
         fTempColor = ((double)nStartGreen) * (1.0-fAlpha) + ((double)nEndGreen) * fAlpha;
         nGreen = GetGradientColorValue((long)fTempColor);
@@ -872,7 +854,7 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
         // Fix printing bug reported in the following NeoOffice forum post by
         // underlapping all successive stripes with the current color:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-        if ( meRasterOp == RasterOp::OverPaint )
+        if ( meRasterOp == ROP_OVERPAINT )
         {
             if ( bLinear )
             {
@@ -881,8 +863,8 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
             }
             else
             {
-                aMirrorRect.Bottom() = static_cast< long >( fMirrorGradientLine - ((double) i) * fScanInc );
-                aMirrorRect.Top() = static_cast< long >( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
+                aMirrorRect.Bottom() = (long)( fMirrorGradientLine - ((double) i) * fScanInc );
+                aMirrorRect.Top() = (long)( fMirrorGradientLine - (((double) i) + 1.0)* fScanInc );
                 aPoly[2] = aMirrorRect.BottomRight();
                 aPoly[3] = aMirrorRect.BottomLeft();
             }
@@ -936,19 +918,17 @@ void OutputDevice::DrawLinearGradientToMetafile( const tools::Rectangle& rRect,
     }
 }
 
-void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
+void OutputDevice::DrawComplexGradientToMetafile( const Rectangle& rRect,
                                                   const Gradient& rGradient )
 {
-    assert(!is_double_buffered_window());
-
     // Determine if we output via Polygon or PolyPolygon
     // For all rasteroperations other then Overpaint always use PolyPolygon,
     // as we will get wrong results if we output multiple times on top of each other.
     // Also for printers always use PolyPolygon, as not all printers
     // can print polygons on top of each other.
 
-    std::unique_ptr<tools::PolyPolygon> xPolyPoly;
-    tools::Rectangle       aRect;
+    boost::scoped_ptr<tools::PolyPolygon> pPolyPoly;
+    Rectangle       aRect;
     Point           aCenter;
     Color           aStartCol( rGradient.GetStartColor() );
     Color           aEndCol( rGradient.GetEndColor() );
@@ -965,7 +945,7 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
 
     rGradient.GetBoundRect( rRect, aRect, aCenter );
 
-    xPolyPoly.reset(new tools::PolyPolygon( 2 ));
+    pPolyPoly.reset(new tools::PolyPolygon( 2 ));
 
     // last parameter - true if complex gradient, false if linear
     long nStepCount = GetGradientSteps( rGradient, rRect, true, true );
@@ -985,7 +965,7 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
         nSteps = 1;
 
     // determine output limits and stepsizes for all directions
-    tools::Polygon aPoly;
+    Polygon aPoly;
     double  fScanLeft = aRect.Left();
     double  fScanTop = aRect.Top();
     double  fScanRight = aRect.Right();
@@ -996,7 +976,7 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
     // all gradients are rendered as nested rectangles which shrink
     // equally in each dimension - except for 'square' gradients
     // which shrink to a central vertex but are not per-se square.
-    if( rGradient.GetStyle() != GradientStyle::Square )
+    if( rGradient.GetStyle() != GradientStyle_SQUARE )
     {
         fScanIncY = std::min( fScanIncY, fScanIncX );
         fScanIncX = fScanIncY;
@@ -1006,8 +986,8 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
 
     mpMetaFile->AddAction( new MetaFillColorAction( Color( nRed, nGreen, nBlue ), true ) );
 
-    xPolyPoly->Insert( aPoly = rRect );
-    xPolyPoly->Insert( aPoly );
+    pPolyPoly->Insert( aPoly = rRect );
+    pPolyPoly->Insert( aPoly );
 
 #if defined USE_JAVA && defined MACOSX
     // Fix bug when drawing radial gradients to the printer or exporting to
@@ -1015,7 +995,7 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
     // drawing the starting color to the intersection of the gradient and
     // clip regions:
     // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63684#63684
-    if ( meRasterOp == RasterOp::OverPaint )
+    if ( meRasterOp == ROP_OVERPAINT )
         mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
 #endif	// USE_JAVA && MACOSX
 
@@ -1031,43 +1011,43 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
         if( ( aRect.GetWidth() < 2 ) || ( aRect.GetHeight() < 2 ) )
             break;
 
-        if( rGradient.GetStyle() == GradientStyle::Radial || rGradient.GetStyle() == GradientStyle::Elliptical )
-            aPoly = tools::Polygon( aRect.Center(), aRect.GetWidth() >> 1, aRect.GetHeight() >> 1 );
+        if( rGradient.GetStyle() == GradientStyle_RADIAL || rGradient.GetStyle() == GradientStyle_ELLIPTICAL )
+            aPoly = Polygon( aRect.Center(), aRect.GetWidth() >> 1, aRect.GetHeight() >> 1 );
         else
-            aPoly = tools::Polygon( aRect );
+            aPoly = Polygon( aRect );
 
         aPoly.Rotate( aCenter, nAngle );
 
         // adapt colour accordingly
-        const long nStepIndex = ( ( xPolyPoly ) ? i : ( i + 1 ) );
+        const long nStepIndex = ( ( pPolyPoly ) ? i : ( i + 1 ) );
         nRed = GetGradientColorValue( nStartRed + ( ( nRedSteps * nStepIndex ) / nSteps ) );
         nGreen = GetGradientColorValue( nStartGreen + ( ( nGreenSteps * nStepIndex ) / nSteps ) );
         nBlue = GetGradientColorValue( nStartBlue + ( ( nBlueSteps * nStepIndex ) / nSteps ) );
 
         bPaintLastPolygon = true; // #107349# Paint last polygon only if loop has generated any output
 
-        xPolyPoly->Replace( xPolyPoly->GetObject( 1 ), 0 );
-        xPolyPoly->Replace( aPoly, 1 );
+        pPolyPoly->Replace( pPolyPoly->GetObject( 1 ), 0 );
+        pPolyPoly->Replace( aPoly, 1 );
 
 #if defined USE_JAVA && defined MACOSX
         // Fix printing bug reported in the following NeoOffice forum post
         // by drawing entire polygon so that there are no gaps between
         // bands in elliptical or radial gradients:
         // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=63688#63688
-        if ( meRasterOp == RasterOp::OverPaint )
+        if ( meRasterOp == ROP_OVERPAINT )
         {
             mpMetaFile->AddAction( new MetaPolygonAction( aPoly ) );
         }
         else
         {
 #endif	// USE_JAVA && MACOSX
-        mpMetaFile->AddAction( new MetaPolyPolygonAction( *xPolyPoly ) );
+        mpMetaFile->AddAction( new MetaPolyPolygonAction( *pPolyPoly ) );
 #if defined USE_JAVA && defined MACOSX
         }
 #endif	// USE_JAVA && MACOSX
 
         // #107349# Set fill color _after_ geometry painting:
-        // xPolyPoly's geometry is the band from last iteration's
+        // pPolyPoly's geometry is the band from last iteration's
         // aPoly to current iteration's aPoly. The window outdev
         // path (see else below), on the other hand, paints the
         // full aPoly. Thus, here, we're painting the band before
@@ -1076,7 +1056,7 @@ void OutputDevice::DrawComplexGradientToMetafile( const tools::Rectangle& rRect,
         mpMetaFile->AddAction( new MetaFillColorAction( Color( nRed, nGreen, nBlue ), true ) );
     }
 
-    const tools::Polygon& rPoly = xPolyPoly->GetObject( 1 );
+    const Polygon& rPoly = pPolyPoly->GetObject( 1 );
 
     if( !rPoly.GetBoundRect().IsEmpty() )
     {
@@ -1102,7 +1082,7 @@ long OutputDevice::GetGradientStepCount( long nMinRect )
     return nInc;
 }
 
-long OutputDevice::GetGradientSteps( const Gradient& rGradient, const tools::Rectangle& rRect, bool bMtf, bool bComplex )
+long OutputDevice::GetGradientSteps( const Gradient& rGradient, const Rectangle& rRect, bool bMtf, bool bComplex )
 {
     // calculate step count
     long nStepCount  = rGradient.GetSteps();
@@ -1132,16 +1112,16 @@ Color OutputDevice::GetSingleColorGradientFill()
     Color aColor;
 
     // we should never call on this function if any of these aren't set!
-    assert( mnDrawMode & ( DrawModeFlags::BlackGradient | DrawModeFlags::WhiteGradient | DrawModeFlags::SettingsGradient) );
+    assert( mnDrawMode & ( DRAWMODE_BLACKGRADIENT | DRAWMODE_WHITEGRADIENT | DRAWMODE_SETTINGSGRADIENT) );
 
-    if ( mnDrawMode & DrawModeFlags::BlackGradient )
+    if ( mnDrawMode & DRAWMODE_BLACKGRADIENT )
         aColor = Color( COL_BLACK );
-    else if ( mnDrawMode & DrawModeFlags::WhiteGradient )
+    else if ( mnDrawMode & DRAWMODE_WHITEGRADIENT )
         aColor = Color( COL_WHITE );
-    else if ( mnDrawMode & DrawModeFlags::SettingsGradient )
+    else if ( mnDrawMode & DRAWMODE_SETTINGSGRADIENT )
         aColor = GetSettings().GetStyleSettings().GetWindowColor();
 
-    if ( mnDrawMode & DrawModeFlags::GhostedGradient )
+    if ( mnDrawMode & DRAWMODE_GHOSTEDGRADIENT )
     {
         aColor = Color( ( aColor.GetRed() >> 1 ) | 0x80,
                         ( aColor.GetGreen() >> 1 ) | 0x80,
@@ -1154,19 +1134,19 @@ Color OutputDevice::GetSingleColorGradientFill()
 void OutputDevice::SetGrayscaleColors( Gradient &rGradient )
 {
     // this should only be called with the drawing mode is for grayscale or ghosted gradients
-    assert ( mnDrawMode & ( DrawModeFlags::GrayGradient | DrawModeFlags::GhostedGradient ) );
+    assert ( mnDrawMode & ( DRAWMODE_GRAYGRADIENT | DRAWMODE_GHOSTEDGRADIENT ) );
 
     Color aStartCol( rGradient.GetStartColor() );
     Color aEndCol( rGradient.GetEndColor() );
 
-    if ( mnDrawMode & DrawModeFlags::GrayGradient )
+    if ( mnDrawMode & DRAWMODE_GRAYGRADIENT )
     {
         sal_uInt8 cStartLum = aStartCol.GetLuminance(), cEndLum = aEndCol.GetLuminance();
         aStartCol = Color( cStartLum, cStartLum, cStartLum );
         aEndCol = Color( cEndLum, cEndLum, cEndLum );
     }
 
-    if ( mnDrawMode & DrawModeFlags::GhostedGradient )
+    if ( mnDrawMode & DRAWMODE_GHOSTEDGRADIENT )
     {
         aStartCol = Color( ( aStartCol.GetRed() >> 1 ) | 0x80,
                            ( aStartCol.GetGreen() >> 1 ) | 0x80,
@@ -1181,11 +1161,11 @@ void OutputDevice::SetGrayscaleColors( Gradient &rGradient )
     rGradient.SetEndColor( aEndCol );
 }
 
-void OutputDevice::AddGradientActions( const tools::Rectangle& rRect, const Gradient& rGradient,
+void OutputDevice::AddGradientActions( const Rectangle& rRect, const Gradient& rGradient,
                                        GDIMetaFile& rMtf )
 {
 
-    tools::Rectangle aRect( rRect );
+    Rectangle aRect( rRect );
 
     aRect.Justify();
 
@@ -1211,7 +1191,7 @@ void OutputDevice::AddGradientActions( const tools::Rectangle& rRect, const Grad
         if ( !aGradient.GetSteps() )
             aGradient.SetSteps( GRADIENT_DEFAULT_STEPCOUNT );
 
-        if( aGradient.GetStyle() == GradientStyle::Linear || aGradient.GetStyle() == GradientStyle::Axial )
+        if( aGradient.GetStyle() == GradientStyle_LINEAR || aGradient.GetStyle() == GradientStyle_AXIAL )
             DrawLinearGradientToMetafile( aRect, aGradient );
         else
             DrawComplexGradientToMetafile( aRect, aGradient );

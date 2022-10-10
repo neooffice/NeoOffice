@@ -138,7 +138,7 @@ done_accessing_file_path( const char * /*cpFilePath*/, accessFilePathState *stat
 
 typedef void accessFilePathState;
 
-#define prepare_to_access_file_path( cpFilePath ) nullptr
+#define prepare_to_access_file_path( cpFilePath ) NULL
 
 #define done_accessing_file_path( cpFilePath, state ) ((void) cpFilePath, (void) state)
 
@@ -315,7 +315,7 @@ int open_c(const char *cpPath, int oflag, int mode)
         // A new file was created. Check if it is outside the sandbox.
         // (In that case it must be one the user selected as export or
         // save destination in a file dialog, otherwise we wouldn't
-        // have been able to create it.) Create and store a security
+        // have been able to crete it.) Create and store a security
         // scoped bookmark for it so that we can access the file in
         // the future, too. (For the "Recent Files" functionality.)
         const char *sandbox = [NSHomeDirectory() UTF8String];
@@ -355,7 +355,7 @@ int utime_c(const char *cpPath, struct utimbuf *times)
 int ftruncate_with_name(int fd, sal_uInt64 uSize, rtl_String* path)
 {
     /* When sandboxed on OS X, ftruncate(), even if it takes an
-     * already open file descriptor which was returned from an open()
+     * already open file descriptor which was retuned from an open()
      * call already checked by the sandbox, still requires a security
      * scope bookmark for the file to be active in case the file is
      * one that the sandbox doesn't otherwise allow access to. Luckily

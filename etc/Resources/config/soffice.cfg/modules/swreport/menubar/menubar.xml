@@ -16,6 +16,13 @@
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
  * 
+ *   Modified January 2017 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
  *   Modified April 2017 by Patrick Luby. NeoOffice is only distributed
  *   under the GNU General Public License, Version 3 as allowed by Section 3.3
  *   of the Mozilla Public License, v. 2.0.
@@ -34,9 +41,7 @@
       <menu:menuseparator/>
       <menu:menu menu:id=".uno:TemplateMenu">
           <menu:menupopup>
-              <menu:menuitem menu:id=".uno:OpenTemplate"/>
               <menu:menuitem menu:id=".uno:SaveAsTemplate"/>
-              <menu:menuseparator/>
               <menu:menuitem menu:id=".uno:NewDoc"/>
           </menu:menupopup>
       </menu:menu>
@@ -129,6 +134,7 @@
       <menu:menuitem menu:id=".uno:EditHyperlink"/>
       <menu:menuseparator/>
       <menu:menuitem menu:id=".uno:LinkDialog"/>
+      <menu:menuitem menu:id=".uno:PlugInsActive"/>
       <menu:menuitem menu:id=".uno:ImageMapDialog"/>
       <menu:menuitem menu:id=".uno:ObjectMenue"/>
       <menu:menuseparator/>
@@ -174,7 +180,19 @@
   <menu:menu menu:id=".uno:InsertMenu">
     <menu:menupopup>
       <menu:menuitem menu:id=".uno:InsertBreak"/>
-      <menu:menuitem menu:id=".uno:InsertFieldCtrl"/>
+      <menu:menu menu:id=".uno:FieldMenu">
+        <menu:menupopup>
+          <menu:menuitem menu:id=".uno:InsertPageNumberField"/>
+          <menu:menuitem menu:id=".uno:InsertPageCountField"/>
+          <menu:menuitem menu:id=".uno:InsertDateField"/>
+          <menu:menuitem menu:id=".uno:InsertTimeField"/>
+          <menu:menuitem menu:id=".uno:InsertTitleField"/>
+          <menu:menuitem menu:id=".uno:InsertAuthorField"/>
+          <menu:menuitem menu:id=".uno:InsertTopicField"/>
+          <menu:menuseparator/>
+          <menu:menuitem menu:id=".uno:InsertField"/>
+        </menu:menupopup>
+      </menu:menu>
       <menu:menuitem menu:id=".uno:InsertSymbol"/>
       <menu:menu menu:id=".uno:FormattingMarkMenu">
         <menu:menupopup>
@@ -215,9 +233,7 @@
           <menu:menuitem menu:id=".uno:Gallery"/>
           <menu:menu menu:id=".uno:Scan">
             <menu:menupopup>
-              <!-- Remove select scanner menu item
-              <menu:menuitem menu:id=".uno:TwainSelect"/>
-              -->
+              <!--<menu:menuitem menu:id=".uno:TwainSelect"/>-->
               <menu:menuitem menu:id=".uno:TwainTransfer"/>
             </menu:menupopup>
           </menu:menu>
@@ -229,6 +245,7 @@
       <menu:menu menu:id=".uno:ObjectMenu">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:InsertObject"/>
+          <menu:menuitem menu:id=".uno:InsertPlugin"/>
           <menu:menuitem menu:id=".uno:InsertObjectStarMath"/>
           <menu:menuitem menu:id=".uno:InsertObjectChart"/>
         </menu:menupopup>
@@ -277,19 +294,15 @@
         </menu:menupopup>
       </menu:menu>
       <menu:menuseparator/>
-      <menu:menu menu:id=".uno:FormatImageMenu">
+      <menu:menu menu:id=".uno:AnchorMenu">
         <menu:menupopup>
-          <menu:menuitem menu:id=".uno:Crop"/>
-          <menu:menuseparator/>
-          <menu:menuitem menu:id=".uno:ExternalEdit"/>
-          <menu:menuitem menu:id=".uno:ChangePicture"/>
-          <menu:menuitem menu:id=".uno:CompressGraphic"/>
-          <menu:menuseparator/>
-          <menu:menuitem menu:id=".uno:SaveGraphic"/>
+          <menu:menuitem menu:id=".uno:SetAnchorToPage" menu:style="radio"/>
+          <menu:menuitem menu:id=".uno:SetAnchorToPara" menu:style="radio"/>
+          <menu:menuitem menu:id=".uno:SetAnchorAtChar" menu:style="radio"/>
+          <menu:menuitem menu:id=".uno:SetAnchorToChar" menu:style="radio"/>
+          <menu:menuitem menu:id=".uno:SetAnchorToFrame" menu:style="radio"/>
         </menu:menupopup>
       </menu:menu>
-      <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:AnchorMenu"/>
       <menu:menu menu:id=".uno:WrapMenu">
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:WrapOff"/>
@@ -312,9 +325,9 @@
           <menu:menuitem menu:id=".uno:CommonAlignRight" menu:style="radio"/>
           <menu:menuitem menu:id=".uno:CommonAlignJustified" menu:style="radio"/>
           <menu:menuseparator/>
-          <menu:menuitem menu:id=".uno:CommonAlignTop" menu:style="radio"/>
-          <menu:menuitem menu:id=".uno:CommonAlignVerticalCenter" menu:style="radio"/>
-          <menu:menuitem menu:id=".uno:CommonAlignBottom" menu:style="radio"/>
+          <menu:menuitem menu:id=".uno:CommonAlignTop"/>
+          <menu:menuitem menu:id=".uno:CommonAlignVerticalCenter"/>
+          <menu:menuitem menu:id=".uno:CommonAlignBottom"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menu menu:id=".uno:ArrangeMenu">
@@ -338,7 +351,6 @@
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:RotateLeft"/>
           <menu:menuitem menu:id=".uno:RotateRight"/>
-          <menu:menuitem menu:id=".uno:Rotate180"/>
         </menu:menupopup>
       </menu:menu>
       <menu:menu menu:id=".uno:GroupMenu">
@@ -468,7 +480,7 @@
         <menu:menupopup>
           <menu:menuitem menu:id=".uno:MacroRecorder"/>
           <menu:menuitem menu:id=".uno:RunMacro"/>
-          <menu:menuitem menu:id=".uno:ScriptOrganizer"/>
+          <menu:menu menu:id=".uno:ScriptOrganizer"/>
           <menu:menuseparator/>
           <menu:menuitem menu:id=".uno:MacroOrganizer?TabId:short=1"/>
         </menu:menupopup>
@@ -493,15 +505,9 @@
       <menu:menuitem menu:id=".uno:HelpIndex"/>
       <menu:menuitem menu:id=".uno:ExtendedHelp"/>
       <!-- Remove feedback and license menu items
-      <menu:menuitem menu:id=".uno:Documentation"/>
       <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:QuestionAnswers"/>
       <menu:menuitem menu:id=".uno:SendFeedback"/>
-      -->
       <menu:menuseparator/>
-      <menu:menuitem menu:id=".uno:SafeMode"/>
-      <menu:menuseparator/>
-      <!-- Remove feedback and license menu items
       <menu:menuitem menu:id=".uno:ShowLicense"/>
       -->
       <!-- Add back About menu item -->

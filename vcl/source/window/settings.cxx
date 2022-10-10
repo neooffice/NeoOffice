@@ -57,25 +57,25 @@ void Window::SetSettings( const AllSettings& rSettings, bool bChild )
     if ( mpWindowImpl->mpBorderWindow )
     {
         mpWindowImpl->mpBorderWindow->SetSettings( rSettings, false );
-        if ( (mpWindowImpl->mpBorderWindow->GetType() == WindowType::BORDERWINDOW) &&
-             static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->mpMenuBarWindow )
-            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->mpMenuBarWindow->SetSettings( rSettings, true );
+        if ( (mpWindowImpl->mpBorderWindow->GetType() == WINDOW_BORDERWINDOW) &&
+             static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->mpMenuBarWindow )
+            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->mpMenuBarWindow->SetSettings( rSettings, true );
     }
 
     AllSettings aOldSettings(*mxSettings);
     OutputDevice::SetSettings( rSettings );
-    AllSettingsFlags nChangeFlags = aOldSettings.GetChangeFlags( rSettings );
+    sal_uLong nChangeFlags = aOldSettings.GetChangeFlags( rSettings );
 
     // recalculate AppFont-resolution and DPI-resolution
     ImplInitResolutionSettings();
 
-    if ( bool(nChangeFlags) )
+    if ( nChangeFlags )
     {
-        DataChangedEvent aDCEvt( DataChangedEventType::SETTINGS, &aOldSettings, nChangeFlags );
+        DataChangedEvent aDCEvt( DATACHANGED_SETTINGS, &aOldSettings, nChangeFlags );
         DataChanged( aDCEvt );
     }
 
-    if ( bChild )
+    if ( bChild || mpWindowImpl->mbChildNotify )
     {
         vcl::Window* pChild = mpWindowImpl->mpFirstChild;
         while ( pChild )
@@ -91,14 +91,17 @@ void Window::UpdateSettings( const AllSettings& rSettings, bool bChild )
 
     if ( mpWindowImpl->mpBorderWindow )
     {
-        mpWindowImpl->mpBorderWindow->UpdateSettings( rSettings );
-        if ( (mpWindowImpl->mpBorderWindow->GetType() == WindowType::BORDERWINDOW) &&
-             static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->mpMenuBarWindow )
-            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->mpMenuBarWindow->UpdateSettings( rSettings, true );
+        mpWindowImpl->mpBorderWindow->UpdateSettings( rSettings, false );
+        if ( (mpWindowImpl->mpBorderWindow->GetType() == WINDOW_BORDERWINDOW) &&
+             static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->mpMenuBarWindow )
+            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->mpMenuBarWindow->UpdateSettings( rSettings, true );
     }
 
     AllSettings aOldSettings(*mxSettings);
-    AllSettingsFlags nChangeFlags = mxSettings->Update( mxSettings->GetWindowUpdate(), rSettings );
+    sal_uLong nChangeFlags = mxSettings->Update( mxSettings->GetWindowUpdate(), rSettings );
+    nChangeFlags |= SETTINGS_IN_UPDATE_SETTINGS; // Set this flag so the receiver of the data changed
+                                                 // event can distinguish between the changing of global
+                                                 // setting and a local change ( with SetSettings )
 
     // recalculate AppFont-resolution and DPI-resolution
     ImplInitResolutionSettings();
@@ -114,7 +117,7 @@ void Window::UpdateSettings( const AllSettings& rSettings, bool bChild )
     aSet.SetWheelBehavior( aOldSettings.GetMouseSettings().GetWheelBehavior() );
     mxSettings->SetMouseSettings( aSet );
 
-    if( (nChangeFlags & AllSettingsFlags::STYLE) && IsBackground() )
+    if( (nChangeFlags & SETTINGS_STYLE) && IsBackground() )
     {
         Wallpaper aWallpaper = GetBackground();
         if( !aWallpaper.IsBitmap() && !aWallpaper.IsGradient() )
@@ -132,15 +135,15 @@ void Window::UpdateSettings( const AllSettings& rSettings, bool bChild )
         }
     }
 
-    if ( bool(nChangeFlags) )
+    if ( nChangeFlags )
     {
-        DataChangedEvent aDCEvt( DataChangedEventType::SETTINGS, &aOldSettings, nChangeFlags );
+        DataChangedEvent aDCEvt( DATACHANGED_SETTINGS, &aOldSettings, nChangeFlags );
         DataChanged( aDCEvt );
         // notify data change handler
-        CallEventListeners( VclEventId::WindowDataChanged, &aDCEvt);
+        ImplCallEventListeners( VCLEVENT_WINDOW_DATACHANGED, &aDCEvt);
     }
 
-    if ( bChild )
+    if ( bChild || mpWindowImpl->mbChildNotify )
     {
         vcl::Window* pChild = mpWindowImpl->mpFirstChild;
         while ( pChild )
@@ -157,6 +160,88 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, bool bCallHdl )
     aTmpSt.SetHighContrastMode( false );
     rSettings.SetStyleSettings( aTmpSt );
     ImplGetFrame()->UpdateSettings( rSettings );
+    // reset default border width for layouters
+    ImplGetSVData()->maAppData.mnDefaultLayoutBorder = -1;
+
+    // Verify availability of the configured UI font, otherwise choose "Andale Sans UI"
+
+    // WTF, what makes Andale Sans UI a suitable cross-platform fallback font?
+
+    OUString aUserInterfaceFont;
+    bool bUseSystemFont = rSettings.GetStyleSettings().GetUseSystemUIFonts();
+
+    // check whether system UI font can display a typical UI text
+    if( bUseSystemFont )
+        bUseSystemFont = ImplCheckUIFont( rSettings.GetStyleSettings().GetAppFont() );
+
+    if ( !bUseSystemFont )
+    {
+        OutputDevice *pOutDev = GetOutDev();
+        pOutDev->ImplInitFontList();
+        OUString aConfigFont = utl::DefaultFontConfiguration::get().getUserInterfaceFont( rSettings.GetUILanguageTag() );
+        sal_Int32 nIndex = 0;
+        while( nIndex != -1 )
+        {
+            OUString aName( aConfigFont.getToken( 0, ';', nIndex ) );
+            if ( !aName.isEmpty() && mpWindowImpl->mpFrameData->mpFontCollection->FindFontFamily( aName ) )
+            {
+                aUserInterfaceFont = aConfigFont;
+                break;
+            }
+        }
+
+        if ( aUserInterfaceFont.isEmpty() )
+        {
+            OUString aFallbackFont ("Andale Sans UI" );
+            if ( mpWindowImpl->mpFrameData->mpFontCollection->FindFontFamily( aFallbackFont ) )
+                aUserInterfaceFont = aFallbackFont;
+        }
+    }
+
+    if ( !bUseSystemFont && !aUserInterfaceFont.isEmpty() )
+    {
+        StyleSettings aStyleSettings = rSettings.GetStyleSettings();
+        vcl::Font aFont = aStyleSettings.GetAppFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetAppFont( aFont );
+        aFont = aStyleSettings.GetHelpFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetHelpFont( aFont );
+        aFont = aStyleSettings.GetTitleFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetTitleFont( aFont );
+        aFont = aStyleSettings.GetFloatTitleFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetFloatTitleFont( aFont );
+        aFont = aStyleSettings.GetMenuFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetMenuFont( aFont );
+        aFont = aStyleSettings.GetToolFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetToolFont( aFont );
+        aFont = aStyleSettings.GetLabelFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetLabelFont( aFont );
+        aFont = aStyleSettings.GetInfoFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetInfoFont( aFont );
+        aFont = aStyleSettings.GetRadioCheckFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetRadioCheckFont( aFont );
+        aFont = aStyleSettings.GetPushButtonFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetPushButtonFont( aFont );
+        aFont = aStyleSettings.GetFieldFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetFieldFont( aFont );
+        aFont = aStyleSettings.GetIconFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetIconFont( aFont );
+        aFont = aStyleSettings.GetGroupFont();
+        aFont.SetName( aUserInterfaceFont );
+        aStyleSettings.SetGroupFont( aFont );
+        rSettings.SetStyleSettings( aStyleSettings );
+    }
 
     StyleSettings aStyleSettings = rSettings.GetStyleSettings();
     // #97047: Force all fonts except Menu and Help to a fixed height
@@ -168,7 +253,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, bool bCallHdl )
         maxFontheight = (int) ((( 8.0 * (double) GetDesktopRectPixel().getHeight()) / 600.0) + 1.5);
 
     vcl::Font aFont = aStyleSettings.GetMenuFont();
-    int defFontheight = aFont.GetFontHeight();
+    int defFontheight = aFont.GetHeight();
     if( defFontheight > maxFontheight )
         defFontheight = maxFontheight;
 
@@ -178,7 +263,7 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, bool bCallHdl )
     bool bBrokenLangFontHeight = true;
 #else	// USE_JAVA
     // if the UI is korean, chinese or another locale
-    // where the system font size is known to be often too small to
+    // where the system font size is kown to be often too small to
     // generate readable fonts enforce a minimum font size of 9 points
     bool bBrokenLangFontHeight = MsLangId::isCJK(Application::GetSettings().GetUILanguageTag().getLanguageType());
     if (bBrokenLangFontHeight)
@@ -191,56 +276,56 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, bool bCallHdl )
         toolfontheight = (defFontheight+8) / 2;
 
     aFont = aStyleSettings.GetAppFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetAppFont( aFont );
     aFont = aStyleSettings.GetTitleFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetTitleFont( aFont );
     aFont = aStyleSettings.GetFloatTitleFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetFloatTitleFont( aFont );
     // keep menu and help font size from system unless in broken locale size
     if( bBrokenLangFontHeight )
     {
         aFont = aStyleSettings.GetMenuFont();
-        if( aFont.GetFontHeight() < defFontheight )
+        if( aFont.GetHeight() < defFontheight )
         {
-            aFont.SetFontHeight( defFontheight );
+            aFont.SetHeight( defFontheight );
             aStyleSettings.SetMenuFont( aFont );
         }
         aFont = aStyleSettings.GetHelpFont();
-        if( aFont.GetFontHeight() < defFontheight )
+        if( aFont.GetHeight() < defFontheight )
         {
-            aFont.SetFontHeight( defFontheight );
+            aFont.SetHeight( defFontheight );
             aStyleSettings.SetHelpFont( aFont );
         }
     }
 
     // use different height for toolfont
     aFont = aStyleSettings.GetToolFont();
-    aFont.SetFontHeight( toolfontheight );
+    aFont.SetHeight( toolfontheight );
     aStyleSettings.SetToolFont( aFont );
 
     aFont = aStyleSettings.GetLabelFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetLabelFont( aFont );
+    aFont = aStyleSettings.GetInfoFont();
+    aFont.SetHeight( defFontheight );
+    aStyleSettings.SetInfoFont( aFont );
     aFont = aStyleSettings.GetRadioCheckFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetRadioCheckFont( aFont );
     aFont = aStyleSettings.GetPushButtonFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetPushButtonFont( aFont );
     aFont = aStyleSettings.GetFieldFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetFieldFont( aFont );
     aFont = aStyleSettings.GetIconFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetIconFont( aFont );
-    aFont = aStyleSettings.GetTabFont();
-    aFont.SetFontHeight( defFontheight );
-    aStyleSettings.SetTabFont( aFont );
     aFont = aStyleSettings.GetGroupFont();
-    aFont.SetFontHeight( defFontheight );
+    aFont.SetHeight( defFontheight );
     aStyleSettings.SetGroupFont( aFont );
 
     rSettings.SetStyleSettings( aStyleSettings );
@@ -251,14 +336,13 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, bool bCallHdl )
     // (see above) then accept that
     if( !rSettings.GetStyleSettings().GetHighContrastMode() )
     {
-        bool bAutoHCMode = true;
+        bool bTmp = false, bAutoHCMode = true;
         utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithComponentContext(
             comphelper::getProcessComponentContext(),
-            "org.openoffice.Office.Common/Accessibility" );    // note: case sensitive !
+            OUString("org.openoffice.Office.Common/Accessibility") );    // note: case sensitive !
         if ( aNode.isValid() )
         {
-            css::uno::Any aValue = aNode.getNodeValue( OUString("AutoDetectSystemHC") );
-            bool bTmp = false;
+            ::com::sun::star::uno::Any aValue = aNode.getNodeValue( OUString("AutoDetectSystemHC") );
             if( aValue >>= bTmp )
                 bAutoHCMode = bTmp;
         }
@@ -280,6 +364,37 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, bool bCallHdl )
         aStyleSettings.SetHighContrastMode( true );
         rSettings.SetStyleSettings( aStyleSettings );
     }
+
+#if defined(DBG_UTIL)
+    // If needed, set AppFont to bold, in order to check
+    // if there is enough space available for texts on other systems
+    if ( DbgIsBoldAppFont() )
+    {
+        aStyleSettings = rSettings.GetStyleSettings();
+        aFont = aStyleSettings.GetAppFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetAppFont( aFont );
+        aFont = aStyleSettings.GetGroupFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetGroupFont( aFont );
+        aFont = aStyleSettings.GetLabelFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetLabelFont( aFont );
+        aFont = aStyleSettings.GetRadioCheckFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetRadioCheckFont( aFont );
+        aFont = aStyleSettings.GetPushButtonFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetPushButtonFont( aFont );
+        aFont = aStyleSettings.GetFieldFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetFieldFont( aFont );
+        aFont = aStyleSettings.GetIconFont();
+        aFont.SetWeight( WEIGHT_BOLD );
+        aStyleSettings.SetIconFont( aFont );
+        rSettings.SetStyleSettings( aStyleSettings );
+    }
+#endif
 
     if ( bCallHdl )
         GetpApp()->OverrideSystemSettings( rSettings );

@@ -33,11 +33,9 @@
  *
  ************************************************************************/
 
-#include <premac.h>
-#import <Cocoa/Cocoa.h>
-#include <postmac.h>
+#include <osl/objcutils.h>
 
-#import "javainteractionhandler_cocoa.h"
+#include "javainteractionhandler_cocoa.h"
 
 @interface OpenJavaDownloadURL : NSObject
 {
@@ -69,7 +67,7 @@
 
 	NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 #ifdef PRODUCT_JAVA_DOWNLOAD_URL
-	NSURL *pURL = [NSURL URLWithString:static_cast< NSString* >( CFSTR( PRODUCT_JAVA_DOWNLOAD_URL ) )];
+	NSURL *pURL = [NSURL URLWithString:(NSString *)CFSTR( PRODUCT_JAVA_DOWNLOAD_URL )];
 	if ( pWorkspace && pURL && ( [@"macappstores" isEqualToString:[pURL scheme]] || [@"http" isEqualToString:[pURL scheme]] || [@"https" isEqualToString:[pURL scheme]] ) )
 		[pWorkspace openURL:pURL];
 #endif	// PRODUCT_JAVA_DOWNLOAD_URL
@@ -84,8 +82,7 @@ void JavaInteractionHandler_downloadJava()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	OpenJavaDownloadURL *pOpenJavaDownloadURL = [OpenJavaDownloadURL create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pOpenJavaDownloadURL performSelectorOnMainThread:@selector(openJavaDownloadURL:) withObject:pOpenJavaDownloadURL waitUntilDone:NO modes:pModes];
+	osl_performSelectorOnMainThread( pOpenJavaDownloadURL, @selector(openJavaDownloadURL:), pOpenJavaDownloadURL, NO );
 
 	[pPool release];
 }

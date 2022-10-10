@@ -73,7 +73,7 @@
                 <menu:menupopup>
                     <menu:menuitem menu:id=".uno:MacroRecorder"/>
                     <menu:menuitem menu:id=".uno:RunMacro"/>
-                    <menu:menuitem menu:id=".uno:ScriptOrganizer"/>
+                    <menu:menu menu:id=".uno:ScriptOrganizer"/>
                     <menu:menuseparator/>
                     <menu:menuitem menu:id=".uno:MacroOrganizer?TabId:short=1"/>
                 </menu:menupopup>
@@ -94,15 +94,9 @@
             <menu:menuitem menu:id=".uno:HelpIndex"/>
             <menu:menuitem menu:id=".uno:ExtendedHelp"/>
             <!-- Remove feedback and license menu items
-            <menu:menuitem menu:id=".uno:Documentation"/>
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:QuestionAnswers"/>
             <menu:menuitem menu:id=".uno:SendFeedback"/>
-            -->
             <menu:menuseparator/>
-            <menu:menuitem menu:id=".uno:SafeMode"/>
-            <menu:menuseparator/>
-            <!-- Remove feedback and license menu items
             <menu:menuitem menu:id=".uno:ShowLicense"/>
             -->
             <!-- Add back About menu item -->

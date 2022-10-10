@@ -10,5 +10,6 @@
 	<!-- Disable library validation or Java and native plugins won't load -->
 	<key>com.apple.security.cs.disable-library-validation</key>
 	<true/>
+	$(CODESIGN_FOR_DEBUGGING)
 </dict>
 </plist>

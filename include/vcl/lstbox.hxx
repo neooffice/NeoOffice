@@ -27,124 +27,93 @@
 #ifndef INCLUDED_VCL_LSTBOX_HXX
 #define INCLUDED_VCL_LSTBOX_HXX
 
-#include <sal/types.h>
-#include <o3tl/typed_flags_set.hxx>
 #include <vcl/dllapi.h>
 #include <vcl/ctrl.hxx>
-
-#define LISTBOX_APPEND              (SAL_MAX_INT32)
-#define LISTBOX_ENTRY_NOTFOUND      (SAL_MAX_INT32)
-#define LISTBOX_ERROR               (SAL_MAX_INT32)
-#define LISTBOX_MAX_ENTRIES         (SAL_MAX_INT32 - 1)
-
-// the following defines can be used for the SetEntryFlags()
-// and GetEntryFlags() methods
-
-// !! Do not use these flags for user data as they are reserved      !!
-// !! to change the internal behaviour of the ListBox implementation !!
-// !! for specific entries.                                          !!
-
-enum class ListBoxEntryFlags
-{
-    NONE                    = 0x0000,
-/** this flag disables a selection of an entry completely. It is not
-    possible to select such entries either from the user interface
-    nor from the ListBox methods. Cursor traveling is handled correctly.
-    This flag can be used to add titles to a ListBox.
-*/
-    DisableSelection        = 0x0001,
-
-/** this flag can be used to make an entry multiline capable
-    A normal entry is single line and will therefore be clipped
-    at the right listbox border. Setting this flag enables
-    word breaks for the entry text.
-*/
-    MultiLine               = 0x0002,
-
-/** this flags lets the item be drawn disabled (e.g. in grey text)
-    usage only guaranteed with ListBoxEntryFlags::DisableSelection
-*/
-    DrawDisabled            = 0x0004,
-};
-namespace o3tl
-{
-    template<> struct typed_flags<ListBoxEntryFlags> : is_typed_flags<ListBoxEntryFlags, 0x0007> {};
-}
+#include <vcl/lstbox.h>
 
 class Image;
 class ImplListBox;
 class ImplListBoxFloatingWindow;
 class ImplBtn;
 class ImplWin;
-class ImplListBoxWindow;
+
+
+//  - ListBox -
+
 
 class VCL_DLLPUBLIC ListBox : public Control
 {
 private:
-    VclPtr<ImplListBox>                mpImplLB;
-    VclPtr<ImplListBoxFloatingWindow>  mpFloatWin;
-    VclPtr<ImplWin>                    mpImplWin;
-    VclPtr<ImplBtn>                    mpBtn;
+    ImplListBox*                mpImplLB;
+    ImplListBoxFloatingWindow*  mpFloatWin;
+    ImplWin*                    mpImplWin;
+    ImplBtn*                    mpBtn;
     sal_uInt16                  mnDDHeight;
     sal_Int32                   mnSaveValue;
     sal_Int32                   m_nMaxWidthChars;
-    Link<ListBox&,void>          maSelectHdl;
-    Link<ListBox&,void>         maDoubleClickHdl;
+    Link                        maSelectHdl;
+    Link                        maDoubleClickHdl;
     sal_uInt16                  mnLineCount;
 
+    /// bitfield
     bool            mbDDAutoSize : 1;
     bool            mbEdgeBlending : 1;
 
 private:
     SAL_DLLPRIVATE void    ImplInitListBoxData();
 
-    DECL_DLLPRIVATE_LINK( ImplSelectHdl, LinkParamNone*, void );
-    DECL_DLLPRIVATE_LINK( ImplScrollHdl, ImplListBox*, void );
-    DECL_DLLPRIVATE_LINK( ImplCancelHdl, LinkParamNone*, void );
-    DECL_DLLPRIVATE_LINK( ImplDoubleClickHdl, ImplListBoxWindow*, void );
-    DECL_DLLPRIVATE_LINK( ImplPopupModeEndHdl, FloatingWindow*, void );
-    DECL_DLLPRIVATE_LINK( ImplSelectionChangedHdl, sal_Int32, void );
-    DECL_DLLPRIVATE_LINK( ImplUserDrawHdl, UserDrawEvent*, void );
-    DECL_DLLPRIVATE_LINK( ImplFocusHdl, sal_Int32, void );
-    DECL_DLLPRIVATE_LINK( ImplListItemSelectHdl, LinkParamNone*, void );
+    DECL_DLLPRIVATE_LINK(  ImplSelectHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplScrollHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplCancelHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplDoubleClickHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplPopupModeEndHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplSelectionChangedHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplFocusHdl, void* );
+    DECL_DLLPRIVATE_LINK(  ImplListItemSelectHdl, void* );
 
-    DECL_DLLPRIVATE_LINK( ImplClickBtnHdl, void*, void );
+    SAL_DLLPRIVATE void ImplClickButtonHandler( Control* );
+    SAL_DLLPRIVATE void ImplUserDrawHandler( UserDrawEvent* );
 
 protected:
     using Window::ImplInit;
     SAL_DLLPRIVATE void    ImplInit( vcl::Window* pParent, WinBits nStyle );
-    SAL_DLLPRIVATE static WinBits ImplInitStyle( WinBits nStyle );
-    bool               IsDropDownBox() const { return mpFloatWin != nullptr; }
+    SAL_DLLPRIVATE WinBits ImplInitStyle( WinBits nStyle );
+    SAL_DLLPRIVATE void    ImplLoadRes( const ResId& rResId );
+    bool               IsDropDownBox() const { return mpFloatWin ? true : false; }
 
 protected:
     explicit            ListBox( WindowType nType );
 
-    virtual void        FillLayoutData() const override;
+    virtual void        FillLayoutData() const SAL_OVERRIDE;
 
 public:
     explicit            ListBox( vcl::Window* pParent, WinBits nStyle = WB_BORDER );
-    virtual             ~ListBox() override;
-    virtual void        dispose() override;
+    explicit            ListBox( vcl::Window* pParent, const ResId& );
+    virtual             ~ListBox();
 
-    virtual void        ApplySettings(vcl::RenderContext& rRenderContext) override;
-    virtual void        Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
-    virtual void        Resize() override;
-    virtual bool        PreNotify( NotifyEvent& rNEvt ) override;
-    virtual void        StateChanged( StateChangedType nType ) override;
-    virtual void        DataChanged( const DataChangedEvent& rDCEvt ) override;
+    virtual void        Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong nFlags ) SAL_OVERRIDE;
+    virtual void        Resize() SAL_OVERRIDE;
+    virtual bool        PreNotify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
+    virtual void        StateChanged( StateChangedType nType ) SAL_OVERRIDE;
+    virtual void        DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
     virtual void        UserDraw( const UserDrawEvent& rUDEvt );
 
     virtual void        Select();
     virtual void        DoubleClick();
-    virtual void        GetFocus() override;
-    virtual void        LoseFocus() override;
+    virtual void        GetFocus() SAL_OVERRIDE;
+    virtual void        LoseFocus() SAL_OVERRIDE;
+    virtual vcl::Window*     GetPreferredKeyInputWindow() SAL_OVERRIDE;
 
-    virtual const Wallpaper& GetDisplayBackground() const override;
+    virtual const Wallpaper& GetDisplayBackground() const SAL_OVERRIDE;
 
     virtual void        setPosSizePixel( long nX, long nY,
-                                         long nWidth, long nHeight, PosSizeFlags nFlags = PosSizeFlags::All ) override;
+                                         long nWidth, long nHeight, sal_uInt16 nFlags = WINDOW_POSSIZE_ALL ) SAL_OVERRIDE;
+    void                SetPosSizePixel( const Point& rNewPos, const Size& rNewSize ) SAL_OVERRIDE
+                        { Control::SetPosSizePixel( rNewPos, rNewSize ); }
+    void                SetDropDownSizePixel( const Size& rNewSize )
+    { if( IsDropDownBox() ) setPosSizePixel( 0, 0, rNewSize.Width(), rNewSize.Height(), WINDOW_POSSIZE_SIZE | WINDOW_POSSIZE_DROPDOWN ); }
 
-    tools::Rectangle           GetDropDownPosSizePixel() const;
+    Rectangle           GetDropDownPosSizePixel() const;
 
     void                AdaptDropDownLineCountToMaximum();
     void                SetDropDownLineCount( sal_uInt16 nLines );
@@ -181,24 +150,23 @@ public:
 
     void                SetEntryData( sal_Int32  nPos, void* pNewData );
     void*               GetEntryData( sal_Int32  nPos ) const;
-    void*               GetSelectEntryData() const { return GetEntryData(GetSelectEntryPos()); }
 
     /** this methods stores a combination of flags from the
-        ListBoxEntryFlags::* defines at the given entry.
-        See description of the possible ListBoxEntryFlags::* flags
+        LISTBOX_ENTRY_FLAG_* defines at the given entry.
+        See description of the possible LISTBOX_ENTRY_FLAG_* flags
         for details.
         Do not use these flags for user data as they are reserved
         to change the internal behaviour of the ListBox implementation
         for specific entries.
     */
-    void                SetEntryFlags( sal_Int32  nPos, ListBoxEntryFlags nFlags );
+    void                SetEntryFlags( sal_Int32  nPos, long nFlags );
 
     /** this methods gets the current combination of flags from the
-        ListBoxEntryFlags::* defines from the given entry.
-        See description of the possible ListBoxEntryFlags::* flags
+        LISTBOX_ENTRY_FLAG_* defines from the given entry.
+        See description of the possible LISTBOX_ENTRY_FLAG_* flags
         for details.
     */
-    ListBoxEntryFlags   GetEntryFlags( sal_Int32  nPos ) const;
+    long                GetEntryFlags( sal_Int32  nPos ) const;
 
     void                SetTopEntry( sal_Int32  nPos );
     sal_Int32           GetTopEntry() const;
@@ -207,7 +175,7 @@ public:
     sal_Int32           GetSavedValue() const { return mnSaveValue; }
     bool                IsValueChangedFromSaved() const { return mnSaveValue != GetSelectEntryPos(); }
 
-    void                SetSeparatorPos( sal_Int32 n );
+    void                SetSeparatorPos( sal_Int32  n = LISTBOX_ENTRY_NOTFOUND );
     sal_Int32           GetSeparatorPos() const;
 
     bool                IsTravelSelect() const;
@@ -221,20 +189,22 @@ public:
     void                SetReadOnly( bool bReadOnly = true );
     bool                IsReadOnly() const;
 
-    tools::Rectangle           GetBoundingRectangle( sal_Int32  nItem ) const;
+    Rectangle           GetBoundingRectangle( sal_Int32  nItem ) const;
+
+    void                SetUserItemSize( const Size& rSz );
 
     void                EnableUserDraw( bool bUserDraw );
 
-    void                DrawEntry( const UserDrawEvent& rEvt );
+    void                DrawEntry( const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos = false );
 
-    void                SetSelectHdl( const Link<ListBox&,void>& rLink )     { maSelectHdl = rLink; }
-    const Link<ListBox&,void>& GetSelectHdl() const                    { return maSelectHdl; }
-    void                SetDoubleClickHdl( const Link<ListBox&,void>& rLink ) { maDoubleClickHdl = rLink; }
-    const Link<ListBox&,void>& GetDoubleClickHdl() const               { return maDoubleClickHdl; }
+    void                SetSelectHdl( const Link& rLink )       { maSelectHdl = rLink; }
+    const Link&         GetSelectHdl() const                    { return maSelectHdl; }
+    void                SetDoubleClickHdl( const Link& rLink )  { maDoubleClickHdl = rLink; }
+    const Link&         GetDoubleClickHdl() const               { return maDoubleClickHdl; }
 
     Size                CalcSubEditSize() const;    //size of area inside lstbox, i.e. no scrollbar/dropdown
     Size                CalcMinimumSize() const;    //size of lstbox area, i.e. including scrollbar/dropdown
-    virtual Size        GetOptimalSize() const override;
+    virtual Size        GetOptimalSize() const SAL_OVERRIDE;
     Size                CalcAdjustedSize( const Size& rPrefSize ) const;
     Size                CalcBlockSize( sal_uInt16 nColumns, sal_uInt16 nLines ) const;
     void                GetMaxVisColumnsAndLines( sal_uInt16& rnCols, sal_uInt16& rnLines ) const;
@@ -267,25 +237,36 @@ public:
     using Control::GetIndexForPoint;
     long GetIndexForPoint( const Point& rPoint, sal_Int32 & rPos ) const;
 
+    sal_Int32 getMaxWidthChars() const { return m_nMaxWidthChars; }
     void setMaxWidthChars(sal_Int32 nWidth);
 
-    virtual bool set_property(const OString &rKey, const OUString &rValue) override;
+    virtual bool set_property(const OString &rKey, const OString &rValue) SAL_OVERRIDE;
 
-    void EnableQuickSelection( bool b );
-
-    static sal_Int32 NaturalSortCompare(const OUString &rA, const OUString &rB);
-
-    virtual FactoryFunction GetUITestFactory() const override;
+    void EnableQuickSelection( const bool& b );
 
 #ifdef USE_JAVA
-    bool IsImplBtnPressed() const;
-#endif	// USE_JAVA
+    const ImplBtn* GetImplBtn() const { return mpBtn; }
+#endif  // USE_JAVA
 };
+
+
+// - MultiListBox -
+
 
 class VCL_DLLPUBLIC MultiListBox : public ListBox
 {
 public:
-    explicit        MultiListBox( vcl::Window* pParent, WinBits nStyle );
+    using ListBox::SaveValue;
+    using ListBox::GetSavedValue;
+    using ListBox::IsValueChangedFromSaved;
+private:
+    // Bei MultiListBox nicht erlaubt...
+    void            SaveValue();
+    sal_Int32       GetSavedValue();
+    bool            IsValueChangedFromSaved() const;
+
+public:
+    explicit        MultiListBox( vcl::Window* pParent, WinBits nStyle = 0 );
 
 };
 

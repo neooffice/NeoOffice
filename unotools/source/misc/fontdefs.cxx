@@ -26,8 +26,8 @@
 
 #include <unotools/fontdefs.hxx>
 #include <unotools/fontcfg.hxx>
+#include <boost/unordered_map.hpp>
 #include <rtl/ustrbuf.hxx>
-#include <unordered_map>
 
 struct ImplLocalizedFontName
 {
@@ -185,7 +185,7 @@ static sal_Unicode const aHiraginoKakuGothicProN[]  = { 0x30D2, 0x30E9, 0x30AE, 
 static sal_Unicode const aHiraginoMaruGothicPro[]   = { 0x30D2, 0x30E9, 0x30AE, 0x30CE, 0x4E38, 0x30B4, 'p','r','o',0};
 static sal_Unicode const aHiraginoMaruGothicProN[]  = { 0x30D2, 0x30E9, 0x30AE, 0x30CE, 0x4E38, 0x30B4, 'p','r','o','n',0};
 
-static const ImplLocalizedFontName aImplLocalizedNamesList[] =
+static ImplLocalizedFontName aImplLocalizedNamesList[] =
 {
 {   "batang",               aBatang },
 {   "batangche",            aBatangChe },
@@ -324,7 +324,7 @@ static const ImplLocalizedFontName aImplLocalizedNamesList[] =
 {   "hiraginokakugothicpron", aHiraginoKakuGothicProN },
 {   "hiraginomarugothicpro", aHiraginoMaruGothicPro },
 {   "hiraginomarugothicpron", aHiraginoMaruGothicProN },
-{   nullptr,                   nullptr },
+{   NULL,                   NULL },
 };
 
 OUString StripScriptFromName(const OUString& _aName)
@@ -348,10 +348,10 @@ OUString StripScriptFromName(const OUString& _aName)
     while (!bFinished)
     {
         bFinished = true;
-        for (const char* suffix : suffixes)
+        for (size_t i = 0; i < SAL_N_ELEMENTS(suffixes); ++i)
         {
-            size_t nLen = strlen(suffix);
-            if (aName.endsWithIgnoreAsciiCaseAsciiL(suffix, nLen))
+            size_t nLen = strlen(suffixes[i]);
+            if (aName.endsWithIgnoreAsciiCaseAsciiL(suffixes[i], nLen))
             {
                 bFinished = false;
                 aName = aName.copy(0, aName.getLength() - nLen);
@@ -426,9 +426,9 @@ OUString GetEnglishSearchFontName(const OUString& rInName)
     // translate normalized localized name to its normalized English ASCII name
     if( bNeedTranslation )
     {
-        typedef std::unordered_map<OUString, const char*, OUStringHash> FontNameDictionary;
+        typedef boost::unordered_map<const OUString, const char*, OUStringHash> FontNameDictionary;
         static FontNameDictionary aDictionary( SAL_N_ELEMENTS(aImplLocalizedNamesList) );
-        // the font name dictionary needs to be initialized once
+        // the font name dictionary needs to be intialized once
         if( aDictionary.empty() )
         {
             // TODO: check if all dictionary entries are already normalized?
@@ -519,7 +519,7 @@ void AddTokenFontName( OUString& rName, const OUString& rNewToken )
         ImplAppendFontToken( rName, rNewToken );
 }
 
-OUString GetSubsFontName( const OUString& rName, SubsFontFlags nFlags )
+OUString GetSubsFontName( const OUString& rName, sal_uLong nFlags )
 {
     OUString aName;
 
@@ -528,7 +528,7 @@ OUString GetSubsFontName( const OUString& rName, SubsFontFlags nFlags )
                                 GetNextFontToken( rName, nIndex ) );
 
     // #93662# do not try to replace StarSymbol with MS only font
-    if( nFlags == (SubsFontFlags::MS|SubsFontFlags::ONLYONE)
+    if( nFlags == (SUBSFONT_MS|SUBSFONT_ONLYONE)
     &&  ( aOrgName == "starsymbol"
       ||  aOrgName == "opensymbol" ) )
         return aName;
@@ -538,19 +538,19 @@ OUString GetSubsFontName( const OUString& rName, SubsFontFlags nFlags )
     {
         for( int i = 0; i < 3; i++ )
         {
-            const ::std::vector< OUString >* pVector = nullptr;
+            const ::std::vector< OUString >* pVector = NULL;
             switch( i )
             {
                 case 0:
-                    if( nFlags & SubsFontFlags::MS  &&  pAttr->MSSubstitutions.size() )
+                    if( nFlags & SUBSFONT_MS  &&  pAttr->MSSubstitutions.size() )
                         pVector = &pAttr->MSSubstitutions;
                     break;
                 case 1:
-                    if( nFlags & SubsFontFlags::PS  &&  pAttr->PSSubstitutions.size() )
+                    if( nFlags & SUBSFONT_PS  &&  pAttr->PSSubstitutions.size() )
                         pVector = &pAttr->PSSubstitutions;
                     break;
                 case 2:
-                    if( nFlags & SubsFontFlags::HTML  &&  pAttr->HTMLSubstitutions.size() )
+                    if( nFlags & SUBSFONT_HTML  &&  pAttr->HTMLSubstitutions.size() )
                         pVector = &pAttr->HTMLSubstitutions;
                     break;
             }
@@ -560,7 +560,7 @@ OUString GetSubsFontName( const OUString& rName, SubsFontFlags nFlags )
                 if( ! ImplIsFontToken( rName, *it ) )
                 {
                     ImplAppendFontToken( aName, *it );
-                    if( nFlags & SubsFontFlags::ONLYONE )
+                    if( nFlags & SUBSFONT_ONLYONE )
                     {
                         i = 4;
                         break;

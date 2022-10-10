@@ -37,7 +37,7 @@
 #include <com/sun/star/uno/XComponentContext.hpp>
 #include <com/sun/star/util/XChangesBatch.hpp>
 
-#include <cppuhelper/implbase.hxx>
+#include <cppuhelper/implbase5.hxx>
 #include <cppuhelper/weakref.hxx>
 #include <osl/mutex.hxx>
 #include <osl/conditn.hxx>
@@ -54,22 +54,23 @@
 #endif	// USE_JAVA
 
 
+
 struct FPEntry
 {
     // flat paragraph iterator
-    css::uno::Reference< css::text::XFlatParagraphIterator > m_xParaIterator;
+    ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraphIterator > m_xParaIterator;
 
     // flat paragraph
-    css::uno::WeakReference< css::text::XFlatParagraph > m_xPara;
+    ::com::sun::star::uno::WeakReference< ::com::sun::star::text::XFlatParagraph > m_xPara;
 
     // document ID to identify different documents
-    OUString        m_aDocId;
+    OUString m_aDocId;
 
     // the starting position to be checked
     sal_Int32       m_nStartIndex;
 
     // the flag to identify whether the document does automatical grammar checking
-    bool            m_bAutomatic;
+    bool        m_bAutomatic;
 
     FPEntry()
         : m_aDocId()
@@ -80,18 +81,20 @@ struct FPEntry
 };
 
 
+
+
 class GrammarCheckingIterator:
-    public cppu::WeakImplHelper
+    public cppu::WeakImplHelper5
     <
-        css::linguistic2::XProofreadingIterator,
-        css::linguistic2::XLinguServiceEventListener,
-        css::linguistic2::XLinguServiceEventBroadcaster,
-        css::lang::XComponent,
-        css::lang::XServiceInfo
+        ::com::sun::star::linguistic2::XProofreadingIterator,
+        ::com::sun::star::linguistic2::XLinguServiceEventListener,
+        ::com::sun::star::linguistic2::XLinguServiceEventBroadcaster,
+        ::com::sun::star::lang::XComponent,
+        ::com::sun::star::lang::XServiceInfo
     >,
     public LinguDispatcher
 {
-    //the queue is keeping track of all sentences to be checked
+    //the queue is keeping track of all senteces to be checked
     //every element of this queue is a FlatParagraphEntry struct-object
     typedef std::deque< FPEntry > FPQueue_t;
 
@@ -111,12 +114,13 @@ class GrammarCheckingIterator:
     GCImplNames_t   m_aGCImplNamesByLang;
 
     // implname -> UNO reference mapping
-    typedef std::map< OUString, css::uno::Reference< css::linguistic2::XProofreader > > GCReferences_t;
+    typedef std::map< OUString, ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XProofreader > > GCReferences_t;
     GCReferences_t  m_aGCReferencesByService;
 
     OUString m_aCurCheckedDocId;
     bool        m_bGCServicesChecked;
     sal_Int32       m_nDocIdCounter;
+    sal_Int32       m_nLastEndOfSentencePos;
 #ifdef USE_JAVA
     AutoTimer       m_aDequeueAndCheckTimer;
 #else	// USE_JAVA
@@ -124,79 +128,82 @@ class GrammarCheckingIterator:
     oslThread       m_thread;
 #endif	// USE_JAVA
 
-    //! beware of initialization order!
+    //! beware of initilization order !
     struct MyMutex : public rtl::Static< osl::Mutex, MyMutex > {};
-    comphelper::OInterfaceContainerHelper2     m_aEventListeners;
-    comphelper::OInterfaceContainerHelper2     m_aNotifyListeners;
+    cppu::OInterfaceContainerHelper     m_aEventListeners;
+    cppu::OInterfaceContainerHelper     m_aNotifyListeners;
 
-    css::uno::Reference< css::i18n::XBreakIterator > m_xBreakIterator;
-    mutable css::uno::Reference< css::util::XChangesBatch >  m_xUpdateAccess;
+    ::com::sun::star::uno::Reference< ::com::sun::star::i18n::XBreakIterator > m_xBreakIterator;
+    mutable ::com::sun::star::uno::Reference< ::com::sun::star::util::XChangesBatch >  m_xUpdateAccess;
 
     void TerminateThread();
 
     sal_Int32 NextDocId();
-    OUString GetOrCreateDocId( const css::uno::Reference< css::lang::XComponent > &xComp );
+    OUString GetOrCreateDocId( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XComponent > &xComp );
 
     void AddEntry(
-            const css::uno::WeakReference< css::text::XFlatParagraphIterator >& xFlatParaIterator,
-            const css::uno::WeakReference< css::text::XFlatParagraph >& xFlatPara,
+            ::com::sun::star::uno::WeakReference< ::com::sun::star::text::XFlatParagraphIterator > xFlatParaIterator,
+            ::com::sun::star::uno::WeakReference< ::com::sun::star::text::XFlatParagraph > xFlatPara,
             const OUString &rDocId, sal_Int32 nStartIndex, bool bAutomatic );
 
-    void ProcessResult( const css::linguistic2::ProofreadingResult &rRes,
-            const css::uno::Reference< css::text::XFlatParagraphIterator > &rxFlatParagraphIterator,
+    void ProcessResult( const ::com::sun::star::linguistic2::ProofreadingResult &rRes,
+            const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraphIterator > &rxFlatParagraphIterator,
             bool bIsAutomaticChecking );
 
-    sal_Int32 GetSuggestedEndOfSentence( const OUString &rText, sal_Int32 nSentenceStartPos, const css::lang::Locale &rLocale );
+    sal_Int32 GetSuggestedEndOfSentence( const OUString &rText, sal_Int32 nSentenceStartPos, const ::com::sun::star::lang::Locale &rLocale );
 
     void GetConfiguredGCSvcs_Impl();
-    css::uno::Reference< css::linguistic2::XProofreader > GetGrammarChecker( const css::lang::Locale & rLocale );
+    ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XProofreader > GetGrammarChecker( const ::com::sun::star::lang::Locale & rLocale );
 
-    css::uno::Reference< css::util::XChangesBatch > const & GetUpdateAccess() const;
+    ::com::sun::star::uno::Reference< ::com::sun::star::util::XChangesBatch >   GetUpdateAccess() const;
 
-    GrammarCheckingIterator( const GrammarCheckingIterator & ) = delete;
-    GrammarCheckingIterator & operator = ( const GrammarCheckingIterator & ) = delete;
+    // disallow use of copy c-tor and assignment operator
+    GrammarCheckingIterator( const GrammarCheckingIterator & );
+    GrammarCheckingIterator & operator = ( const GrammarCheckingIterator & );
 
 public:
 
 #ifdef USE_JAVA
-    DECL_LINK( DequeueAndCheck, Timer*, void );
+    DECL_LINK( DequeueAndCheck, Timer* );
 #else	// USE_JAVA
     void DequeueAndCheck();
 #endif	// USE_JAVA
 
     explicit GrammarCheckingIterator();
-    virtual ~GrammarCheckingIterator() override;
+    virtual ~GrammarCheckingIterator();
 
     // XProofreadingIterator
-    virtual void SAL_CALL startProofreading( const css::uno::Reference< css::uno::XInterface >& xDocument, const css::uno::Reference< css::text::XFlatParagraphIteratorProvider >& xIteratorProvider ) override;
-    virtual css::linguistic2::ProofreadingResult SAL_CALL checkSentenceAtPosition( const css::uno::Reference< css::uno::XInterface >& xDocument, const css::uno::Reference< css::text::XFlatParagraph >& xFlatParagraph, const OUString& aText, const css::lang::Locale& aLocale, ::sal_Int32 nStartOfSentencePosition, ::sal_Int32 nSuggestedBehindEndOfSentencePosition, ::sal_Int32 nErrorPositionInParagraph ) override;
-    virtual void SAL_CALL resetIgnoreRules(  ) override;
-    virtual sal_Bool SAL_CALL isProofreading( const css::uno::Reference< css::uno::XInterface >& xDocument ) override;
+    virtual void SAL_CALL startProofreading( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument, const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraphIteratorProvider >& xIteratorProvider ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual ::com::sun::star::linguistic2::ProofreadingResult SAL_CALL checkSentenceAtPosition( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument, const ::com::sun::star::uno::Reference< ::com::sun::star::text::XFlatParagraph >& xFlatParagraph, const OUString& aText, const ::com::sun::star::lang::Locale& aLocale, ::sal_Int32 nStartOfSentencePosition, ::sal_Int32 nSuggestedBehindEndOfSentencePosition, ::sal_Int32 nErrorPositionInParagraph ) throw (::com::sun::star::lang::IllegalArgumentException, ::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL resetIgnoreRules(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL isProofreading( const ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface >& xDocument ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XLinguServiceEventListener
-    virtual void SAL_CALL processLinguServiceEvent( const css::linguistic2::LinguServiceEvent& aLngSvcEvent ) override;
+    virtual void SAL_CALL processLinguServiceEvent( const ::com::sun::star::linguistic2::LinguServiceEvent& aLngSvcEvent ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XLinguServiceEventBroadcaster
-    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const css::uno::Reference< css::linguistic2::XLinguServiceEventListener >& xLstnr ) override;
-    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const css::uno::Reference< css::linguistic2::XLinguServiceEventListener >& xLstnr ) override;
+    virtual sal_Bool SAL_CALL addLinguServiceEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XLinguServiceEventListener >& xLstnr ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL removeLinguServiceEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::linguistic2::XLinguServiceEventListener >& xLstnr ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XComponent
-    virtual void SAL_CALL dispose(  ) override;
-    virtual void SAL_CALL addEventListener( const css::uno::Reference< css::lang::XEventListener >& xListener ) override;
-    virtual void SAL_CALL removeEventListener( const css::uno::Reference< css::lang::XEventListener >& aListener ) override;
+    virtual void SAL_CALL dispose(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL addEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& xListener ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual void SAL_CALL removeEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& aListener ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XEventListener
-    virtual void SAL_CALL disposing( const css::lang::EventObject& Source ) override;
+    virtual void SAL_CALL disposing( const ::com::sun::star::lang::EventObject& Source ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // XServiceInfo
-    virtual OUString SAL_CALL getImplementationName(  ) override;
-    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) override;
-    virtual css::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) override;
+    virtual OUString SAL_CALL getImplementationName(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual sal_Bool SAL_CALL supportsService( const OUString& ServiceName ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw (::com::sun::star::uno::RuntimeException, std::exception) SAL_OVERRIDE;
 
     // LinguDispatcher
-    virtual void SetServiceList( const css::lang::Locale &rLocale, const css::uno::Sequence< OUString > &rSvcImplNames ) override;
-    virtual css::uno::Sequence< OUString > GetServiceList( const css::lang::Locale &rLocale ) const override;
+    virtual void SetServiceList( const ::com::sun::star::lang::Locale &rLocale, const ::com::sun::star::uno::Sequence< OUString > &rSvcImplNames ) SAL_OVERRIDE;
+    virtual ::com::sun::star::uno::Sequence< OUString > GetServiceList( const ::com::sun::star::lang::Locale &rLocale ) const SAL_OVERRIDE;
+    virtual DspType GetDspType() const SAL_OVERRIDE;
 };
+
 
 
 #endif

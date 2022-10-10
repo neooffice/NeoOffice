@@ -1,0 +1,24 @@
+--- source/processor3d/zbufferprocessor3d.cxx	2015-11-25 07:55:38.000000000 -0500
++++ source/processor3d/zbufferprocessor3d.cxx	2021-05-11 14:25:22.000000000 -0400
+@@ -500,21 +500,6 @@
+     {
+     }
+ 
+-    RasterPrimitive3D& operator=(const RasterPrimitive3D& rComp)
+-    {
+-        mpGeoTexSvx = rComp.mpGeoTexSvx;
+-        mpTransparenceGeoTexSvx = rComp.mpTransparenceGeoTexSvx;
+-        maMaterial = rComp.maMaterial;
+-        maPolyPolygon = rComp.maPolyPolygon;
+-        mfCenterZ = rComp.mfCenterZ;
+-        mbModulate = rComp.mbModulate;
+-        mbFilter = rComp.mbFilter;
+-        mbSimpleTextureActive = rComp.mbSimpleTextureActive;
+-        mbIsLine = rComp.mbIsLine;
+-
+-        return *this;
+-    }
+-
+     bool operator<(const RasterPrimitive3D& rComp) const
+     {
+         return mfCenterZ < rComp.mfCenterZ;

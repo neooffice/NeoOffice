@@ -25,6 +25,7 @@
  */
 
 
+#include <canvas/debug.hxx>
 #include <tools/diagnose_ex.h>
 #include <canvas/canvastools.hxx>
 
@@ -62,7 +63,7 @@
 typedef sal_Bool UseDarkModeColors_Type();
 
 static ::osl::Module aModule;
-static UseDarkModeColors_Type *pUseDarkModeColors = nullptr;
+static UseDarkModeColors_Type *pUseDarkModeColors = NULL;
 
 static sal_Bool UseDarkModeColors()
 {
@@ -72,7 +73,7 @@ static sal_Bool UseDarkModeColors()
     if (!pUseDarkModeColors)
     {
         if (aModule.load("libvcllo.dylib"))
-            pUseDarkModeColors = reinterpret_cast< UseDarkModeColors_Type* >(aModule.getSymbol("UseDarkModeColors"));
+            pUseDarkModeColors = (UseDarkModeColors_Type *)aModule.getSymbol( "UseDarkModeColors");
     }
 
     if (pUseDarkModeColors)
@@ -95,7 +96,7 @@ namespace slideshow
             class NamedValueComparator
             {
             public:
-                explicit NamedValueComparator( const beans::NamedValue& rKey ) :
+                NamedValueComparator( const beans::NamedValue& rKey ) :
                     mrKey( rKey )
                 {
                 }
@@ -408,11 +409,11 @@ namespace slideshow
                            const ShapeSharedPtr&        /*rShape*/,
                            const ::basegfx::B2DVector&  /*rSlideBounds*/ )
         {
-            bool bTmp;
+            bool nTmp;
             // try to extract bool value
-            if( (rSourceAny >>= bTmp) )
+            if( (rSourceAny >>= nTmp) )
             {
-                o_rValue = bTmp;
+                o_rValue = nTmp;
 
                 // succeeded
                 return true;
@@ -473,9 +474,17 @@ namespace slideshow
             const beans::NamedValue*    pArray = rSequence.getConstArray();
             const size_t                nLen( rSequence.getLength() );
 
-            return ::std::any_of( pArray,
-                                  pArray + nLen,
-                                  NamedValueComparator( rSearchKey ) );
+            if( nLen == 0 )
+                return false;
+
+            const beans::NamedValue* pFound = ::std::find_if( pArray,
+                                                              pArray + nLen,
+                                                              NamedValueComparator( rSearchKey ) );
+
+            if( pFound == rSequence.getConstArray() + nLen )
+                return false;
+
+            return true;
         }
 
         basegfx::B2DRange calcRelativeShapeBounds( const basegfx::B2DVector& rPageSize,
@@ -574,7 +583,7 @@ namespace slideshow
             }
 
             // return identity transform for un-attributed
-            // shapes. This renders the sprite as-is, in its
+            // shapes. This renders the sprite as-is, in it's
             // document-supplied size.
             return aTransform;
         }
@@ -703,7 +712,8 @@ namespace slideshow
                 ::basegfx::tools::createPolygonFromRect( rRect ));
 
             ::cppcanvas::PolyPolygonSharedPtr pPolyPoly(
-                ::cppcanvas::BaseGfxFactory::createPolyPolygon( rCanvas, aPoly ) );
+                ::cppcanvas::BaseGfxFactory::getInstance().createPolyPolygon( rCanvas,
+                                                                              aPoly ) );
 
             if( pPolyPoly )
             {
@@ -755,7 +765,8 @@ namespace slideshow
                                                             uno::UNO_QUERY_THROW );
             // read bound rect
             awt::Rectangle aTmpRect;
-            if( !(xPropSet->getPropertyValue("BoundRect") >>= aTmpRect) )
+            if( !(xPropSet->getPropertyValue(
+                      OUString("BoundRect") ) >>= aTmpRect) )
             {
                 ENSURE_OR_THROW( false,
                                   "getAPIShapeBounds(): Could not get \"BoundRect\" property from shape" );

@@ -24,7 +24,6 @@
 #include "excimp8.hxx"
 #include "scextopt.hxx"
 #include "document.hxx"
-#include <o3tl/make_unique.hxx>
 
 // *** Implementation ***
 
@@ -33,32 +32,31 @@ XclImpName::TokenStrmData::TokenStrmData( XclImpStream& rStrm ) :
 
 XclImpName::XclImpName( XclImpStream& rStrm, sal_uInt16 nXclNameIdx ) :
     XclImpRoot( rStrm.GetRoot() ),
-    mpScData( nullptr ),
+    mpScData( 0 ),
     mcBuiltIn( EXC_BUILTIN_UNKNOWN ),
     mnScTab( SCTAB_MAX ),
-    meNameType( ScRangeData::Type::Name ),
+    meNameType( RT_NAME ),
     mnXclTab( EXC_NAME_GLOBAL ),
     mnNameIndex( nXclNameIdx ),
     mbVBName( false ),
     mbMacro( false ),
-    mpTokensData( nullptr )
+    mpTokensData( NULL )
 {
     ExcelToSc& rFmlaConv = GetOldFmlaConverter();
 
     // 1) *** read data from stream *** ---------------------------------------
 
     sal_uInt16 nFlags = 0, nFmlaSize = 0, nExtSheet = EXC_NAME_GLOBAL;
-    sal_uInt8 nNameLen = 0;
+    sal_uInt8 nNameLen = 0, nShortCut;
 
     switch( GetBiff() )
     {
         case EXC_BIFF2:
         {
             sal_uInt8 nFlagsBiff2;
-            nFlagsBiff2 = rStrm.ReaduInt8();
+            rStrm >> nFlagsBiff2;
             rStrm.Ignore( 1 );
-            rStrm.Ignore( 1 ); //nShortCut
-            nNameLen = rStrm.ReaduInt8();
+            rStrm >> nShortCut >> nNameLen;
             nFmlaSize = rStrm.ReaduInt8();
             ::set_flag( nFlags, EXC_NAME_FUNC, ::get_flag( nFlagsBiff2, EXC_NAME2_FUNC ) );
         }
@@ -67,22 +65,14 @@ XclImpName::XclImpName( XclImpStream& rStrm, sal_uInt16 nXclNameIdx ) :
         case EXC_BIFF3:
         case EXC_BIFF4:
         {
-            nFlags = rStrm.ReaduInt16();
-            rStrm.Ignore( 1 ); //nShortCut
-            nNameLen = rStrm.ReaduInt8();
-            nFmlaSize = rStrm.ReaduInt16();
+            rStrm >> nFlags >> nShortCut >> nNameLen >> nFmlaSize;
         }
         break;
 
         case EXC_BIFF5:
         case EXC_BIFF8:
         {
-            nFlags = rStrm.ReaduInt16();
-            rStrm.Ignore( 1 ); //nShortCut
-            nNameLen = rStrm.ReaduInt8();
-            nFmlaSize = rStrm.ReaduInt16();
-            nExtSheet = rStrm.ReaduInt16();
-            mnXclTab = rStrm.ReaduInt16();
+            rStrm >> nFlags >> nShortCut >> nNameLen >> nFmlaSize >> nExtSheet >> mnXclTab;
             rStrm.Ignore( 4 );
         }
         break;
@@ -109,7 +99,7 @@ XclImpName::XclImpName( XclImpStream& rStrm, sal_uInt16 nXclNameIdx ) :
     if( (GetBiff() == EXC_BIFF5) && (maXclName == XclTools::GetXclBuiltInDefName(EXC_BUILTIN_FILTERDATABASE)) )
     {
         bBuiltIn = true;
-        maXclName = OUStringLiteral1(EXC_BUILTIN_FILTERDATABASE);
+        maXclName = OUString(EXC_BUILTIN_FILTERDATABASE);
     }
 
     // convert Excel name to Calc name
@@ -144,7 +134,7 @@ XclImpName::XclImpName( XclImpStream& rStrm, sal_uInt16 nXclNameIdx ) :
     // 3) *** convert the name definition formula *** -------------------------
 
     rFmlaConv.Reset();
-    const ScTokenArray* pTokArr = nullptr; // pointer to token array, owned by rFmlaConv
+    const ScTokenArray* pTokArr = 0; // pointer to token array, owned by rFmlaConv
 
     if( ::get_flag( nFlags, EXC_NAME_BIG ) )
     {
@@ -153,19 +143,19 @@ XclImpName::XclImpName( XclImpStream& rStrm, sal_uInt16 nXclNameIdx ) :
     }
     else if( bBuiltIn )
     {
-        SCTAB const nLocalTab = (mnXclTab == EXC_NAME_GLOBAL) ? SCTAB_MAX : (mnXclTab - 1);
+        SCsTAB const nLocalTab = (mnXclTab == EXC_NAME_GLOBAL) ? SCTAB_MAX : (mnXclTab - 1);
 
         // --- print ranges or title ranges ---
         rStrm.PushPosition();
         switch( mcBuiltIn )
         {
             case EXC_BUILTIN_PRINTAREA:
-                if( rFmlaConv.Convert( GetPrintAreaBuffer(), rStrm, nFmlaSize, nLocalTab, FT_RangeName ) == ConvErr::OK )
-                    meNameType |= ScRangeData::Type::PrintArea;
+                if( rFmlaConv.Convert( GetPrintAreaBuffer(), rStrm, nFmlaSize, nLocalTab, FT_RangeName ) == ConvOK )
+                    meNameType |= RT_PRINTAREA;
             break;
             case EXC_BUILTIN_PRINTTITLES:
-                if( rFmlaConv.Convert( GetTitleAreaBuffer(), rStrm, nFmlaSize, nLocalTab, FT_RangeName ) == ConvErr::OK )
-                    meNameType |= ScRangeData::Type::ColHeader | ScRangeData::Type::RowHeader;
+                if( rFmlaConv.Convert( GetTitleAreaBuffer(), rStrm, nFmlaSize, nLocalTab, FT_RangeName ) == ConvOK )
+                    meNameType |= RT_COLHEADER | RT_ROWHEADER;
             break;
         }
         rStrm.PopPosition();
@@ -188,7 +178,7 @@ XclImpName::XclImpName( XclImpStream& rStrm, sal_uInt16 nXclNameIdx ) :
                     break;
                     case EXC_BUILTIN_CRITERIA:
                         GetFilterManager().AddAdvancedRange( aRange );
-                        meNameType |= ScRangeData::Type::Criteria;
+                        meNameType |= RT_CRITERIA;
                     break;
                     case EXC_BUILTIN_EXTRACT:
                         if (pTokArr->IsValidReference(aRange, ScAddress()))
@@ -219,7 +209,7 @@ void XclImpName::ConvertTokens()
 
     ExcelToSc& rFmlaConv = GetOldFmlaConverter();
     rFmlaConv.Reset();
-    const ScTokenArray* pArray = nullptr;
+    const ScTokenArray* pArray = NULL;
 
     XclImpStreamPos aOldPos;
     XclImpStream& rStrm = mpTokensData->mrStrm;
@@ -237,13 +227,13 @@ void XclImpName::ConvertTokens()
 void XclImpName::InsertName(const ScTokenArray* pArray)
 {
     // create the Calc name data
-    ScRangeData* pData = new ScRangeData(&GetDocRef(), maScName, *pArray, ScAddress(), meNameType);
+    ScRangeData* pData = new ScRangeData(GetDocPtr(), maScName, *pArray, ScAddress(), meNameType);
     pData->GuessPosition();             // calculate base position for relative refs
     pData->SetIndex( mnNameIndex );     // used as unique identifier in formulas
     if (mnXclTab == EXC_NAME_GLOBAL)
     {
         if (!GetDoc().GetRangeName()->insert(pData))
-            pData = nullptr;
+            pData = NULL;
     }
     else
     {
@@ -251,7 +241,7 @@ void XclImpName::InsertName(const ScTokenArray* pArray)
         if (pLocalNames)
         {
             if (!pLocalNames->insert(pData))
-                pData = nullptr;
+                pData = NULL;
         }
 #ifndef NO_LIBO_RANGE_DATA_LEAK_FIX
         else
@@ -272,10 +262,14 @@ void XclImpName::InsertName(const ScTokenArray* pArray)
         }
     }
     if (pData)
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
     {
         GetDoc().CheckLinkFormulaNeedingCheck( *pData->GetCode());
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
         mpScData = pData;               // cache for later use
+#ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
     }
+#endif	// !NO_LIBO_WEBSERVICE_LOADING_FIX
 }
 
 XclImpNameManager::XclImpNameManager( const XclImpRoot& rRoot ) :
@@ -287,21 +281,21 @@ void XclImpNameManager::ReadName( XclImpStream& rStrm )
 {
     sal_uLong nCount = maNameList.size();
     if( nCount < 0xFFFF )
-        maNameList.push_back( o3tl::make_unique<XclImpName>( rStrm, static_cast< sal_uInt16 >( nCount + 1 ) ) );
+        maNameList.push_back( new XclImpName( rStrm, static_cast< sal_uInt16 >( nCount + 1 ) ) );
 }
 
 const XclImpName* XclImpNameManager::FindName( const OUString& rXclName, SCTAB nScTab ) const
 {
-    const XclImpName* pGlobalName = nullptr;   // a found global name
-    const XclImpName* pLocalName = nullptr;    // a found local name
+    const XclImpName* pGlobalName = 0;   // a found global name
+    const XclImpName* pLocalName = 0;    // a found local name
     for( XclImpNameList::const_iterator itName = maNameList.begin(); itName != maNameList.end() && !pLocalName; ++itName )
     {
-        if( (*itName)->GetXclName() == rXclName )
+        if( itName->GetXclName() == rXclName )
         {
-            if( (*itName)->GetScTab() == nScTab )
-                pLocalName = itName->get();
-            else if( (*itName)->IsGlobal() )
-                pGlobalName = itName->get();
+            if( itName->GetScTab() == nScTab )
+                pLocalName = &(*itName);
+            else if( itName->IsGlobal() )
+                pGlobalName = &(*itName);
         }
     }
     return pLocalName ? pLocalName : pGlobalName;
@@ -310,14 +304,14 @@ const XclImpName* XclImpNameManager::FindName( const OUString& rXclName, SCTAB n
 const XclImpName* XclImpNameManager::GetName( sal_uInt16 nXclNameIdx ) const
 {
     OSL_ENSURE( nXclNameIdx > 0, "XclImpNameManager::GetName - index must be >0" );
-    return ( nXclNameIdx <= 0 ||  nXclNameIdx > maNameList.size() ) ? nullptr : maNameList.at( nXclNameIdx - 1 ).get();
+    return ( nXclNameIdx <= 0 ||  nXclNameIdx > maNameList.size() ) ? NULL : &(maNameList.at( nXclNameIdx - 1 ));
 }
 
 void XclImpNameManager::ConvertAllTokens()
 {
     XclImpNameList::iterator it = maNameList.begin(), itEnd = maNameList.end();
     for (; it != itEnd; ++it)
-        (*it)->ConvertTokens();
+        it->ConvertTokens();
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

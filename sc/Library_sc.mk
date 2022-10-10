@@ -46,8 +46,6 @@ $(eval $(call gb_Library_use_sdk_api,sc))
 
 $(eval $(call gb_Library_use_externals,sc,\
     boost_headers \
-    $(call gb_Helper_optional,OPENCL, \
-        clew) \
     icu_headers \
     icui18n \
     icuuc \
@@ -61,13 +59,23 @@ else
 $(eval $(call gb_Library_use_externals,sc,orcus-parser))
 endif
 
+ifeq ($(ENABLE_TELEPATHY),TRUE)
+$(eval $(call gb_Library_use_libraries,sc,tubes))
+
+$(eval $(call gb_Library_add_exception_objects,sc,\
+    sc/source/ui/collab/sccollaboration \
+    sc/source/ui/collab/sendfunc \
+))
+endif
+
 $(eval $(call gb_Library_use_libraries,sc,\
     $(call gb_Helper_optional,AVMEDIA,avmedia) \
     basegfx \
+    $(call gb_Helper_optional,OPENCL, \
+        clew) \
     comphelper \
     cppu \
     cppuhelper \
-    dbtools \
     drawinglayer \
     editeng \
     for \
@@ -94,6 +102,7 @@ $(eval $(call gb_Library_use_libraries,sc,\
         vbahelper) \
     vcl \
     xo \
+    $(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_add_exception_objects,sc,\
@@ -107,7 +116,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/data/cellvalues \
     sc/source/core/data/clipcontext \
     sc/source/core/data/clipparam \
-    sc/source/core/data/colcontainer \
     sc/source/core/data/column \
     sc/source/core/data/column2 \
     sc/source/core/data/column3 \
@@ -166,7 +174,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/data/listenercontext \
     sc/source/core/data/markarr \
     sc/source/core/data/markdata \
-    sc/source/core/data/markmulti \
     sc/source/core/data/mtvelements \
     sc/source/core/data/olinetab \
     sc/source/core/data/pagepar \
@@ -216,6 +223,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/tool/chartpos \
     sc/source/core/tool/chgtrack \
     sc/source/core/tool/chgviset \
+    sc/source/core/tool/clkernelthread \
     sc/source/core/tool/compare \
     sc/source/core/tool/compiler \
     sc/source/core/tool/consoli  \
@@ -243,11 +251,9 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/tool/interpr5 \
     sc/source/core/tool/interpr6 \
     sc/source/core/tool/interpr7 \
-    sc/source/core/tool/interpr8 \
     sc/source/core/tool/jumpmatrix \
     sc/source/core/tool/listenerquery \
     sc/source/core/tool/lookupcache \
-    sc/source/core/tool/matrixoperators \
     sc/source/core/tool/navicfg \
     sc/source/core/tool/numformat \
     sc/source/core/tool/odffmap \
@@ -271,7 +277,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/core/tool/refreshtimer \
     sc/source/core/tool/reftokenhelper \
     sc/source/core/tool/refupdat \
-    sc/source/core/tool/reordermap \
     sc/source/core/tool/scmatrix \
     sc/source/core/tool/scopetools \
     sc/source/core/tool/sharedformula \
@@ -381,14 +386,14 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/app/typemap \
     sc/source/ui/app/uiitems \
     sc/source/ui/attrdlg/scabstdlg \
-    sc/source/ui/cctrl/cbnumberformat \
     sc/source/ui/cctrl/cbuttonw \
     sc/source/ui/cctrl/checklistmenu \
     sc/source/ui/cctrl/dpcontrol \
+    sc/source/ui/cctrl/popmenu \
+    sc/source/ui/cctrl/tbinsert \
     sc/source/ui/cctrl/tbzoomsliderctrl \
     sc/source/ui/condformat/condformatdlg \
     sc/source/ui/condformat/condformatdlgentry \
-    sc/source/ui/condformat/condformatdlgitem \
     sc/source/ui/condformat/condformathelper \
     sc/source/ui/condformat/colorformat \
     sc/source/ui/dbgui/asciiopt \
@@ -408,7 +413,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/dbgui/PivotLayoutTreeListLabel \
     sc/source/ui/dbgui/PivotLayoutTreeList \
     sc/source/ui/dbgui/sfiltdlg \
-    sc/source/ui/dbgui/validate \
     sc/source/ui/dialogs/searchresults \
     sc/source/ui/docshell/arealink \
     sc/source/ui/docshell/autostyl \
@@ -423,10 +427,10 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/docshell/docsh4 \
     sc/source/ui/docshell/docsh5 \
     sc/source/ui/docshell/docsh6 \
+    sc/source/ui/docshell/docsh7 \
     sc/source/ui/docshell/docsh8 \
     sc/source/ui/docshell/documentlinkmgr \
     sc/source/ui/docshell/editable \
-    sc/source/ui/docshell/dataprovider \
     sc/source/ui/docshell/externalrefmgr \
     sc/source/ui/docshell/impex \
     sc/source/ui/docshell/macromgr \
@@ -466,6 +470,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/formdlg/dwfunctr \
     sc/source/ui/formdlg/formdata \
     sc/source/ui/formdlg/formula \
+    sc/source/ui/formdlg/privsplt \
     sc/source/ui/miscdlgs/acredlin \
     sc/source/ui/miscdlgs/anyrefdg \
     sc/source/ui/miscdlgs/autofmt \
@@ -473,7 +478,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/miscdlgs/crnrdlg \
     sc/source/ui/miscdlgs/datastreamdlg \
     sc/source/ui/miscdlgs/highred \
-    sc/source/ui/miscdlgs/mergecellsdialog \
     sc/source/ui/miscdlgs/optsolver \
     sc/source/ui/miscdlgs/protectiondlg \
     sc/source/ui/miscdlgs/redcom \
@@ -496,11 +500,12 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/pagedlg/tphfedit \
     sc/source/ui/sidebar/AlignmentPropertyPanel \
     sc/source/ui/sidebar/CellLineStyleControl \
+    sc/source/ui/sidebar/CellLineStylePopup \
     sc/source/ui/sidebar/CellLineStyleValueSet \
     sc/source/ui/sidebar/CellBorderUpdater \
     sc/source/ui/sidebar/CellAppearancePropertyPanel \
     sc/source/ui/sidebar/CellBorderStyleControl \
-    sc/source/ui/sidebar/NumberFormatControl \
+    sc/source/ui/sidebar/CellBorderStylePopup \
     sc/source/ui/sidebar/NumberFormatPropertyPanel \
     sc/source/ui/sidebar/ScPanelFactory \
     sc/source/ui/StatisticsDialogs/AnalysisOfVarianceDialog \
@@ -513,14 +518,12 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/StatisticsDialogs/MatrixComparisonGenerator \
     sc/source/ui/StatisticsDialogs/MovingAverageDialog \
     sc/source/ui/StatisticsDialogs/RandomNumberGeneratorDialog \
-    sc/source/ui/StatisticsDialogs/RegressionDialog \
     sc/source/ui/StatisticsDialogs/SamplingDialog \
     sc/source/ui/StatisticsDialogs/StatisticsInputOutputDialog \
     sc/source/ui/StatisticsDialogs/StatisticsTwoVariableDialog \
     sc/source/ui/StatisticsDialogs/TableFillingAndNavigationTools \
     sc/source/ui/StatisticsDialogs/TTestDialog \
     sc/source/ui/StatisticsDialogs/ZTestDialog \
-    sc/source/ui/uitest/uiobject \
     sc/source/ui/undo/areasave \
     sc/source/ui/undo/refundo \
     sc/source/ui/undo/target \
@@ -548,7 +551,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/unoobj/cellvaluebinding \
     sc/source/ui/unoobj/chart2uno \
     sc/source/ui/unoobj/chartuno \
-    sc/source/ui/unoobj/condformatuno \
     sc/source/ui/unoobj/confuno \
     sc/source/ui/unoobj/convuno \
     sc/source/ui/unoobj/cursuno \
@@ -572,12 +574,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/unoobj/notesuno \
     sc/source/ui/unoobj/optuno \
     sc/source/ui/unoobj/pageuno \
-    sc/source/ui/unoobj/PivotTableDataProvider \
-    sc/source/ui/unoobj/PivotTableDataSource \
-    sc/source/ui/unoobj/PivotTableDataSequence \
-    sc/source/ui/unoobj/TablePivotCharts \
-    sc/source/ui/unoobj/TablePivotChart \
-    sc/source/ui/unoobj/ChartTools \
     sc/source/ui/unoobj/servuno \
     sc/source/ui/unoobj/shapeuno \
     sc/source/ui/unoobj/srchuno \
@@ -603,6 +599,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/view/dbfunc3 \
     sc/source/ui/view/dbfunc4 \
     sc/source/ui/view/drawutil \
+    sc/source/ui/view/drawvie2 \
     sc/source/ui/view/drawvie3 \
     sc/source/ui/view/drawvie4 \
     sc/source/ui/view/drawview \
@@ -620,6 +617,7 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/view/invmerge \
     sc/source/ui/view/notemark \
     sc/source/ui/view/olinewin \
+    sc/source/ui/view/olkact \
     sc/source/ui/view/output \
     sc/source/ui/view/output2 \
     sc/source/ui/view/output3 \
@@ -673,18 +671,6 @@ $(eval $(call gb_Library_add_exception_objects,sc,\
     sc/source/ui/view/waitoff \
     sc/source/ui/xmlsource/xmlsourcedlg \
 ))
-
-ifeq ($(ENABLE_FORMULA_LOGGER),TRUE)
-$(eval $(call gb_Library_add_exception_objects,sc,\
-    sc/source/core/tool/formulalogger \
-))
-endif
-
-ifneq (,$(gb_ENABLE_DBGUTIL))
-$(eval $(call gb_Library_add_exception_objects,sc,\
-    sc/source/ui/view/gridwin_dbgutil \
-))
-endif
 
 $(eval $(call gb_Helper_optional,OPENCL,\
 $(call gb_Library_add_exception_objects,sc,\

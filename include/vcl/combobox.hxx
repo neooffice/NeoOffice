@@ -27,68 +27,116 @@
 #ifndef INCLUDED_VCL_COMBOBOX_HXX
 #define INCLUDED_VCL_COMBOBOX_HXX
 
-#include <memory>
+#include <boost/signals2/connection.hpp>
 #include <vcl/dllapi.h>
+#include <vcl/ctrl.hxx>
+#include <vcl/combobox.h>
 #include <vcl/edit.hxx>
 
-#define COMBOBOX_APPEND             (SAL_MAX_INT32)
-#define COMBOBOX_ENTRY_NOTFOUND     (SAL_MAX_INT32)
-#define COMBOBOX_MAX_ENTRIES        (SAL_MAX_INT32 - 1)
-
 class UserDrawEvent;
+
+class ImplListBoxFloatingWindow;
+class ImplListBox;
+class ImplBtn;
+
+
+// - ComboBox -
+
 
 class VCL_DLLPUBLIC ComboBox : public Edit
 {
 private:
-    struct Impl;
-    std::unique_ptr<Impl> m_pImpl;
+    Edit*                       mpSubEdit;
+    ImplListBox*                mpImplLB;
+    ImplBtn*                    mpBtn;
+    ImplListBoxFloatingWindow*  mpFloatWin;
+    sal_uInt16                  mnDDHeight;
+    sal_Unicode                 mcMultiSep;
+    bool                        mbDDAutoSize        : 1;
+    bool                        mbSyntheticModify   : 1;
+    bool                        mbMatchCase         : 1;
+    sal_Int32 m_nMaxWidthChars;
+    Link                        maSelectHdl;
+    Link                        maDoubleClickHdl;
+    boost::signals2::scoped_connection mAutocompleteConnection;
+
+    struct ComboBoxBounds
+    {
+        Point aSubEditPos;
+        Size aSubEditSize;
+
+        Point aButtonPos;
+        Size aButtonSize;
+    };
+
+private:
+    SAL_DLLPRIVATE void     ImplInitComboBoxData();
+    SAL_DLLPRIVATE void     ImplUpdateFloatSelection();
+    SAL_DLLPRIVATE ComboBoxBounds calcComboBoxDropDownComponentBounds(
+        const Size &rOutSize, const Size &rBorderOutSize) const;
+
+    DECL_DLLPRIVATE_LINK(   ImplSelectHdl, void* );
+    DECL_DLLPRIVATE_LINK(   ImplCancelHdl, void* );
+    DECL_DLLPRIVATE_LINK(   ImplDoubleClickHdl, void* );
+    DECL_DLLPRIVATE_LINK(   ImplPopupModeEndHdl, void* );
+    DECL_DLLPRIVATE_LINK(   ImplSelectionChangedHdl, void* );
+    DECL_DLLPRIVATE_LINK( ImplListItemSelectHdl , void* );
+
+    SAL_DLLPRIVATE void ImplClickButtonHandler( ImplBtn* );
+    SAL_DLLPRIVATE void ImplUserDrawHandler( UserDrawEvent* );
+    SAL_DLLPRIVATE void ImplAutocompleteHandler( Edit* );
 
 protected:
     using Window::ImplInit;
     SAL_DLLPRIVATE void     ImplInit( vcl::Window* pParent, WinBits nStyle );
-    SAL_DLLPRIVATE static WinBits ImplInitStyle( WinBits nStyle );
+    SAL_DLLPRIVATE WinBits  ImplInitStyle( WinBits nStyle );
+    SAL_DLLPRIVATE void     ImplLoadRes( const ResId& rResId );
     SAL_DLLPRIVATE void     ImplCalcEditHeight();
     SAL_DLLPRIVATE long     getMaxWidthScrollBarAndDownButton() const;
 
 protected:
-    bool            IsDropDownBox() const;
+    bool            IsDropDownBox() const { return mpFloatWin ? true : false; }
 
-    virtual void    FillLayoutData() const override;
-
+    virtual void  FillLayoutData() const SAL_OVERRIDE;
 public:
     explicit        ComboBox( vcl::Window* pParent, WinBits nStyle = 0 );
-    virtual         ~ComboBox() override;
-    virtual void    dispose() override;
+    explicit        ComboBox( vcl::Window* pParent, const ResId& );
+    virtual         ~ComboBox();
 
-    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, DrawFlags nFlags ) override;
-    virtual void    Resize() override;
-    virtual bool    EventNotify( NotifyEvent& rNEvt ) override;
-    virtual void    StateChanged( StateChangedType nType ) override;
-    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) override;
+    virtual void    Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong nFlags ) SAL_OVERRIDE;
+    virtual void    Resize() SAL_OVERRIDE;
+    virtual bool    PreNotify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
+    virtual bool    Notify( NotifyEvent& rNEvt ) SAL_OVERRIDE;
+    virtual void    StateChanged( StateChangedType nType ) SAL_OVERRIDE;
+    virtual void    DataChanged( const DataChangedEvent& rDCEvt ) SAL_OVERRIDE;
 
     virtual void    UserDraw( const UserDrawEvent& rUDEvt );
     virtual void    Select();
-    void            DoubleClick();
+    virtual void    DoubleClick();
 
-    virtual void    Modify() override;
+    virtual void    Modify() SAL_OVERRIDE;
 
-    virtual const Wallpaper& GetDisplayBackground() const override;
+    virtual const Wallpaper& GetDisplayBackground() const SAL_OVERRIDE;
 
-    virtual void    setPosSizePixel( long nX, long nY, long nWidth, long nHeight, PosSizeFlags nFlags = PosSizeFlags::All ) override;
+    virtual void    setPosSizePixel( long nX, long nY, long nWidth, long nHeight, sal_uInt16 nFlags = WINDOW_POSSIZE_ALL ) SAL_OVERRIDE;
+    void            SetPosSizePixel( const Point& rNewPos, const Size& rNewSize ) SAL_OVERRIDE
+                        { Edit::SetPosSizePixel( rNewPos, rNewSize ); }
+    void            SetDropDownSizePixel( const Size& rNewSize )
+    { if( IsDropDownBox() ) setPosSizePixel( 0, 0, rNewSize.Width(), rNewSize.Height(), WINDOW_POSSIZE_SIZE | WINDOW_POSSIZE_DROPDOWN ); }
 
-    tools::Rectangle       GetDropDownPosSizePixel() const;
+    Rectangle       GetDropDownPosSizePixel() const;
 
-    void            AdaptDropDownLineCountToMaximum();
+    void AdaptDropDownLineCountToMaximum();
     void            SetDropDownLineCount( sal_uInt16 nLines );
     sal_uInt16      GetDropDownLineCount() const;
 
     void            EnableAutoSize( bool bAuto );
-    bool            IsAutoSizeEnabled() const;
+    bool        IsAutoSizeEnabled() const               { return mbDDAutoSize; }
 
     void            EnableDDAutoWidth( bool b );
 
-    virtual void    SetText( const OUString& rStr ) override;
-    virtual void    SetText( const OUString& rStr, const Selection& rNewSelection ) override;
+    virtual void    SetText( const OUString& rStr ) SAL_OVERRIDE;
+    virtual void    SetText( const OUString& rStr, const Selection& rNewSelection ) SAL_OVERRIDE;
 
     virtual sal_Int32  InsertEntry(const OUString& rStr, sal_Int32  nPos = COMBOBOX_APPEND);
     sal_Int32       InsertEntryWithImage( const OUString& rStr, const Image& rImage, sal_Int32  nPos = COMBOBOX_APPEND );
@@ -116,27 +164,29 @@ public:
     void            DrawEntry( const UserDrawEvent& rEvt, bool bDrawImage, bool bDrawText, bool bDrawTextAtImagePos = false );
     void            SetBorderStyle( WindowBorderStyle nBorderStyle );
 
-    void            SetSeparatorPos( sal_Int32  n );
+    void            SetSeparatorPos( sal_Int32  n = COMBOBOX_ENTRY_NOTFOUND );
 
     void            EnableAutocomplete( bool bEnable, bool bMatchCase = false );
     bool            IsAutocompleteEnabled() const;
 
     void            EnableMultiSelection( bool bMulti );
     bool            IsMultiSelectionEnabled() const;
+    void            SetMultiSelectionSeparator( sal_Unicode cSep ) { mcMultiSep = cSep; }
+    sal_Unicode     GetMultiSelectionSeparator() const { return mcMultiSep; }
 
-    void            SetSelectHdl(const Link<ComboBox&,void>& rLink);
-    const Link<ComboBox&,void>&   GetSelectHdl() const;
-    void            SetDoubleClickHdl(const Link<ComboBox&,void>& rLink);
-    const Link<ComboBox&,void>&   GetDoubleClickHdl() const;
+    void            SetSelectHdl( const Link& rLink )       { maSelectHdl = rLink; }
+    const Link&     GetSelectHdl() const                    { return maSelectHdl; }
+    void            SetDoubleClickHdl( const Link& rLink )  { maDoubleClickHdl = rLink; }
+    const Link&     GetDoubleClickHdl() const               { return maDoubleClickHdl; }
 
-    Size            CalcMinimumSize() const override;
-    virtual Size    GetOptimalSize() const override;
+    Size            CalcMinimumSize() const SAL_OVERRIDE;
+    virtual Size    GetOptimalSize() const SAL_OVERRIDE;
     Size            CalcAdjustedSize( const Size& rPrefSize ) const;
     Size            CalcBlockSize( sal_uInt16 nColumns, sal_uInt16 nLines ) const;
     void            GetMaxVisColumnsAndLines( sal_uInt16& rnCols, sal_uInt16& rnLines ) const;
 
-    void            SetMRUEntries( const OUString& rEntries );
-    OUString        GetMRUEntries() const;
+    void            SetMRUEntries( const OUString& rEntries, sal_Unicode cSep = ';' );
+    OUString        GetMRUEntries( sal_Unicode cSep = ';' ) const;
     void            SetMaxMRUCount( sal_Int32  n );
     sal_Int32       GetMaxMRUCount() const;
     void            SetEntryData( sal_Int32  nPos, void* pNewData );
@@ -150,11 +200,10 @@ public:
 
     sal_Int32       GetSelectEntryCount() const;
     sal_Int32       GetSelectEntryPos( sal_Int32  nSelIndex = 0 ) const;
-    OUString        GetSelectEntry() const { return GetEntry( GetSelectEntryPos() ); }
     bool            IsEntryPosSelected( sal_Int32  nPos ) const;
     void            SelectEntryPos( sal_Int32  nPos, bool bSelect = true );
     void            SetNoSelection();
-    tools::Rectangle       GetBoundingRectangle( sal_Int32  nItem ) const;
+    Rectangle       GetBoundingRectangle( sal_Int32  nItem ) const;
 
     /** checks whether a certain point lies within the bounds of
         a list item and returns the item as well as the character position
@@ -177,14 +226,13 @@ public:
     using Control::GetIndexForPoint;
     long GetIndexForPoint( const Point& rPoint, sal_Int32 & rPos ) const;
 
+    sal_Int32 getMaxWidthChars() const { return m_nMaxWidthChars; }
     void setMaxWidthChars(sal_Int32 nWidth);
 
-    virtual bool set_property(const OString &rKey, const OUString &rValue) override;
-
-    virtual FactoryFunction GetUITestFactory() const override;
+    virtual bool set_property(const OString &rKey, const OString &rValue) SAL_OVERRIDE;
 
 #ifdef USE_JAVA
-    bool IsImplBtnPressed() const;
+    const ImplBtn* GetImplBtn() const { return mpBtn; }
 #endif	// USE_JAVA
 };
 

@@ -24,11 +24,11 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <memory>
 #include <sal/config.h>
 
 #include <cstdlib>
 
+#include <tools/debug.hxx>
 
 #include <vcl/layout.hxx>
 #include <vcl/settings.hxx>
@@ -38,9 +38,6 @@
 #include <vcl/syswin.hxx>
 #include <vcl/taskpanelist.hxx>
 #include <vcl/unowrap.hxx>
-#include <vcl/tabctrl.hxx>
-#include <vcl/tabpage.hxx>
-#include <vcl/mnemonic.hxx>
 
 #include <rtl/strbuf.hxx>
 
@@ -56,40 +53,54 @@ class SystemWindow::ImplData
 {
 public:
     ImplData();
+    ~ImplData();
 
-    std::unique_ptr<TaskPaneList>
-                    mpTaskPaneList;
+    TaskPaneList*   mpTaskPaneList;
     Size            maMaxOutSize;
-    OUString        maRepresentedURL;
-    Link<SystemWindow&,void> maCloseHdl;
+    OUString   maRepresentedURL;
+    Link maCloseHdl;
 };
 
 SystemWindow::ImplData::ImplData()
 {
-    mpTaskPaneList = nullptr;
+    mpTaskPaneList = NULL;
     maMaxOutSize = Size( SHRT_MAX, SHRT_MAX );
+}
+
+SystemWindow::ImplData::~ImplData()
+{
+    delete mpTaskPaneList;
+}
+
+void SystemWindow::Init()
+{
+    mpImplData          = new ImplData;
+    mpWindowImpl->mbSysWin            = true;
+    mpWindowImpl->mnActivateMode      = ACTIVATE_MODE_GRABFOCUS;
+
+    mpMenuBar           = NULL;
+    mbPinned            = false;
+    mbRollUp            = false;
+    mbRollFunc          = false;
+    mbDockBtn           = false;
+    mbHideBtn           = false;
+    mbSysChild          = false;
+    mbIsCalculatingInitialLayoutSize = false;
+    mbInitialLayoutDone = false;
+    mnMenuBarMode       = MENUBAR_MODE_NORMAL;
+    mnIcon              = 0;
+    mpDialogParent      = NULL;
+
+    //To-Do, reuse maResizeTimer
+    maLayoutTimer.SetTimeout(50);
+    maLayoutTimer.SetTimeoutHdl( LINK( this, SystemWindow, ImplHandleLayoutTimerHdl ) );
 }
 
 SystemWindow::SystemWindow(WindowType nType)
     : Window(nType)
-    , mbRollUp(false)
-    , mbRollFunc(false)
-    , mbDockBtn(false)
-    , mbHideBtn(false)
-    , mbSysChild(false)
-    , mbIsCalculatingInitialLayoutSize(false)
-    , mnMenuBarMode(MenuBarMode::Normal)
-    , mnIcon(0)
-    , mpImplData(new ImplData)
     , mbIsDefferedInit(false)
 {
-    mpWindowImpl->mbSysWin            = true;
-    mpWindowImpl->mnActivateMode      = ActivateModeFlags::GrabFocus;
-
-    //To-Do, reuse maResizeTimer
-    maLayoutIdle.SetPriority(TaskPriority::RESIZE);
-    maLayoutIdle.SetInvokeHandler( LINK( this, SystemWindow, ImplHandleLayoutTimerHdl ) );
-    maLayoutIdle.SetDebugName( "vcl::SystemWindow maLayoutIdle" );
+    Init();
 }
 
 void SystemWindow::loadUI(vcl::Window* pParent, const OString& rID, const OUString& rUIXMLDescription,
@@ -97,119 +108,39 @@ void SystemWindow::loadUI(vcl::Window* pParent, const OString& rID, const OUStri
 {
     mbIsDefferedInit = true;
     mpDialogParent = pParent; //should be unset in doDeferredInit
-    m_pUIBuilder.reset( new VclBuilder(this, getUIRootDir(), rUIXMLDescription, rID, rFrame) );
+    m_pUIBuilder = new VclBuilder(this, getUIRootDir(), rUIXMLDescription, rID, rFrame);
 }
 
 SystemWindow::~SystemWindow()
 {
-    disposeOnce();
+    maLayoutTimer.Stop();
+    delete mpImplData;
+    mpImplData = NULL;
 }
 
-void SystemWindow::dispose()
+bool SystemWindow::Notify( NotifyEvent& rNEvt )
 {
-    maLayoutIdle.Stop();
-    mpImplData.reset();
-
-    // Hack to make sure code called from base ~Window does not interpret this
-    // as a SystemWindow (which it no longer is by then):
-    mpWindowImpl->mbSysWin = false;
-    disposeBuilder();
-    mpDialogParent.clear();
-    mpMenuBar.clear();
-    Window::dispose();
-}
-
-void ImplHandleControlAccelerator( vcl::Window* pWindow, bool bShow )
-{
-    Control *pControl = dynamic_cast<Control*>(pWindow->ImplGetWindow());
-    if (pControl && pControl->GetText().indexOf('~') != -1)
-    {
-        pControl->SetShowAccelerator( bShow );
-        pControl->Invalidate(InvalidateFlags::Update);
-    }
-}
-
-namespace
-{
-    void processChildren(vcl::Window *pParent, bool bShowAccel)
-    {
-        // go through its children
-        vcl::Window* pChild = firstLogicalChildOfParent(pParent);
-        while (pChild)
-        {
-            if (pChild->GetType() == WindowType::TABCONTROL)
-            {
-                // find currently shown tab page
-                TabControl* pTabControl = static_cast<TabControl*>(pChild);
-                TabPage* pTabPage = pTabControl->GetTabPage( pTabControl->GetCurPageId() );
-                processChildren(pTabPage, bShowAccel);
-            }
-            else if (pChild->GetType() == WindowType::TABPAGE)
-            {
-                // bare tabpage without tabcontrol parent (options dialog)
-                processChildren(pChild, bShowAccel);
-            }
-            else if ((pChild->GetStyle() & (WB_DIALOGCONTROL | WB_NODIALOGCONTROL)) == WB_DIALOGCONTROL)
-            {
-                // special controls that manage their children outside of widget layout
-                processChildren(pChild, bShowAccel);
-            }
-            else
-            {
-                ImplHandleControlAccelerator(pChild, bShowAccel);
-            }
-            pChild = nextLogicalChildOfParent(pParent, pChild);
-        }
-    }
-}
-
-bool Accelerator::ToggleMnemonicsOnHierarchy(const CommandEvent& rCEvent, vcl::Window *pWindow)
-{
-    if (rCEvent.GetCommand() == CommandEventId::ModKeyChange && ImplGetSVData()->maNWFData.mbAutoAccel)
-    {
-        const CommandModKeyData *pCData = rCEvent.GetModKeyData();
-        const bool bShowAccel = pCData && pCData->IsMod2() && pCData->IsDown();
-        processChildren(pWindow, bShowAccel);
-        return true;
-    }
-    return false;
-}
-
-bool SystemWindow::EventNotify( NotifyEvent& rNEvt )
-{
-    if (rNEvt.GetType() == MouseNotifyEvent::COMMAND)
-        Accelerator::ToggleMnemonicsOnHierarchy(*rNEvt.GetCommandEvent(), this);
-
     // capture KeyEvents for menu handling
-    if (rNEvt.GetType() == MouseNotifyEvent::KEYINPUT ||
-        rNEvt.GetType() == MouseNotifyEvent::COMMAND)
+    if ( rNEvt.GetType() == EVENT_KEYINPUT )
     {
         MenuBar* pMBar = mpMenuBar;
-        if ( !pMBar && ( GetType() == WindowType::FLOATINGWINDOW ) )
+        if ( !pMBar && ( GetType() == WINDOW_FLOATINGWINDOW ) )
         {
             vcl::Window* pWin = ImplGetFrameWindow()->ImplGetWindow();
             if( pWin && pWin->IsSystemWindow() )
                 pMBar = static_cast<SystemWindow*>(pWin)->GetMenuBar();
         }
-        bool bDone(false);
-        if (pMBar)
-        {
-            if (rNEvt.GetType() == MouseNotifyEvent::COMMAND)
-                bDone = pMBar->ImplHandleCmdEvent(*rNEvt.GetCommandEvent());
-            else
-                bDone = pMBar->ImplHandleKeyEvent(*rNEvt.GetKeyEvent());
-        }
-        if (bDone)
+        if ( pMBar && pMBar->ImplHandleKeyEvent( *rNEvt.GetKeyEvent(), false ) )
             return true;
     }
 
-    return Window::EventNotify( rNEvt );
+    return Window::Notify( rNEvt );
 }
 
 bool SystemWindow::PreNotify( NotifyEvent& rNEvt )
 {
     // capture KeyEvents for taskpane cycling
-    if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
+    if ( rNEvt.GetType() == EVENT_KEYINPUT )
     {
         if( rNEvt.GetKeyEvent()->GetKeyCode().GetCode() == KEY_F6 &&
             rNEvt.GetKeyEvent()->GetKeyCode().IsMod1() &&
@@ -221,12 +152,12 @@ bool SystemWindow::PreNotify( NotifyEvent& rNEvt )
         }
         else
         {
-            TaskPaneList *pTList = mpImplData->mpTaskPaneList.get();
-            if( !pTList && ( GetType() == WindowType::FLOATINGWINDOW ) )
+            TaskPaneList *pTList = mpImplData->mpTaskPaneList;
+            if( !pTList && ( GetType() == WINDOW_FLOATINGWINDOW ) )
             {
                 vcl::Window* pWin = ImplGetFrameWindow()->ImplGetWindow();
                 if( pWin && pWin->IsSystemWindow() )
-                    pTList = static_cast<SystemWindow*>(pWin)->mpImplData->mpTaskPaneList.get();
+                    pTList = static_cast<SystemWindow*>(pWin)->mpImplData->mpTaskPaneList;
             }
             if( !pTList )
             {
@@ -239,7 +170,7 @@ bool SystemWindow::PreNotify( NotifyEvent& rNEvt )
                     if( pWin && pWin->IsSystemWindow() )
                         pSysWin = static_cast<SystemWindow*>(pWin);
                 }
-                pTList = pSysWin->mpImplData->mpTaskPaneList.get();
+                pTList = pSysWin->mpImplData->mpTaskPaneList;
             }
             if( pTList && pTList->HandleKeyEvent( *rNEvt.GetKeyEvent() ) )
                 return true;
@@ -250,15 +181,13 @@ bool SystemWindow::PreNotify( NotifyEvent& rNEvt )
 
 TaskPaneList* SystemWindow::GetTaskPaneList()
 {
-    if( !mpImplData )
-        return nullptr;
     if( mpImplData->mpTaskPaneList )
-        return mpImplData->mpTaskPaneList.get();
+        return mpImplData->mpTaskPaneList ;
     else
     {
-        mpImplData->mpTaskPaneList.reset( new TaskPaneList );
+        mpImplData->mpTaskPaneList = new TaskPaneList();
         MenuBar* pMBar = mpMenuBar;
-        if ( !pMBar && ( GetType() == WindowType::FLOATINGWINDOW ) )
+        if ( !pMBar && ( GetType() == WINDOW_FLOATINGWINDOW ) )
         {
             vcl::Window* pWin = ImplGetFrameWindow()->ImplGetWindow();
             if ( pWin && pWin->IsSystemWindow() )
@@ -266,16 +195,18 @@ TaskPaneList* SystemWindow::GetTaskPaneList()
         }
         if( pMBar )
             mpImplData->mpTaskPaneList->AddWindow( pMBar->ImplGetWindow() );
-        return mpImplData->mpTaskPaneList.get();
+        return mpImplData->mpTaskPaneList;
     }
 }
 
 bool SystemWindow::Close()
 {
-    VclPtr<vcl::Window> xWindow = this;
-    CallEventListeners( VclEventId::WindowClose );
-    if ( xWindow->IsDisposed() )
+    ImplDelData aDelData;
+    ImplAddDel( &aDelData );
+    ImplCallEventListeners( VCLEVENT_WINDOW_CLOSE );
+    if ( aDelData.IsDead() )
         return false;
+    ImplRemoveDel( &aDelData );
 
     if ( mpWindowImpl->mxWindowPeer.is() && IsCreatedWithToolkit() )
         return false;
@@ -295,7 +226,15 @@ bool SystemWindow::Close()
     return true;
 }
 
-void SystemWindow::TitleButtonClick( TitleButton )
+void SystemWindow::TitleButtonClick( sal_uInt16 )
+{
+}
+
+void SystemWindow::Pin()
+{
+}
+
+void SystemWindow::Roll()
 {
 }
 
@@ -336,41 +275,78 @@ void SystemWindow::SetIcon( sal_uInt16 nIcon )
     }
 }
 
-void SystemWindow::ShowTitleButton( TitleButton nButton, bool bVisible )
+void SystemWindow::EnableSaveBackground( bool bSave )
 {
-    if ( nButton == TitleButton::Docking )
+    if( ImplGetSVData()->maWinData.mbNoSaveBackground )
+        bSave = false;
+
+    vcl::Window* pWindow = this;
+    while ( pWindow->mpWindowImpl->mpBorderWindow )
+        pWindow = pWindow->mpWindowImpl->mpBorderWindow;
+    if ( pWindow->mpWindowImpl->mbOverlapWin && !pWindow->mpWindowImpl->mbFrame )
+    {
+        pWindow->mpWindowImpl->mpOverlapData->mbSaveBack = bSave;
+        if ( !bSave )
+            pWindow->ImplDeleteOverlapBackground();
+    }
+}
+
+bool SystemWindow::IsSaveBackgroundEnabled() const
+{
+    const vcl::Window* pWindow = this;
+    while ( pWindow->mpWindowImpl->mpBorderWindow )
+        pWindow = pWindow->mpWindowImpl->mpBorderWindow;
+    if ( pWindow->mpWindowImpl->mpOverlapData )
+        return pWindow->mpWindowImpl->mpOverlapData->mbSaveBack;
+    else
+        return false;
+}
+
+void SystemWindow::ShowTitleButton( sal_uInt16 nButton, bool bVisible )
+{
+    if ( nButton == TITLE_BUTTON_DOCKING )
     {
         if ( mbDockBtn != bVisible )
         {
             mbDockBtn = bVisible;
             if ( mpWindowImpl->mpBorderWindow )
-                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetDockButton( bVisible );
+                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetDockButton( bVisible );
         }
     }
-    else if ( nButton == TitleButton::Hide )
+    else if ( nButton == TITLE_BUTTON_HIDE )
     {
         if ( mbHideBtn != bVisible )
         {
             mbHideBtn = bVisible;
             if ( mpWindowImpl->mpBorderWindow )
-                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetHideButton( bVisible );
+                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetHideButton( bVisible );
         }
     }
-    else if ( nButton == TitleButton::Menu )
+    else if ( nButton == TITLE_BUTTON_MENU )
     {
         if ( mpWindowImpl->mpBorderWindow )
-            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMenuButton( bVisible );
+            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMenuButton( bVisible );
     }
     else
         return;
 }
 
-bool SystemWindow::IsTitleButtonVisible( TitleButton nButton ) const
+bool SystemWindow::IsTitleButtonVisible( sal_uInt16 nButton ) const
 {
-    if ( nButton == TitleButton::Docking )
+    if ( nButton == TITLE_BUTTON_DOCKING )
         return mbDockBtn;
-    else /* if ( nButton == TitleButton::Hide ) */
+    else /* if ( nButton == TITLE_BUTTON_HIDE ) */
         return mbHideBtn;
+}
+
+void SystemWindow::SetPin( bool bPin )
+{
+    if ( bPin != mbPinned )
+    {
+        mbPinned = bPin;
+        if ( mpWindowImpl->mpBorderWindow )
+            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetPin( bPin );
+    }
 }
 
 void SystemWindow::RollUp()
@@ -384,7 +360,7 @@ void SystemWindow::RollUp()
             aSize.Width() = GetOutputSizePixel().Width();
         mbRollUp = true;
         if ( mpWindowImpl->mpBorderWindow )
-            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetRollUp( true, aSize );
+            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetRollUp( true, aSize );
         else
             SetOutputSizePixel( aSize );
         mbRollFunc = false;
@@ -397,7 +373,7 @@ void SystemWindow::RollDown()
     {
         mbRollUp = false;
         if ( mpWindowImpl->mpBorderWindow )
-            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetRollUp( false, maOrgSize );
+            static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetRollUp( false, maOrgSize );
         else
             SetOutputSizePixel( maOrgSize );
     }
@@ -408,7 +384,7 @@ void SystemWindow::SetMinOutputSizePixel( const Size& rSize )
     maMinOutSize = rSize;
     if ( mpWindowImpl->mpBorderWindow )
     {
-        static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMinOutputSize( rSize.Width(), rSize.Height() );
+        static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMinOutputSize( rSize.Width(), rSize.Height() );
         if ( mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame )
             mpWindowImpl->mpBorderWindow->mpWindowImpl->mpFrame->SetMinClientSize( rSize.Width(), rSize.Height() );
     }
@@ -427,7 +403,7 @@ void SystemWindow::SetMaxOutputSizePixel( const Size& rSize )
     mpImplData->maMaxOutSize = aSize;
     if ( mpWindowImpl->mpBorderWindow )
     {
-        static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMaxOutputSize( aSize.Width(), aSize.Height() );
+        static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMaxOutputSize( aSize.Width(), aSize.Height() );
         if ( mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame )
             mpWindowImpl->mpBorderWindow->mpWindowImpl->mpFrame->SetMaxClientSize( aSize.Width(), aSize.Height() );
     }
@@ -443,7 +419,7 @@ const Size& SystemWindow::GetMaxOutputSizePixel() const
 static void ImplWindowStateFromStr(WindowStateData& rData,
     const OString& rStr)
 {
-    WindowStateMask nValidMask = WindowStateMask::NONE;
+    sal_uLong       nValidMask  = 0;
     sal_Int32 nIndex      = 0;
     OString aTokenStr;
 
@@ -452,7 +428,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetX(aTokenStr.toInt32());
         if( rData.GetX() > -16384 && rData.GetX() < 16384 )
-            nValidMask |= WindowStateMask::X;
+            nValidMask |= WINDOWSTATE_MASK_X;
         else
             rData.SetX( 0 );
     }
@@ -463,7 +439,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetY(aTokenStr.toInt32());
         if( rData.GetY() > -16384 && rData.GetY() < 16384 )
-            nValidMask |= WindowStateMask::Y;
+            nValidMask |= WINDOWSTATE_MASK_Y;
         else
             rData.SetY( 0 );
     }
@@ -474,7 +450,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetWidth(aTokenStr.toInt32());
         if( rData.GetWidth() > 0 && rData.GetWidth() < 16384 )
-            nValidMask |= WindowStateMask::Width;
+            nValidMask |= WINDOWSTATE_MASK_WIDTH;
         else
             rData.SetWidth( 0 );
     }
@@ -485,7 +461,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetHeight(aTokenStr.toInt32());
         if( rData.GetHeight() > 0 && rData.GetHeight() < 16384 )
-            nValidMask |= WindowStateMask::Height;
+            nValidMask |= WINDOWSTATE_MASK_HEIGHT;
         else
             rData.SetHeight( 0 );
     }
@@ -496,13 +472,13 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - ignore Minimize
-        WindowStateState nState = (WindowStateState)aTokenStr.toInt32();
-        //nState &= ~(WindowStateState::Minimized);
+        sal_uInt32 nState = (sal_uInt32)aTokenStr.toInt32();
+        //nState &= ~(WINDOWSTATE_STATE_MINIMIZED);
         rData.SetState( nState );
-        nValidMask |= WindowStateMask::State;
+        nValidMask |= WINDOWSTATE_MASK_STATE;
     }
     else
-        rData.SetState( WindowStateState::NONE );
+        rData.SetState( 0 );
 
     // read maximized pos/size
     aTokenStr = rStr.getToken(0, ',', nIndex);
@@ -510,7 +486,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedX(aTokenStr.toInt32());
         if( rData.GetMaximizedX() > -16384 && rData.GetMaximizedX() < 16384 )
-            nValidMask |= WindowStateMask::MaximizedX;
+            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_X;
         else
             rData.SetMaximizedX( 0 );
     }
@@ -521,7 +497,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedY(aTokenStr.toInt32());
         if( rData.GetMaximizedY() > -16384 && rData.GetMaximizedY() < 16384 )
-            nValidMask |= WindowStateMask::MaximizedY;
+            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_Y;
         else
             rData.SetMaximizedY( 0 );
     }
@@ -532,7 +508,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedWidth(aTokenStr.toInt32());
         if( rData.GetMaximizedWidth() > 0 && rData.GetMaximizedWidth() < 16384 )
-            nValidMask |= WindowStateMask::MaximizedWidth;
+            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_WIDTH;
         else
             rData.SetMaximizedWidth( 0 );
     }
@@ -543,7 +519,7 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
     {
         rData.SetMaximizedHeight(aTokenStr.toInt32());
         if( rData.GetMaximizedHeight() > 0 && rData.GetMaximizedHeight() < 16384 )
-            nValidMask |= WindowStateMask::MaximizedHeight;
+            nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_HEIGHT;
         else
             rData.SetMaximizedHeight( 0 );
     }
@@ -556,42 +532,42 @@ static void ImplWindowStateFromStr(WindowStateData& rData,
 
 static OString ImplWindowStateToStr(const WindowStateData& rData)
 {
-    const WindowStateMask nValidMask = rData.GetMask();
-    if ( nValidMask == WindowStateMask::NONE )
+    sal_uLong nValidMask = rData.GetMask();
+    if ( !nValidMask )
         return OString();
 
     OStringBuffer rStrBuf;
 
-    if ( nValidMask & WindowStateMask::X )
+    if ( nValidMask & WINDOWSTATE_MASK_X )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetX()));
     rStrBuf.append(',');
-    if ( nValidMask & WindowStateMask::Y )
+    if ( nValidMask & WINDOWSTATE_MASK_Y )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetY()));
     rStrBuf.append(',');
-    if ( nValidMask & WindowStateMask::Width )
+    if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetWidth()));
     rStrBuf.append(',');
-    if ( nValidMask & WindowStateMask::Height )
+    if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetHeight()));
     rStrBuf.append( ';' );
-    if ( nValidMask & WindowStateMask::State )
+    if ( nValidMask & WINDOWSTATE_MASK_STATE )
     {
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - ignore Minimize
-        WindowStateState nState = rData.GetState();
+        sal_uInt32 nState = rData.GetState();
         rStrBuf.append(static_cast<sal_Int32>(nState));
     }
     rStrBuf.append(';');
-    if ( nValidMask & WindowStateMask::MaximizedX )
+    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_X )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedX()));
     rStrBuf.append(',');
-    if ( nValidMask & WindowStateMask::MaximizedY )
+    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_Y )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedY()));
     rStrBuf.append( ',' );
-    if ( nValidMask & WindowStateMask::MaximizedWidth )
+    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_WIDTH )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedWidth()));
     rStrBuf.append(',');
-    if ( nValidMask & WindowStateMask::MaximizedHeight )
+    if ( nValidMask & WINDOWSTATE_MASK_MAXIMIZED_HEIGHT )
         rStrBuf.append(static_cast<sal_Int32>(rData.GetMaximizedHeight()));
     rStrBuf.append(';');
 
@@ -600,7 +576,7 @@ static OString ImplWindowStateToStr(const WindowStateData& rData)
 
 void SystemWindow::ImplMoveToScreen( long& io_rX, long& io_rY, long i_nWidth, long i_nHeight, vcl::Window* i_pConfigureWin )
 {
-    tools::Rectangle aScreenRect;
+    Rectangle aScreenRect;
     if( !Application::IsUnifiedDisplay() )
         aScreenRect = Application::GetScreenPosSizePixel( GetScreenNumber() );
     else
@@ -655,8 +631,8 @@ void SystemWindow::ImplMoveToScreen( long& io_rX, long& io_rY, long i_nWidth, lo
 
 void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 {
-    const WindowStateMask nValidMask = rData.GetMask();
-    if ( nValidMask == WindowStateMask::NONE )
+    sal_uLong nValidMask = rData.GetMask();
+    if ( !nValidMask )
         return;
 
     if ( mbSysChild )
@@ -668,7 +644,7 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 
     if ( pWindow->mpWindowImpl->mbFrame )
     {
-        const WindowStateState nState = rData.GetState();
+        sal_uLong           nState      = rData.GetState();
         SalFrameState   aState;
         aState.mnMask               = rData.GetMask();
         aState.mnX                  = rData.GetX();
@@ -676,9 +652,9 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         aState.mnWidth              = rData.GetWidth();
         aState.mnHeight             = rData.GetHeight();
 
-        if( rData.GetMask() & (WindowStateMask::Width|WindowStateMask::Height) )
+        if( rData.GetMask() & (WINDOWSTATE_MASK_WIDTH|WINDOWSTATE_MASK_HEIGHT) )
         {
-            // #i43799# adjust window state sizes if a minimal output size was set
+            // #i43799# adjust window state sizes if a minimial output size was set
             // otherwise the frame and the client might get different sizes
             if( maMinOutSize.Width() > aState.mnWidth )
                 aState.mnWidth = maMinOutSize.Width();
@@ -692,8 +668,8 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         aState.mnMaximizedHeight    = rData.GetMaximizedHeight();
         // #94144# allow Minimize again, should be masked out when read from configuration
         // 91625 - ignore Minimize
-        //nState &= ~(WindowStateState::Minimized);
-        aState.mnState  = nState & WindowStateState::SystemMask;
+        //nState &= ~(WINDOWSTATE_STATE_MINIMIZED);
+        aState.mnState  = nState & WINDOWSTATE_STATE_SYSTEMMASK;
 
         // normalize window positions onto screen
         ImplMoveToScreen( aState.mnX, aState.mnY, aState.mnWidth, aState.mnHeight, pWindow );
@@ -701,10 +677,10 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 
         // #96568# avoid having multiple frames at the same screen location
         //  do the check only if not maximized
-        if( !((rData.GetMask() & WindowStateMask::State) && (nState & WindowStateState::Maximized)) )
-            if( rData.GetMask() & (WindowStateMask::Pos|WindowStateMask::Width|WindowStateMask::Height) )
+        if( !((rData.GetMask() & WINDOWSTATE_MASK_STATE) && (nState & WINDOWSTATE_STATE_MAXIMIZED)) )
+            if( rData.GetMask() & (WINDOWSTATE_MASK_POS|WINDOWSTATE_MASK_WIDTH|WINDOWSTATE_MASK_HEIGHT) )
             {
-                tools::Rectangle aDesktop = GetDesktopRectPixel();
+                Rectangle aDesktop = GetDesktopRectPixel();
                 ImplSVData *pSVData = ImplGetSVData();
                 vcl::Window *pWin = pSVData->maWinData.mpFirstFrame;
                 bool bWrapped = false;
@@ -748,7 +724,7 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         // do a synchronous resize for layout reasons
         //  but use rData only when the window is not to be maximized (#i38089#)
         //  otherwise we have no useful size information
-        if( (rData.GetMask() & WindowStateMask::State) && (nState & WindowStateState::Maximized) )
+        if( (rData.GetMask() & WINDOWSTATE_MASK_STATE) && (nState & WINDOWSTATE_STATE_MAXIMIZED) )
         {
             // query maximized size from frame
             SalFrameGeometry aGeometry = mpWindowImpl->mpFrame->GetGeometry();
@@ -760,7 +736,7 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
                 ImplHandleResize( pWindow, aGeometry.nWidth, aGeometry.nHeight );
         }
         else
-            if( rData.GetMask() & (WindowStateMask::Width|WindowStateMask::Height) )
+            if( rData.GetMask() & (WINDOWSTATE_MASK_WIDTH|WINDOWSTATE_MASK_HEIGHT) )
 #ifdef USE_JAVA
             {
                 // Fix bug 3558 by waiting for the native resize event to be
@@ -775,15 +751,15 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
     }
     else
     {
-        PosSizeFlags nPosSize = PosSizeFlags::NONE;
-        if ( nValidMask & WindowStateMask::X )
-            nPosSize |= PosSizeFlags::X;
-        if ( nValidMask & WindowStateMask::Y )
-            nPosSize |= PosSizeFlags::Y;
-        if ( nValidMask & WindowStateMask::Width )
-            nPosSize |= PosSizeFlags::Width;
-        if ( nValidMask & WindowStateMask::Height )
-            nPosSize |= PosSizeFlags::Height;
+        sal_uInt16 nPosSize = 0;
+        if ( nValidMask & WINDOWSTATE_MASK_X )
+            nPosSize |= WINDOW_POSSIZE_X;
+        if ( nValidMask & WINDOWSTATE_MASK_Y )
+            nPosSize |= WINDOW_POSSIZE_Y;
+        if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
+            nPosSize |= WINDOW_POSSIZE_WIDTH;
+        if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
+            nPosSize |= WINDOW_POSSIZE_HEIGHT;
 
         if( IsRollUp() )
             RollDown();
@@ -805,10 +781,10 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
         maOrgSize = Size( nWidth, nHeight );
 
         // 91625 - ignore Minimize
-        if ( nValidMask & WindowStateMask::State )
+        if ( nValidMask & WINDOWSTATE_MASK_STATE )
         {
-            const WindowStateState nState = rData.GetState();
-            if ( nState & WindowStateState::Rollup )
+            sal_uLong nState = rData.GetState();
+            if ( nState & WINDOWSTATE_STATE_ROLLUP )
                 RollUp();
             else
                 RollDown();
@@ -818,8 +794,8 @@ void SystemWindow::SetWindowStateData( const WindowStateData& rData )
 
 void SystemWindow::GetWindowStateData( WindowStateData& rData ) const
 {
-    WindowStateMask nValidMask = rData.GetMask();
-    if ( nValidMask == WindowStateMask::NONE )
+    sal_uLong nValidMask = rData.GetMask();
+    if ( !nValidMask )
         return;
 
     if ( mbSysChild )
@@ -832,71 +808,71 @@ void SystemWindow::GetWindowStateData( WindowStateData& rData ) const
     if ( pWindow->mpWindowImpl->mbFrame )
     {
         SalFrameState aState;
-        aState.mnMask = WindowStateMask::All;
+        aState.mnMask = 0xFFFFFFFF;
         if ( mpWindowImpl->mpFrame->GetWindowState( &aState ) )
         {
-            if ( nValidMask & WindowStateMask::X )
+            if ( nValidMask & WINDOWSTATE_MASK_X )
                 rData.SetX( aState.mnX );
-            if ( nValidMask & WindowStateMask::Y )
+            if ( nValidMask & WINDOWSTATE_MASK_Y )
                 rData.SetY( aState.mnY );
-            if ( nValidMask & WindowStateMask::Width )
+            if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
                 rData.SetWidth( aState.mnWidth );
-            if ( nValidMask & WindowStateMask::Height )
+            if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
                 rData.SetHeight( aState.mnHeight );
-            if ( aState.mnMask & WindowStateMask::MaximizedX )
+            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_X )
             {
                 rData.SetMaximizedX( aState.mnMaximizedX );
-                nValidMask |= WindowStateMask::MaximizedX;
+                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_X;
             }
-            if ( aState.mnMask & WindowStateMask::MaximizedY )
+            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_Y )
             {
                 rData.SetMaximizedY( aState.mnMaximizedY );
-                nValidMask |= WindowStateMask::MaximizedY;
+                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_Y;
             }
-            if ( aState.mnMask & WindowStateMask::MaximizedWidth )
+            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_WIDTH )
             {
                 rData.SetMaximizedWidth( aState.mnMaximizedWidth );
-                nValidMask |= WindowStateMask::MaximizedWidth;
+                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_WIDTH;
             }
-            if ( aState.mnMask & WindowStateMask::MaximizedHeight )
+            if ( aState.mnMask & WINDOWSTATE_MASK_MAXIMIZED_HEIGHT )
             {
                 rData.SetMaximizedHeight( aState.mnMaximizedHeight );
-                nValidMask |= WindowStateMask::MaximizedHeight;
+                nValidMask |= WINDOWSTATE_MASK_MAXIMIZED_HEIGHT;
             }
-            if ( nValidMask & WindowStateMask::State )
+            if ( nValidMask & WINDOWSTATE_MASK_STATE )
             {
                 // #94144# allow Minimize again, should be masked out when read from configuration
                 // 91625 - ignore Minimize
-                if ( !(nValidMask&WindowStateMask::Minimized) )
-                    aState.mnState &= ~(WindowStateState::Minimized);
+                if ( !(nValidMask&WINDOWSTATE_MASK_MINIMIZED) )
+                    aState.mnState &= ~(WINDOWSTATE_STATE_MINIMIZED);
                 rData.SetState( aState.mnState );
             }
             rData.SetMask( nValidMask );
         }
         else
-            rData.SetMask( WindowStateMask::NONE );
+            rData.SetMask( 0 );
     }
     else
     {
         Point   aPos = GetPosPixel();
         Size    aSize = GetSizePixel();
-        WindowStateState nState = WindowStateState::NONE;
+        sal_uLong   nState = 0;
 
         if ( IsRollUp() )
         {
             aSize.Height() += maOrgSize.Height();
-            nState = WindowStateState::Rollup;
+            nState |= WINDOWSTATE_STATE_ROLLUP;
         }
 
-        if ( nValidMask & WindowStateMask::X )
+        if ( nValidMask & WINDOWSTATE_MASK_X )
             rData.SetX( aPos.X() );
-        if ( nValidMask & WindowStateMask::Y )
+        if ( nValidMask & WINDOWSTATE_MASK_Y )
             rData.SetY( aPos.Y() );
-        if ( nValidMask & WindowStateMask::Width )
+        if ( nValidMask & WINDOWSTATE_MASK_WIDTH )
             rData.SetWidth( aSize.Width() );
-        if ( nValidMask & WindowStateMask::Height )
+        if ( nValidMask & WINDOWSTATE_MASK_HEIGHT )
             rData.SetHeight( aSize.Height() );
-        if ( nValidMask & WindowStateMask::State )
+        if ( nValidMask & WINDOWSTATE_MASK_STATE )
             rData.SetState( nState );
     }
 }
@@ -911,7 +887,7 @@ void SystemWindow::SetWindowState(const OString& rStr)
     SetWindowStateData( aData );
 }
 
-OString SystemWindow::GetWindowState( WindowStateMask nMask ) const
+OString SystemWindow::GetWindowState( sal_uLong nMask ) const
 {
     WindowStateData aData;
     aData.SetMask( nMask );
@@ -920,41 +896,38 @@ OString SystemWindow::GetWindowState( WindowStateMask nMask ) const
     return ImplWindowStateToStr(aData);
 }
 
-void SystemWindow::SetMenuBar(MenuBar* pMenuBar)
+void SystemWindow::SetMenuBar(MenuBar* pMenuBar, const css::uno::Reference<css::frame::XFrame>& rFrame)
 {
     if ( mpMenuBar != pMenuBar )
     {
         MenuBar* pOldMenuBar = mpMenuBar;
-        vcl::Window*  pOldWindow = nullptr;
-        VclPtr<vcl::Window> pNewWindow;
+        vcl::Window*  pOldWindow = NULL;
+        vcl::Window*  pNewWindow=NULL;
         mpMenuBar = pMenuBar;
 
-        if ( mpWindowImpl->mpBorderWindow && (mpWindowImpl->mpBorderWindow->GetType() == WindowType::BORDERWINDOW) )
+        if ( mpWindowImpl->mpBorderWindow && (mpWindowImpl->mpBorderWindow->GetType() == WINDOW_BORDERWINDOW) )
         {
             if ( pOldMenuBar )
                 pOldWindow = pOldMenuBar->ImplGetWindow();
             else
-                pOldWindow = nullptr;
+                pOldWindow = NULL;
             if ( pOldWindow )
             {
-                CallEventListeners( VclEventId::WindowMenubarRemoved, static_cast<void*>(pOldMenuBar) );
-                pOldWindow->SetAccessible( css::uno::Reference< css::accessibility::XAccessible >() );
+                ImplCallEventListeners( VCLEVENT_WINDOW_MENUBARREMOVED, (void*) pOldMenuBar );
+                pOldWindow->SetAccessible( ::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessible >() );
             }
             if ( pMenuBar )
             {
-                SAL_WARN_IF( pMenuBar->pWindow, "vcl", "SystemWindow::SetMenuBar() - MenuBars can only set in one SystemWindow at time" );
-
-                pNewWindow = MenuBar::ImplCreate(mpWindowImpl->mpBorderWindow, pOldWindow, pMenuBar);
-                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMenuBarWindow(pNewWindow);
-
-                CallEventListeners( VclEventId::WindowMenubarAdded, static_cast<void*>(pMenuBar) );
+                DBG_ASSERT( !pMenuBar->pWindow, "SystemWindow::SetMenuBar() - MenuBars can only set in one SystemWindow at time" );
+                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMenuBarWindow( pNewWindow = MenuBar::ImplCreate( mpWindowImpl->mpBorderWindow, pOldWindow, pMenuBar, rFrame));
+                ImplCallEventListeners( VCLEVENT_WINDOW_MENUBARADDED, (void*) pMenuBar );
             }
             else
-                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMenuBarWindow( nullptr );
+                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMenuBarWindow( NULL );
             ImplToBottomChild();
             if ( pOldMenuBar )
             {
-                bool bDelete = (pMenuBar == nullptr);
+                bool bDelete = (pMenuBar == 0);
                 if( bDelete && pOldWindow )
                 {
                     if( mpImplData->mpTaskPaneList )
@@ -962,7 +935,7 @@ void SystemWindow::SetMenuBar(MenuBar* pMenuBar)
                 }
                 MenuBar::ImplDestroy( pOldMenuBar, bDelete );
                 if( bDelete )
-                    pOldWindow = nullptr;  // will be deleted in MenuBar::ImplDestroy,
+                    pOldWindow = NULL;  // will be deleted in MenuBar::ImplDestroy,
             }
 
         }
@@ -985,39 +958,17 @@ void SystemWindow::SetMenuBar(MenuBar* pMenuBar)
     }
 }
 
-void SystemWindow::SetNotebookBar(const OUString& rUIXMLDescription, const css::uno::Reference<css::frame::XFrame>& rFrame)
-{
-    if (rUIXMLDescription != maNotebookBarUIFile)
-    {
-        static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetNotebookBar(rUIXMLDescription, rFrame);
-        maNotebookBarUIFile = rUIXMLDescription;
-        if(GetNotebookBar())
-            GetNotebookBar()->SetSystemWindow(this);
-    }
-}
-
-void SystemWindow::CloseNotebookBar()
-{
-    static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->CloseNotebookBar();
-    maNotebookBarUIFile.clear();
-}
-
-VclPtr<NotebookBar> SystemWindow::GetNotebookBar() const
-{
-    return static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->GetNotebookBar();
-}
-
-void SystemWindow::SetMenuBarMode( MenuBarMode nMode )
+void SystemWindow::SetMenuBarMode( sal_uInt16 nMode )
 {
     if ( mnMenuBarMode != nMode )
     {
         mnMenuBarMode = nMode;
-        if ( mpWindowImpl->mpBorderWindow && (mpWindowImpl->mpBorderWindow->GetType() == WindowType::BORDERWINDOW) )
+        if ( mpWindowImpl->mpBorderWindow && (mpWindowImpl->mpBorderWindow->GetType() == WINDOW_BORDERWINDOW) )
         {
-            if ( nMode == MenuBarMode::Hide )
-                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMenuBarMode( true );
+            if ( nMode == MENUBAR_MODE_HIDE )
+                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMenuBarMode( true );
             else
-                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow.get())->SetMenuBarMode( false );
+                static_cast<ImplBorderWindow*>(mpWindowImpl->mpBorderWindow)->SetMenuBarMode( false );
         }
     }
 }
@@ -1044,26 +995,24 @@ void SystemWindow::SetApplicationID(const OUString &rApplicationID)
     mpWindowImpl->mpFrame->SetApplicationID( rApplicationID );
 }
 
-void SystemWindow::SetCloseHdl(const Link<SystemWindow&,void>& rLink)
+void SystemWindow::SetCloseHdl(const Link& rLink)
 {
     mpImplData->maCloseHdl = rLink;
 }
 
-const Link<SystemWindow&,void>& SystemWindow::GetCloseHdl() const
+const Link& SystemWindow::GetCloseHdl() const
 {
     return mpImplData->maCloseHdl;
 }
 
 void SystemWindow::queue_resize(StateChangedType /*eReason*/)
 {
+    if (hasPendingLayout() || isCalculatingInitialLayoutSize())
+        return;
     if (!isLayoutEnabled())
         return;
-    if (isCalculatingInitialLayoutSize())
-        return;
     InvalidateSizeCache();
-    if (hasPendingLayout())
-        return;
-    maLayoutIdle.Start();
+    maLayoutTimer.Start();
 }
 
 void SystemWindow::Resize()
@@ -1082,17 +1031,19 @@ Size SystemWindow::GetOptimalSize() const
     if (!isLayoutEnabled())
         return Window::GetOptimalSize();
 
-    Size aSize = VclContainer::getLayoutRequisition(*GetWindow(GetWindowType::FirstChild));
+    Size aSize = VclContainer::getLayoutRequisition(*GetWindow(WINDOW_FIRSTCHILD));
 
     sal_Int32 nBorderWidth = get_border_width();
 
-    aSize.Height() += 2 * nBorderWidth;
-    aSize.Width()  += 2 * nBorderWidth;
+    aSize.Height() += mpWindowImpl->mnLeftBorder + mpWindowImpl->mnRightBorder
+        + 2*nBorderWidth;
+    aSize.Width() += mpWindowImpl->mnTopBorder + mpWindowImpl->mnBottomBorder
+        + 2*nBorderWidth;
 
     return Window::CalcWindowSize(aSize);
 }
 
-void SystemWindow::setPosSizeOnContainee(Size aSize, Window &rBox)
+void SystemWindow::setPosSizeOnContainee(Size aSize, VclContainer &rBox)
 {
     sal_Int32 nBorderWidth = get_border_width();
 
@@ -1100,20 +1051,21 @@ void SystemWindow::setPosSizeOnContainee(Size aSize, Window &rBox)
     aSize.Height() -= 2 * nBorderWidth;
 
     Point aPos(nBorderWidth, nBorderWidth);
-    VclContainer::setLayoutAllocation(rBox, aPos, CalcOutputSize(aSize));
+    VclContainer::setLayoutAllocation(rBox, aPos, aSize);
 }
 
-IMPL_LINK_NOARG( SystemWindow, ImplHandleLayoutTimerHdl, Timer*, void )
+IMPL_LINK( SystemWindow, ImplHandleLayoutTimerHdl, void*, EMPTYARG )
 {
     if (!isLayoutEnabled())
     {
         SAL_WARN("vcl.layout", "SystemWindow has become non-layout because extra children have been added directly to it.");
-        return;
+        return 0;
     }
 
-    Window *pBox = GetWindow(GetWindowType::FirstChild);
+    VclBox *pBox = static_cast<VclBox*>(GetWindow(WINDOW_FIRSTCHILD));
     assert(pBox);
     setPosSizeOnContainee(GetSizePixel(), *pBox);
+    return 0;
 }
 
 void SystemWindow::SetText(const OUString& rStr)
@@ -1128,16 +1080,16 @@ OUString SystemWindow::GetText() const
     return Window::GetText();
 }
 
-void SystemWindow::settingOptimalLayoutSize(Window* /*pBox*/)
+void SystemWindow::settingOptimalLayoutSize(VclBox* /*pBox*/)
 {
 }
 
 void SystemWindow::setOptimalLayoutSize()
 {
-    maLayoutIdle.Stop();
+    maLayoutTimer.Stop();
 
     //resize SystemWindow to fit requisition on initial show
-    Window *pBox = GetWindow(GetWindowType::FirstChild);
+    VclBox *pBox = static_cast<VclBox*>(GetWindow(WINDOW_FIRSTCHILD));
 
     settingOptimalLayoutSize(pBox);
 
@@ -1155,8 +1107,8 @@ void SystemWindow::setOptimalLayoutSize()
 
 void SystemWindow::DoInitialLayout()
 {
-    if (GetSettings().GetStyleSettings().GetAutoMnemonic())
-       Accelerator::GenerateAutoMnemonicsOnHierarchy(this);
+    if ( GetSettings().GetStyleSettings().GetAutoMnemonic() )
+       ImplWindowAutoMnemonic( this );
 
     if (isLayoutEnabled())
     {
@@ -1164,6 +1116,7 @@ void SystemWindow::DoInitialLayout()
         setDeferredProperties();
         setOptimalLayoutSize();
         mbIsCalculatingInitialLayoutSize = false;
+        mbInitialLayoutDone = true;
     }
 }
 
