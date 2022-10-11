@@ -70,9 +70,9 @@ OS_AVAILABLE_ARCHS=x86_64 arm64
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$1 }')
 OS_MINOR_VERSION:=$(shell /usr/bin/sw_vers -productVersion | awk -F. '{ print $$2 }')
 OS_VERSION:=$(OS_MAJOR_VERSION).$(OS_MINOR_VERSION)
-# Limit to Oracle's Java SE 8 only as other JDK versions are likely to break
+# Limit to Oracle's Java SE 17 only as other JDK versions may break
 # the LibreOffice build
-JDK_HOME:=$(shell /usr/libexec/java_home -V 2>&1 | grep '"Oracle Corporation" - "Java SE 8"' | awk '{ print $$NF }')
+JDK_HOME:=$(shell /usr/libexec/java_home -V 2>&1 | grep '"Oracle Corporation" - "Java SE 17' | awk '{ print $$NF }')
 CODESIGN_EXTRA_OPTIONS:=--timestamp
 # Set to true to enable connecting from the Instruments application
 CODESIGN_FOR_DEBUGGING=<key>com.apple.security.get-task-allow</key><true/>
@@ -321,13 +321,11 @@ build.libo_checkout: \
 
 build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
-	build.libo_root_configure.ac_patch \
 	build.libo_root_download.lst_patch \
 	build.libo_avmedia_patch \
 	build.libo_basegfx_patch \
 	build.libo_bin_patch \
 	build.libo_bridges_patch \
-	build.libo_config_host_patch \
 	build.libo_connectivity_patch \
 	build.libo_cppuhelper_patch \
 	build.libo_cui_patch \
