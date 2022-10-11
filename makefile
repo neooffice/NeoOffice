@@ -321,12 +321,6 @@ build.libo_checkout: \
 
 build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
-	build.libo_root_Makefile.in_patch \
-	build.libo_root_RepositoryExternal.mk_patch \
-	build.libo_root_aclocal.m4_patch \
-	build.libo_root_config.guess_patch \
-	build.libo_root_config.sub_patch \
-	build.libo_root_config_host.mk.in_patch \
 	build.libo_root_configure.ac_patch \
 	build.libo_root_download.lst_patch \
 	build.libo_avmedia_patch \

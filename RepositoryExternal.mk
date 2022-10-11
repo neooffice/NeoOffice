@@ -34,49 +34,15 @@
 # in the system case, no libraries should be registered, but the target-local
 # variable LIBS should be set to FOO_LIBS, and INCLUDES to FOO_CFLAGS.
 
+
+ifeq ($(CPUNAME),X86_64)
+wnt_arch_subdir_optional=x64/
+wnt_arch_subdir_mandatory=x64
+else ifeq ($(CPUNAME),INTEL)
+wnt_arch_subdir_mandatory=Win32
+endif
+
 # External headers
-
-ifneq ($(SYSTEM_MESA_HEADERS),)
-
-gb_LinkTarget__use_mesa_headers :=
-
-else # !SYSTEM_MESA_HEADERS
-
-define gb_LinkTarget__use_mesa_headers
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(SRCDIR)/external/Mesa/inc \
-	$$(INCLUDE) \
-)
-
-endef
-
-endif # SYSTEM_MESA_HEADERS
-
-ifneq ($(SYSTEM_NPAPI_HEADERS),)
-
-# yes this uses internal headers too...
-# they are split across 2 dirs for this reason
-define gb_LinkTarget__use_npapi_headers
-$(call gb_LinkTarget_set_include,$(1),\
-	$(NPAPI_HEADERS_CFLAGS) \
-	-I$(SRCDIR)/external/np_sdk \
-	$$(INCLUDE) \
-)
-
-endef
-
-else #!SYSTEM_NPAPI_HEADERS
-
-define gb_LinkTarget__use_npapi_headers
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(SRCDIR)/external/np_sdk/inc \
-	-I$(SRCDIR)/external/np_sdk \
-	$$(INCLUDE) \
-)
-
-endef
-
-endif #SYSTEM_NPAPI_HEADERS
 
 ifneq ($(SYSTEM_ODBC_HEADERS),)
 
@@ -99,23 +65,6 @@ endef
 
 endif # SYSTEM_ODBC_HEADERS
 
-ifneq ($(SYSTEM_VIGRA),)
-
-gb_LinkTarget__use_vigra_headers :=
-
-else
-
-define gb_LinkTarget__use_vigra_headers
-$(call gb_LinkTarget_use_unpacked,$(1),vigra)
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,vigra/include) \
-	$$(INCLUDE) \
-)
-
-endef
-
-endif
-
 ifneq ($(SYSTEM_MDDS),)
 
 gb_ExternalProject__use_mdds_headers :=
@@ -131,7 +80,7 @@ endef
 else # !SYSTEM_MDDS
 
 define gb_ExternalProject__use_mdds_headers
-$(call gb_ExternalProject_use_external_project,$(1),mdds)
+$(call gb_ExternalProject_use_unpacked,$(1),mdds)
 
 endef
 
@@ -148,34 +97,77 @@ endif # SYSTEM_MDDS
 
 ifneq ($(SYSTEM_GLM),)
 
-gb_LinkTarget__use_glm_headers :=
+define gb_LinkTarget__use_glm_headers
+$(call gb_LinkTarget_add_defs,$(1),\
+    -DGLM_FORCE_CTOR_INIT \
+)
+
+endef
+
 gb_ExternalProject__use_glm_headers :=
 
 else
 
 define gb_LinkTarget__use_glm_headers
+$(call gb_LinkTarget_add_defs,$(1),\
+    -DGLM_FORCE_CTOR_INIT \
+)
 $(call gb_LinkTarget_use_unpacked,$(1),glm)
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,glm) \
+	$(GLM_CFLAGS) \
 	$$(INCLUDE) \
 )
 
 endef
 
 define gb_ExternalProject__use_glm_headers
-$(call gb_ExternalProject_get_preparation_target,$(1)) :| $(call gb_UnpackedTarball_get_final_target,glm)
+$(call gb_ExternalProject_use_unpacked,$(1),glm)
 
 endef
 
+endif
+
+ifneq ($(ENABLE_SKIA),)
+define gb_LinkTarget__use_skia
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/core \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/effects \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/gpu \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/config \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/ports \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/private \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/include/third_party/vulkan \
+	-I$(call gb_UnpackedTarball_get_dir,skia)/tools/gpu \
+	-I$(call gb_UnpackedTarball_get_dir,skia) \
+	-I$(SRCDIR)/external/skia/inc/ \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_libraries,$(1),skia)
+$(call gb_LinkTarget_add_defs,$(1),\
+	-DSK_USER_CONFIG_HEADER="<$(BUILDDIR)/config_host/config_skia.h>" \
+	-DSKIA_DLL \
+)
+endef
+$(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo,\
+        skia \
+))
 endif
 
 ifeq (SANE,$(filter SANE,$(BUILD_TYPE)))
 
 define gb_LinkTarget__use_sane_headers
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR),$(SRCDIR))/external/$(if $(filter WNT,$(OS)),twain,sane)/inc \
-	$$(INCLUDE) \
+    $(if $(filter $(PRODUCT_BUILD_TYPE),java),$(LIBO_SRCDIR), \
+    $(if $(filter WNT,$(OS)), \
+        -I$(call gb_UnpackedTarball_get_dir,twain_dsm/pub/include), \
+        -I$(SRCDIR)/external/sane/inc) \
+    ) \
+    $$(INCLUDE) \
 )
+
+ifeq ($(OS),WNT)
+$(call gb_LinkTarget_use_unpacked,$(1),twain_dsm)
+endif
 
 endef
 
@@ -220,7 +212,7 @@ endef
 else # !SYSTEM_CPPUNIT
 
 define gb_LinkTarget__use_cppunit
-$(call gb_LinkTarget_use_external_project,$(1),cppunit)
+$(call gb_LinkTarget_use_external_project,$(1),cppunit, full)
 
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,cppunit/include)\
@@ -241,59 +233,64 @@ endef
 
 endif # SYSTEM_CPPUNIT
 
-ifneq ($(SYSTEM_GLEW),)
 
-define gb_LinkTarget__use_glew
+ifeq ($(ENABLE_EPOXY),TRUE)
+ifeq ($(SYSTEM_EPOXY),TRUE)
+
+define gb_LinkTarget__use_epoxy
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
-    $(GLEW_CFLAGS) \
+    $(EPOXY_CFLAGS) \
 )
-$(call gb_LinkTarget_add_libs,$(1),$(GLEW_LIBS))
+$(call gb_LinkTarget_add_libs,$(1),$(EPOXY_LIBS))
 
 endef
 
-gb_ExternalProject__use_glew :=
+gb_ExternalProject__use_epoxy :=
 
-else # !SYSTEM_GLEW
+else # !SYSTEM_EPOXY
 
-$(eval $(call gb_Helper_register_packages_for_install,ooo,\
-	glew \
+define gb_LinkTarget__use_epoxy
+$(call gb_LinkTarget_set_include,$(1),\
+       -I$(call gb_UnpackedTarball_get_dir,epoxy/include) \
+       $$(INCLUDE) \
+)
+
+$(call gb_LinkTarget_use_libraries,$(1),\
+    epoxy \
+)
+
+endef
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	epoxy \
 ))
 
-define gb_LinkTarget__use_glew
-$(call gb_LinkTarget_use_package,$(1),glew)
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,glew/include) \
-	$$(INCLUDE) \
-)
-
-ifeq ($(COM),MSC)
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,glew)/lib/$(if $(MSVC_USE_DEBUG_RUNTIME),Debug/Win32/glew32d.lib,Release/Win32/glew32.lib) \
-)
-else
-$(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,glew)/lib/ -lGLEW \
-)
-endif
+define gb_ExternalProject__use_epoxy
+$(call gb_ExternalProject_use_external_project,$(1),epoxy)
 
 endef
 
-define gb_ExternalProject__use_glew
-$(call gb_ExternalProject_use_external_project,$(1),glew)
+endif # !SYSTEM_EPOXY
+else # !ENABLE_EPOXY
 
-endef
+gb_LinkTarget__use_epoxy :=
+gb_ExternalProject__use_epoxy :=
 
-endif # SYSTEM_GLEW
+endif # !ENABLE_EPOXY
+
 
 define gb_LinkTarget__use_iconv
+ifeq ($(COM),MSC)
+$(call gb_LinkTarget_add_libs,$(1),libiconv.lib)
+else
 $(call gb_LinkTarget_add_libs,$(1),-liconv)
-
+endif
 endef
 
-ifneq ($(SYSTEM_MARIADB),)
+ifneq ($(SYSTEM_MARIADB_CONNECTOR_C),)
 
-define gb_LinkTarget__use_mariadb
+define gb_LinkTarget__use_mariadb-connector-c
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
     $(MARIADB_CFLAGS) \
@@ -301,29 +298,41 @@ $(call gb_LinkTarget_set_include,$(1),\
 $(call gb_LinkTarget_add_libs,$(1),$(MARIADB_LIBS))
 
 endef
-gb_ExternalProject__use_mariadb :=
+gb_ExternalProject__use_mariadb-connector-c :=
 
-else # !SYSTEM_MARIADB
+else # !SYSTEM_MARIADB_CONNECTOR_C
 
-define gb_LinkTarget__use_mariadb
+define gb_LinkTarget__use_mariadb-connector-c
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(MARIADB_CFLAGS) \
 )
 $(call gb_LinkTarget_use_static_libraries,$(1),\
-	mariadblib \
+	mariadb-connector-c \
+)
+ifeq ($(OS),MACOSX)
+$(call gb_LinkTarget_add_libs,$(1),\
+	-liconv \
+)
+endif
+$(call gb_LinkTarget_use_system_win32_libs,$(1),\
+	ws2_32 \
+	advapi32 \
+	kernel32 \
+	shlwapi \
+	crypt32 \
 )
 
 endef
-define gb_ExternalProject__use_mariadb
-$(call gb_ExternalProject_use_static_libraries,$(1),mariadblib)
+define gb_ExternalProject__use_mariadb-connector-c
+$(call gb_ExternalProject_use_static_libraries,$(1),mariadb-connector-c)
 
 endef
 
-endif # SYSTEM_MARIADB
+endif # SYSTEM_MARIADB_CONNECTOR_C
 
 
-ifneq ($(SYSTEM_MARIADB),)
+ifneq ($(SYSTEM_MARIADB_CONNECTOR_C),)
 
 define gb_LinkTarget__use_mysql
 
@@ -353,48 +362,12 @@ endef
 
 endif
 
-ifneq ($(SYSTEM_MYSQL_CPPCONN),)
-
-define gb_LinkTarget__use_mysqlcppconn
-$(call gb_LinkTarget_add_libs,$(1),\
-	-lmysqlcppconn \
-)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DSYSTEM_MYSQL_CPPCONN \
-)
-endef
-
-else
-
-$(eval $(call gb_Helper_register_libraries,PLAINLIBS_NONE,\
-	mysqlcppconn \
-))
-
-# note: this does not link mysqlcppconn, it is loaded via osl_loadModuleRelative
-define gb_LinkTarget__use_mysqlcppconn
-
-$(call gb_LinkTarget_use_unpacked,$(1),mysqlcppconn)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DCPPCONN_LIB_BUILD \
-)
-
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,mysqlcppconn) \
-	-I$(call gb_UnpackedTarball_get_dir,mysqlcppconn)/cppconn \
-	$$(INCLUDE) \
-)
-
-endef
-
-endif
-
 ifneq ($(SYSTEM_ZLIB),)
 
 define gb_LinkTarget__use_zlib
 $(call gb_LinkTarget_add_defs,$(1),\
 	-DSYSTEM_ZLIB \
+	-DZLIB_CONST \
 )
 $(call gb_LinkTarget_add_libs,$(1),-lz)
 
@@ -411,6 +384,10 @@ else # !SYSTEM_ZLIB
 
 define gb_LinkTarget__use_zlib_multiarch
 $(if $(2),,$(call gb_Output_error,gb_LinkTarget__use_zlib_multiarch needs two arguments))
+
+$(call gb_LinkTarget_add_defs,$(1), \
+    -DZLIB_CONST \
+)
 
 $(call gb_LinkTarget_set_include,$(1),\
 	$(ZLIB_CFLAGS) \
@@ -441,45 +418,39 @@ endef
 endif # SYSTEM_ZLIB
 
 
-ifneq ($(SYSTEM_JPEG),)
+ifneq ($(SYSTEM_LIBJPEG),)
 
-define gb_LinkTarget__use_jpeg
-$(call gb_LinkTarget_add_libs,$(1),-ljpeg)
+define gb_LinkTarget__use_libjpeg
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	$(LIBJPEG_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(LIBJPEG_LIBS))
 $(call gb_LinkTarget_set_ldflags,$(1),\
 	$$(filter-out -L/usr/lib/jvm%,$$(T_LDFLAGS)) \
 )
 
 endef
 
-else ifeq ($(WITH_JPEG_TURBO),TRUE)
+gb_ExternalProject__use_libjpeg :=
 
-define gb_LinkTarget__use_jpeg
+else
+
+define gb_LinkTarget__use_libjpeg
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,jpeg-turbo) \
+	-I$(call gb_UnpackedTarball_get_dir,libjpeg-turbo) \
 	$$(INCLUDE) \
 )
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,jpeg-turbo)/.libs/libjpeg$(gb_StaticLibrary_PLAINEXT) \
-)
-$(call gb_LinkTarget_use_external_project,$(1),jpeg-turbo)
+$(call gb_LinkTarget_use_static_libraries,$(1),libjpeg-turbo)
 
 endef
 
-else # !SYSTEM_JPEG
-
-define gb_LinkTarget__use_jpeg
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,jpeg) \
-	$$(INCLUDE) \
-)
-
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	jpeg \
-)
+define gb_ExternalProject__use_libjpeg
+$(call gb_ExternalProject_use_static_libraries,$(1),libjpeg-turbo)
 
 endef
 
-endif # SYSTEM_JPEG
+endif # SYSTEM_LIBJPEG
 
 ifneq ($(SYSTEM_MYTHES),)
 
@@ -605,6 +576,7 @@ endef
 gb_ExternalProject__use_hunspell :=
 
 else # !SYSTEM_HUNSPELL
+ifneq ($(ENABLE_WASM_STRIP_HUNSPELL),TRUE)
 
 define gb_LinkTarget__use_hunspell
 $(call gb_LinkTarget_add_defs,$(1),\
@@ -632,6 +604,7 @@ $(call gb_ExternalProject_use_external_project,$(1),hunspell)
 
 endef
 
+endif # ENABLE_WASM_STRIP_HUNSPELL
 endif # SYSTEM_HUNSPELL
 
 
@@ -656,7 +629,7 @@ $(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_LOCALE_LIB))
 
 endef
 
-define gb_LinkTarget__use_boostdatetime
+define gb_LinkTarget__use_boost_date_time
 $(call gb_LinkTarget__use_boost_lib,$(1),$(BOOST_DATE_TIME_LIB))
 
 endef
@@ -711,12 +684,7 @@ $(call gb_LinkTarget_add_libs,$(1),\
 
 endef
 
-define gb_LinkTarget__use_boostthread
-$(call gb_LinkTarget__use_boost_lib,$(1),boostthread)
-
-endef
-
-define gb_LinkTarget__use_boostdatetime
+define gb_LinkTarget__use_boost_date_time
 $(call gb_LinkTarget__use_boost_lib,$(1),boost_date_time)
 
 endef
@@ -758,27 +726,27 @@ $(call gb_LinkTarget_set_include,$(1),\
 endef
 
 define gb_ExternalProject__use_boost_headers
-$(call gb_ExternalProject_get_preparation_target,$(1)) :| $(call gb_UnpackedTarball_get_final_target,boost)
+$(call gb_ExternalProject_use_unpacked,$(1),boost)
 
 endef
 
 endif # SYSTEM_BOOST
 
 
-ifneq ($(SYSTEM_CMIS),)
+ifneq ($(SYSTEM_LIBCMIS),)
 
-define gb_LinkTarget__use_cmis
+define gb_LinkTarget__use_libcmis
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
-	$(CMIS_CFLAGS) \
+	$(LIBCMIS_CFLAGS) \
 )
-$(call gb_LinkTarget_add_libs,$(1),$(CMIS_LIBS))
+$(call gb_LinkTarget_add_libs,$(1),$(LIBCMIS_LIBS))
 
 endef
 
-else # !SYSTEM_CMIS
+else # !SYSTEM_LIBCMIS
 
-define gb_LinkTarget__use_cmis
+define gb_LinkTarget__use_libcmis
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,libcmis)/inc \
 	$$(INCLUDE) \
@@ -789,35 +757,16 @@ $(call gb_LinkTarget_use_static_libraries,$(1),\
 
 endef
 
-endif # SYSTEM_CMIS
+endif # SYSTEM_LIBCMIS
 
 ifeq ($(ENABLE_JAVA),TRUE)
 
-ifeq ($(OS)$(COM),WNTGCC)
-
-define gb_LinkTarget__use_jawt
-$(call gb_LinkTarget_use_custom_headers,$(1),external/jawt)
-
-$(call gb_LinkTarget_add_ldflags,$(1),\
-	-L$(call gb_CustomTarget_get_workdir,external/jawt) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(JAWTLIB) \
-)
-
-endef
-
-else # $(OS)$(COM) != WNTGCC
-
 define gb_LinkTarget__use_jawt
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(JAWTLIB) \
 )
 
 endef
-
-endif # $(OS)$(COM) = WNTGCC
 
 else # !ENABLE_JAVA
 
@@ -881,25 +830,70 @@ else # !SYSTEM_LIBEXTTEXTCAT
 
 define gb_LinkTarget__use_libexttextcat
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,exttextcat/src) \
+	-I$(call gb_UnpackedTarball_get_dir,libexttextcat/src) \
 	$$(INCLUDE) \
 )
 
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_use_static_libraries,$(1),\
-	exttextcat \
+	libexttextcat \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,exttextcat)/src/.libs/libexttextcat-2.0.a\
+	$(call gb_UnpackedTarball_get_dir,libexttextcat)/src/.libs/libexttextcat-2.0.a\
 )
-$(call gb_LinkTarget_use_external_project,$(1),exttextcat)
+$(call gb_LinkTarget_use_external_project,$(1),libexttextcat)
 endif
 
 
 endef
 
 endif # SYSTEM_LIBEXTTEXTCAT
+
+
+ifneq ($(SYSTEM_LIBNUMBERTEXT),)
+
+define gb_LinkTarget__use_libnumbertext
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	$(LIBNUMBERTEXT_CFLAGS) \
+)
+$(call gb_LinkTarget_add_defs,$(1),\
+	-DSYSTEM_LIBNUMBERTEXT \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(LIBNUMBERTEXT_LIBS))
+
+endef
+
+else # !SYSTEM_LIBNUMBERTEXT
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo, \
+	libnumbertext_numbertext \
+))
+
+define gb_LinkTarget__use_libnumbertext
+$(call gb_LinkTarget_use_package,$(1),libnumbertext_numbertext)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libnumbertext/src) \
+	$$(INCLUDE) \
+)
+
+ifeq ($(COM),MSC)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+	libnumbertext \
+)
+else
+
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libnumbertext)/src/.libs/libnumbertext-1.0.a\
+)
+$(call gb_LinkTarget_use_external_project,$(1),libnumbertext,full)
+
+endif
+
+endef
+
+endif # SYSTEM_LIBNUMBERTEXT
 
 
 ifneq ($(SYSTEM_LIBXML),)
@@ -920,15 +914,11 @@ gb_ExternalProject__use_libxml2:=
 else # !SYSTEM_LIBXML
 
 $(eval $(call gb_Helper_register_packages_for_install,ure,\
-	xml2 \
-))
-
-$(eval $(call gb_Helper_register_packages_for_install,ooo,\
-	xml2_win32 \
+	libxml2 \
 ))
 
 define gb_LinkTarget__use_libxml2
-$(call gb_LinkTarget_use_package,$(1),xml2)
+$(call gb_LinkTarget_use_package,$(1),libxml2)
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(LIBXML_CFLAGS) \
@@ -944,10 +934,10 @@ endif
 
 endef
 define gb_ExternalProject__use_libxml2
-$(call gb_ExternalProject_use_package,$(1),xml2)
+$(call gb_ExternalProject_use_package,$(1),libxml2)
 
 ifeq ($(COM),MSC)
-$(call gb_ExternalProject_use_external_project,$(1),icu)
+$(call gb_ExternalProject_use_packages,$(1),icu icu_ure)
 endif
 
 endef
@@ -979,42 +969,42 @@ endef
 else # !SYSTEM_LIBXSLT
 
 $(eval $(call gb_Helper_register_packages_for_install,ooo,\
-	xslt \
+	libxslt \
 ))
 
 define gb_LinkTarget__use_libxslt
-$(call gb_LinkTarget_use_package,$(1),xslt)
+$(call gb_LinkTarget_use_package,$(1),libxslt)
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
-	-I$(call gb_UnpackedTarball_get_dir,xslt) \
+	-I$(call gb_UnpackedTarball_get_dir,libxslt) \
 )
 
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,xslt)/win32/bin.msvc/libxslt.lib \
+	$(call gb_UnpackedTarball_get_dir,libxslt)/win32/bin.msvc/libxslt.lib \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,xslt)/libxslt/.libs -lxslt \
+	-L$(call gb_UnpackedTarball_get_dir,libxslt)/libxslt/.libs -lxslt \
 )
 endif
 
 endef
 
 define gb_LinkTarget__use_libexslt
-$(call gb_LinkTarget_use_package,$(1),xslt)
+$(call gb_LinkTarget_use_package,$(1),libxslt)
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
-	-I$(call gb_UnpackedTarball_get_dir,xslt) \
+	-I$(call gb_UnpackedTarball_get_dir,libxslt) \
 )
 
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,xslt)/win32/bin.msvc/libexslt.lib \
+	$(call gb_UnpackedTarball_get_dir,libxslt)/win32/bin.msvc/libexslt.lib \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,xslt)/libexslt/.libs -lexslt \
+	-L$(call gb_UnpackedTarball_get_dir,libxslt)/libexslt/.libs -lexslt \
 )
 endif
 
@@ -1022,7 +1012,34 @@ endef
 
 endif # SYSTEM_LIBXSLT
 
-ifeq ($(ENABLE_LIBLANGTAG),TRUE)
+
+ifneq ($(SYSTEM_XMLSEC),)
+
+define gb_LinkTarget__use_xmlsec
+$(call gb_LinkTarget_add_defs,$(1),\
+	-DSYSTEM_XMLSEC \
+)
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	$(XMLSEC_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(XMLSEC_LIBS))
+
+endef
+
+gb_ExternalProject__use_xmlsec:=
+
+else # !SYSTEM_XMLSEC
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	xmlsec \
+))
+
+define gb_LinkTarget__use_xmlsec
+
+endef
+
+endif # SYSTEM_XMLSEC
 
 ifneq ($(SYSTEM_LIBLANGTAG),)
 
@@ -1036,122 +1053,51 @@ $(call gb_LinkTarget_add_libs,$(1),$(LIBLANGTAG_LIBS))
 
 endef
 
+gb_ExternalProject__use_liblangtag :=
+
 else # !SYSTEM_LIBLANGTAG
 
-$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+$(eval $(call gb_Helper_register_packages_for_install,ure,\
 	liblangtag_data \
 ))
 
+ifeq ($(COM),MSC)
+
 define gb_LinkTarget__use_liblangtag
-$(call gb_LinkTarget_use_unpacked,$(1),langtag)
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,langtag) \
+	$(LIBLANGTAG_CFLAGS) \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),$(LIBLANGTAG_LIBS))
-$(call gb_LinkTarget_use_external_project,$(1),langtag)
+$(call gb_LinkTarget_use_external_project,$(1),liblangtag)
+
+endef
+
+else
+
+$(eval $(call gb_Helper_register_packages_for_install,ure,\
+	liblangtag \
+))
+
+define gb_LinkTarget__use_liblangtag
+$(call gb_LinkTarget_set_include,$(1),\
+	$(LIBLANGTAG_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(LIBLANGTAG_LIBS))
+$(call gb_LinkTarget_use_package,$(1),liblangtag)
+
+endef
+
+endif # MSC
+
+define gb_ExternalProject__use_liblangtag
+$(call gb_ExternalProject_use_external_project,$(1),liblangtag)
 
 endef
 
 endif # SYSTEM_LIBLANGTAG
 
-else
-
-gb_LinkTarget__use_liblangtag :=
-
-endif # ENABLE_LIBLANGTAG
-
-gb_ExternalProject__use_apr :=
-
-ifeq ($(WITH_WEBDAV),serf)
-
-define gb_LinkTarget__use_apr
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(APR_CFLAGS) \
-)
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(APR_LIBS) \
-	$(if $(filter $(OS),LINUX),-lpthread) \
-	$(if $(filter $(OS),MACOSX),-liconv) \
-)
-
-ifeq ($(SYSTEM_APR),)
-$(call gb_LinkTarget_use_system_win32_libs,$(1),\
-	mswsock \
-	rpcrt4 \
-	shell32 \
-)
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DAPR_DECLARE_STATIC \
-	-DAPU_DECLARE_STATIC \
-)
-$(call gb_LinkTarget_use_external_project,$(1),apr_util)
-endif
-
-endef
-
-define gb_ExternalProject__use_apr
-ifeq ($(SYSTEM_APR),)
-$(call gb_ExternalProject_use_external_project,$(1),apr_util)
-endif
-
-endef
-
-define gb_LinkTarget__use_serf
-$(call gb_LinkTarget_set_include,$(1),\
-	$(SERF_CFLAGS) \
-	$$(INCLUDE) \
-)
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(SERF_LIBS) \
-)
-
-ifeq ($(SYSTEM_SERF),)
-$(call gb_LinkTarget_use_external_project,$(1),serf)
-endif
-
-endef
-
-else ifeq ($(WITH_WEBDAV),neon)
-
-ifneq ($(SYSTEM_NEON),)
-
-define gb_LinkTarget__use_neon
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DNEON_VERSION=0x$(NEON_VERSION) \
-	-DSYSTEM_NEON \
-)
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(NEON_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(NEON_LIBS))
-
-endef
-
-else # !SYSTEM_NEON
-
-$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
-	neon \
-))
-
-define gb_LinkTarget__use_neon
-$(call gb_LinkTarget_use_unpacked,$(1),neon)
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,neon/src) \
-	$$(INCLUDE) \
-)
-$(call gb_LinkTarget_use_libraries,$(1),\
-	neon \
-)
-
-endef
-
-endif # SYSTEM_NEON
-
-endif # WITH_WEBDAV
 
 ifneq ($(SYSTEM_REDLAND),)
 
@@ -1222,7 +1168,7 @@ $(call gb_LinkTarget_use_libraries,$(1),\
 	rdf \
 )
 else
-$(call gb_LinkTarget_use_packages,$(1),raptor rasqal redland)
+$(call gb_LinkTarget_use_packages,$(1),redland raptor rasqal)
 
 $(call gb_LinkTarget_add_libs,$(1),\
 	-L$(call gb_UnpackedTarball_get_dir,redland)/src/.libs -lrdf \
@@ -1236,16 +1182,13 @@ endef
 else # ANDROID
 
 define gb_LinkTarget__use_librdf
-$(call gb_LinkTarget_use_packages,$(1),raptor rasqal redland)
+$(call gb_LinkTarget_use_packages,$(1),redland raptor rasqal)
 
 endef
 
 endif # ANDROID
 
 endif # SYSTEM_REDLAND
-
-
-ifneq ($(filter unx,$(GUIBASE))$(ENABLE_CAIRO_CANVAS),) # or
 
 ifneq ($(SYSTEM_CAIRO),)
 
@@ -1261,9 +1204,11 @@ endef
 
 else # !SYSTEM_CAIRO
 
+ifneq ($(filter-out MACOSX WNT,$(OS)),)
+
 $(eval $(call gb_Helper_register_packages_for_install,ooo,\
 	cairo \
-	$(if $(filter $(OS),WNT),,pixman) \
+    pixman \
 ))
 
 define gb_LinkTarget__use_cairo
@@ -1273,20 +1218,19 @@ $(call gb_LinkTarget_use_external,$(1),freetype_headers)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,cairo) \
 	-I$(call gb_UnpackedTarball_get_dir,cairo)/src \
+	-I$(call gb_UnpackedTarball_get_dir,pixman)/pixman \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),\
 	-L$(call gb_UnpackedTarball_get_dir,cairo)/src/.libs -lcairo \
-	$(if $(filter-out MACOSX WNT,$(OS)), \
 		-L$(call gb_UnpackedTarball_get_dir,pixman)/pixman/.libs -lpixman-1 \
-	) \
 )
 
 endef
 
-endif # SYSTEM_CAIRO
+endif # !MACOSX, !WNT
 
-endif # CAIRO
+endif # !SYSTEM_CAIRO
 
 ifneq ($(SYSTEM_FREETYPE),)
 
@@ -1298,28 +1242,16 @@ $(call gb_LinkTarget_set_include,$(1),\
 
 endef
 
-define gb_LinkTarget__use_freetype
-$(call gb_LinkTarget_use_external,$(1),freetype_headers)
-$(call gb_LinkTarget_add_libs,$(1),$(FREETYPE_LIBS))
-
-endef
-
 gb_ExternalProject__use_freetype :=
 
-else ifeq ($(OS),ANDROID)
+else
 
 define gb_LinkTarget__use_freetype_headers
 $(call gb_LinkTarget_use_external_project,$(1),freetype)
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,freetype)/include \
+	$(FREETYPE_CFLAGS) \
 	$$(INCLUDE) \
 )
-
-endef
-
-define gb_LinkTarget__use_freetype
-$(call gb_LinkTarget_use_external,$(1),freetype_headers)
-$(call gb_LinkTarget_add_libs,$(1),$(FREETYPE_LIBS))
 
 endef
 
@@ -1329,6 +1261,12 @@ $(call gb_ExternalProject_use_external_project,$(1),freetype)
 endef
 
 endif # SYSTEM_FREETYPE
+
+define gb_LinkTarget__use_freetype
+$(call gb_LinkTarget_use_external,$(1),freetype_headers)
+$(call gb_LinkTarget_add_libs,$(1),$(FREETYPE_LIBS))
+
+endef
 
 ifneq ($(SYSTEM_FONTCONFIG),)
 
@@ -1342,7 +1280,15 @@ $(call gb_LinkTarget_add_libs,$(1),$(FONTCONFIG_LIBS))
 
 endef
 
-else ifeq ($(OS),ANDROID)
+ifeq ($(OS),EMSCRIPTEN)
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+    libfontconfig_data \
+))
+endif
+
+gb_ExternalProject__use_fontconfig :=
+
+else # SYSTEM_FONTCONFIG
 
 define gb_LinkTarget__use_fontconfig
 $(call gb_LinkTarget_use_external_project,$(1),fontconfig)
@@ -1351,11 +1297,18 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 )
 
+$(call gb_LinkTarget_add_libs,$(1),\
+    -L$(call gb_UnpackedTarball_get_dir,fontconfig)/src/.libs -lfontconfig \
+)
+
+endef
+
+define gb_ExternalProject__use_fontconfig
+$(call gb_ExternalProject_use_external_project,$(1),fontconfig)
+
 endef
 
 endif # SYSTEM_FONTCONFIG
-
-ifeq ($(ENABLE_GRAPHITE),TRUE)
 
 ifneq ($(SYSTEM_GRAPHITE),)
 
@@ -1367,6 +1320,8 @@ $(call gb_LinkTarget_set_include,$(1),\
 $(call gb_LinkTarget_add_libs,$(1),$(GRAPHITE_LIBS))
 
 endef
+
+gb_ExternalProject__use_graphite:=
 
 else # !SYSTEM_GRAPHITE
 
@@ -1382,13 +1337,13 @@ $(call gb_LinkTarget_use_static_libraries,$(1),\
 
 endef
 
+define gb_ExternalProject__use_graphite
+$(call gb_ExternalProject_use_static_libraries,$(1),\
+	graphite \
+)
+
+endef
 endif # SYSTEM_GRAPHITE
-
-else # !ENABLE_GRAPHITE
-
-gb_LinkTarget__use_graphite :=
-
-endif # ENABLE_GRAPHITE
 
 ifneq ($(SYSTEM_ICU),)
 
@@ -1442,7 +1397,7 @@ endef
 
 # icudata and icui18n is called icudt and icuin when built with MSVC :-/
 define gb_LinkTarget__use_icudata
-$(call gb_LinkTarget_use_package,$(1),icu)
+$(call gb_LinkTarget_use_package,$(1),icu_ure)
 
 ifeq ($(OS),WNT)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -1472,7 +1427,7 @@ endif
 endef
 
 define gb_LinkTarget__use_icuuc
-$(call gb_LinkTarget_use_package,$(1),icu)
+$(call gb_LinkTarget_use_package,$(1),icu_ure)
 
 ifeq ($(OS),WNT)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -1488,7 +1443,6 @@ endef
 
 endif # SYSTEM_ICU
 
-ifeq ($(ENABLE_HARFBUZZ),TRUE)
 ifneq ($(SYSTEM_HARFBUZZ),)
 
 define gb_LinkTarget__use_harfbuzz
@@ -1500,6 +1454,8 @@ $(call gb_LinkTarget_add_libs,$(1),$(HARFBUZZ_LIBS))
 
 endef
 
+gb_ExternalProject__use_harfbuzz :=
+
 else # SYSTEM_HARFBUZZ != TRUE
 
 define gb_LinkTarget__use_harfbuzz
@@ -1508,24 +1464,25 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),$(HARFBUZZ_LIBS))
+$(call gb_LinkTarget_use_external,$(1),icuuc)
 $(call gb_LinkTarget_use_external_project,$(1),harfbuzz)
 
 endef
 
+define gb_ExternalProject__use_harfbuzz
+$(call gb_ExternalProject_use_external_project,$(1),harfbuzz)
+
+endef
+
 endif # SYSTEM_HARFBUZZ
-else # ENABLE_HARFBUZZ != YES
 
-gb_LinkTarget__use_harfbuzz :=
-
-endif # ENABLE_HARFBUZZ
-
-ifeq ($(DISABLE_OPENSSL),TRUE)
+ifneq ($(ENABLE_OPENSSL),TRUE)
 
 gb_ExternalProject__use_openssl:=
 gb_LinkTarget__use_openssl_headers:=
 gb_LinkTarget__use_openssl:=
 
-else # !DISABLE_OPENSSL
+else # ENABLE_OPENSSL
 
 ifneq ($(SYSTEM_OPENSSL),)
 
@@ -1553,6 +1510,7 @@ $(call gb_ExternalProject_use_package,$(1),openssl)
 endef
 
 define gb_LinkTarget__use_openssl_headers
+$(call gb_LinkTarget_use_external_project,$(1),openssl,full)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,openssl)/include \
 	$$(INCLUDE) \
@@ -1564,13 +1522,14 @@ define gb_LinkTarget__use_openssl
 $(call gb_LinkTarget_use_package,$(1),openssl)
 ifeq ($(OS),WNT)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,openssl)/out32dll/ssleay32.lib \
-	$(call gb_UnpackedTarball_get_dir,openssl)/out32dll/libeay32.lib \
+	$(call gb_UnpackedTarball_get_dir,openssl)/libcrypto.lib \
+	$(call gb_UnpackedTarball_get_dir,openssl)/libssl.lib \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(call gb_UnpackedTarball_get_dir,openssl)/libssl.a \
 	$(call gb_UnpackedTarball_get_dir,openssl)/libcrypto.a \
+	$(if $(filter $(OS),LINUX),-pthread) \
 )
 $(call gb_LinkTarget_use_external_project,$(1),openssl)
 ifeq ($(OS),SOLARIS)
@@ -1584,41 +1543,7 @@ endif
 endef
 
 endif # SYSTEM_OPENSSL
-endif # DISABLE_OPENSSL
-
-
-ifeq ($(DISABLE_OPENSSL),TRUE)
-
-define gb_LinkTarget__use_gnutls
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(GNUTLS_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-    -DDISABLE_OPENSSL \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(GNUTLS_LIBS))
-
-endef
-
-define gb_LinkTarget__use_libgcrypt
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(LIBGCRYPT_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(LIBGCRYPT_LIBS))
-
-endef
-
-else # !DISABLE_OPENSSL
-
-gb_LinkTarget__use_gnutls:=
-gb_LinkTarget__use_libgcrypt:=
-
-endif # DISABLE_OPENSSL
+endif # ENABLE_OPENSSL
 
 
 ifneq ($(SYSTEM_CDR),)
@@ -1698,13 +1623,39 @@ gb_ExternalProject__use_etonyek :=
 
 else # !SYSTEM_ETONYEK
 
+ifeq ($(COM),MSC)
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	etonyek \
+))
+
 define gb_LinkTarget__use_etonyek
 $(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libetonyek)/inc \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_libraries,$(1),\
+	etonyek \
+)
+
+endef
+
+else # !MSC
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo, \
+	libetonyek \
+))
+
+define gb_LinkTarget__use_etonyek
+$(call gb_LinkTarget_use_package,$(1),libetonyek)
+
+$(call gb_LinkTarget_set_include,$(1),\
 	-I${WORKDIR}/UnpackedTarball/libetonyek/inc \
+	-DLIBETONYEK_VISIBILITY \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,libetonyek)/src/lib/.libs/libetonyek-0.1$(gb_StaticLibrary_PLAINEXT) \
+	-L$(call gb_UnpackedTarball_get_dir,libetonyek)/src/lib/.libs -letonyek-0.1 \
 )
 $(call gb_LinkTarget_use_external_project,$(1),libetonyek)
 
@@ -1714,6 +1665,8 @@ define gb_ExternalProject__use_etonyek
 $(call gb_ExternalProject_use_external_project,$(1),libetonyek)
 
 endef
+
+endif
 
 endif # SYSTEM_ETONYEK
 
@@ -1794,6 +1747,7 @@ $(call gb_LinkTarget_use_package,$(1),libodfgen)
 
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,libodfgen)/inc \
+	-DLIBODFGEN_VISIBILITY \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -1806,6 +1760,39 @@ endif
 
 endif # SYSTEM_ODFGEN
 
+ifneq ($(SYSTEM_EPUBGEN),)
+
+define gb_LinkTarget__use_epubgen
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+    $(EPUBGEN_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(EPUBGEN_LIBS))
+
+endef
+gb_ExternalProject__use_epubgen :=
+
+else # !SYSTEM_EPUBGEN
+ifneq ($(ENABLE_WASM_STRIP_EPUB),TRUE)
+
+define gb_LinkTarget__use_epubgen
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libepubgen)/inc \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libepubgen)/src/lib/.libs/libepubgen-0.1$(gb_StaticLibrary_PLAINEXT) \
+)
+$(call gb_LinkTarget_use_external_project,$(1),libepubgen)
+
+endef
+define gb_ExternalProject__use_epubgen
+$(call gb_ExternalProject_use_external_project,$(1),libepubgen)
+
+endef
+
+endif # ENABLE_WASM_STRIP_EPUB
+endif # SYSTEM_EPUBGEN
 
 ifneq ($(SYSTEM_REVENGE),)
 
@@ -1855,6 +1842,7 @@ $(call gb_LinkTarget_use_package,$(1),librevenge)
 
 $(call gb_LinkTarget_set_include,$(1),\
 	$(REVENGE_CFLAGS) \
+	-DLIBREVENGE_VISIBILITY \
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -1966,6 +1954,72 @@ endef
 endif # SYSTEM_PAGEMAKER
 
 
+ifneq ($(SYSTEM_QXP),)
+
+define gb_LinkTarget__use_qxp
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+    $(QXP_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(QXP_LIBS))
+
+endef
+gb_ExternalProject__use_qxp :=
+
+else # !SYSTEM_QXP
+
+define gb_LinkTarget__use_qxp
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libqxp)/inc \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libqxp)/src/lib/.libs/libqxp-0.0$(gb_StaticLibrary_PLAINEXT) \
+)
+$(call gb_LinkTarget_use_external_project,$(1),libqxp)
+
+endef
+define gb_ExternalProject__use_qxp
+$(call gb_ExternalProject_use_external_project,$(1),libqxp)
+
+endef
+
+endif # SYSTEM_QXP
+
+
+ifneq ($(SYSTEM_ZMF),)
+
+define gb_LinkTarget__use_zmf
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+    $(ZMF_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(ZMF_LIBS))
+
+endef
+gb_ExternalProject__use_zmf :=
+
+else # !SYSTEM_ZMF
+
+define gb_LinkTarget__use_zmf
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libzmf)/inc \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libzmf)/src/lib/.libs/libzmf-0.0$(gb_StaticLibrary_PLAINEXT) \
+)
+$(call gb_LinkTarget_use_external_project,$(1),libzmf)
+
+endef
+define gb_ExternalProject__use_zmf
+$(call gb_ExternalProject_use_external_project,$(1),libzmf)
+
+endef
+
+endif # SYSTEM_ZMF
+
+
 ifneq ($(SYSTEM_VISIO),)
 
 define gb_LinkTarget__use_visio
@@ -2008,21 +2062,53 @@ gb_ExternalProject__use_wpd :=
 
 else # !SYSTEM_WPD
 
+ifeq ($(COM),MSC)
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	wpd \
+))
+
 define gb_LinkTarget__use_wpd
 $(call gb_LinkTarget_set_include,$(1),\
 	$(WPD_CFLAGS) \
 	$$(INCLUDE) \
 )
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,libwpd)/src/lib/.libs/libwpd-0.10$(gb_StaticLibrary_PLAINEXT) \
+$(call gb_LinkTarget_use_libraries,$(1),\
+	wpd \
 )
-$(call gb_LinkTarget_use_external_project,$(1),libwpd)
 
 endef
+
 define gb_ExternalProject__use_wpd
-$(call gb_ExternalProject_use_external_project,$(1),libwpd)
+$(call gb_ExternalProject_get_preparation_target,$(1)) : $(call gb_Library_get_target,wpd)
 
 endef
+
+else # !MSC
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo, \
+	libwpd \
+))
+
+define gb_LinkTarget__use_wpd
+$(call gb_LinkTarget_use_package,$(1),libwpd)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	$(WPD_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(WPD_LIBS) \
+)
+
+endef
+
+define gb_ExternalProject__use_wpd
+$(call gb_ExternalProject_use_package,$(1),libwpd)
+
+endef
+
+endif # MSC
 
 endif # SYSTEM_WPD
 
@@ -2041,21 +2127,43 @@ gb_ExternalProject__use_wpg :=
 
 else # !SYSTEM_WPG
 
+ifeq ($(COM),MSC)
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	wpg \
+))
+
 define gb_LinkTarget__use_wpg
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,libwpg)/inc \
 	$$(INCLUDE) \
 )
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,libwpg)/src/lib/.libs/libwpg-0.3$(gb_StaticLibrary_PLAINEXT) \
+$(call gb_LinkTarget_use_libraries,$(1),\
+	wpg \
 )
-$(call gb_LinkTarget_use_external_project,$(1),libwpg)
 
 endef
-define gb_ExternalProject__use_wpg
-$(call gb_ExternalProject_use_external_project,$(1),libwpg)
+
+else # !MSC
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo, \
+	libwpg \
+))
+
+define gb_LinkTarget__use_wpg
+$(call gb_LinkTarget_use_package,$(1),libwpg)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libwpg)/inc \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,libwpg)/src/lib/.libs -lwpg-0.3 \
+)
 
 endef
+
+endif # MSC
 
 endif # SYSTEM_WPG
 
@@ -2106,7 +2214,7 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 )
 $(call gb_LinkTarget_add_libs,$(1),\
-	-L$(call gb_UnpackedTarball_get_dir,libwps)/src/lib/.libs -lwps-0.3 \
+	-L$(call gb_UnpackedTarball_get_dir,libwps)/src/lib/.libs -lwps-0.4 \
 )
 
 endef
@@ -2169,6 +2277,60 @@ endef
 endif # MSC
 
 endif # SYSTEM_MWAW
+
+ifneq ($(SYSTEM_STAROFFICE),)
+
+define gb_LinkTarget__use_staroffice
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+    $(STAROFFICE_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(STAROFFICE_LIBS))
+
+endef
+
+else # !SYSTEM_STAROFFICE
+
+ifeq ($(COM),MSC)
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	staroffice \
+))
+
+define gb_LinkTarget__use_staroffice
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libstaroffice)/inc \
+	$$(INCLUDE) \
+)
+
+$(call gb_LinkTarget_use_libraries,$(1),\
+	staroffice \
+)
+
+endef
+
+else # !MSC
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	libstaroffice \
+))
+
+define gb_LinkTarget__use_staroffice
+$(call gb_LinkTarget_use_package,$(1),libstaroffice)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libstaroffice)/inc \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,libstaroffice)/src/lib/.libs -lstaroffice-0.0 \
+)
+
+endef
+
+endif # MSC
+
+endif # SYSTEM_STAROFFICE
 
 
 ifneq ($(SYSTEM_LCMS2),)
@@ -2236,7 +2398,7 @@ endef
 else # !SYSTEM_LPSOLVE
 
 define gb_LinkTarget__use_lpsolve
-$(call gb_LinkTarget_use_unpacked,$(1),lpsolve)
+$(call gb_LinkTarget_use_package,$(1),lpsolve)
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(call gb_UnpackedTarball_get_dir,lpsolve)/lpsolve55/lpsolve55.lib \
@@ -2273,7 +2435,7 @@ define gb_LinkTarget__use_coinmp
 $(call gb_LinkTarget_use_package,$(1),coinmp)
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,coinmp)/CoinMP/MSVisualStudio/v9/$(if $(MSVC_USE_DEBUG_RUNTIME),Debug,Release)/CoinMP.lib \
+	$(call gb_UnpackedTarball_get_dir,coinmp)/CoinMP/MSVisualStudio/v9/$(wnt_arch_subdir_optional)$(if $(MSVC_USE_DEBUG_RUNTIME),Debug,Release)/CoinMP.lib \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -2317,16 +2479,24 @@ gb_LinkTarget__use_coinmp :=
 
 endif # ENABLE_COINMP
 
+ifneq (,$(filter MDNSRESPONDER,$(BUILD_TYPE)))
+
+define gb_LinkTarget__use_mDNSResponder
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,mDNSResponder)/mDNSShared \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_static_libraries,$(1),mDNSResponder)
+endef
+
+endif # MDNSRESPONDER
+
 ifeq ($(ENABLE_GIO),TRUE)
 
 define gb_LinkTarget__use_gio
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(GIO_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DENABLE_GIO \
 )
 
 $(call gb_LinkTarget_add_libs,$(1),$(GIO_LIBS))
@@ -2363,34 +2533,6 @@ gb_LinkTarget__use_avahi :=
 
 endif # ENABLE_AVAHI
 
-
-define gb_LinkTarget__use_gtk
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(GTK_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(GTK_LIBS))
-
-ifeq ($(ENABLE_GTK_PRINT),TRUE)
-
-$(call gb_LinkTarget_add_defs,$(1),-DENABLE_GTK_PRINT)
-
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(GTK_PRINT_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(GTK_PRINT_LIBS))
-
-endif
-
-endef
-
-define gb_LinkTarget__use_gthread
-$(call gb_LinkTarget_add_libs,$(1),$(GTHREAD_LIBS))
-endef
-
 ifeq ($(ENABLE_CUPS),TRUE)
 
 define gb_LinkTarget__use_cups
@@ -2410,7 +2552,7 @@ define gb_LinkTarget__use_cups
 
 endef
 
-endif # ENABLE_DBUS
+endif # ENABLE_CUPS
 
 ifeq ($(ENABLE_DBUS),TRUE)
 
@@ -2419,16 +2561,6 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(DBUS_CFLAGS) \
 )
-
-$(call gb_LinkTarget_add_defs,$(1),\
-    -DENABLE_DBUS \
-)
-
-ifeq ($(ENABLE_PACKAGEKIT),TRUE)
-$(call gb_LinkTarget_add_defs,$(1),\
-    -DENABLE_PACKAGEKIT \
-)
-endif # ENABLE_PACKAGEKIT
 
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(DBUS_LIBS) \
@@ -2445,40 +2577,9 @@ endef
 endif # ENABLE_DBUS
 
 
-define gb_LinkTarget__use_dbusmenugtk
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(DBUSMENUGTK_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(DBUSMENUGTK_LIBS))
-
-endef
-
-
-ifeq ($(ENABLE_TELEPATHY),TRUE)
-
-define gb_LinkTarget__use_telepathy
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(TELEPATHY_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(TELEPATHY_LIBS) \
-)
-
-endef
-
-else # !ENABLE_TELEPATHY
-
-gb_LinkTarget__use_telepathy :=
-
-endif # ENABLE_TELEPATHY
-
 ifneq ($(SYSTEM_LIBPNG),)
 
-define gb_LinkTarget__use_png
+define gb_LinkTarget__use_libpng
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 	$(LIBPNG_CFLAGS) \
@@ -2490,11 +2591,11 @@ $(call gb_LinkTarget_add_libs,$(1),\
 
 endef
 
-gb_ExternalProject__use_png :=
+gb_ExternalProject__use_libpng :=
 
 else # !SYSTEM_LIBPNG
 
-define gb_LinkTarget__use_png
+define gb_LinkTarget__use_libpng
 $(call gb_LinkTarget_set_include,$(1),\
 	$(LIBPNG_CFLAGS) \
 	$$(INCLUDE) \
@@ -2506,7 +2607,7 @@ $(call gb_LinkTarget__use_zlib,$(1))
 
 endef
 
-define gb_ExternalProject__use_png
+define gb_ExternalProject__use_libpng
 $(call gb_ExternalProject_use_static_libraries,$(1),\
 	libpng \
 )
@@ -2514,6 +2615,102 @@ $(call gb_ExternalProject_use_static_libraries,$(1),\
 endef
 
 endif # !SYSTEM_LIBPNG
+
+ifneq ($(SYSTEM_LIBTIFF),)
+
+define gb_LinkTarget__use_libtiff
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	$(LIBTIFF_CFLAGS) \
+)
+
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(LIBTIFF_LIBS) \
+)
+
+endef
+
+gb_ExternalProject__use_libtiff :=
+
+else # !SYSTEM_LIBTIFF
+
+define gb_LinkTarget__use_libtiff
+$(call gb_LinkTarget_set_include,$(1),\
+	$(LIBTIFF_CFLAGS) \
+	$$(INCLUDE) \
+)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libtiff)/libtiff \
+	$$(INCLUDE) \
+)
+ifeq ($(OS),WNT)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libtiff)/libtiff/.libs/libtiff$(gb_StaticLibrary_PLAINEXT) \
+)
+else
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,libtiff)/libtiff/.libs -ltiff \
+)
+endif
+$(call gb_LinkTarget_use_external_project,$(1),libtiff,full)
+
+endef
+
+define gb_ExternalProject__use_libtiff
+$(call gb_ExternalProject_use_external_project,$(1),libtiff)
+
+endef
+
+endif # !SYSTEM_LIBTIFF
+
+ifneq ($(SYSTEM_LIBWEBP),)
+
+define gb_LinkTarget__use_libwebp
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	$(LIBWEBP_CFLAGS) \
+)
+
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(LIBWEBP_LIBS) \
+)
+
+endef
+
+gb_ExternalProject__use_libwebp :=
+
+else # !SYSTEM_LIBWEBP
+
+define gb_LinkTarget__use_libwebp
+$(call gb_LinkTarget_set_include,$(1),\
+	$(LIBWEBP_CFLAGS) \
+	$$(INCLUDE) \
+)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,libwebp)/src \
+	$$(INCLUDE) \
+)
+ifeq ($(OS),WNT)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,libwebp)/output/lib/libwebp$(if $(MSVC_USE_DEBUG_RUNTIME),_debug)$(gb_StaticLibrary_PLAINEXT) \
+)
+else
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,libwebp)/src/.libs -lwebp \
+)
+endif
+$(call gb_LinkTarget_use_external_project,$(1),libwebp)
+
+endef
+
+define gb_ExternalProject__use_libwebp
+$(call gb_ExternalProject_use_external_project,$(1),libwebp)
+
+endef
+
+endif # !SYSTEM_LIBWEBP
 
 
 ifneq ($(SYSTEM_CURL),)
@@ -2545,7 +2742,7 @@ $(call gb_LinkTarget_set_include,$(1),\
 
 ifeq ($(COM),MSC)
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,curl)/lib/$(if $(MSVC_USE_DEBUG_RUNTIME),debug-dll,release-dll)/libcurl$(if $(MSVC_USE_DEBUG_RUNTIME),d)_imp.lib \
+	$(call gb_UnpackedTarball_get_dir,curl)/builds/libcurl-vc12-$(gb_MSBUILD_PLATFORM)-$(gb_MSBUILD_CONFIG)-dll-zlib-static-ipv6-sspi-schannel/lib/libcurl$(if $(MSVC_USE_DEBUG_RUNTIME),_debug).lib \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -2579,6 +2776,8 @@ endef
 
 endif # ENABLE_VALGRIND
 
+ifeq ($(ENABLE_POPPLER),TRUE)
+
 ifneq ($(SYSTEM_POPPLER),)
 
 define gb_LinkTarget__use_poppler
@@ -2595,9 +2794,13 @@ endef
 
 else # !SYSTEM_POPPLER
 
-define gb_LinkTarget__use_poppler
-$(call gb_LinkTarget_use_external_project,$(1),poppler)
+$(eval $(call gb_Helper_register_packages_for_install,pdfimport,\
+	poppler_data \
+))
 
+define gb_LinkTarget__use_poppler
+$(call gb_LinkTarget_use_external_project,$(1),poppler,full)
+$(call gb_LinkTarget_use_package,$(1),poppler_data)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,poppler) \
 	-I$(call gb_UnpackedTarball_get_dir,poppler)/poppler \
@@ -2605,11 +2808,8 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 )
 
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,poppler)/fofi/.libs/libfofi$(gb_StaticLibrary_PLAINEXT) \
-	$(call gb_UnpackedTarball_get_dir,poppler)/goo/.libs/libgoo$(gb_StaticLibrary_PLAINEXT) \
-	$(call gb_UnpackedTarball_get_dir,poppler)/poppler/.libs/libpoppler$(gb_StaticLibrary_PLAINEXT) \
-)
+$(call gb_LinkTarget_use_static_libraries,$(1),poppler)
+$(call gb_LinkTarget_use_external,$(1),libjpeg)
 
 ifeq ($(OS),MACOSX)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -2629,6 +2829,8 @@ endif
 endef
 
 endif # SYSTEM_POPPLER
+
+endif # ENABLE_POPPLER
 
 
 ifneq ($(SYSTEM_CLUCENE),)
@@ -2666,7 +2868,7 @@ $(call gb_LinkTarget_use_libraries,$(1),\
 endef
 
 $(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
-	clucene \
+    $(call gb_Helper_optionals_or,HELPTOOLS XMLHELP,clucene) \
 ))
 
 endif # SYSTEM_CLUCENE
@@ -2701,7 +2903,7 @@ endef
 
 endif # SYSTEM_HSQLDB
 
-
+ifeq ($(ENABLE_LDAP),TRUE)
 ifneq ($(SYSTEM_OPENLDAP),)
 
 define gb_LinkTarget__use_openldap
@@ -2723,13 +2925,14 @@ $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,openldap/include) \
 	$$(INCLUDE) \
 )
-$(call gb_LinkTarget_use_external_project,$(1),openldap)
+$(call gb_LinkTarget_use_external_project,$(1),openldap,full)
 $(call gb_LinkTarget_add_libs,$(1), \
 	$(call gb_UnpackedTarball_get_dir,openldap)/libraries/libldap/.libs/libldap.a \
 	$(call gb_UnpackedTarball_get_dir,openldap)/libraries/liblber/.libs/liblber.a \
 )
 
 endef
+endif
 
 define gb_ExternalProject__use_openldap
 $(call gb_ExternalProject_use_external_project,$(1),openldap)
@@ -2737,7 +2940,6 @@ $(call gb_ExternalProject_use_external_project,$(1),openldap)
 endef
 
 endif # SYSTEM_OPENLDAP
-
 
 ifneq ($(SYSTEM_LIBTOMMATH),)
 
@@ -2845,9 +3047,15 @@ endef
 
 else # !SYSTEM_POSTGRESQL
 
+ifeq ($(OS),WNT)
+$(eval $(call gb_Helper_register_packages_for_install,postgresqlsdbc,\
+	postgresql \
+))
+endif # WNT
+
 define gb_LinkTarget__use_postgresql
 
-$(call gb_LinkTarget_use_external_project,$(1),postgresql)
+$(call gb_LinkTarget_use_external_project,$(1),postgresql,full)
 
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,postgresql)/src/include \
@@ -2855,223 +3063,106 @@ $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
 )
 
+ifeq ($(OS),WNT)
+
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,postgresql)/$(gb_MSBUILD_CONFIG)/libpq/libpq.lib \
+)
+
+else # !WNT
+
 $(call gb_LinkTarget_add_libs,$(1),\
 	$(call gb_UnpackedTarball_get_dir,postgresql)/src/interfaces/libpq/libpq$(gb_StaticLibrary_PLAINEXT) \
+	$(call gb_UnpackedTarball_get_dir,postgresql)/src/common/libpgcommon$(gb_StaticLibrary_PLAINEXT) \
+	$(call gb_UnpackedTarball_get_dir,postgresql)/src/port/libpgport$(gb_StaticLibrary_PLAINEXT) \
+    $(if $(WITH_GSSAPI),$(GSSAPI_LIBS)) \
 )
 
-ifeq ($(OS)$(COM),WNTMSC)
-$(call gb_LinkTarget_use_external,$(1),openssl)
+endif # !WNT
 
-$(call gb_LinkTarget_use_system_win32_libs,$(1),\
-	secur32 \
-	ws2_32 \
-)
+endef # gb_LinkTarget__use_postgresql
 
-endif
+endif # !SYSTEM_POSTGRESQL
 
-endef
+ifneq (,$(filter TRUE,$(ENABLE_KF5) $(ENABLE_GTK3_KDE5)))
 
-endif # SYSTEM_POSTGRESQL
-
-ifneq ($(WITH_MOZAB4WIN),)
-
-$(eval $(call gb_Helper_register_packages_for_install,ooo,\
-	moz_runtime \
-))
-
-define gb_LinkTarget__use_mozilla
-
-$(call gb_LinkTarget_use_unpacked,$(1),moz_lib)
-$(call gb_LinkTarget_use_unpacked,$(1),moz_inc)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DMOZILLA_INTERNAL_API \
-)
-
+define gb_LinkTarget__use_kf5
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc) \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/addrbook \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/content \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/embed_base \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/intl \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/mime \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/mozldap \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/msgbase \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/necko \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/pref \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/profile \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/rdf \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/string \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/uconv \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/xpcom \
-	-I$(call gb_UnpackedTarball_get_dir,moz_inc)/xpcom_obsolete \
+	$(subst -isystem/,-isystem /,$(filter -I% -isystem%,$(subst -isystem /,-isystem/,$(KF5_CFLAGS)))) \
 	$$(INCLUDE) \
 )
-
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,nss)/dist/out/lib/nspr4.lib \
-	$(call gb_UnpackedTarball_get_dir,moz_lib)/xpcom.lib \
-	$(call gb_UnpackedTarball_get_dir,moz_lib)/xpcom_core.lib \
-)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DMOZILLA_CLIENT \
-	-DMOZ_REFLOW_PERF \
-	-DMOZ_REFLOW_PERF_DSP \
-	-DMOZ_XUL \
-	-DOJI \
-	-DWIN32 \
-	-DXP_PC \
-	-DXP_WIN \
-	-DXP_WIN32 \
-	-D_WINDOWS \
-)
-
-ifeq ($(COM),GCC)
 
 $(call gb_LinkTarget_add_cxxflags,$(1),\
-	-Wall \
-	-Wcast-align \
-	-Wconversion \
-	-Wno-long-long \
-	-Woverloaded-virtual \
-	-Wpointer-arith \
-	-Wsynth \
-	-fno-rtti \
+	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(KF5_CFLAGS))) \
 )
-
-else
-
-ifneq ($(DBG_LEVEL),0)
-$(call gb_LinkTarget_add_defs,$(1),\
-	-D_STL_NOFORCE_MANIFEST \
-)
-endif
 
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,moz_lib)/embed_base_s.lib \
-	$(call gb_UnpackedTarball_get_dir,moz_lib)/mozreg_s.lib \
+	$(KF5_LIBS) \
 )
-
-endif # !GCC
 
 endef
 
-endif # WITH_MOZAB4WIN
+else # !ENABLE_KF5
 
-ifeq ($(ENABLE_KDE),TRUE)
+define gb_LinkTarget__use_kf5
 
-define gb_LinkTarget__use_kde
+endef
+
+endif # ENABLE_KF5
+
+
+
+ifneq (,$(filter TRUE,$(ENABLE_QT5) $(ENABLE_GTK3_KDE5)))
+
+define gb_LinkTarget__use_qt5
 $(call gb_LinkTarget_set_include,$(1),\
-	$(subst -isystem/,-isystem /,$(filter -I% -isystem%,$(subst -isystem /,-isystem/,$(KDE_CFLAGS)))) \
+	$(subst -isystem/,-isystem /,$(filter -I% -isystem%,$(subst -isystem /,-isystem/,$(QT5_CFLAGS)))) \
 	$$(INCLUDE) \
 )
 
 $(call gb_LinkTarget_add_defs,$(1),\
-	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(KDE_CFLAGS))) \
+	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(QT5_CFLAGS))) \
 )
 
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(KDE_LIBS) \
+	$(QT5_LIBS) \
 )
-
-ifeq ($(COM),GCC)
-$(call gb_LinkTarget_add_cxxflags,$(1),\
-	-Wno-shadow \
-)
-endif
 
 endef
 
-else # !ENABLE_KDE
+else # !ENABLE_QT5
 
-define gb_LinkTarget__use_kde
+define gb_LinkTarget__use_qt5
 
 endef
 
-endif # ENABLE_KDE
+endif # ENABLE_QT5
 
+ifeq ($(ENABLE_QT6),TRUE)
 
-ifeq ($(ENABLE_KDE4),TRUE)
-
-define gb_LinkTarget__use_kde4
+define gb_LinkTarget__use_qt6
 $(call gb_LinkTarget_set_include,$(1),\
-	$(subst -isystem/,-isystem /,$(filter -I% -isystem%,$(subst -isystem /,-isystem/,$(KDE4_CFLAGS)))) \
+	$(subst -isystem/,-isystem /,$(filter -I% -isystem%,$(subst -isystem /,-isystem/,$(QT6_CFLAGS)))) \
 	$$(INCLUDE) \
 )
 
 $(call gb_LinkTarget_add_defs,$(1),\
-	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(KDE4_CFLAGS))) \
+	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(QT6_CFLAGS))) \
 )
 
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(KDE4_LIBS) \
-)
-
-ifeq ($(COM),GCC)
-$(call gb_LinkTarget_add_cxxflags,$(1),\
-	-Wno-shadow \
-)
-endif
-
-endef
-
-else # !ENABLE_KDE4
-
-define gb_LinkTarget__use_kde4
-
-endef
-
-endif # ENABLE_KDE4
-
-
-ifeq ($(ENABLE_TDE),TRUE)
-
-define gb_LinkTarget__use_tde
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(TDE_LIBS) \
-)
-
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(TDE_CFLAGS) \
-)
-endef
-
-else # ! ENABLE_TDE
-
-define gb_LinkTarget__use_tde
-
-endef
-
-endif # ENABLE_TDE
-
-
-ifeq ($(ENABLE_GCONF),TRUE)
-
-define gb_LinkTarget__use_gconf
-$(call gb_LinkTarget_set_include,$(1),\
-	$(subst -isystem/,-isystem /,$(filter -I% -isystem%,$(subst -isystem /,-isystem/,$(GCONF_CFLAGS)))) \
-	$$(INCLUDE) \
-)
-
-$(call gb_LinkTarget_add_defs,$(1),\
-	$(filter-out -I% -isystem%,$(subst -isystem /,-isystem/,$(GCONF_CFLAGS))) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(GCONF_LIBS) \
+	$(QT6_LIBS) \
 )
 
 endef
 
-else # !ENABLE_GCONF
+else # !ENABLE_QT6
 
-define gb_LinkTarget__use_gconf
+define gb_LinkTarget__use_qt6
 
 endef
 
-endif # ENABLE_GCONF
+endif # ENABLE_QT6
 
 
 # PYTHON
@@ -3127,14 +3218,14 @@ endif
 
 ifeq ($(OS),WNT)
 ifeq ($(CPUNAME),X86_64)
-python_arch_subdir=amd64
+python_arch_subdir=amd64/
 else ifeq ($(CPUNAME),AARCH64)
-python_arch_subdir=arm64
+python_arch_subdir=arm64/
 else
-python_arch_subdir=win32
+python_arch_subdir=win32/
 endif
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild/$(python_arch_subdir)/python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
+	$(call gb_UnpackedTarball_get_dir,python3)/PCbuild/$(python_arch_subdir)python$(PYTHON_VERSION_MAJOR)$(PYTHON_VERSION_MINOR)$(if $(MSVC_USE_DEBUG_RUNTIME),_d).lib \
 )
 else ifeq ($(OS),MACOSX)
 $(call gb_LinkTarget_add_libs,$(1),\
@@ -3158,8 +3249,6 @@ endef
 endif # SYSTEM_PYTHON
 
 # ORCUS
-ifeq ($(ENABLE_ORCUS),TRUE)
-
 ifneq ($(SYSTEM_LIBORCUS),)
 
 define gb_LinkTarget__use_orcus
@@ -3176,47 +3265,83 @@ endef
 
 else # !SYSTEM_LIBORCUS
 
+ifeq ($(COM),MSC)
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	orcus \
+	orcus-parser \
+))
+
 define gb_LinkTarget__use_orcus
-$(call gb_LinkTarget_use_external_project,$(1),liborcus)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
 	$$(INCLUDE) \
 )
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,liborcus)/src/liborcus/.libs/liborcus-0.8$(gb_StaticLibrary_PLAINEXT) \
-)
 
-$(if $(SYSTEM_BOOST), \
-    $(call gb_LinkTarget_add_ldflags,$(1),$(BOOST_LDFLAGS)) \
-    $(call gb_LinkTarget_add_libs,$(1),$(BOOST_SYSTEM_LIB)) \
+$(call gb_LinkTarget_use_libraries,$(1),\
+	orcus \
 )
 
 endef
 
 define gb_LinkTarget__use_orcus-parser
-$(call gb_LinkTarget_use_external_project,$(1),liborcus)
 $(call gb_LinkTarget_set_include,$(1),\
 	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
 	$$(INCLUDE) \
 )
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,liborcus)/src/parser/.libs/liborcus-parser-0.8$(gb_StaticLibrary_PLAINEXT) \
+
+$(call gb_LinkTarget_use_libraries,$(1),\
+	orcus-parser \
 )
 
 endef
 
+else # !MSC
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	liborcus \
+))
+
+define gb_LinkTarget__use_orcus
+$(call gb_LinkTarget_use_package,$(1),liborcus)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
+	$$(INCLUDE) \
+)
+
+$(call gb_LinkTarget_add_libs,$(1),\
+       -L$(call gb_UnpackedTarball_get_dir,liborcus)/src/liborcus/.libs -lorcus-0.17 \
+)
+
+$(if $(SYSTEM_BOOST), \
+	$(call gb_LinkTarget_add_ldflags,$(1),$(BOOST_LDFLAGS)) \
+	$(call gb_LinkTarget_add_libs,$(1),$(BOOST_SYSTEM_LIB)) \
+)
+
+endef
+
+define gb_LinkTarget__use_orcus-parser
+$(call gb_LinkTarget_use_package,$(1),liborcus)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,liborcus/include) \
+	$$(INCLUDE) \
+)
+
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,liborcus)/src/parser/.libs -lorcus-parser-0.17 \
+)
+
+endef
+
+endif # MSC
+
 endif # SYSTEM_LIBORCUS
 
-else # ENABLE_ORCUS != TRUE
 
-gb_LinkTarget__use_orcus :=
-gb_LinkTarget__use_orcus-parser :=
-
-endif
-
-ifeq ($(ENABLE_EOT),TRUE)
-
-ifneq ($(SYSTEM_LIBEOT),)
+ifeq ($(ENABLE_LIBEOT),TRUE)
+ifeq ($(SYSTEM_LIBEOT),TRUE)
 
 define gb_LinkTarget__use_libeot
 $(call gb_LinkTarget_set_include,$(1),\
@@ -3248,20 +3373,16 @@ $(call gb_ExternalProject_use_external_project,$(1),libeot)
 
 endef
 
-endif # SYSTEM_LIBEOT
-
-else # !ENABLE_EOT
+endif # !SYSTEM_LIBEOT
+else # !ENABLE_LIBEOT
 
 gb_LinkTarget__use_libeot :=
 gb_ExternalProject__use_libeot :=
 
-endif # ENABLE_EOT
+endif # !ENABLE_LIBEOT
 
-### X11 stuff ###
 
-ifeq ($(GUIBASE),unx)
-
-ifeq ($(XRANDR_DLOPEN),FALSE)
+ifeq ($(USING_X11), TRUE)
 
 define gb_LinkTarget__use_Xrandr
 $(call gb_LinkTarget_set_include,$(1),\
@@ -3274,16 +3395,6 @@ $(call gb_LinkTarget_add_libs,$(1),\
 )
 endef
 
-else # XRANDR_DLOPEN
-
-define gb_LinkTarget__use_Xrandr
-$(call gb_LinkTarget_add_defs,$(1),\
-	-DXRANDR_DLOPEN \
-)
-endef
-
-endif # XRANDR_DLOPEN
-
 define gb_LinkTarget__use_Xrender
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
@@ -3295,16 +3406,11 @@ $(call gb_LinkTarget_add_libs,$(1),\
 )
 endef
 
-endif # GUIBASE=unx
+endif # USING_X11
 
 
 gb_ExternalProject__use_nss3:=
 
-ifeq ($(OS),ANDROID)
-
-gb_LinkTarget__use_nss3:=
-
-else
 
 ifneq ($(SYSTEM_NSS),)
 
@@ -3321,6 +3427,11 @@ $(call gb_LinkTarget_set_include,$(1),\
 $(call gb_LinkTarget_add_libs,$(1),\
     $(NSS_LIBS) \
 )
+
+endef
+
+define gb_LinkTarget__use_nssutil3
+$(call gb_LinkTarget__use_nss3,$(1))
 
 endef
 
@@ -3393,6 +3504,27 @@ endif
 
 endef
 
+define gb_LinkTarget__use_nssutil3
+$(call gb_LinkTarget_use_package,$(1),nss)
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	-I$(call gb_UnpackedTarball_get_dir,nss)/dist/public/nss \
+	-I$(call gb_UnpackedTarball_get_dir,nss)/dist/out/include \
+)
+
+ifeq ($(COM),MSC)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,nss)/dist/out/lib/nssutil3.lib \
+)
+else
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,nss)/dist/out/lib \
+	-lnssutil3 \
+)
+endif
+
+endef
+
 define gb_ExternalProject__use_nss3
 $(call gb_ExternalProject_use_package,$(1),nss)
 
@@ -3400,96 +3532,168 @@ endef
 
 endif # SYSTEM_NSS
 
-endif # DESKTOP
+ifeq ($(ENABLE_BREAKPAD),TRUE)
 
-ifeq ($(ENABLE_GLTF),TRUE)
-
-ifneq ($(SYSTEM_LIBGLTF),TRUE)
-
-define gb_LinkTarget__use_libgltf
+define gb_LinkTarget__use_breakpad
 $(call gb_LinkTarget_set_include,$(1),\
-    -I$(call gb_UnpackedTarball_get_dir,libgltf)/inc \
+    -I$(call gb_UnpackedTarball_get_dir,breakpad)/src \
     $$(INCLUDE) \
 )
 
 ifeq ($(COM),MSC)
-$(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,libgltf)/build/win32/$(if $(MSVC_USE_DEBUG_RUNTIME),Debug/libgltf.lib,Release/libgltf.lib) \
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+    breakpad \
 )
 else
 $(call gb_LinkTarget_add_libs,$(1),\
-	$(call gb_UnpackedTarball_get_dir,libgltf)/src/.libs/libgltf-0.0$(gb_StaticLibrary_PLAINEXT) \
+	$(call gb_UnpackedTarball_get_dir,breakpad)/src/client/linux/libbreakpad_client.a \
 )
 endif
 
-$(call gb_LinkTarget_use_external_project,$(1),libgltf)
+$(call gb_LinkTarget_use_external_project,$(1),breakpad)
 
 endef
 
-else # SYSTEM_LIBGLTF
+endif # ENABLE_BREAKPAD
 
-define gb_LinkTarget__use_libgltf
+ifeq ($(ENABLE_GPGMEPP),TRUE)
+
+ifneq ($(SYSTEM_GPGMEPP),)
+
+gb_ExternalProject__use_gpgmepp:=
+gb_ExternalProject__use_libassuan:=
+gb_ExternalProject__use_libgpg-error:=
+
+define gb_LinkTarget__use_gpgmepp
 $(call gb_LinkTarget_set_include,$(1),\
 	$$(INCLUDE) \
-	$(LIBGLTF_CFLAGS) \
+	$$(GPGMEPP_CFLAGS) \
 )
-$(call gb_LinkTarget_add_libs,$(1),$(LIBGLTF_LIBS))
+
+$(call gb_LinkTarget_add_libs,$(1),\
+    $(GPGMEPP_LIBS) \
+)
 
 endef
 
-endif # SYSTEN_LIBGLTF
+else ifneq ($(filter GPGMEPP,$(BUILD_TYPE)),) # NON-SYSTEM_GPGME
 
-ifeq ($(ENABLE_COLLADA),TRUE)
+define gb_ExternalProject__use_gpgmepp
+$(call gb_ExternalProject_use_external_project,$(1),gpgmepp)
 
-ifeq ($(SYSTEM_OPENCOLLADA),TRUE)
+endef
+define gb_ExternalProject__use_libassuan
+$(call gb_ExternalProject_use_external_project,$(1),libassuan)
 
-define gb_LinkTarget__use_opencollada_parser
-$(call gb_LinkTarget_set_include,$(1),\
-	$$(INCLUDE) \
-	$(OPENCOLLADA_CFLAGS) \
-)
-
-$(call gb_LinkTarget_add_libs,$(1),$(OPENCOLLADA_LIBS))
+endef
+define gb_ExternalProject__use_libgpg-error
+$(call gb_ExternalProject_use_external_project,$(1),libgpg-error)
 
 endef
 
-else # !SYSTEM_OPENCOLLADA
+ifneq ($(filter WNT,$(OS)),)
 
-define gb_LinkTarget__use_opencollada_parser
+define gb_LinkTarget__use_libgpg-error
+$(call gb_LinkTarget_use_package,$(1),libgpg-error)
+
 $(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,opencollada)/COLLADABaseUtils/include \
-	-I$(call gb_UnpackedTarball_get_dir,opencollada)/COLLADAFramework/include \
-	-I$(call gb_UnpackedTarball_get_dir,opencollada)/COLLADASaxFrameworkLoader/include \
-	-I$(call gb_UnpackedTarball_get_dir,opencollada)/GeneratedSaxParser/include \
-	$$(INCLUDE) \
-)
-
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	opencollada_parser \
-)
-endef
-
-endif # SYSTEM_OPENCOLLADA
-
-define gb_LinkTarget__use_collada2gltf
-$(call gb_LinkTarget_set_include,$(1),\
-	-I$(call gb_UnpackedTarball_get_dir,collada2gltf) \
-	-I$(call gb_UnpackedTarball_get_dir,collada2gltf)/assetModifiers \
-	-I$(call gb_UnpackedTarball_get_dir,collada2gltf)/GLTF \
-	-I$(call gb_UnpackedTarball_get_dir,collada2gltf)/helpers \
-	-I$(call gb_UnpackedTarball_get_dir,collada2gltf)/JSON \
-	-I$(call gb_UnpackedTarball_get_dir,collada2gltf)/dependencies/json/include/rapidjson/ \
+	$(GPG_ERROR_CFLAGS) \
 	$$(INCLUDE) \
 )
-
-$(call gb_LinkTarget_use_static_libraries,$(1),\
-	collada2gltf \
+$(call gb_LinkTarget_add_libs,$(1),\
+       -LIBPATH:$(call gb_UnpackedTarball_get_dir,libgpg-error)/src/.libs libgpg-error.lib \
 )
+
 endef
 
-endif # ENABLE_COLLADA
+define gb_LinkTarget__use_libassuan
+$(call gb_LinkTarget_use_package,$(1),libassuan)
 
-endif # ENABLE_GLTF
+$(call gb_LinkTarget_set_include,$(1),\
+	$(LIBASSUAN_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+       -LIBPATH:$(call gb_UnpackedTarball_get_dir,libassuan)/src/.libs libassuan.lib \
+)
+
+endef
+
+define gb_LinkTarget__use_gpgmepp
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,gpgmepp)/lang/cpp/src \
+	-I$(call gb_UnpackedTarball_get_dir,gpgmepp)/src \
+	$$(GPG_ERROR_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_libraries,$(1),\
+	gpgmepp \
+)
+
+endef
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	gpgmepp \
+	libassuan \
+	libgpg-error \
+))
+
+$(eval $(call gb_Helper_register_libraries_for_install,PLAINLIBS_OOO,ooo,\
+	gpgmepp \
+))
+
+endif
+
+ifneq ($(filter MACOSX LINUX,$(OS)),)
+
+define gb_LinkTarget__use_gpgmepp
+$(call gb_LinkTarget_use_package,$(1),gpgmepp)
+
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,gpgmepp)/lang/cpp/src \
+	-I$(call gb_UnpackedTarball_get_dir,gpgmepp)/src \
+	$$(GPG_ERROR_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,gpgmepp)/lang/cpp/src/.libs/ -lgpgmepp \
+	$(if $(filter TRUE,$(DISABLE_DYNLOADING)),-L$(call gb_UnpackedTarball_get_dir,gpgmepp)/src/.libs/ -lgpgme) \
+	$(if $(filter TRUE,$(DISABLE_DYNLOADING)),$$(GPG_ERROR_LIBS)) \
+	$(if $(filter TRUE,$(DISABLE_DYNLOADING)),$$(LIBASSUAN_LIBS)) \
+)
+
+endef
+
+$(eval $(call gb_Helper_register_packages_for_install,ooo,\
+	gpgmepp \
+	libassuan \
+	libgpg-error \
+))
+
+endif
+
+endif
+
+else # !ENABLE_GPGMEPP
+
+gb_ExternalProject__use_gpgmepp :=
+gb_ExternalProject__use_libassuan :=
+gb_ExternalProject__use_libgpg-error :=
+
+gb_LinkTarget__use_gpgmepp :=
+gb_LinkTarget__use_libassuan :=
+gb_LinkTarget__use_libgpg-error :=
+
+endif # ENABLE_GPGMEPP
+
+define gb_LinkTarget__use_dconf
+$(call gb_LinkTarget_set_include,$(1),\
+		$$(INCLUDE) \
+		$(DCONF_CFLAGS) \
+)
+
+$(call gb_LinkTarget_add_libs,$(1),$(DCONF_LIBS))
+endef
 
 ### Jars ############################################################
 
@@ -3567,82 +3771,6 @@ endef
 endif # SYSTEM_RHINO
 
 endif
-
-ifneq ($(SYSTEM_APACHE_COMMONS),)
-
-define gb_Jar__use_commons-codec
-$(call gb_Jar_use_system_jar,$(1),$(COMMONS_CODEC_JAR))
-endef
-gb_ExternalProject__use_commons-codec :=
-
-define gb_Jar__use_commons-httpclient
-$(call gb_Jar_use_system_jar,$(1),$(COMMONS_HTTPCLIENT_JAR))
-endef
-gb_ExternalProject__use_commons-httpclient :=
-
-define gb_Jar__use_commons-lang
-$(call gb_Jar_usadd_linked_libse_system_jar,$(1),$(COMMONS_LANG_JAR))
-endef
-gb_ExternalProject__use_commons-lang :=
-
-define gb_Jar__use_commons-logging
-$(call gb_Jar_use_system_jar,$(1),$(COMMONS_LOGGING_JAR))
-endef
-gb_ExternalProject__use_commons-logging :=
-
-else # !SYSTEM_APACHE_COMMONS
-
-ifeq ($(ENABLE_JAVA),TRUE)
-$(eval $(call gb_Helper_register_jars_for_install,OOO,reportbuilder,\
-	commons-logging-$(COMMONS_LOGGING_VERSION) \
-))
-endif
-$(eval $(call gb_Helper_register_jars,OXT,\
-	$(if $(filter TRUE,$(HAVE_JAVA6)),commons-codec-1.9,commons-codec-1.6) \
-	commons-httpclient-3.1 \
-	$(if $(filter TRUE,$(HAVE_JAVA6)),commons-lang3-3.3.1.jar,commons-lang-2.4) \
-))
-
-define gb_Jar__use_commons-codec
-$(call gb_Jar_use_external_project,$(1),apache_commons_codec)
-$(call gb_Jar_use_external_jar,$(1),$(call gb_UnpackedTarball_get_dir,apache_commons_codec)\
-$(if $(filter TRUE,$(HAVE_JAVA6)),/dist/commons-codec-1.9.jar,/dist/commons-codec-1.6.jar),\
-$(if $(filter TRUE,$(HAVE_JAVA6)),commons-codec-1.9.jar,commons-codec-1.6.jar)\
-)
-endef
-define gb_ExternalProject__use_commons-codec
-$(call gb_ExternalProject_use_external_project,$(1),apache_commons_codec)
-endef
-
-define gb_Jar__use_commons-httpclient
-$(call gb_Jar_use_external_project,$(1),apache_commons_httpclient)
-$(call gb_Jar_use_external_jar,$(1),$(call gb_UnpackedTarball_get_dir,apache_commons_httpclient)/dist/commons-httpclient.jar,commons-httpclient-3.1.jar)
-endef
-define gb_ExternalProject__use_commons-httpclient
-$(call gb_ExternalProject_use_external_project,$(1),apache_commons_httpclient)
-endef
-
-define gb_Jar__use_commons-lang
-$(call gb_Jar_use_external_project,$(1),apache_commons_lang)
-$(call gb_Jar_use_external_jar,$(1),$(call gb_UnpackedTarball_get_dir,apache_commons_lang)\
-$(if $(filter TRUE,$(HAVE_JAVA6)),/target/commons-lang3-3.3.1.jar,/dist/commons-lang-2.4.jar),\
-$(if $(filter TRUE,$(HAVE_JAVA6)),commons-lang3-3.3.1.jar,commons-lang-2.4.jar)\
-)
-endef
-define gb_ExternalProject__use_commons-lang
-$(call gb_ExternalProject_use_external_project,$(1),apache_commons_lang)
-endef
-
-define gb_Jar__use_commons-logging
-$(call gb_Jar_use_external_project,$(1),apache_commons_logging)
-$(call gb_Jar_use_jar,$(1),commons-logging-$(COMMONS_LOGGING_VERSION))
-endef
-define gb_ExternalProject__use_commons-logging
-$(call gb_ExternalProject_use_external_project,$(1),apache_commons_logging)
-endef
-
-endif # SYSTEM_APACHE_COMMONS
-
 
 ifneq ($(SYSTEM_JFREEREPORT),)
 
@@ -3757,65 +3885,45 @@ endif # SYSTEM_JFREEREPORT
 
 # Executables
 
-# FIXME: the library target should be for build too
 define gb_Executable__register_bestreversemap
 $(call gb_Executable_add_runtime_dependencies,bestreversemap,\
-	$(if $(filter-out ANDROID,$(OS)),$(call gb_Library_get_target,sal_textenc)) \
+    $(call gb_CondLibSalTextenc,$(call gb_Library_get_target_for_build,sal_textenc)) \
 )
 endef
 
 # TODO depending on the whole URE might be overkill, but I do not have a
 # Windows machine to debug it...
-# FIXME: the library target should be for build too
 define gb_Executable__register_climaker
 $(call gb_Executable_add_runtime_dependencies,climaker,\
-	$(call gb_Library_get_target,$(gb_CPPU_ENV)_uno) \
-	$(call gb_Rdb_get_target_for_build,ure/services) \
-	$(INSTROOT)/$(LIBO_URE_SHARE_FOLDER)/misc/services.rdb \
-	$(call gb_UnoApi_get_target,udkapi) \
+	$(call gb_Library_get_target_for_build,$(CPPU_ENV_FOR_BUILD)_uno) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_MISC_FOLDER)/services.rdb \
+	$(call gb_UnoApi_get_target_for_build,udkapi) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_ETC_FOLDER)/$(call gb_Helper_get_rcfile,uno)
 )
 endef
 
 define gb_Executable__register_cppumaker
 $(call gb_Executable_add_runtime_dependencies,cppumaker,\
-	$(if $(filter-out ANDROID,$(OS)),$(call gb_Library_get_target,sal_textenc)) \
+    $(call gb_CondLibSalTextenc,$(call gb_Library_get_target,sal_textenc)) \
 )
 endef
-
-gb_Gallery__UNO_COMPONENTS := \
-	comphelper/util/comphelp \
-	configmgr/source/configmgr \
-	drawinglayer/drawinglayer \
-	framework/util/fwk \
-	i18npool/util/i18npool \
-	package/source/xstor/xstor \
-	package/util/package2 \
-	sax/source/expatwrap/expwrap \
-	sfx2/util/sfx \
-	svgio/svgio \
-	svx/util/svx \
-	svx/util/svxcore \
-	ucb/source/core/ucb1 \
-	ucb/source/ucp/file/ucpfile1 \
-	unoxml/source/service/unoxml
 
 # This is used to determine what we need for 'build' platform.
 define gb_Executable__register_gengal
 $(call gb_Executable_add_runtime_dependencies,gengal,\
-	$(foreach component,$(gb_Gallery__UNO_COMPONENTS) \
-	,$(call gb_ComponentTarget_get_target_for_build,$(component))) \
-	$(call gb_AllLangResTarget_get_target,ofa) \
-	$(call gb_Library_get_target,$(gb_CPPU_ENV)_uno) \
-	$(if $(filter-out MACOSX WNT,$(OS_FOR_BUILD)),$(if $(ENABLE_HEADLESS),, \
-		$(call gb_Library_get_target,vclplug_svp) \
-	)) \
-	$(call gb_Package_get_target_for_build,postprocess_images) \
+	$(call gb_Library_get_target_for_build,$(CPPU_ENV_FOR_BUILD)_uno) \
+	$(call gb_Library_get_target_for_build,localedata_en) \
+	$(if $(filter MACOSX,$(OS_FOR_BUILD)),$(call gb_Library_get_target_for_build,vclplug_osx)) \
+	$(if $(filter WNT,$(OS_FOR_BUILD)),$(call gb_Library_get_target_for_build,vclplug_win)) \
+	$(if $(filter host,$(gb_Side)),$(call gb_Package_get_target,postprocess_images)) \
 	$(call gb_Package_get_target_for_build,postprocess_registry) \
-	$(call gb_Package_get_target_for_build,instsetoo_native_setup_ure) \
-	$(call gb_Rdb_get_target_for_build,ure/services) \
-	$(INSTROOT)/$(LIBO_URE_SHARE_FOLDER)/misc/services.rdb \
-	$(call gb_UnoApi_get_target,offapi) \
-	$(call gb_UnoApi_get_target,udkapi) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_ETC_FOLDER)/$(call gb_Helper_get_rcfile,uno) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_ETC_FOLDER)/$(call gb_Helper_get_rcfile,fundamental) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_ETC_FOLDER)/$(call gb_Helper_get_rcfile,louno) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_MISC_FOLDER)/services.rdb \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_ETC_FOLDER)/services/services.rdb \
+	$(call gb_UnoApi_get_target_for_build,offapi) \
+	$(call gb_UnoApi_get_target_for_build,udkapi) \
 )
 endef
 
@@ -3824,6 +3932,7 @@ ifeq ($(SYSTEM_ICU),)
 define gb_Executable__register_gendict
 $(call gb_Executable_add_runtime_dependencies,gendict,\
 	$(call gb_Package_get_target_for_build,icu) \
+	$(call gb_Package_get_target_for_build,icu_ure) \
 )
 endef
 
@@ -3837,7 +3946,7 @@ endef
 
 define gb_Executable__register_localize
 $(call gb_Executable_add_runtime_dependencies,localize,\
-	$(foreach exec,cfgex helpex propex transex3 treex uiex ulfex xrmex,\
+	$(foreach exec,cfgex helpex propex treex ulfex xrmex,\
 		$(call gb_Executable_get_runtime_dependencies,$(exec)) \
 	) \
 )
@@ -3846,28 +3955,24 @@ endef
 # FIXME ure/services.rdb needs cleanup
 # The dependencies on ure/services.rdb and udkapi.rdb are implicitly required
 # due to the settings for URE_SERVICES and URE_TYPES in cppuhelper/source/unorc:
-# FIXME: the library target should be for build too
 define gb_Executable__register_saxparser
 $(call gb_Executable_add_runtime_dependencies,saxparser,\
-	$(call gb_Library_get_target,$(gb_CPPU_ENV)_uno) \
+	$(call gb_Library_get_target_for_build,$(CPPU_ENV_FOR_BUILD)_uno) \
 	$(call gb_Package_get_target_for_build,instsetoo_native_setup_ure) \
 	$(call gb_Rdb_get_target_for_build,saxparser) \
-	$(call gb_Rdb_get_target_for_build,ure/services) \
-	$(INSTROOT)/$(LIBO_URE_SHARE_FOLDER)/misc/services.rdb \
-	$(call gb_UnoApi_get_target,udkapi) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_MISC_FOLDER_FOR_BUILD)/services.rdb \
+	$(call gb_UnoApi_get_target_for_build,udkapi) \
 )
 endef
 
 # NOTE: the dependencies on ure/services.rdb and udkapi.rdb are implicitly
 # required due to the settings for URE_SERVICES and URE_TYPES in
 # cppuhelper/source/unorc
-# FIXME: the library target should be for build too
 define gb_Executable__register_uno
 $(call gb_Executable_add_runtime_dependencies,uno,\
-	$(call gb_Library_get_target,$(gb_CPPU_ENV)_uno) \
-	$(call gb_Rdb_get_target_for_build,ure/services) \
-	$(INSTROOT)/$(LIBO_URE_SHARE_FOLDER)/misc/services.rdb \
-	$(call gb_UnoApi_get_target,udkapi) \
+	$(call gb_Library_get_target_for_build,$(CPPU_ENV_FOR_BUILD)_uno) \
+	$(INSTROOT_FOR_BUILD)/$(LIBO_URE_MISC_FOLDER)/services.rdb \
+	$(call gb_UnoApi_get_target_for_build,udkapi) \
 )
 endef
 
@@ -3881,10 +3986,10 @@ gb_ExternalExecutable__register_xmllint :=
 else # ! SYSTEM_LIBXML_FOR_BUILD
 
 define gb_ExternalExecutable__register_xmllint
-$(call gb_ExternalExecutable_set_internal,xmllint,$(WORKDIR_FOR_BUILD)/UnpackedTarball/xml2/$(if $(filter MSC,$(COM)),win32/bin.msvc)/xmllint$(gb_Executable_EXT_for_build),xml2)
+$(call gb_ExternalExecutable_set_internal,xmllint,$(WORKDIR_FOR_BUILD)/UnpackedTarball/libxml2/$(if $(filter MSC,$(COM)),win32/bin.msvc)/xmllint$(gb_Executable_EXT_for_build),libxml2)
 $(call gb_ExternalExecutable_add_dependencies,xmllint,\
 	$(if $(filter WNT,$(OS)),$(call gb_Package_get_target,icu_ure)) \
-	$(call gb_Package_get_target,xml2) \
+	$(call gb_Package_get_target,libxml2) \
 )
 
 endef
@@ -3898,10 +4003,11 @@ gb_ExternalExecutable__register_xsltproc :=
 else # ! SYSTEM_LIBXSLT_FOR_BUILD
 
 define gb_ExternalExecutable__register_xsltproc
-$(call gb_ExternalExecutable_set_internal,xsltproc,$(WORKDIR_FOR_BUILD)/UnpackedTarball/xslt/$(if $(filter MSC,$(COM)),win32/bin.msvc,xsltproc)/xsltproc$(gb_Executable_EXT_for_build),xslt)
+$(call gb_ExternalExecutable_set_internal,xsltproc,$(WORKDIR_FOR_BUILD)/UnpackedTarball/libxslt/$(if $(filter MSC,$(COM)),win32/bin.msvc,xsltproc)/xsltproc$(gb_Executable_EXT_for_build),libxslt)
 $(call gb_ExternalExecutable_add_dependencies,xsltproc,\
 	$(if $(filter WNT,$(OS)),$(call gb_Package_get_target,icu_ure)) \
-	$(call gb_Package_get_target,xslt) \
+	$(call gb_Package_get_target,libxml2) \
+	$(call gb_Package_get_target,libxslt) \
 )
 
 endef
@@ -3967,6 +4073,7 @@ $(call gb_ExternalExecutable_set_internal,genbrk,$(WORKDIR_FOR_BUILD)/UnpackedTa
 $(call gb_ExternalExecutable_set_precommand,genbrk,$(subst $$,$$$$,$(gb_ICU_PRECOMMAND)))
 $(call gb_ExternalExecutable_add_dependencies,genbrk,\
 	$(call gb_Package_get_target_for_build,icu) \
+	$(call gb_Package_get_target_for_build,icu_ure) \
 )
 
 endef
@@ -3987,6 +4094,7 @@ $(call gb_ExternalExecutable_set_internal,genccode,$(WORKDIR_FOR_BUILD)/Unpacked
 $(call gb_ExternalExecutable_set_precommand,genccode,$(subst $$,$$$$,$(gb_ICU_PRECOMMAND)))
 $(call gb_ExternalExecutable_add_dependencies,genccode,\
 	$(call gb_Package_get_target_for_build,icu) \
+	$(call gb_Package_get_target_for_build,icu_ure) \
 )
 
 endef
@@ -4007,10 +4115,196 @@ $(call gb_ExternalExecutable_set_internal,gencmn,$(WORKDIR_FOR_BUILD)/UnpackedTa
 $(call gb_ExternalExecutable_set_precommand,gencmn,$(subst $$,$$$$,$(gb_ICU_PRECOMMAND)))
 $(call gb_ExternalExecutable_add_dependencies,gencmn,\
 	$(call gb_Package_get_target_for_build,icu) \
+	$(call gb_Package_get_target_for_build,icu_ure) \
 )
 
 endef
 
 endif
+
+ifneq ($(ENABLE_ONLINE_UPDATE_MAR),)
+ifneq ($(SYSTEM_BZIP2),)
+
+define gb_LinkTarget__use_bzip2
+$(call gb_LinkTarget_set_include,$(1),\
+	$(BZIP2_CFLAGS) \
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(BZIP2_LIBS))
+
+endef
+
+gb_ExternalProject__use_bzip2 :=
+
+else # !SYSTEM_BZIP2
+
+define gb_LinkTarget__use_bzip2
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,bzip2) \
+	$$(INCLUDE) \
+)
+
+ifeq ($(COM),MSC)
+$(call gb_LinkTarget_add_libs,$(1),\
+	$(call gb_UnpackedTarball_get_dir,bzip2)/libbz2.lib \
+)
+else
+$(call gb_LinkTarget_add_libs,$(1),\
+	-L$(call gb_UnpackedTarball_get_dir,bzip2) -lbz2 \
+)
+endif
+
+$(call gb_LinkTarget_use_external_project,$(1),bzip2)
+endef
+
+define gb_ExternalProject__use_bzip2
+$(call gb_ExternalProject_use_external_project,$(1),bzip2)
+endef
+
+endif
+endif
+
+define gb_LinkTarget__use_clew
+$(call gb_LinkTarget_set_include,$(1), \
+    -I$(SRCDIR)/external/clew/source/include \
+    $$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_libraries,$(1),clew)
+endef
+
+ifneq ($(ENABLE_PDFIUM),)
+define gb_LinkTarget__use_pdfium
+$(call gb_LinkTarget_set_include,$(1),\
+       -I$(call gb_UnpackedTarball_get_dir,pdfium)/public \
+       -DCOMPONENT_BUILD \
+       $$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_libraries,$(1),pdfium)
+endef
+$(eval $(call gb_Helper_register_libraries_for_install,OOOLIBS,ooo,\
+       pdfium \
+))
+endif
+
+ifneq ($(SYSTEM_DRAGONBOX),)
+
+define gb_LinkTarget__use_dragonbox
+$(call gb_LinkTarget_set_include,$(1),\
+	$$(INCLUDE) \
+	$$(DRAGONBOX_CFLAGS) \
+)
+endef
+
+else
+
+define gb_LinkTarget__use_dragonbox
+$(call gb_LinkTarget_use_unpacked,$(1),dragonbox)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,dragonbox/include/)\
+	$$(INCLUDE) \
+)
+endef
+
+endif
+
+define gb_LinkTarget__use_dtoa
+$(call gb_LinkTarget_use_unpacked,$(1),dtoa)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,dtoa/include/)\
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+	dtoa \
+)
+
+endef
+
+define gb_ExternalProject__use_dtoa
+$(call gb_ExternalProject_use_static_libraries,$(1),dtoa)
+
+endef
+
+$(eval $(call gb_Helper_register_packages_for_install,ucrt_binarytable,\
+	$(if $(UCRT_REDISTDIR),ucrt) \
+))
+
+ifneq ($(SYSTEM_BOX2D),)
+
+define gb_LinkTarget__use_box2d
+$(call gb_LinkTarget_set_include,$(1),\
+	-DSYSTEM_BOX2D \
+	$$(INCLUDE) \
+	$(BOX2D_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(BOX2D_LIBS))
+
+endef
+
+gb_ExternalProject__use_box2d :=
+
+else # !SYSTEM_BOX2D
+
+define gb_LinkTarget__use_box2d
+$(call gb_LinkTarget_use_unpacked,$(1),box2d)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,box2d/include/)\
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+	box2d \
+)
+
+endef
+
+define gb_ExternalProject__use_box2d
+$(call gb_ExternalProject_use_static_libraries,$(1),box2d)
+
+endef
+
+endif # SYSTEM_BOX2D
+
+ifneq ($(SYSTEM_ZXING),)
+
+define gb_LinkTarget__use_zxing
+$(call gb_LinkTarget_set_include,$(1),\
+	-DSYSTEM_ZXING \
+	$$(INCLUDE) \
+	$(ZXING_CFLAGS) \
+)
+$(call gb_LinkTarget_add_libs,$(1),$(ZXING_LIBS))
+
+endef
+
+gb_ExternalProject__use_zxing :=
+
+else # !SYSTEM_ZXING
+
+ifneq ($(ENABLE_ZXING),)
+
+define gb_LinkTarget__use_zxing
+$(call gb_LinkTarget_use_unpacked,$(1),zxing)
+$(call gb_LinkTarget_set_include,$(1),\
+	-I$(call gb_UnpackedTarball_get_dir,zxing/core/src/)\
+	$$(INCLUDE) \
+)
+$(call gb_LinkTarget_use_static_libraries,$(1),\
+	zxing \
+)
+
+endef
+
+define gb_ExternalProject__use_zxing
+$(call gb_ExternalProject_use_static_libraries,$(1),zxing)
+
+endef
+
+else # !ENABLE_ZXING
+
+define gb_LinkTarget__use_zxing
+endef
+
+endif # ENABLE_ZXING
+
+endif # SYSTEM_ZXING
 
 # vim: set noet sw=4 ts=4:
