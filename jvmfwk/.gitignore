@@ -12,7 +12,6 @@ plugins/sunmajor/pluginlib/sunversion.hxx
 plugins/sunmajor/pluginlib/util_cocoa.mm.orig
 plugins/sunmajor/pluginlib/util.cxx.orig
 plugins/sunmajor/pluginlib/sunjre.cxx.orig
-plugins/sunmajor/pluginlib/sunversion.cxx
 plugins/sunmajor/pluginlib/sunjavapluginrc
 plugins/sunmajor/pluginlib/util_cocoa.mm
 plugins/sunmajor/pluginlib/diagnostics.h

@@ -48,6 +48,14 @@
 #include <accessibilityoptions.hxx>
 #include <switerator.hxx>
 
+#ifdef USE_JAVA
+
+#include <unordered_map>
+
+static ::std::unordered_map< const SwViewShell*, const SwViewShell* > aViewShellMap;
+
+#endif	// USE_JAVA
+
 void SwViewShell::Init( const SwViewOption *pNewOpt )
 {
     mbDocSizeChgd = false;
@@ -264,6 +272,10 @@ SwViewShell::SwViewShell( SwDoc& rDocument, vcl::Window *pWindow,
 
     // OD 2004-06-01 #i26791#
     mbInConstructor = false;
+
+#ifdef USE_JAVA
+    aViewShellMap[ this ] = this;
+#endif	// USE_JAVA
 }
 
 /// CTor for further Shells on a document.
@@ -360,6 +372,9 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
     // OD 2004-06-01 #i26791#
     mbInConstructor = false;
 
+#ifdef USE_JAVA
+    aViewShellMap[ this ] = this;
+#endif	// USE_JAVA
 }
 
 SwViewShell::~SwViewShell()
@@ -417,6 +432,15 @@ SwViewShell::~SwViewShell()
 
         delete mpImp; // Delete first, so that the LayoutViews are destroyed.
         mpImp = 0;   // Set to zero, because ~SwFrm relies on it.
+
+#ifdef USE_JAVA
+        // SwAccessibleMap's dtor calls a method on this instance so remove
+        // this instance from the list of valid view shell's after mpImp has
+        // been deleted
+        ::std::unordered_map< const SwViewShell*, const SwViewShell* >::iterator it = aViewShellMap.find( this );
+        if ( it != aViewShellMap.end() )
+            aViewShellMap.erase( it );
+#endif	// USE_JAVA
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if ( mpDoc )
@@ -498,5 +522,15 @@ SdrView* SwViewShell::GetDrawViewWithValidMarkList()
     pDView->ValidateMarkList();
     return pDView;
 }
+
+#ifdef USE_JAVA
+
+bool ImplIsValidSwViewShell( const SwViewShell *pViewShell )
+{
+    ::std::unordered_map< const SwViewShell*, const SwViewShell* >::const_iterator it = aViewShellMap.find( pViewShell );
+    return ( it != aViewShellMap.end() ? true : false );
+}
+
+#endif	// USE_JAVA
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

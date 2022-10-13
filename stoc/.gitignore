@@ -83,7 +83,6 @@ source/javavm/interact.hxx
 source/javavm/jvmargs.cxx
 source/javavm/javavm.component
 source/javavm/javavm.hxx
-source/javavm/javavm.cxx
 source/javavm/interact.cxx
 source/javavm/jvmargs.hxx
 source/uriproc/UriReferenceFactory.cxx
