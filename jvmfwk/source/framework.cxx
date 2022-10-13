@@ -367,17 +367,6 @@ javaFrameworkError SAL_CALL jfw_startVM(
         if (plerr == JFW_PLUGIN_E_VM_CREATION_FAILED)
         {
             errcode = JFW_E_VM_CREATION_FAILED;
-#ifdef USE_JAVA
-            // If loading of the JVM fails, search for an alternative JVM
-            static bool bInFallback = false;
-            if ( !bInFallback )
-            {
-                bInFallback = true;
-                if ( jfw_findAndSelectJRE( NULL ) == JFW_E_NONE )
-                    errcode = JFW_E_NO_SELECT;
-                bInFallback = false;
-            }
-#endif	// USE_JAVA
         }
         else if (plerr != JFW_PLUGIN_E_NONE )
         {
