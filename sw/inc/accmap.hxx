@@ -42,10 +42,13 @@
 #include <memory>
 #endif	// !NO_LIBO_BUG_58624_FIX
 #include <set>
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
+#include "viewsh.h"
+#ifdef MACOSX
 #include <osl/thread.hxx>
 #include <vcl/a11y.h>
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
+#endif	// USE_JAVA
 
 class SwAccessibleParagraph;
 
@@ -209,6 +212,12 @@ public:
 
     inline SwViewShell* GetShell() const
     {
+#ifdef USE_JAVA
+        // Attempt to fix Mac App Store crash by checking if mpVSh has already
+        // been deleted
+        if ( mpVSh && !ImplIsValidSwViewShell( mpVSh ) )
+            return nullptr;
+#endif	// USE_JAVA
         return mpVSh;
     }
     bool IsInSameLevel(const SdrObject* pObj, const SwFEShell* pFESh);
