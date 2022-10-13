@@ -379,12 +379,6 @@ SwViewShell::SwViewShell( SwViewShell& rShell, vcl::Window *pWindow,
 
 SwViewShell::~SwViewShell()
 {
-#ifdef USE_JAVA
-    ::std::unordered_map< const SwViewShell*, const SwViewShell* >::iterator it = aViewShellMap.find( this );
-    if ( it != aViewShellMap.end() )
-        aViewShellMap.erase( it );
-#endif	// USE_JAVA
-
 #ifndef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
 #ifdef USE_JAVA
     IDocumentLayoutAccess * pLayoutAccess = mxDoc.get() ? &mxDoc->getIDocumentLayoutAccess() : nullptr;
@@ -438,6 +432,15 @@ SwViewShell::~SwViewShell()
 
         delete mpImp; // Delete first, so that the LayoutViews are destroyed.
         mpImp = 0;   // Set to zero, because ~SwFrm relies on it.
+
+#ifdef USE_JAVA
+        // SwAccessibleMap's dtor calls a method on this instance so remove
+        // this instance from the list of valid view shell's after mpImp has
+        // been deleted
+        ::std::unordered_map< const SwViewShell*, const SwViewShell* >::iterator it = aViewShellMap.find( this );
+        if ( it != aViewShellMap.end() )
+            aViewShellMap.erase( it );
+#endif	// USE_JAVA
 
 #ifdef NO_LIBO_SWDOC_ACQUIRE_LEAK_FIX
         if ( mpDoc )
