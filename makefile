@@ -322,8 +322,6 @@ build.libo_checkout: \
 build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
 	build.libo_root_download.lst_patch \
-	build.libo_connectivity_patch \
-	build.libo_cppuhelper_patch \
 	build.libo_cui_patch \
 	build.libo_dbaccess_patch \
 	build.libo_desktop_patch \
