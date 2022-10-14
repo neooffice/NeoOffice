@@ -10,3 +10,7 @@ patches/libreoffice/external/tarballs/libreoffice-translations-7.4.1.2.tar.xz fi
 patches/libreoffice/external/tarballs/libreoffice-help-7.4.1.2.tar.xz filter=lfs diff=lfs merge=lfs -text
 patches/libreoffice/external/tarballs/libreoffice-dictionaries-7.4.1.2.tar.xz filter=lfs diff=lfs merge=lfs -text
 patches/libreoffice/libreoffice-7.4.1.2.tar.xz filter=lfs diff=lfs merge=lfs -text
+patches/libreoffice/libreoffice-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
+patches/libreoffice/external/tarballs/libreoffice-dictionaries-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
+patches/libreoffice/external/tarballs/libreoffice-help-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
+patches/libreoffice/external/tarballs/libreoffice-translations-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
