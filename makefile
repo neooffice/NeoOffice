@@ -322,6 +322,7 @@ build.libo_checkout: \
 build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
 	build.libo_root_download.lst_patch \
+	build.libo_bin_patch \
 	build.libo_external_patch \
 	build.libo_include_patch \
 	build.libo_sd_patch \

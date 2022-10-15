@@ -1,0 +1,9 @@
+--- unpack-sources	2022-10-15 17:30:53.000000000 -0400
++++ unpack-sources	2022-10-15 17:36:52.000000000 -0400
+@@ -87,5 +87,5 @@
+     # create symlinks for module directories; ignore git-hooks directory
+     while read -r dir; do
+         ln -sf "src/${tarname}/$(basename "$dir")" "$start_dir"
+-    done < <(find "$lo_src_dir/$tarname" -mindepth 1 -maxdepth 1 -type d -path $lo_src_dir/$tarname/git-hooks)
++    done < <(find "$lo_src_dir/$tarname" -mindepth 1 -maxdepth 1 -type d)
+ done
