@@ -324,12 +324,6 @@ build.libo_patches: \
 	build.libo_root_download.lst_patch \
 	build.libo_external_patch \
 	build.libo_include_patch \
-	build.libo_jvmfwk_patch \
-	build.libo_lotuswordpro_patch \
-	build.libo_oox_patch \
-	build.libo_postprocess_patch \
-	build.libo_pyuno_patch \
-	build.libo_reportdesign_patch \
 	build.libo_sal_patch \
 	build.libo_sc_patch \
 	build.libo_sd_patch \
