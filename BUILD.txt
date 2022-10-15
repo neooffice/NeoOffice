@@ -25,7 +25,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
    http://www.neooffice.org/neojava/javadownload.php
 
-   Important: the build may fail if other versions of Oracle's JDK are installed so be sure to delete such versions from the /Library/Java/JavaVirtualMachines folder before starting the build.
+   Important: the build may fail if other versions of Oracle's JDK are installed so you may want to delete all versions except Oracle's JDK 17 from the /Library/Java/JavaVirtualMachines folder before starting the build.
 
 3. If you are building on an Apple Silicon machine, you may need Apple's Rosetta to run Oracle's JDK 17 so run the following command to ensure that Rosetta is installed:
 
