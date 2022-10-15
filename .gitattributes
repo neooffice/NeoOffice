@@ -14,3 +14,5 @@ patches/libreoffice/libreoffice-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -te
 patches/libreoffice/external/tarballs/libreoffice-dictionaries-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
 patches/libreoffice/external/tarballs/libreoffice-help-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
 patches/libreoffice/external/tarballs/libreoffice-translations-7.4.2.3.tar.xz filter=lfs diff=lfs merge=lfs -text
+patches/libreoffice/external/tarballs/nss-3.83-with-nspr-4.34.1.tar.gz filter=lfs diff=lfs merge=lfs -text
+patches/libreoffice/external/tarballs/zxing-cpp-1.2.0.tar.gz filter=lfs diff=lfs merge=lfs -text
