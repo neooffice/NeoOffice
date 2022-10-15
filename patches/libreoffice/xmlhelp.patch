@@ -1,9 +1,9 @@
---- util/compact.xsl	2015-11-25 06:55:38.000000000 -0600
-+++ util/compact.xsl	2017-04-12 15:07:07.000000000 -0500
-@@ -24,23 +33,31 @@
-     <!-- To remove attributes or nodes, 
-          simply write a matching template that doesn't do anything. 
-          Therefore, it is removed -->
+--- util/compact.xsl	2022-10-10 06:15:14.000000000 -0400
++++ util/compact.xsl	2022-10-15 15:09:30.000000000 -0400
+@@ -29,21 +29,27 @@
+             <xsl:apply-templates select="@*[normalize-space()]|node()|text()"/>
+         </xsl:copy>
+     </xsl:template>
 +    <!-- Do not remove attributes used in main_transform.xsl
      <xsl:template match="@localize"/>
 +    -->
@@ -21,10 +21,6 @@
      <xsl:template match="link/@name"/>
 +    <!-- Do not remove attributes used in main_transform.xsl
      <xsl:template match="paragraph/@id"/>
-+    -->
-     <xsl:template match="paragraph/@l10n"/>
-     <xsl:template match="paragraph/@oldref"/>
-+    <!-- Do not remove attributes used in main_transform.xsl
      <xsl:template match="table/@id"/>
      <xsl:template match="title/@id"/>
      <xsl:template match="topic/@id"/>

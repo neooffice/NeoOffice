@@ -324,21 +324,10 @@ build.libo_patches: \
 	build.libo_root_download.lst_patch \
 	build.libo_external_patch \
 	build.libo_include_patch \
-	build.libo_sal_patch \
-	build.libo_sc_patch \
 	build.libo_sd_patch \
-	build.libo_sdext_patch \
-	build.libo_sfx2_patch \
-	build.libo_slideshow_patch \
-	build.libo_solenv_patch \
-	build.libo_stoc_patch \
-	build.libo_svl_patch \
-	build.libo_svtools_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch \
-	build.libo_writerperfect_patch \
-	build.libo_xmlhelp_patch \
-	build.libo_xmloff_patch
+	build.libo_xmlhelp_patch
 	touch "$@"
 
 build.libo_root_%_patch: $(LIBO_PATCHES_HOME)/%.patch build.libo_src_checkout
