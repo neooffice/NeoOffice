@@ -323,13 +323,6 @@ build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
 	build.libo_root_download.lst_patch \
 	build.libo_external_patch \
-	build.libo_filter_patch \
-	build.libo_forms_patch \
-	build.libo_formula_patch \
-	build.libo_fpicker_patch \
-	build.libo_framework_patch \
-	build.libo_helpcompiler_patch \
-	build.libo_idl_patch \
 	build.libo_include_patch \
 	build.libo_jvmfwk_patch \
 	build.libo_lotuswordpro_patch \
@@ -347,7 +340,6 @@ build.libo_patches: \
 	build.libo_stoc_patch \
 	build.libo_svl_patch \
 	build.libo_svtools_patch \
-	build.libo_svx_patch \
 	build.libo_sw_patch \
 	build.libo_vcl_patch \
 	build.libo_writerperfect_patch \
