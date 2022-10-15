@@ -322,13 +322,6 @@ build.libo_checkout: \
 build.libo_patches: \
 	build.libo_root_Makefile.gbuild_patch \
 	build.libo_root_download.lst_patch \
-	build.libo_cui_patch \
-	build.libo_dbaccess_patch \
-	build.libo_desktop_patch \
-	build.libo_drawinglayer_patch \
-	build.libo_editeng_patch \
-	build.libo_embeddedobj_patch \
-	build.libo_extensions_patch \
 	build.libo_external_patch \
 	build.libo_filter_patch \
 	build.libo_forms_patch \
