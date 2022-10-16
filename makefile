@@ -458,41 +458,41 @@ else
 # Use hardlinks for Windows
 	cd "$(@:build.neo_%_patch=%)" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)" ; find . ! -type d | grep -v /CVS/ ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(LIBO_BUILD_HOME)/$(@:build.neo_%_patch=%)/$$i" "$$i" 2>/dev/null ; fi ; done'
 endif
-	cd "$(@:build.neo_%_patch=%)" ; $(MAKE) $(MFLAGS) clean
-	cd "$(@:build.neo_%_patch=%)" ; $(MAKE) $(MFLAGS)
+	cd "$(@:build.neo_%_patch=%)" ; $(GNUMAKE) $(MAKEFLAGS) clean
+	cd "$(@:build.neo_%_patch=%)" ; $(GNUMAKE) $(MAKEFLAGS)
 	touch "$@"
 
 build.neo_%_component: build.neo_solenv_patch
-	cd "$(@:build.neo_%_component=%)" ; $(MAKE) $(MFLAGS) clean
-	cd "$(@:build.neo_%_component=%)" ; $(MAKE) $(MFLAGS)
+	cd "$(@:build.neo_%_component=%)" ; $(GNUMAKE) $(MAKEFLAGS) clean
+	cd "$(@:build.neo_%_component=%)" ; $(GNUMAKE) $(MAKEFLAGS)
 	touch "$@"
 
 build.neo_tests: $(PRODUCT_MODULES:%=build.neo_%_test)
 	touch "$@"
 
 build.neo_%_test: build.neo_patches
-	cd "$(@:build.neo_%_test=%)" ; $(MAKE) $(MFLAGS) check
+	cd "$(@:build.neo_%_test=%)" ; $(GNUMAKE) $(MAKEFLAGS) check
 	touch "$@"
 
 build.check_env_vars: build.neo_configure
-	@"$(MAKE)" $(MFLAGS) PARENT_PRODUCT_NAME="$(PRODUCT_NAME)" PARENT_PRODUCT_DOMAIN="$(PRODUCT_DOMAIN)" PARENT_PRODUCT_DIR_NAME="$(PRODUCT_DIR_NAME)" PARENT_PRODUCT_DIR_NAME2="$(PRODUCT_DIR_NAME2)" PARENT_PRODUCT_DIR_NAME3="$(PRODUCT_DIR_NAME3)" PARENT_PRODUCT_MAC_APP_STORE_URL="$(PRODUCT_MAC_APP_STORE_URL)" PARENT_PRODUCT_JAVA_DOWNLOAD_URL="$(PRODUCT_JAVA_DOWNLOAD_URL)" PARENT_PRODUCT_MIN_OSVERSION="$(PRODUCT_MIN_OSVERSION)" PARENT_PRODUCT_MAX_OSVERSION="$(PRODUCT_MAX_OSVERSION)" -f "$(PWD)/etc/Makefile" check_env_vars
+	@"$(GNUMAKE)" $(MAKEFLAGS) PARENT_PRODUCT_NAME="$(PRODUCT_NAME)" PARENT_PRODUCT_DOMAIN="$(PRODUCT_DOMAIN)" PARENT_PRODUCT_DIR_NAME="$(PRODUCT_DIR_NAME)" PARENT_PRODUCT_DIR_NAME2="$(PRODUCT_DIR_NAME2)" PARENT_PRODUCT_DIR_NAME3="$(PRODUCT_DIR_NAME3)" PARENT_PRODUCT_MAC_APP_STORE_URL="$(PRODUCT_MAC_APP_STORE_URL)" PARENT_PRODUCT_JAVA_DOWNLOAD_URL="$(PRODUCT_JAVA_DOWNLOAD_URL)" PARENT_PRODUCT_MIN_OSVERSION="$(PRODUCT_MIN_OSVERSION)" PARENT_PRODUCT_MAX_OSVERSION="$(PRODUCT_MAX_OSVERSION)" -f "$(PWD)/etc/Makefile" check_env_vars
 
 build.package: build.neo_tests
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.package"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "build.package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.package_shared"
 	touch "$@"
 endif
 
 build.package2: build.neo_tests
 ifndef PRODUCT_BUILD2
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package2"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.package2"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.package_shared"
 	touch "$@"
 endif
 endif
@@ -500,10 +500,10 @@ endif
 build.package3: build.neo_tests
 ifndef PRODUCT_BUILD3
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.package3"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.package3"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(CERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(CERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.package_shared"
 	touch "$@"
 endif
 endif
@@ -807,21 +807,21 @@ endif
 	rm -Rf "$(INSTALL_HOME)/tmp"
 
 build.patch_package: build.package
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY)" "build.patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY)" "build.patch_package_shared"
 	touch "$@"
 
 build.patch_package2: build.package2
 ifndef PRODUCT_BUILD2
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY2)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY2)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS2)" "build.patch_package_shared"
 	touch "$@"
 endif
 
 build.patch_package3: build.package3
 ifndef PRODUCT_BUILD3
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "CERTAPPIDENTITY=$(PATCHCERTAPPIDENTITY3)" "CERTPKGIDENTITY=$(PATCHCERTPKGIDENTITY3)" "PRODUCT_BUNDLED_LANG_PACKS=$(PRODUCT_BUNDLED_LANG_PACKS3)" "build.patch_package_shared"
 	touch "$@"
 endif
 
@@ -1013,11 +1013,11 @@ build.all_patches: build.patch_package build.patch_package3
 
 build.notarize_package: build.package
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package"
 else
 ifeq ($(findstring 3rd Party Mac Developer,$(CERTAPPIDENTITY)),)
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "build.notarize_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.notarize_package_shared"
 endif
 	touch "$@"
 endif
@@ -1025,10 +1025,10 @@ endif
 build.notarize_package2: build.package2
 ifndef PRODUCT_BUILD2
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package2"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package2"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "build.notarize_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "build.notarize_package_shared"
 	touch "$@"
 endif
 endif
@@ -1036,10 +1036,10 @@ endif
 build.notarize_package3: build.package3
 ifndef PRODUCT_BUILD3
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package3"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.notarize_package3"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.notarize_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.notarize_package_shared"
 	touch "$@"
 endif
 endif
@@ -1051,14 +1051,14 @@ build.notarize_package_shared:
 	xcrun notarytool submit "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg" --keychain-profile AC_PASSWORD --wait
 
 build.notarize_patch_package: build.patch_package
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "build.notarize_patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.notarize_patch_package_shared"
 	touch "$@"
 
 build.notarize_patch_package3: build.patch_package3
 ifndef PRODUCT_BUILD3
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.notarize_patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.notarize_patch_package_shared"
 	touch "$@"
 endif
 
@@ -1073,11 +1073,11 @@ build.notarize_all_patches: build.notarize_patch_package build.notarize_patch_pa
 
 build.staple_package: build.notarize_package
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package"
 else
 ifeq ($(findstring 3rd Party Mac Developer,$(CERTAPPIDENTITY)),)
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "build.staple_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.staple_package_shared"
 endif
 	touch "$@"
 endif
@@ -1085,10 +1085,10 @@ endif
 build.staple_package2: build.notarize_package2
 ifndef PRODUCT_BUILD2
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package2"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package2"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "build.staple_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD2=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION2)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT2)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME2)" "build.staple_package_shared"
 	touch "$@"
 endif
 endif
@@ -1096,10 +1096,10 @@ endif
 build.staple_package3: build.notarize_package3
 ifndef PRODUCT_BUILD3
 ifeq ("$(PRODUCT_PATCH_VERSION)","Patch 0")
-	"$(MAKE)" $(MFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package3"
+	"$(GNUMAKE)" $(MAKEFLAGS) PRODUCT_PATCH_VERSION=" " "build.staple_package3"
 else
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.staple_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.staple_package_shared"
 	touch "$@"
 endif
 endif
@@ -1109,14 +1109,14 @@ build.staple_package_shared:
 	xcrun stapler validate "$(INSTALL_HOME)/$(subst $(SPACE),_,$(PRODUCT_NAME))-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
 
 build.staple_patch_package: build.notarize_patch_package
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "build.staple_patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.staple_patch_package_shared"
 	touch "$@"
 
 build.staple_patch_package3: build.notarize_patch_package3
 ifndef PRODUCT_BUILD3
-	"$(MAKE)" $(MFLAGS) "build.check_env_vars"
-	"$(MAKE)" $(MFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.staple_patch_package_shared"
+	"$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
+	"$(GNUMAKE)" $(MAKEFLAGS) "PRODUCT_BUILD3=TRUE" "PRODUCT_VERSION=$(PRODUCT_VERSION3)" "PRODUCT_VERSION_EXT=$(PRODUCT_VERSION_EXT3)" "PRODUCT_DIR_NAME=$(PRODUCT_DIR_NAME3)" "build.staple_patch_package_shared"
 	touch "$@"
 endif
 
@@ -1171,3 +1171,6 @@ clean:
 	@echo "  $(GNUMAKE) build.clean_all"
 	@echo ""
 	@exit 1
+
+pat:
+	echo "$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
