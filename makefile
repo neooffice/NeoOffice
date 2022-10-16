@@ -1171,6 +1171,3 @@ clean:
 	@echo "  $(GNUMAKE) build.clean_all"
 	@echo ""
 	@exit 1
-
-pat:
-	echo "$(GNUMAKE)" $(MAKEFLAGS) "build.check_env_vars"
