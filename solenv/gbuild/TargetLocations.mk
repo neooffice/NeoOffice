@@ -26,7 +26,7 @@
 
 # outdir target pattern
 
-# thoese are hard-coded to URE for now since there are so few of them...
+# these are hard-coded to URE for now since there are so few of them...
 gb_CliLibrary_get_target = $(INSTROOT)/$(LIBO_URE_LIB_FOLDER)/$(1)$(gb_CliLibrary_EXT)
 gb_CliNativeLibrary_get_target = $(INSTROOT)/$(LIBO_URE_LIB_FOLDER)/$(1)$(gb_CliNativeLibrary_EXT)
 gb_CliUnoApi_get_target = $(INSTROOT)/$(if $(filter cli_uretypes,$(1)),$(LIBO_URE_LIB_FOLDER),$(LIBO_LIB_FOLDER))/$(1)$(gb_CliUnoApi_EXT)
@@ -35,22 +35,28 @@ gb_PackagePart_get_destinations = \
 	$(WORKDIR)/unittest \
 
 # kind of lame but with just 3 of these why bother with registration etc.
-gb_UnoApi_get_target = $(INSTROOT)/$(if $(filter udkapi,$(1)),$(LIBO_URE_SHARE_FOLDER)/misc/types,$(LIBO_ETC_FOLDER)/types/$(1)).rdb
+gb_UnoApi_get_target = $(INSTROOT)/$(if $(filter udkapi,$(1)),$(LIBO_URE_MISC_FOLDER)/types,$(LIBO_ETC_FOLDER)/types/$(1)).rdb
+gb_UnoApi_get_target_for_build = $(INSTROOT_FOR_BUILD)/$(if $(filter udkapi,$(1)),$(LIBO_URE_MISC_FOLDER_FOR_BUILD)/types,$(LIBO_ETC_FOLDER)/types/$(1)).rdb
 
 # workdir target patterns
 
 gb_AutoInstall_get_target = $(WORKDIR)/AutoInstall/$(1)
 gb_AllLangHelp_get_target = $(WORKDIR)/AllLangHelp/$(1)
+gb_AllLangHelp_get_helpfiles_target = $(WORKDIR)/AllLangHelp/$(1).helpfiles
 gb_AllLangPackage_get_target = $(WORKDIR)/AllLangPackage/$(1)
-gb_AllLangResTarget_get_target = $(WORKDIR)/AllLangRes/$(1)
+gb_AllLangMoTarget_get_target = $(WORKDIR)/AllLangMo/$(1)
 gb_AsmObject_get_target = $(WORKDIR)/AsmObject/$(1).o
+gb_AsmObject_get_dwo_target = $(WORKDIR)/AsmObject/$(1).dwo
 gb_CObject_get_target = $(WORKDIR)/CObject/$(1).o
+gb_CObject_get_dwo_target = $(WORKDIR)/CObject/$(1).dwo
 gb_GenCObject_get_target = $(WORKDIR)/GenCObject/$(1).o
+gb_GenCObject_get_dwo_target = $(WORKDIR)/GenCObject/$(1).dwo
 gb_CliAssembly_get_target = $(WORKDIR)/CliAssembly/$(1).done
 gb_CliAssemblyTarget_get_target = $(WORKDIR)/CliAssemblyTarget/$(1).done
 gb_CliAssemblyTarget_get_assembly_target = $(WORKDIR)/CliAssemblyTarget/$(1)$(gb_CliAssemblyTarget_POLICYEXT)
 gb_CliConfigTarget_get_target = $(WORKDIR)/CliConfigTarget/$(1).config
 gb_CliNativeLibrary_get_preparation_target = $(WORKDIR)/CliNativeLibraryTarget/$(1).prepare
+gb_CompilerTest_get_target = $(WORKDIR)/CompilerTest/$(1)
 gb_ComponentTarget_get_target = $(WORKDIR)/ComponentTarget/$(1).component
 gb_ComponentTarget_get_target_for_build = $(WORKDIR_FOR_BUILD)/ComponentTarget/$(1).component
 gb_Configuration_get_preparation_target = $(WORKDIR)/Configuration/$(1).prepared
@@ -62,8 +68,13 @@ gb_CustomTarget_get_workdir = $(WORKDIR)/CustomTarget/$(1)
 gb_DescriptionTranslateTarget_get_target = $(WORKDIR)/DescriptionTranslateTarget/$(1).xml
 gb_Dictionary_get_target = $(WORKDIR)/Dictionary/$(1).done
 gb_CxxObject_get_target = $(WORKDIR)/CxxObject/$(1).o
+gb_CxxObject_get_dwo_target = $(WORKDIR)/CxxObject/$(1).dwo
 gb_GenCxxObject_get_target = $(WORKDIR)/GenCxxObject/$(1).o
+gb_GenCxxObject_get_dwo_target = $(WORKDIR)/GenCxxObject/$(1).dwo
+gb_GenNasmObject_get_target = $(WORKDIR)/GenNasmObject/$(1).o
+gb_GenNasmObject_get_dwo_target = $(WORKDIR)/GenNasmObject/$(1).dwo
 gb_Executable_get_headers_target = $(WORKDIR)/Headers/Executable/$(1)
+gb_Executable_get_linktargetfile = $(call gb_LinkTarget_get_target,$(call gb_Executable_get_linktarget,$1))
 gb_Executable_get_runtime_target = $(WORKDIR_FOR_BUILD)/Executable/$(1).run
 gb_Extension_get_target = $(WORKDIR)/Extension/$(1).oxt
 gb_Extension_get_rootdir = $(WORKDIR)/Extension/$(1)/root
@@ -111,25 +122,49 @@ gb_JunitTest_get_classsetname = JunitTest/$(1)
 gb_JunitTest_get_target = $(WORKDIR)/JunitTest/$(1)/done
 gb_JunitTest_get_userdir = $(WORKDIR)/JunitTest/$(1)/user
 gb_PythonTest_get_target = $(WORKDIR)/PythonTest/$(1)/done
+# linktarget = class/object<>some_optional_target, like Library/libswlo.so<>/.../instdir/program/libswlo.so
+# while the target is optional, the workdir functions will always work correctly
 gb_LinkTarget__get_workdir_linktargetname = $(firstword $(subst <>,  ,$(1)))
+gb_LinkTarget__get_workdir_linktargetclass =  $(firstword $(subst /,  ,$(call gb_LinkTarget__get_workdir_linktargetname,$(1))))
+gb_LinkTarget__get_workdir_linktargetobject = $(lastword $(subst /,  ,$(call gb_LinkTarget__get_workdir_linktargetname,$(1))))
 gb_LinkTarget_get_headers_target = \
  $(WORKDIR)/Headers/$(call gb_LinkTarget__get_workdir_linktargetname,$(1))
 gb_LinkTarget_get_objects_list = \
  $(WORKDIR)/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1)).objectlist
 gb_LinkTarget_get_dep_target = \
  $(WORKDIR)/Dep/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1)).d
+gb_LinkTarget_get_dep_libraries_target = \
+ $(WORKDIR)/Dep/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1)).d.libraries
+gb_LinkTarget_get_dep_externals_target = \
+ $(WORKDIR)/Dep/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1)).d.externals
+gb_LinkTarget_get_dep_statics_target = \
+ $(WORKDIR)/Dep/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1)).d.statics
 gb_LinkTarget_get_clean_target = \
  $(WORKDIR)/Clean/LinkTarget/$(call gb_LinkTarget__get_workdir_linktargetname,$(1))
 gb_LinkTarget_get_target = $(lastword $(subst <>,  ,$(1)))
+gb_LinkTarget_get_pch_timestamp = $(WORKDIR)/PrecompiledHeader/$(call gb_PrecompiledHeader__get_debugdir,$(1))/Timestamps/$(1)
+gb_LinkTarget_get_pch_reuse_timestamp = $(WORKDIR)/PrecompiledHeader/$(call gb_PrecompiledHeader__get_debugdir,$(1))/Timestamps/$(1)_reuse
 gb_Module_get_nonl10n_target = $(WORKDIR)/Module/nonl10n/$(1)
 gb_Module_get_l10n_target = $(WORKDIR)/Module/l10n/$(1)
 gb_Module_get_check_target = $(WORKDIR)/Module/check/$(1)
 gb_Module_get_slowcheck_target = $(WORKDIR)/Module/slowcheck/$(1)
+gb_Module_get_screenshot_target = $(WORKDIR)/Module/screenshot/$(1)
 gb_Module_get_subsequentcheck_target = $(WORKDIR)/Module/subsequentcheck/$(1)
 gb_Module_get_perfcheck_target = $(WORKDIR)/Module/perfcheck/$(1)
+gb_Module_get_uicheck_target = $(WORKDIR)/Module/uicheck/$(1)
 gb_Module_get_target = $(WORKDIR)/Module/$(1)
 gb_ObjCxxObject_get_target = $(WORKDIR)/ObjCxxObject/$(1).o
+gb_ObjCxxObject_get_dwo_target = $(WORKDIR)/ObjCxxObject/$(1).dwo
 gb_ObjCObject_get_target = $(WORKDIR)/ObjCObject/$(1).o
+gb_ObjCObject_get_dwo_target = $(WORKDIR)/ObjCObject/$(1).dwo
+gb_GenObjCxxObject_get_target = $(WORKDIR)/GenObjCxxObject/$(1).o
+gb_GenObjCxxObject_get_dwo_target = $(WORKDIR)/GenObjCxxObject/$(1).dwo
+gb_GenObjCObject_get_target = $(WORKDIR)/GenObjCObject/$(1).o
+gb_GenObjCObject_get_dwo_target = $(WORKDIR)/GenObjCObject/$(1).dwo
+gb_CxxClrObject_get_target = $(WORKDIR)/CxxClrObject/$(1).o
+gb_CxxClrObject_get_dwo_target = $(WORKDIR)/CxxClrObject/$(1).dwo
+gb_GenCxxClrObject_get_target = $(WORKDIR)/GenCxxClrObject/$(1).o
+gb_GenCxxClrObject_get_dwo_target = $(WORKDIR)/GenCxxClrObject/$(1).dwo
 gb_Pagein_get_target = $(WORKDIR)/Pagein/pagein-$(1)
 gb_Package_get_preparation_target = $(WORKDIR)/Package/prepared/$(1)
 gb_Package_get_target = $(WORKDIR)/Package/$(1).filelist
@@ -137,16 +172,18 @@ gb_Package_get_target_for_build = $(WORKDIR_FOR_BUILD)/Package/$(1).filelist
 gb_PackageSet_get_target = $(WORKDIR)/PackageSet/$(1).filelist
 gb_PackageInfo_get_target = $(WORKDIR)/PackageInfo
 gb_Postprocess_get_target = $(WORKDIR)/Postprocess/$(1)
-gb_PrecompiledHeader_get_dep_target = $(WORKDIR)/Dep/PrecompiledHeader/$(gb_PrecompiledHeader_DEBUGDIR)/$(1).hxx.gch.d
-gb_PrecompiledHeader_get_target = $(WORKDIR)/PrecompiledHeader/$(gb_PrecompiledHeader_DEBUGDIR)/$(1).hxx.gch
-gb_PrecompiledHeader_get_timestamp = $(WORKDIR)/PrecompiledHeader/$(gb_PrecompiledHeader_DEBUGDIR)/Timestamps/$(1)
+gb_PrecompiledHeader_get_dep_target = $(WORKDIR)/Dep/PrecompiledHeader/$(call gb_PrecompiledHeader__get_debugdir,$(2))/$(1).hxx$(gb_PrecompiledHeader_EXT).d
+gb_PrecompiledHeader_get_dep_target_tmp = $(call gb_PrecompiledHeader_get_dep_target,$(1),$(2)).tmp
+gb_PrecompiledHeader_get_flags_file = $(WORKDIR)/PrecompiledHeader/$(call gb_PrecompiledHeader__get_debugdir,$(2))/$(1).hxx$(gb_PrecompiledHeader_EXT).flags
+gb_PrecompiledHeader_get_for_reuse_target = $(WORKDIR)/PrecompiledHeader/$(call gb_PrecompiledHeader__get_debugdir,$(2))/$(1).hxx$(gb_PrecompiledHeader_EXT).reuse
+gb_PrecompiledHeader_get_target = $(WORKDIR)/PrecompiledHeader/$(call gb_PrecompiledHeader__get_debugdir,$(2))/$(1).hxx$(gb_PrecompiledHeader_EXT)
 gb_PropertiesTranslateTarget_get_target = $(WORKDIR)/PropertiesTranslateTarget/$(1).properties
 gb_Pyuno_get_final_target = $(WORKDIR)/Pyuno/$(1).final
 gb_Pyuno_get_target = $(WORKDIR)/Pyuno/$(1).done
 gb_Rdb_get_target = $(WORKDIR)/Rdb/$(1).rdb
 gb_Rdb_get_target_for_build = $(WORKDIR_FOR_BUILD)/Rdb/$(1).rdb
-gb_ResTarget_get_imagelist_target = $(WORKDIR)/ResTarget/$(1).ilst
 gb_ResTarget_get_target = $(WORKDIR)/ResTarget/$(1).res
+gb_MoTarget_get_target = $(WORKDIR)/MoTarget/$(1).mo
 gb_ScpMergeTarget_get_target = $(WORKDIR)/ScpMergeTarget/$(1).ulf
 gb_ScpPreprocessTarget_get_target = $(WORKDIR)/ScpPreprocessTarget/$(1).pre
 gb_ScpTarget_get_external_target = $(WORKDIR)/ScpTarget/$(1).external
@@ -154,20 +191,13 @@ gb_ScpTarget_get_target = $(WORKDIR)/ScpTarget/$(1).par
 gb_ScpTemplateTarget_get_dir = $(abspath $(WORKDIR)/ScpTemplateTarget/$(dir $(1)))
 gb_ScpTemplateTarget_get_target = $(abspath $(WORKDIR)/ScpTemplateTarget/$(dir $(1))$(subst pack,modules,$(subst module_,all,$(notdir $(1)))).inc)
 gb_SdiTarget_get_target = $(WORKDIR)/SdiTarget/$(1)
-gb_SrsPartMergeTarget_get_target = $(WORKDIR)/SrsPartMergeTarget/$(1)
-gb_SrsPartTarget_get_target = $(WORKDIR)/SrsPartTarget/$(1)
-gb_SrsTarget_get_headers_target = $(WORKDIR)/SrsTarget/$(1).headers
-gb_SrsTarget_get_target = $(WORKDIR)/SrsTarget/$(1).srs
-gb_SrsTemplatePartTarget_get_target = $(WORKDIR)/SrsTemplatePartTarget/$(firstword $(subst /, ,$(1)))/$(subst _tmpl,,$(notdir $(1)))
-gb_SrsTemplateTarget_get_include_dir = $(WORKDIR)/SrsTemplatePartTarget/$(firstword $(subst /, ,$(1)))
-gb_SrsTemplateTarget_get_target = $(WORKDIR)/SrsTemplateTarget/$(1)
 gb_ThesaurusIndexTarget_get_target = $(WORKDIR)/ThesaurusIndexTarget/$(basename $(1)).idx
 gb_UIConfig_get_imagelist_target = $(WORKDIR)/UIConfig/$(1).ilst
+gb_UIConfig_get_a11yerrors_target = $(WORKDIR)/UIConfig/$(1).a11yerrors
 gb_UIConfig_get_target = $(WORKDIR)/UIConfig/$(1).done
 gb_UIImageListTarget_get_target = $(WORKDIR)/UIImageListTarget/$(1).ilst
-gb_UILocalizeTarget_get_target = $(WORKDIR)/UILocalizeTarget/$(1).done
-gb_UILocalizeTarget_get_workdir = $(WORKDIR)/UILocalizeTarget/$(1)
 gb_UIMenubarTarget_get_target = $(WORKDIR)/UIMenubarTarget/$(1).xml
+gb_UITest_get_target = $(WORKDIR)/UITest/$(1)/done
 gb_UnoApiTarget_get_target = $(WORKDIR)/UnoApiTarget/$(1).rdb
 gb_UnoApiHeadersTarget_get_bootstrap_dir = $(WORKDIR)/UnoApiHeadersTarget/$(1)/$(call gb_UnoApiHeadersTarget_select_variant,$(1),bootstrap)
 gb_UnoApiHeadersTarget_get_comprehensive_dir = $(WORKDIR)/UnoApiHeadersTarget/$(1)/$(call gb_UnoApiHeadersTarget_select_variant,$(1),comprehensive)
@@ -216,7 +246,7 @@ $(WORKDIR)/LinkTarget/$(call gb_Library__get_workdir_linktargetname,$(1)).export
 endef
 
 define gb_Library_get_versionlink_target
-$(INSTDIR)/$(SDKDIRNAME)/lib/$(basename $(call gb_Library_get_filename,$(1)))
+$(call gb_Library_get_sdk_link_dir)/$(basename $(call gb_Library_get_filename,$(1)))
 endef
 
 define gb_Library_get_headers_target
@@ -231,13 +261,14 @@ $(eval $(call gb_Helper_make_clean_targets,\
 	AutoInstall \
 	AllLangHelp \
 	AllLangPackage \
-	AllLangResTarget \
+	AllLangMoTarget \
 	CliAssembly \
 	CliAssemblyTarget \
 	CliConfigTarget \
 	CliLibrary \
 	CliNativeLibrary \
 	CliUnoApi \
+	CompilerTest \
 	ComponentTarget \
 	CustomPackage \
 	DescriptionTranslateTarget \
@@ -281,8 +312,6 @@ $(eval $(call gb_Helper_make_clean_targets,\
 	ScpTarget \
 	ScpTemplateTarget \
 	SdiTarget \
-	SrsTarget \
-	SrsTemplateTarget \
 	StaticLibrary \
 	ThesaurusIndexTarget \
 	CppunitTest \
@@ -291,8 +320,8 @@ $(eval $(call gb_Helper_make_clean_targets,\
 	ExternalProject \
 	UIConfig \
 	UIImageListTarget \
-	UILocalizeTarget \
 	UIMenubarTarget \
+	UITest \
 	UnoApi \
 	UnoApiHeadersTarget \
 	UnoApiTarget \
@@ -316,12 +345,15 @@ $(eval $(call gb_Helper_make_dep_targets,\
 	CxxObject \
 	ObjCObject \
 	ObjCxxObject \
+	CxxClrObject \
 	AsmObject \
 	GenCObject \
 	GenCxxObject \
+	GenObjCObject \
+	GenObjCxxObject \
+	GenNasmObject \
+	GenCxxClrObject \
 	SdiTarget \
-	SrsPartTarget \
-	SrsTarget \
 ))
 
 # other getters
@@ -336,6 +368,10 @@ endef
 
 define gb_Library_get_filename
 $(patsubst $(1):%,%,$(filter $(1):%,$(gb_Library_FILENAMES)))
+endef
+
+define gb_Library_get_filename_for_build
+$(patsubst $(1):%,%,$(filter $(1):%,$(gb_Library_FILENAMES_FOR_BUILD)))
 endef
 
 define gb_Executable_get_filename
@@ -382,6 +418,9 @@ endif # CROSS_COMPILING
 define gb_Executable_get_linktarget
 $(call gb_Executable__get_workdir_linktargetname,$(1))<>$(call gb_Executable_get_target,$(1))
 endef
+gb_Executable_get_linktarget_target = $(call gb_LinkTarget_get_target,$(call gb_Executable_get_linktarget,$(1)))
+
+gb_ExternalProject__get_workdir_linktargetname = ExternalProject/$(1)
 
 define gb_Library__get_workdir_linktargetname
 Library/$(call gb_Library_get_filename,$(1))
@@ -389,10 +428,19 @@ endef
 define gb_Library_get_target
 $(call gb_Library_get_instdir,$(1))/$(call gb_Library_get_runtime_filename,$(1))
 endef
+ifneq ($(CROSS_COMPILING),)
+define gb_Library_get_target_for_build
+$(call gb_Library_get_instdir_for_build,$(1))/$(call gb_Library_get_runtime_filename_for_build,$(1))
+endef
+else
+gb_Library_get_target_for_build = $(gb_Library_get_target)
+endif # CROSS_COMPILING
 # this returns a tuple of both the linktargetname, and the target file
 define gb_Library_get_linktarget
 $(call gb_Library__get_workdir_linktargetname,$(1))<>$(call gb_Library_get_target,$(1))
 endef
+gb_Library_get_linktarget_target = $(call gb_LinkTarget_get_target,$(call gb_Library_get_linktarget,$(1)))
+gb_Library_get_dep_libraries_target = $(call gb_LinkTarget_get_dep_libraries_target,$(call gb_Library_get_linktarget,$(1)))
 
 define gb_StaticLibrary__get_workdir_linktargetname
 StaticLibrary/$(call gb_StaticLibrary_get_filename,$(1))
@@ -404,6 +452,7 @@ endef
 define gb_StaticLibrary_get_linktarget
 $(call gb_StaticLibrary__get_workdir_linktargetname,$(1))<>$(call gb_StaticLibrary_get_target,$(1))
 endef
+gb_StaticLibrary_get_linktarget_target = $(call gb_LinkTarget_get_target,$(call gb_StaticLibrary_get_linktarget,$(1)))
 
 define gb_CppunitTest__get_workdir_linktargetname
 CppunitTest/$(call gb_CppunitTest_get_filename,$(1))
@@ -415,6 +464,18 @@ endef
 define gb_CppunitTest_get_linktarget
 $(call gb_CppunitTest__get_workdir_linktargetname,$(1))<>$(call gb_CppunitTest__get_linktarget_target,$(1))
 endef
+gb_CppunitTest_get_linktarget_target = $(call gb_LinkTarget_get_target,$(call gb_CppunitTest_get_linktarget,$(1)))
+
+define gb_CompilerTest__get_workdir_linktargetname
+CompilerTest/$(1)
+endef
+define gb_CompilerTest__get_linktarget_target
+$(WORKDIR)/LinkTarget/$(call gb_CompilerTest__get_workdir_linktargetname,$(1))
+endef
+# this returns a tuple of both the linktargetname, and the target file
+define gb_CompilerTest_get_linktarget
+$(call gb_CompilerTest__get_workdir_linktargetname,$(1))<>$(call gb_CompilerTest__get_linktarget_target,$(1))
+endef
 
 # static members declared here because they are used globally
 
@@ -423,6 +484,7 @@ gb_Library_WORKDIR_FOR_BUILD = $(WORKDIR_FOR_BUILD)/LinkTarget/Library
 gb_Executable_BINDIR = $(WORKDIR)/LinkTarget/Executable
 gb_Executable_BINDIR_FOR_BUILD = $(WORKDIR_FOR_BUILD)/LinkTarget/Executable
 gb_Library_DLLDIR = $(WORKDIR)/LinkTarget/Library
+gb_Library_DLLDIR_FOR_BUILD = $(WORKDIR_FOR_BUILD)/LinkTarget/Library
 gb_CppunitTest_DLLDIR = $(WORKDIR)/LinkTarget/CppunitTest
 
 # static variables declared here because they are used globally

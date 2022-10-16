@@ -30,6 +30,7 @@ gb_SdiTarget_SVIDLCOMMAND := $(call gb_Executable_get_command,svidl)
 
 $(call gb_SdiTarget_get_target,%) : $(SRCDIR)/%.sdi $(gb_SdiTarget_SVIDLDEPS)
 	$(call gb_Output_announce,$*,$(true),SDI,1)
+	$(call gb_Trace_StartRange,$*,SDI)
 	$(call gb_Helper_abbreviate_dirs,\
 		mkdir -p $(dir $@))
 	$(call gb_Helper_abbreviate_dirs,\
@@ -43,6 +44,7 @@ $(call gb_SdiTarget_get_target,%) : $(SRCDIR)/%.sdi $(gb_SdiTarget_SVIDLDEPS)
 			$(if $(gb_FULLDEPS),-fM$(call gb_SdiTarget_get_dep_target,$*)) \
 			$< \
 		&& touch $@.hxx)
+	$(call gb_Trace_EndRange,$*,SDI)
 # touch the hxx file so it's newer than the target - the .hxx only occurs in
 # generated .d files, so it's not a target yet when building from scratch!
 
@@ -71,12 +73,14 @@ $(call gb_SdiTarget_get_clean_target,%) :
 			$(call gb_SdiTarget_get_target,$*))
 
 define gb_SdiTarget_SdiTarget
-$(call gb_SdiTarget_get_target,$(1)) : INCLUDE := $$(subst -I. ,-I$$(dir $(SRCDIR)/$(1)) ,$$(SOLARINC))
+$(call gb_SdiTarget_get_target,$(1)) : \
+    INCLUDE := -I$(SRCDIR)/include $(SOLARINC) -I$$(dir $(SRCDIR)/$(1))
 $(call gb_SdiTarget_get_target,$(1)) : EXPORTS := $(SRCDIR)/$(2).sdi
 ifeq ($(gb_FULLDEPS),$(true))
 -include $(call gb_SdiTarget_get_dep_target,$(1))
 $(call gb_SdiTarget_get_dep_target,$(1)) :| $(dir $(call gb_SdiTarget_get_dep_target,$(1))).dir
 endif
+$(call gb_Helper_make_userfriendly_targets,$(1),SdiTarget)
 endef
 
 define gb_SdiTarget_set_include
