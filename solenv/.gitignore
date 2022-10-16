@@ -213,7 +213,6 @@ gbuild/Trace.mk
 gbuild/UITest.mk
 gbuild/UnoApi.mk
 gbuild/UnpackedTarball.mk
-gbuild/WinResTarget.mk
 gbuild/Zip.mk
 gbuild/empty.zip
 gbuild/extensions/post_Counters.mk

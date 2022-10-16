@@ -394,6 +394,7 @@ build.neo_configure: build.neo_instdir build.neo_workdir $(INSTDIR) $(WORKDIR)
 	echo "# Modify some of LibreOffice's environment variables" >> "$@"
 	echo "unexport DYLD_LIBRARY_PATH" >> "$@"
 	echo "export PATH:=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin" >> "$@"
+	echo "gb_Side := host" >> "$@"
 	echo "include "'$$(dir $$(realpath $$(firstword $$(MAKEFILE_LIST))))../$(LIBO_BUILD_HOME)/config_host.mk' >> "$@"
 	echo "# Save LibreOffice environment variables" >> "$@"
 	echo "export LIBO_SRCDIR:="'$$(SRCDIR)' >> "$@"
@@ -407,7 +408,6 @@ endif
 ifndef CROSS_COMPILE
 	echo "export INSTROOT_FOR_BUILD:=$(realpath $(INSTDIR))"'/$$(PRODUCTNAME).app/Contents' >> "$@"
 endif
-	echo "export SOLARINC:=-I. -I$(realpath include)"' $$(SOLARINC)' >> "$@"
 	echo "export SRC_ROOT:=$(realpath .)" >> "$@"
 	echo "export SRCDIR:=$(realpath .)" >> "$@"
 	echo "export WORKDIR:=$(realpath $(WORKDIR))" >> "$@"

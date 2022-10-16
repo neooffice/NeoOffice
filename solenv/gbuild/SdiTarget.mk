@@ -74,7 +74,7 @@ $(call gb_SdiTarget_get_clean_target,%) :
 
 define gb_SdiTarget_SdiTarget
 $(call gb_SdiTarget_get_target,$(1)) : \
-    INCLUDE := -I$(SRCDIR)/include $(SOLARINC) -I$$(dir $(SRCDIR)/$(1))
+    INCLUDE := -I$(SRCDIR)/include $(if $(filter $(PRODUCT_BUILD_TYPE),java),-I$(LIBO_SRCDIR)/include) $(SOLARINC) -I$$(dir $(SRCDIR)/$(1))
 $(call gb_SdiTarget_get_target,$(1)) : EXPORTS := $(SRCDIR)/$(2).sdi
 ifeq ($(gb_FULLDEPS),$(true))
 -include $(call gb_SdiTarget_get_dep_target,$(1))
