@@ -25,13 +25,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
    http://www.neooffice.org/neojava/javadownload.php
 
-   Important: the build may fail if other versions of Oracle's JDK are installed so you may want to delete all versions except Oracle's JDK 17 from the /Library/Java/JavaVirtualMachines folder before starting the build.
-
-3. If you are building on an Apple Silicon machine, you may need Apple's Rosetta to run Oracle's JDK 17 so run the following command to ensure that Rosetta is installed:
-
-   sudo softwareupdate --install-rosetta --agree-to-license
-
-4. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the MacPorts package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
+3. Install the following Mac Ports packages by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need download and install the MacPorts package to install the MacPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /opt/local/bin/port install autoconf -x11 +universal
    sudo /opt/local/bin/port install automake -x11 +universal
@@ -42,32 +36,32 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
    After running the above command, add "/opt/local/bin" to the end of your shell's PATH environment variable so that the build can all of the commands installed by /opt/local/bin/port command in the previous step.
 
-5. Make sure the git LFS extension is installed by downloading git-lfs:
+4. Make sure the git LFS extension is installed by downloading git-lfs:
 
    curl -L -O https://github.com/git-lfs/git-lfs/releases/download/v3.0.2/git-lfs-darwin-amd64-v3.0.2.zip
    mkdir git-lfs-darwin-amd64-v3.0.2 && cd git-lfs-darwin-amd64-v3.0.2 && unzip ../git-lfs-darwin-amd64-v3.0.2.zip && sudo ./install.sh
    git lfs install
 
-6. Download all LFS files from Github's LFS repository:
+5. Download all LFS files from Github's LFS repository:
 
    cd "<source folder>"
    git lfs fetch
    git lfs checkout
 
-7. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
+6. Installed the Perl Archive::Zip module using the following command. You may need to run this command more than once as the unit tests may fail the first time that you run it:
 
    sudo cpan -i Archive::Zip
 
-8. To build the installers, obtain the following types of codesigning certificates from Apple and install the certificates in the macOS Keychain Access application:
+7. To build the installers, obtain the following types of codesigning certificates from Apple and install the certificates in the macOS Keychain Access application:
 
    3rd Party Mac Developer Application
    3rd Party Mac Developer Installer
    Developer ID Application
    Developer ID Installer
 
-9. Assign the codesigning certificates obtained in the previous step by copying the "<source folder>/certs.neo.mk" file to "<source folder>/certs.mk". Then, open the "<source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
+8. Assign the codesigning certificates obtained in the previous step by copying the "<source folder>/certs.neo.mk" file to "<source folder>/certs.mk". Then, open the "<source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
 
-10. Start the build by invoking the following commands:
+9. Start the build by invoking the following commands:
 
    cd "<source folder>"
    gmake
@@ -79,7 +73,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
    Important note: if the build fails in the build.neo_tests make target, uncheck iCloud Drive in the System Preferences iCloud panel and reinvoke the above commands to continue the build.
 
-11. After a successful build, you can optionally build patch installers by invoking the following commands:
+10. After a successful build, you can optionally build patch installers by invoking the following commands:
 
    cd "<source folder>"
    gmake build.all_patches
@@ -89,7 +83,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
       "<source folder>/build/patch_install/*.dmg" - Patch installer for the Mac App Store version
       "<source folder>/build/patch_install3/*.dmg" - Patch installer for the Professional Edition version
 
-12. You can notarize and staple the installer .dmg files built in the previous step using Apple's notarization service by executing the following command:
+11. You can notarize and staple the installer .dmg files built in the previous step using Apple's notarization service by executing the following command:
 
    gmake build.staple_all
 
@@ -101,7 +95,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
    gmake APPLEDEVELOPERID=<e-mail of your Apple Developer account> build.store_notarytool_credentials
 
-13. There are several make rules to clean build files. To clean only the NeoOffice installers and patch installers execute the following commmand:
+12. There are several make rules to clean build files. To clean only the NeoOffice installers and patch installers execute the following commmand:
 
     gmake build.clean_neo_installers
 
