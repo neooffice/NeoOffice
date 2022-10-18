@@ -772,8 +772,11 @@ bool Dialog::ImplStartExecuteModal()
 #if defined USE_JAVA && defined MACOSX
     // Do not attempt to run a modal dialog while we are in a signal handler as
     // it will deadlock. Also, fix bug 1108 by not running it if a native sheet
-    // is being displayed.
-    if ( GetSalData()->mbInSignalHandler || GetSalData()->mbInNativeModalSheet )
+    // is being displayed. Also, fix infinite loop in Dialog::Execute() when
+    // the restart dialog is displayed after selecting the "Restart Now" option
+    // after changing the selected Java version by cancelling the dialog if
+    // we are already shutting down.
+    if ( Application::IsShutDown() || GetSalData()->mbInSignalHandler || GetSalData()->mbInNativeModalSheet )
         return sal_False;
 #endif	// USE_JAVA && MACOSX
 
