@@ -97,7 +97,7 @@ OUString macosx_getLocale()
         CFRelease(subs);
 
         // Mac OS X will sometimes use "_" as its delimiter
-        subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("_"));
+        subs = CFStringCreateArrayBySeparatingStrings(nullptr, sref, CFSTR("_"));
     }
 #endif	// USE_JAVA
     CFArrayGuard arrGuard(subs);
