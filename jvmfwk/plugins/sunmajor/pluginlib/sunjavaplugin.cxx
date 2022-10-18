@@ -25,9 +25,11 @@
  */
 
 
-#ifdef WNT
-# include <stdio.h>
+#ifdef _WIN32
 # include <sys/stat.h>
+# if !defined WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
 # include <windows.h>
 #endif
 
@@ -35,33 +37,46 @@
 # include <dlfcn.h>
 #endif
 
-#if OSL_DEBUG_LEVEL > 0
-#include <stdio.h>
-#endif
 #include <string.h>
 
-#include "boost/scoped_array.hpp"
-#include "config_options.h"
-#include "osl/diagnose.h"
-#include "rtl/ustring.hxx"
-#include "rtl/ustrbuf.hxx"
-#include "osl/module.hxx"
-#include "osl/mutex.hxx"
-#include "osl/process.h"
-#include "osl/thread.hxx"
-#include "osl/file.hxx"
-#include "rtl/instance.hxx"
-#include "osl/getglobalmutex.hxx"
+#include <cstddef>
+#include <cassert>
+#include <memory>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <config_options.h>
+#include <osl/diagnose.h>
+#include <rtl/ustring.hxx>
+#include <rtl/ustrbuf.hxx>
+#include <osl/module.hxx>
+#include <osl/mutex.hxx>
+#include <osl/process.h>
+#include <osl/thread.hxx>
+#include <osl/file.hxx>
+#include <sal/log.hxx>
+#include <o3tl/char16_t2wchar_t.hxx>
 #include <setjmp.h>
 #include <signal.h>
-#include <stack>
 
-#include "jni.h"
-#include "rtl/byteseq.hxx"
-#include "vendorplugin.hxx"
+#if defined __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-attributes"
+#endif
+#include <jni.h>
+#if defined __clang__
+#pragma clang diagnostic pop
+#endif
+
+#include <rtl/byteseq.hxx>
+#include <fwkbase.hxx>
+#include <elements.hxx>
+#include <vendorbase.hxx>
+#include <vendorplugin.hxx>
+#include <jvmfwk/framework.hxx>
 #include "util.hxx"
 #include "sunversion.hxx"
-#include "vendorlist.hxx"
 #include "diagnostics.h"
 
 #ifdef MACOSX
@@ -81,30 +96,27 @@
 #endif
 #endif
 
-#if defined LINUX && defined X86
+#if defined LINUX && (defined X86 || defined X86_64)
 #include <sys/resource.h>
 #endif
 
 using namespace osl;
-using namespace std;
 using namespace jfw_plugin;
 
 
 namespace {
 
-struct PluginMutex: public ::rtl::Static<osl::Mutex, PluginMutex> {};
-
-#if defined UNX
+#if defined(UNX) && !defined(ANDROID)
 OString getPluginJarPath(
-    const OUString & sVendor,
-    const OUString& sLocation,
-    const OUString& sVersion)
+    std::u16string_view sVendor,
+    std::u16string_view sLocation,
+    std::u16string_view sVersion)
 {
     OString ret;
     OUString sName1("javaplugin.jar");
     OUString sName2("plugin.jar");
     OUString sPath;
-    if ( sVendor == "Sun Microsystems Inc." )
+    if ( sVendor == u"Sun Microsystems Inc." )
     {
         SunVersion ver142("1.4.2-ea");
         SunVersion ver150("1.5.0-ea");
@@ -123,7 +135,7 @@ OString getPluginJarPath(
         }
         if (!sName.isEmpty())
         {
-            sName = sLocation + "/lib/" + sName;
+            sName = OUString::Concat(sLocation) + "/lib/" + sName;
             OSL_VERIFY(
                 osl_getSystemPathFromFileURL(sName.pData, & sPath.pData)
                 == osl_File_E_None);
@@ -131,18 +143,17 @@ OString getPluginJarPath(
     }
     else
     {
-        char sep[] =  {SAL_PATHSEPARATOR, 0};
-        OUString sName(sLocation + "/lib/" + sName1);
+        OUString sName(OUString::Concat(sLocation) + "/lib/" + sName1);
         OUString sPath1;
         OUString sPath2;
         if (osl_getSystemPathFromFileURL(sName.pData, & sPath1.pData)
             == osl_File_E_None)
         {
-            sName = sLocation + "/lib/" + sName2;
+            sName = OUString::Concat(sLocation) + "/lib/" + sName2;
             if (osl_getSystemPathFromFileURL(sName.pData, & sPath2.pData)
                 == osl_File_E_None)
             {
-                sPath = sPath1 + OUString::createFromAscii(sep) + sPath2;
+                sPath = sPath1 + OUStringChar(SAL_PATHSEPARATOR) + sPath2;
             }
         }
         OSL_ASSERT(!sPath.isEmpty());
@@ -154,43 +165,30 @@ OString getPluginJarPath(
 #endif // UNX
 
 
-JavaInfo* createJavaInfo(const rtl::Reference<VendorBase> & info)
+std::unique_ptr<JavaInfo> createJavaInfo(
+    const rtl::Reference<VendorBase> & info)
 {
-    JavaInfo* pInfo = (JavaInfo*) rtl_allocateMemory(sizeof(JavaInfo));
-    if (pInfo == NULL)
-        return NULL;
-    OUString sVendor = info->getVendor();
-    pInfo->sVendor = sVendor.pData;
-    rtl_uString_acquire(sVendor.pData);
-    OUString sHome = info->getHome();
-    pInfo->sLocation = sHome.pData;
-    rtl_uString_acquire(pInfo->sLocation);
-    OUString sVersion = info->getVersion();
-    pInfo->sVersion = sVersion.pData;
-    rtl_uString_acquire(pInfo->sVersion);
-    pInfo->nFeatures = info->supportsAccessibility() ? 1 : 0;
-    pInfo->nRequirements = info->needsRestart() ? JFW_REQUIRE_NEEDRESTART : 0;
     OUStringBuffer buf(1024);
     buf.append(info->getRuntimeLibrary());
     if (!info->getLibraryPath().isEmpty())
     {
-        buf.appendAscii("\n");
+        buf.append("\n");
         buf.append(info->getLibraryPath());
-        buf.appendAscii("\n");
+        buf.append("\n");
     }
-
     OUString sVendorData = buf.makeStringAndClear();
-    rtl::ByteSequence byteSeq( (sal_Int8*) sVendorData.pData->buffer,
-                               sVendorData.getLength() * sizeof(sal_Unicode));
-    pInfo->arVendorData = byteSeq.get();
-    rtl_byte_sequence_acquire(pInfo->arVendorData);
-
-    return pInfo;
+    return std::unique_ptr<JavaInfo>(
+        new JavaInfo{
+            info->getVendor(), info->getHome(), info->getVersion(),
+            sal_uInt64(info->needsRestart() ? JFW_REQUIRE_NEEDRESTART : 0),
+            rtl::ByteSequence(
+                reinterpret_cast<sal_Int8*>(sVendorData.pData->buffer),
+                sVendorData.getLength() * sizeof(sal_Unicode))});
 }
 
 OUString getRuntimeLib(const rtl::ByteSequence & data)
 {
-    const sal_Unicode* chars = (sal_Unicode*) data.getConstArray();
+    const sal_Unicode* chars = reinterpret_cast<sal_Unicode const *>(data.getConstArray());
     sal_Int32 len = data.getLength();
     OUString sData(chars, len / 2);
     //the runtime lib is on the first line
@@ -208,10 +206,41 @@ extern "C" void JNICALL abort_handler()
     // If we are within JNI_CreateJavaVM then we jump back into getJavaVM
     if( g_bInGetJavaVM != 0 )
     {
-        fprintf( stderr, "JavaVM: JNI_CreateJavaVM called _exit, caught by abort_handler in javavm.cxx\n");
+        SAL_WARN("jfw", "JavaVM: JNI_CreateJavaVM called os::abort(), caught by abort_handler");
         longjmp( jmp_jvm_abort, 0);
     }
 }
+
+typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
+
+#ifndef ANDROID
+int createJvm(
+    JNI_CreateVM_Type * pCreateJavaVM, JavaVM ** pJavaVM, JNIEnv ** ppEnv, JavaVMInitArgs * vm_args)
+{
+    /* We set a global flag which is used by the abort handler in order to
+       determine whether it is  should use longjmp to get back into this function.
+       That is, the abort handler determines if it is on the same stack as this function
+       and then jumps back into this function.
+    */
+    g_bInGetJavaVM = 1;
+    jint err;
+    memset( jmp_jvm_abort, 0, sizeof(jmp_jvm_abort));
+    /* If the setjmp return value is not "0" then this point was reached by a longjmp in the
+       abort_handler, which was called indirectly by JNI_CreateVM.
+    */
+    if( setjmp( jmp_jvm_abort ) == 0)
+    {
+        //returns negative number on failure
+        err= pCreateJavaVM(pJavaVM, ppEnv, vm_args);
+        g_bInGetJavaVM = 0;
+    }
+    else
+        // set err to a positive number, so as or recognize that an abort (longjmp)
+        //occurred
+        err= 1;
+    return err;
+}
+#endif
 
 /** helper function to check Java version requirements
 
@@ -226,15 +255,13 @@ extern "C" void JNICALL abort_handler()
         [in] represents the maximum version of a JRE. The string can be empty.
     @param arExcludeList
         [in] contains a list of &quot;bad&quot; versions. JREs which have one of these
-        versions must not be returned by this function. It can be NULL.
-    @param nLenList
-        [in] the number of version strings contained in <code>arExcludeList</code>.
+        versions must not be returned by this function.
 
    @return
-    JFW_PLUGIN_E_NONE the function ran successfully and the version requirements are met
-    JFW_PLUGIN_E_FAILED_VERSION at least one of the version requirements (minVersion,
+    javaPluginError::NONE the function ran successfully and the version requirements are met
+    javaPluginError::FailedVersion at least one of the version requirements (minVersion,
     maxVersion, excludeVersions) was violated
-    JFW_PLUGIN_E_WRONG_VERSION_FORMAT the version strings in
+    javaPluginError::WrongVersionFormat the version strings in
     <code>sMinVersion,sMaxVersion,arExcludeList</code> are not recognized as valid
     version strings.
 
@@ -243,15 +270,18 @@ javaPluginError checkJavaVersionRequirements(
     rtl::Reference<VendorBase> const & aVendorInfo,
     OUString const& sMinVersion,
     OUString const& sMaxVersion,
-    rtl_uString * * arExcludeList,
-    sal_Int32  nLenList)
+    std::vector<OUString> const & arExcludeList)
 {
+    if (!aVendorInfo->isValidArch())
+    {
+        return javaPluginError::WrongArch;
+    }
     if (!sMinVersion.isEmpty())
     {
         try
         {
             if (aVendorInfo->compareVersions(sMinVersion) < 0)
-                return JFW_PLUGIN_E_FAILED_VERSION;
+                return javaPluginError::FailedVersion;
         }
         catch (MalformedVersionException&)
         {
@@ -261,7 +291,7 @@ javaPluginError checkJavaVersionRequirements(
                 "[Java framework]sunjavaplugin does not know version: "
                 + sMinVersion + " for vendor: " + aVendorInfo->getVendor()
                 + " .Check minimum Version." );
-            return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+            return javaPluginError::WrongVersionFormat;
         }
     }
 
@@ -270,7 +300,7 @@ javaPluginError checkJavaVersionRequirements(
         try
         {
             if (aVendorInfo->compareVersions(sMaxVersion) > 0)
-                return JFW_PLUGIN_E_FAILED_VERSION;
+                return javaPluginError::FailedVersion;
         }
         catch (MalformedVersionException&)
         {
@@ -280,17 +310,15 @@ javaPluginError checkJavaVersionRequirements(
                 "[Java framework]sunjavaplugin does not know version: "
                 + sMaxVersion + " for vendor: " + aVendorInfo->getVendor()
                 + " .Check maximum Version." );
-            return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+            return javaPluginError::WrongVersionFormat;
         }
     }
 
-    for (int i = 0; i < nLenList; i++)
-    {
-        OUString sExVer(arExcludeList[i]);
+    for (auto const & sExVer: arExcludeList) {
         try
         {
             if (aVendorInfo->compareVersions(sExVer) == 0)
-                return JFW_PLUGIN_E_FAILED_VERSION;
+                return javaPluginError::FailedVersion;
         }
         catch (MalformedVersionException&)
         {
@@ -300,194 +328,221 @@ javaPluginError checkJavaVersionRequirements(
                 "[Java framework]sunjavaplugin does not know version: "
                 + sExVer + " for vendor: " + aVendorInfo->getVendor()
                 + " .Check excluded versions." );
-            return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+            return javaPluginError::WrongVersionFormat;
         }
     }
 
-    return JFW_PLUGIN_E_NONE;
+    return javaPluginError::NONE;
 }
 
 }
 
 javaPluginError jfw_plugin_getAllJavaInfos(
-    OUString const& sVendor,
-    OUString const& sMinVersion,
-    OUString const& sMaxVersion,
-    rtl_uString  * *arExcludeList,
-    sal_Int32  nLenList,
-    JavaInfo*** parJavaInfo,
-    sal_Int32 *nLenInfoList)
+    bool checkJavaHomeAndPath,
+    jfw::VendorSettings const & vendorSettings,
+    std::vector<std::unique_ptr<JavaInfo>>* parJavaInfo,
+    std::vector<rtl::Reference<jfw_plugin::VendorBase>> & infos)
 {
-    OSL_ASSERT(parJavaInfo);
-    OSL_ASSERT(nLenInfoList);
-    if (!parJavaInfo || !nLenInfoList)
-        return JFW_PLUGIN_E_INVALID_ARG;
-
-    //nLenlist contains the number of elements in arExcludeList.
-    //If no exclude list is provided then nLenList must be 0
-    OSL_ASSERT( ! (arExcludeList == NULL && nLenList > 0));
-    if (arExcludeList == NULL && nLenList > 0)
-        return JFW_PLUGIN_E_INVALID_ARG;
-
-    OSL_ASSERT(!sVendor.isEmpty());
-    if (sVendor.isEmpty())
-        return JFW_PLUGIN_E_INVALID_ARG;
-
-    JavaInfo** arInfo = NULL;
+    assert(parJavaInfo);
 
     //Find all JREs
-    vector<rtl::Reference<VendorBase> > vecInfos =
-        getAllJREInfos();
-    vector<rtl::Reference<VendorBase> > vecVerifiedInfos;
+    std::vector<rtl::Reference<VendorBase> > vecInfos =
+        addAllJREInfos(checkJavaHomeAndPath, infos);
+    std::vector<rtl::Reference<VendorBase> > vecVerifiedInfos;
 
-    typedef vector<rtl::Reference<VendorBase> >::iterator it;
-    for (it i= vecInfos.begin(); i != vecInfos.end(); ++i)
+    for (auto const& vecInfo : vecInfos)
     {
-        const rtl::Reference<VendorBase>& cur = *i;
-
-        if (!sVendor.equals(cur->getVendor()))
-            continue;
-
+        auto const versionInfo = vendorSettings.getVersionInformation(vecInfo->getVendor());
         javaPluginError err = checkJavaVersionRequirements(
-            cur, sMinVersion, sMaxVersion, arExcludeList, nLenList);
+            vecInfo, versionInfo.sMinVersion, versionInfo.sMaxVersion, versionInfo.vecExcludeVersions);
 
-        if (err == JFW_PLUGIN_E_FAILED_VERSION)
+        if (err == javaPluginError::FailedVersion || err == javaPluginError::WrongArch)
             continue;
-        else if (err == JFW_PLUGIN_E_WRONG_VERSION_FORMAT)
+        else if (err == javaPluginError::WrongVersionFormat)
             return err;
 
-        vecVerifiedInfos.push_back(*i);
+        vecVerifiedInfos.push_back(vecInfo);
     }
     //Now vecVerifiedInfos contains all those JREs which meet the version requirements
     //Transfer them into the array that is passed out.
-    arInfo = (JavaInfo**) rtl_allocateMemory(vecVerifiedInfos.size() * sizeof (JavaInfo*));
-    int j = 0;
-    typedef vector<rtl::Reference<VendorBase> >::const_iterator cit;
-    for (cit ii = vecVerifiedInfos.begin(); ii != vecVerifiedInfos.end(); ++ii, ++j)
+    parJavaInfo->clear();
+    for (auto const& vecVerifiedInfo : vecVerifiedInfos)
     {
-        arInfo[j] = createJavaInfo(*ii);
+        parJavaInfo->push_back(createJavaInfo(vecVerifiedInfo));
     }
-    *nLenInfoList = vecVerifiedInfos.size();
 
-
-    *parJavaInfo = arInfo;
-    return JFW_PLUGIN_E_NONE;
+    return javaPluginError::NONE;
 }
 
 javaPluginError jfw_plugin_getJavaInfoByPath(
     OUString const& sPath,
-    OUString const& sVendor,
-    OUString const& sMinVersion,
-    OUString const& sMaxVersion,
-    rtl_uString  *  *arExcludeList,
-    sal_Int32  nLenList,
-    JavaInfo ** ppInfo)
+    jfw::VendorSettings const & vendorSettings,
+    std::unique_ptr<JavaInfo> * ppInfo)
 {
-    if (!ppInfo)
-        return JFW_PLUGIN_E_INVALID_ARG;
+    assert(ppInfo != nullptr);
     OSL_ASSERT(!sPath.isEmpty());
     if (sPath.isEmpty())
-        return JFW_PLUGIN_E_INVALID_ARG;
-
-    //nLenlist contains the number of elements in arExcludeList.
-    //If no exclude list is provided then nLenList must be 0
-    OSL_ASSERT( ! (arExcludeList == NULL && nLenList > 0));
-    if (arExcludeList == NULL && nLenList > 0)
-        return JFW_PLUGIN_E_INVALID_ARG;
-
-    OSL_ASSERT(!sVendor.isEmpty());
-    if (sVendor.isEmpty())
-        return JFW_PLUGIN_E_INVALID_ARG;
+        return javaPluginError::InvalidArg;
 
     rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath(sPath);
     if (!aVendorInfo.is())
-        return JFW_PLUGIN_E_NO_JRE;
+        return javaPluginError::NoJre;
 
     //Check if the detected JRE matches the version requirements
-    if (!sVendor.equals(aVendorInfo->getVendor()))
-        return JFW_PLUGIN_E_NO_JRE;
-    javaPluginError errorcode = checkJavaVersionRequirements(
-            aVendorInfo, sMinVersion, sMaxVersion, arExcludeList, nLenList);
+    javaPluginError errorcode = javaPluginError::NONE;
+    auto const versionInfo = vendorSettings.getVersionInformation(aVendorInfo->getVendor());
+    errorcode = checkJavaVersionRequirements(
+        aVendorInfo, versionInfo.sMinVersion, versionInfo.sMaxVersion, versionInfo.vecExcludeVersions);
 
-    if (errorcode == JFW_PLUGIN_E_NONE)
+    if (errorcode == javaPluginError::NONE)
         *ppInfo = createJavaInfo(aVendorInfo);
 
     return errorcode;
 }
 
-#if defined(WNT)
+javaPluginError jfw_plugin_getJavaInfoFromJavaHome(
+    jfw::VendorSettings const & vendorSettings,
+    std::unique_ptr<JavaInfo> * ppInfo,
+    std::vector<rtl::Reference<VendorBase>> & infos)
+{
+    assert(ppInfo);
+
+    std::vector<rtl::Reference<VendorBase>> infoJavaHome;
+    addJavaInfoFromJavaHome(infos, infoJavaHome);
+
+    if (infoJavaHome.empty())
+        return javaPluginError::NoJre;
+    assert(infoJavaHome.size() == 1);
+
+    //Check if the detected JRE matches the version requirements
+    auto const versionInfo = vendorSettings.getVersionInformation(infoJavaHome[0]->getVendor());
+    if (checkJavaVersionRequirements(
+                infoJavaHome[0],
+                versionInfo.sMinVersion,
+                versionInfo.sMaxVersion,
+                versionInfo.vecExcludeVersions)
+            == javaPluginError::NONE)
+    {
+        *ppInfo = createJavaInfo(infoJavaHome[0]);
+        return javaPluginError::NONE;
+    }
+
+    return javaPluginError::NoJre;
+}
+
+javaPluginError jfw_plugin_getJavaInfosFromPath(
+    jfw::VendorSettings const & vendorSettings,
+    std::vector<std::unique_ptr<JavaInfo>> & javaInfosFromPath,
+    std::vector<rtl::Reference<jfw_plugin::VendorBase>> & infos)
+{
+    // find JREs from PATH
+    std::vector<rtl::Reference<VendorBase>> vecInfosFromPath;
+    addJavaInfosFromPath(infos, vecInfosFromPath);
+
+    std::vector<std::unique_ptr<JavaInfo>> vecVerifiedInfos;
+
+    // copy infos of JREs that meet version requirements to vecVerifiedInfos
+    for (auto const& infosFromPath : vecInfosFromPath)
+    {
+        auto const versionInfo = vendorSettings.getVersionInformation(infosFromPath->getVendor());
+        if (checkJavaVersionRequirements(
+                    infosFromPath,
+                    versionInfo.sMinVersion,
+                    versionInfo.sMaxVersion,
+                    versionInfo.vecExcludeVersions)
+                == javaPluginError::NONE)
+        {
+            vecVerifiedInfos.push_back(createJavaInfo(infosFromPath));
+        }
+    }
+
+    if (vecVerifiedInfos.empty())
+        return javaPluginError::NoJre;
+
+    javaInfosFromPath = std::move(vecVerifiedInfos);
+
+    return javaPluginError::NONE;
+}
+
+
+#if defined(_WIN32)
 
 // Load msvcr71.dll using an explicit full path from where it is
 // present as bundled with the JRE. In case it is not found where we
 // think it should be, do nothing, and just let the implicit loading
 // that happens when loading the JVM take care of it.
 
-static void load_msvcr(LPCWSTR jvm_dll, wchar_t const* msvcr)
+static void load_msvcr(std::u16string_view jvm_dll, std::u16string_view msvcr)
 {
-    wchar_t msvcr_dll[MAX_PATH];
-    wchar_t *slash;
-
-    if (wcslen(jvm_dll) > MAX_PATH - 15)
-        return;
-
-    wcscpy(msvcr_dll, jvm_dll);
-
     // First check if msvcr71.dll is in the same folder as jvm.dll. It
     // normally isn't, at least up to 1.6.0_22, but who knows if it
     // might be in the future.
-    slash = wcsrchr(msvcr_dll, L'\\');
+    std::size_t slash = jvm_dll.rfind('\\');
 
-    if (!slash)
+    if (slash == std::u16string_view::npos)
     {
         // Huh, weird path to jvm.dll. Oh well.
+        SAL_WARN("jfw", "JVM pathname <" << OUString(jvm_dll) << "> w/o backslash");
         return;
     }
 
-    wcscpy(slash+1, msvcr);
-    if (LoadLibraryW(msvcr_dll))
+    if (LoadLibraryW(
+            o3tl::toW(OUString(OUString::Concat(jvm_dll.substr(0, slash+1)) + msvcr).getStr())))
         return;
 
     // Then check if msvcr71.dll is in the parent folder of where
     // jvm.dll is. That is currently (1.6.0_22) as far as I know the
     // normal case.
-    *slash = 0;
-    slash = wcsrchr(msvcr_dll, L'\\');
+    slash = jvm_dll.rfind('\\', slash);
 
-    if (!slash)
+    if (slash == std::u16string_view::npos)
         return;
 
-    wcscpy(slash+1, msvcr);
-    LoadLibraryW(msvcr_dll);
+    (void)LoadLibraryW(
+        o3tl::toW(OUString(OUString::Concat(jvm_dll.substr(0, slash+1)) + msvcr).getStr()));
 }
 
 // Check if the jvm DLL imports msvcr71.dll, and in that case try
 // loading it explicitly. In case something goes wrong, do nothing,
 // and just let the implicit loading try to take care of it.
-static void do_msvcr_magic(rtl_uString *jvm_dll)
+static void do_msvcr_magic(OUString const &jvm_dll)
 {
-    rtl_uString* Module(0);
     struct stat st;
 
-    oslFileError nError = osl_getSystemPathFromFileURL(jvm_dll, &Module);
+    OUString Module;
+    osl::FileBase::RC nError = osl::FileBase::getSystemPathFromFileURL(
+        jvm_dll, Module);
 
-    if ( osl_File_E_None != nError )
-        rtl_uString_assign(&Module, jvm_dll);
+    if ( osl::FileBase::E_None != nError )
+    {
+        SAL_WARN(
+            "jfw", "getSystemPathFromFileURL(" << jvm_dll << "): " << +nError);
+        return;
+    }
 
-    FILE *f = _wfopen(reinterpret_cast<LPCWSTR>(Module->buffer), L"rb");
+    FILE *f = _wfopen(o3tl::toW(Module.getStr()), L"rb");
+
+    if (!f)
+    {
+        SAL_WARN("jfw", "_wfopen(" << Module << ") failed");
+        return;
+    }
 
     if (fstat(fileno(f), &st) == -1)
     {
+        SAL_WARN("jfw", "fstat(" << Module << ") failed");
         fclose(f);
         return;
     }
 
-    PIMAGE_DOS_HEADER dos_hdr = (PIMAGE_DOS_HEADER) malloc(st.st_size);
-
+    PIMAGE_DOS_HEADER dos_hdr = static_cast<PIMAGE_DOS_HEADER>(malloc(st.st_size));
+    assert(dos_hdr);
     if (fread(dos_hdr, st.st_size, 1, f) != 1 ||
         memcmp(dos_hdr, "MZ", 2) != 0 ||
         dos_hdr->e_lfanew < 0 ||
-        dos_hdr->e_lfanew > (LONG) (st.st_size - sizeof(IMAGE_NT_HEADERS)))
+        dos_hdr->e_lfanew > static_cast<LONG>(st.st_size - sizeof(IMAGE_NT_HEADERS)))
     {
+        SAL_WARN("jfw", "analyzing <" << Module << "> failed");
         free(dos_hdr);
         fclose(f);
         return;
@@ -495,7 +550,7 @@ static void do_msvcr_magic(rtl_uString *jvm_dll)
 
     fclose(f);
 
-    IMAGE_NT_HEADERS *nt_hdr = (IMAGE_NT_HEADERS *) ((char *)dos_hdr + dos_hdr->e_lfanew);
+    IMAGE_NT_HEADERS *nt_hdr = reinterpret_cast<IMAGE_NT_HEADERS *>(reinterpret_cast<char *>(dos_hdr) + dos_hdr->e_lfanew);
 
     DWORD importsVA = nt_hdr->OptionalHeader
             .DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
@@ -508,37 +563,38 @@ static void do_msvcr_magic(rtl_uString *jvm_dll)
         if (sections->VirtualAddress <= importsVA &&
             importsVA < sections->VirtualAddress + sections->SizeOfRawData)
         {
-            VAtoPhys = sections->PointerToRawData - sections->VirtualAddress;
+            VAtoPhys = static_cast<size_t>(sections->PointerToRawData) - static_cast<size_t>(sections->VirtualAddress);
             break;
         }
         ++sections;
     }
     if (-1 == VAtoPhys) // not found?
     {
+        SAL_WARN("jfw", "analyzing <" << Module << "> failed");
         free(dos_hdr);
         return;
     }
     IMAGE_IMPORT_DESCRIPTOR *imports =
-        (IMAGE_IMPORT_DESCRIPTOR *) ((char *) dos_hdr + importsVA + VAtoPhys);
+        reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR *>(reinterpret_cast<char *>(dos_hdr) + importsVA + VAtoPhys);
 
-    while (imports <= (IMAGE_IMPORT_DESCRIPTOR *) ((char *) dos_hdr + st.st_size - sizeof (IMAGE_IMPORT_DESCRIPTOR)) &&
+    while (imports <= reinterpret_cast<IMAGE_IMPORT_DESCRIPTOR *>(reinterpret_cast<char *>(dos_hdr) + st.st_size - sizeof (IMAGE_IMPORT_DESCRIPTOR)) &&
            imports->Name != 0 &&
-           imports->Name + VAtoPhys < (DWORD) st.st_size)
+           imports->Name + VAtoPhys < static_cast<DWORD>(st.st_size))
     {
-        static struct { char const * name; wchar_t const * wname; } msvcrts[] =
+        static std::u16string_view msvcrts[] =
         {
-            { "msvcr71.dll" , L"msvcr71.dll"  },
-            { "msvcr100.dll", L"msvcr100.dll" },
+            u"msvcr71.dll",
+            u"msvcr100.dll"
         };
-        char const* importName = (char *) dos_hdr + imports->Name + VAtoPhys;
+        char const* importName = reinterpret_cast<char *>(dos_hdr) + imports->Name + VAtoPhys;
+        sal_Int32 importNameLen = rtl_str_getLength(importName);
         for (size_t i = 0; i < SAL_N_ELEMENTS(msvcrts); ++i)
         {
-            if (0 == strnicmp(importName,
-                // Intentional strlen() + 1 here to include terminating zero
-                        msvcrts[i].name, strlen(msvcrts[i].name) + 1))
+            if (0 == rtl_ustr_ascii_compareIgnoreAsciiCase_WithLengths(
+                    msvcrts[i].data(), msvcrts[i].size(),
+                    importName, importNameLen))
             {
-                load_msvcr(reinterpret_cast<LPCWSTR>(Module->buffer),
-                        msvcrts[i].wname);
+                load_msvcr(Module, msvcrts[i]);
                 free(dos_hdr);
                 return;
             }
@@ -564,54 +620,59 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     JavaVM ** ppVm,
     JNIEnv ** ppEnv)
 {
-    // unless guard is volatile the following warning occurs on gcc:
-    // warning: variable 't' might be clobbered by `longjmp' or `vfork'
-    volatile osl::MutexGuard guard(PluginMutex::get());
-    // unless errorcode is volatile the following warning occurs on gcc:
-    // warning: variable 'errorcode' might be clobbered by `longjmp' or `vfork'
-    volatile javaPluginError errorcode = JFW_PLUGIN_E_NONE;
-    if ( pInfo == NULL || ppVm == NULL || ppEnv == NULL)
-        return JFW_PLUGIN_E_INVALID_ARG;
-    //Check if the Vendor (pInfo->sVendor) is supported by this plugin
-    if ( ! isVendorSupported(pInfo->sVendor))
-        return JFW_PLUGIN_E_WRONG_VENDOR;
+    static osl::Mutex aPluginMutex;
+    assert(pInfo != nullptr);
+    assert(ppVm != nullptr);
+    assert(ppEnv != nullptr);
+    osl::MutexGuard guard(aPluginMutex);
+    javaPluginError errorcode = javaPluginError::NONE;
 #ifdef MACOSX
 #ifdef USE_JAVA
     try
     {
 #endif	// USE_JAVA
-    rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( OUString( pInfo->sLocation ) );
-    if ( !aVendorInfo.is() || aVendorInfo->compareVersions( OUString( pInfo->sVersion ) ) < 0 )
+    rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( pInfo->sLocation );
+    if ( !aVendorInfo.is() || aVendorInfo->compareVersions( pInfo->sVersion ) < 0 )
 #ifdef USE_JAVA
-        return JFW_PLUGIN_E_FAILED_VERSION;
+        return javaPluginError::FailedVersion;
     }
     catch ( MalformedVersionException& )
     {
-        return JFW_PLUGIN_E_WRONG_VERSION_FORMAT;
+        return javaPluginError::WrongVersionFormat;
     }
 #else	// USE_JAVA
-        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+        return javaPluginError::VmCreationFailed;
 #endif	// USE_JAVA
 #endif
     OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
 #ifdef MACOSX
     if ( !JvmfwkUtil_isLoadableJVM( sRuntimeLib ) )
-        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+        return javaPluginError::VmCreationFailed;
 #endif
     JFW_TRACE2("Using Java runtime library: " << sRuntimeLib);
 
 #ifndef ANDROID
     // On linux we load jvm with RTLD_GLOBAL. This is necessary for debugging, because
     // libjdwp.so need a symbol (fork1) from libjvm which it only gets if the jvm is loaded
-    // witd RTLD_GLOBAL. On Solaris libjdwp.so is correctly linked with libjvm.so
+    // with RTLD_GLOBAL. On Solaris libjdwp.so is correctly linked with libjvm.so
     osl::Module moduleRt;
 #if defined(LINUX)
     if (!moduleRt.load(sRuntimeLib, SAL_LOADMODULE_GLOBAL | SAL_LOADMODULE_NOW))
+#elif defined MACOSX
+    // Must be SAL_LOADMODULE_GLOBAL when e.g. specifying a
+    // -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000 option to
+    // JDK 1.8.0_121 at least, as JNI_CreateJavaVM -> Threads::create_vm ->
+    // JvmtiExport::post_vm_initialized -> cbEarlyVMInit -> initialize ->
+    // util_initialize -> sun.misc.VMSupport.getAgentProperties ->
+    // Java_sun_misc_VMSupport_initAgentProperties ->
+    // JDK_FindJvmEntry("JVM_INitAgentProperties") ->
+    // dlsym(RTLD_DEFAULT, "JVM_INitAgentProperties"):
+    if (!moduleRt.load(sRuntimeLib, SAL_LOADMODULE_GLOBAL))
 #else
-#if defined(WNT)
-    do_msvcr_magic(sRuntimeLib.pData);
+#if defined(_WIN32)
+    do_msvcr_magic(sRuntimeLib);
 #endif
-    if (!moduleRt.load(sRuntimeLib, SAL_LOADMODULE_DEFAULT))
+    if (!moduleRt.load(sRuntimeLib))
 #endif
     {
         JFW_ENSURE(false,
@@ -619,17 +680,16 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                       " could not load Java runtime library: \n"
                    + sRuntimeLib + "\n");
         JFW_TRACE0("Could not load Java runtime library: " << sRuntimeLib);
-        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+        return javaPluginError::VmCreationFailed;
     }
 
 #if ( defined UNX && !defined MACOSX ) || defined USE_JAVA
     //Setting the JAVA_HOME is needed for awt
     OUString sPathLocation;
-    osl_getSystemPathFromFileURL(pInfo->sLocation, & sPathLocation.pData);
+    osl::FileBase::getSystemPathFromFileURL(pInfo->sLocation, sPathLocation);
     osl_setEnvironment(OUString("JAVA_HOME").pData, sPathLocation.pData);
 #endif	// ( UNX && !MACOSX ) || USE_JAVA
 
-    typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
 #if defined USE_JAVA && defined MACOSX
     // Fix bug 1257 by explicitly loading the JVM instead of loading the
     // shared JavaVM library
@@ -640,7 +700,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA && MACOSX
 
     JNI_CreateVM_Type * pCreateJavaVM =
-        (JNI_CreateVM_Type *)moduleRt.getFunctionSymbol(sSymbolCreateJava);
+        reinterpret_cast<JNI_CreateVM_Type *>(moduleRt.getFunctionSymbol(sSymbolCreateJava));
 #if defined USE_JAVA && defined MACOSX
     if (!pCreateJavaVM)
         pCreateJavaVM = (JNI_CreateVM_Type *)moduleRt.getFunctionSymbol(sSymbolCreateJava2);
@@ -652,10 +712,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
             sRuntimeLib, osl_getThreadTextEncoding());
         OString sSymbol = OUStringToOString(
             sSymbolCreateJava, osl_getThreadTextEncoding());
-        fprintf(stderr,"[Java framework]sunjavaplugin" SAL_DLLEXTENSION
-                "Java runtime library: %s does not export symbol %s !\n",
-                sLib.getStr(), sSymbol.getStr());
-        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+        SAL_WARN("jfw", "Java runtime library: " << sLib << " does not export symbol " << sSymbol);
+        return javaPluginError::VmCreationFailed;
     }
     moduleRt.release();
 
@@ -681,37 +739,24 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // JNI_CreateJavaVM. This happens when the LD_LIBRARY_PATH does not contain
     // all some directories of the Java installation. This is necessary for
     // all versions below 1.5.1
-    options.push_back(Option("abort", reinterpret_cast<void*>(abort_handler)));
+    options.emplace_back("abort", reinterpret_cast<void*>(abort_handler));
     bool hasStackSize = false;
-#ifndef NO_LIBO_KLX6N3W9_FIX
 #ifdef UNX
     // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
     // in the class path in order to have applet support:
     OString sAddPath = getPluginJarPath(pInfo->sVendor, pInfo->sLocation,pInfo->sVersion);
 #endif
-#endif	// !NO_LIBO_KLX6N3W9_FIX
     for (int i = 0; i < cOptions; i++)
     {
         OString opt(arOptions[i].optionString);
 #ifdef UNX
-#ifdef NO_LIBO_KLX6N3W9_FIX
-        // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
-        // in the class path in order to have applet support:
-#endif	// NO_LIBO_KLX6N3W9_FIX
         if (opt.startsWith("-Djava.class.path="))
         {
-#ifdef NO_LIBO_KLX6N3W9_FIX
-            OString sAddPath = getPluginJarPath(pInfo->sVendor, pInfo->sLocation,pInfo->sVersion);
-#endif	// NO_LIBO_KLX6N3W9_FIX
             if (!sAddPath.isEmpty())
-#ifndef NO_LIBO_KLX6N3W9_FIX
             {
-#endif	// !NO_LIBO_KLX6N3W9_FIX
-                opt += OString(SAL_PATHSEPARATOR) + sAddPath;
-#ifndef NO_LIBO_KLX6N3W9_FIX
+                opt += OStringChar(SAL_PATHSEPARATOR) + sAddPath;
                 sAddPath.clear();
             }
-#endif	// !NO_LIBO_KLX6N3W9_FIX
         }
 #endif
         if (opt == "-Xint") {
@@ -725,13 +770,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         // empty options
         if (opt.getLength())
 #endif	// USE_JAVA
-        options.push_back(Option(opt, arOptions[i].extraInfo));
+        options.emplace_back(opt, arOptions[i].extraInfo);
     }
     if (addForceInterpreted) {
-        options.push_back(Option("-Xint", nullptr));
+        options.emplace_back("-Xint", nullptr);
     }
     if (!hasStackSize) {
-#if defined LINUX && defined X86
+#if defined LINUX && (defined X86 || defined X86_64)
         // At least OpenJDK 1.8.0's os::workaround_expand_exec_shield_cs_limit
         // (hotspot/src/os_cpu/linux_x86/vm/os_linux_x86.cpp) can mmap an rwx
         // page into the area that the main stack can grow down to according to
@@ -754,8 +799,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                     "jfw", "huge RLIMIT_STACK " << l.rlim_cur << " -> 8192K");
                 l.rlim_cur = 8192 * 1024;
             }
-            options.push_back(
-                Option("-Xss" + OString::number(l.rlim_cur), nullptr));
+            options.emplace_back("-Xss" + OString::number(l.rlim_cur), nullptr);
         } else {
             int e = errno;
             SAL_WARN("jfw", "getrlimit(RLIMIT_STACK) failed with errno " << e);
@@ -772,7 +816,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     // directories that actually exist.
     OString aExtProp( "-Djava.ext.dirs=" );
     OUString aExtPath( sPathLocation );
-    aExtPath += OStringToOUString( aPathDelimiter + "lib" + aPathDelimiter + "ext", osl_getThreadTextEncoding() );
+    aExtPath += OStringToOUString( OString( aPathDelimiter + "lib" + aPathDelimiter + "ext" ), osl_getThreadTextEncoding() );
     OUString aExtURL;
     if ( osl_getFileURLFromSystemPath( aExtPath.pData, &aExtURL.pData ) == osl_File_E_None )
     {
@@ -780,7 +824,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         if ( DirectoryItem::get( aExtURL, aDirItem ) == File::E_None )
             aExtProp += OUStringToOString( aExtPath, osl_getThreadTextEncoding() );
     }
-    options.push_back( Option( aExtProp, nullptr ) );
+    options.emplace_back( aExtProp, nullptr );
 
     // Set the library path to include the executable path but none of the
     // extensions
@@ -819,31 +863,30 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         aLibPath += aEnvPath;
     }
 #endif	// MACOSX
-    options.push_back( Option( aLibPath, nullptr ) );
+    options.emplace_back( aLibPath, nullptr );
 
     // Set miscellaneous optimizations for the JVM
-    options.push_back( Option( "-Xrs", nullptr ) );
+    options.emplace_back( "-Xrs", nullptr );
 
     size_t nUserMem = 256;
     OString aMemMax( "-Xmx" );
     aMemMax += OString::number( (sal_Int32)nUserMem ) + "m";
-    options.push_back( Option( aMemMax, nullptr ) );
+    options.emplace_back( aMemMax, nullptr );
 
 #ifdef MACOSX
     // Enable Java AWT as the hanging caused by Oracle's Java AWT classes has
     // been fixed in vcl/source/app/svmainhook_cocoa.mm
-    options.push_back( Option( "-Djava.awt.headless=false", nullptr ) );
+    options.emplace_back( "-Djava.awt.headless=false", nullptr );
 #endif	// MACOSX
 #endif	// USE_JAVA
-#ifndef NO_LIBO_KLX6N3W9_FIX
+
 #ifdef UNX
     if (!sAddPath.isEmpty()) {
         options.emplace_back("-Djava.class.path=" + sAddPath, nullptr);
     }
 #endif
-#endif	// !NO_LIBO_KLX6N3W9_FIX
 
-    boost::scoped_array<JavaVMOption> sarOptions(new JavaVMOption[options.size()]);
+    std::unique_ptr<JavaVMOption[]> sarOptions(new JavaVMOption[options.size()]);
     for (std::vector<Option>::size_type i = 0; i != options.size(); ++i) {
         SAL_INFO(
             "jfw",
@@ -863,43 +906,20 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     vm_args.nOptions= options.size(); //TODO overflow
     vm_args.ignoreUnrecognized= JNI_TRUE;
 
-    /* We set a global flag which is used by the abort handler in order to
-       determine whether it is  should use longjmp to get back into this function.
-       That is, the abort handler determines if it is on the same stack as this function
-       and then jumps back into this function.
-    */
-    g_bInGetJavaVM = 1;
-    jint err;
-    JavaVM * pJavaVM = 0;
-    memset( jmp_jvm_abort, 0, sizeof(jmp_jvm_abort));
-    int jmpval= setjmp( jmp_jvm_abort );
-    /* If jmpval is not "0" then this point was reached by a longjmp in the
-       abort_handler, which was called indirectly by JNI_CreateVM.
-    */
-    if( jmpval == 0)
-    {
-        //returns negative number on failure
-        err= pCreateJavaVM(&pJavaVM, ppEnv, &vm_args);
-        g_bInGetJavaVM = 0;
-    }
-    else
-        // set err to a positive number, so as or recognize that an abort (longjmp)
-        //occurred
-        err= 1;
+    JavaVM * pJavaVM = nullptr;
+    jint err = createJvm(pCreateJavaVM, &pJavaVM, ppEnv, &vm_args);
 
     if(err != 0)
     {
         if( err < 0)
         {
-            fprintf(stderr,"[Java framework] sunjavaplugin" SAL_DLLEXTENSION
-                    "Can not create Java Virtual Machine\n");
-            errorcode = JFW_PLUGIN_E_VM_CREATION_FAILED;
+            SAL_WARN("jfw", "Can not create Java Virtual Machine, " << err);
+            errorcode = javaPluginError::VmCreationFailed;
         }
         else if( err > 0)
         {
-            fprintf(stderr,"[Java framework] sunjavaplugin" SAL_DLLEXTENSION
-                    "Can not create JavaVirtualMachine, abort handler was called.\n");
-            errorcode = JFW_PLUGIN_E_VM_CREATION_FAILED;
+            SAL_WARN("jfw", "Can not create JavaVirtualMachine, abort handler was called");
+            errorcode = javaPluginError::VmCreationFailed;
         }
     }
     else
@@ -910,43 +930,44 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #else
     (void) arOptions;
     (void) cOptions;
+    (void) ppEnv;
     // On Android we always have a Java VM as we only expect this code
     // to be run in an Android app anyway.
     *ppVm = lo_get_javavm();
-    fprintf(stderr, "lo_get_javavm returns %p", *ppVm);
 #endif
 
-   return errorcode;
+    return errorcode;
 }
 
-javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, sal_Bool *exist)
+javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, bool *exist)
 {
-    javaPluginError ret = JFW_PLUGIN_E_NONE;
-    if (!pInfo || !exist)
-        return JFW_PLUGIN_E_INVALID_ARG;
+    assert(pInfo != nullptr);
+    assert(exist != nullptr);
+
+    javaPluginError ret = javaPluginError::NONE;
     OUString sLocation(pInfo->sLocation);
 
     if (sLocation.isEmpty())
-        return JFW_PLUGIN_E_INVALID_ARG;
+        return javaPluginError::InvalidArg;
     ::osl::DirectoryItem item;
     ::osl::File::RC rc_item = ::osl::DirectoryItem::get(sLocation, item);
     if (::osl::File::E_None == rc_item)
     {
-        *exist = sal_True;
+        *exist = true;
     }
     else if (::osl::File::E_NOENT == rc_item)
     {
-        *exist = sal_False;
+        *exist = false;
     }
     else
     {
-        ret = JFW_PLUGIN_E_ERROR;
+        ret = javaPluginError::Error;
     }
     //We can have the situation that the JavaVM runtime library is not
     //contained within JAVA_HOME. Then the check for JAVA_HOME would return
     //true although the runtime library may not be loadable.
     //Or the JAVA_HOME directory of a deinstalled JRE left behind.
-    if (ret == JFW_PLUGIN_E_NONE && *exist == sal_True)
+    if (ret == javaPluginError::NONE && *exist)
     {
         OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
         JFW_TRACE2("Checking existence of Java runtime library");
@@ -955,18 +976,30 @@ javaPluginError jfw_plugin_existJRE(const JavaInfo *pInfo, sal_Bool *exist)
         ::osl::File::RC rc_itemRt = ::osl::DirectoryItem::get(sRuntimeLib, itemRt);
         if (::osl::File::E_None == rc_itemRt)
         {
-            *exist = sal_True;
+            *exist = true;
             JFW_TRACE2("Java runtime library exist: " << sRuntimeLib);
 
+            // Check version
+            rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath(sLocation);
+            if (!aVendorInfo.is())
+            {
+                *exist = false;
+                JFW_TRACE2("JRE or supported vendor not accessible at location: " << sLocation);
+            }
+            else if(pInfo->sVersion!=aVendorInfo->getVersion())
+            {
+                *exist = false;
+                JFW_TRACE2("Mismatch between version number in libreoffice settings and installed JRE:  " << pInfo->sVersion <<" != " << aVendorInfo->getVersion());
+            }
         }
         else if (::osl::File::E_NOENT == rc_itemRt)
         {
-            *exist = sal_False;
+            *exist = false;
             JFW_TRACE2("Java runtime library does not exist: " << sRuntimeLib);
         }
         else
         {
-            ret = JFW_PLUGIN_E_ERROR;
+            ret = javaPluginError::Error;
             JFW_TRACE2("Error while looking for Java runtime library: " << sRuntimeLib);
         }
     }
