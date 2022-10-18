@@ -193,7 +193,7 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 				pURL = [pURL URLByStandardizingPath];
 				if ( pURL )
 				{
-					NSString *pHomeDir = [pURL path];
+					pHomeDir = [pURL path];
 					if ( pHomeDir )
 					{
 						const char *pHomeDirStr = [pHomeDir UTF8String];
@@ -217,7 +217,7 @@ sal_Bool macxp_getNSHomeDirectory(char *path, int buflen)
 	return bRet;
 }
 
-void macxp_setFileType(const sal_Char* path)
+void macxp_setFileType(const char* path)
 {
 #ifdef PRODUCT_FILETYPE
 	if ( path && strlen( path ) )
@@ -253,7 +253,7 @@ sal_Bool macxp_isUbiquitousPath(sal_Unicode *path, sal_Int32 len)
 		NSFileManager *pFileManager = [NSFileManager defaultManager];
 		if ( pFileManager )
 		{
-			NSString *pPath = [NSString stringWithCharacters:path length:len];
+			NSString *pPath = [NSString stringWithCharacters:(unichar *)path length:len];
 			if ( pPath && [pPath length] )
 			{
 				NSURL *pURL = [NSURL fileURLWithPath:pPath];

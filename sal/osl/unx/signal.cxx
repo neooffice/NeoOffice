@@ -26,202 +26,138 @@
 
 #include <sal/config.h>
 
+#include <signalshared.hxx>
+
 #include <config_features.h>
 
+#include "soffice.hxx"
 /* system headers */
 #include "system.hxx"
 
-#if defined( MACOSX )
-
-#if defined( INTEL )
 #include "backtrace.h"
-#define INCLUDE_BACKTRACE
-#if HAVE_FEATURE_CRASHDUMP
-#define STACKTYPE "MacOsX_X86"
-#endif
-#endif /* INTEL */
 
-#endif /* MACOSX */
-
-#ifdef LINUX
-#include <execinfo.h>
-#include <link.h>
-#define INCLUDE_BACKTRACE
-#if HAVE_FEATURE_CRASHDUMP
-#define STACKTYPE "Linux"
-#endif
-#endif
-
-#ifdef SOLARIS
-
-#include "backtrace.h"
-#define INCLUDE_BACKTRACE
-
-#if HAVE_FEATURE_CRASHDUMP
-#if defined( SPARC )
-#define STACKTYPE "Solaris_Sparc"
-#elif defined( INTEL )
-#define STACKTYPE "Solaris_X86"
-#else
-#define STACKTYPE "Solaris_Unknown"
-#endif
-#endif
-
-#endif /* defined SOLARIS */
-
-#if defined INCLUDE_BACKTRACE
 #define MAX_STACK_FRAMES 256
-#endif
 
 #include <osl/diagnose.h>
-#include <osl/mutex.h>
 #include <osl/signal.h>
-#include <osl/process.h>
-#include <osl/thread.h>
+#include <sal/log.hxx>
 #include <sal/macros.h>
 #include <rtl/bootstrap.h>
 #include <rtl/digest.h>
 
 #include "file_path_helper.hxx"
-
 #define ACT_IGNORE  1
 #define ACT_EXIT    2
 #define ACT_SYSTEM  3
 #define ACT_HIDE    4
-#if HAVE_FEATURE_CRASHDUMP
-#    define ACT_ABORT   5
-#else
-#    define ACT_ABORT   ACT_SYSTEM
-#endif
+#define ACT_ABORT   5
 
 #if defined HAVE_VALGRIND_HEADERS
 #include <valgrind/memcheck.h>
 #endif
 
-typedef struct _oslSignalHandlerImpl
+namespace
 {
-    oslSignalHandlerFunction      Handler;
-    void*                         pData;
-    struct _oslSignalHandlerImpl* pNext;
-} oslSignalHandlerImpl;
-
-static struct SignalAction
+extern "C" using Handler1 = void (*)(int);
+extern "C" using Handler2 = void (*)(int, siginfo_t *, void *);
+struct SignalAction
 {
     int Signal;
     int Action;
-    void (*Handler)(int);
+    Handler1 Handler;
+    bool siginfo; // Handler's type is Handler2
 } Signals[] =
 {
-    { SIGHUP,    ACT_HIDE, NULL },    /* hangup */
-    { SIGINT,    ACT_EXIT,   NULL },    /* interrupt (rubout) */
-    { SIGQUIT,   ACT_EXIT,  NULL },    /* quit (ASCII FS) */
-    { SIGILL,    ACT_SYSTEM,  NULL },    /* illegal instruction (not reset when caught) */
+    { SIGHUP,    ACT_HIDE,   SIG_DFL, false }, /* hangup */
+    { SIGINT,    ACT_EXIT,   SIG_DFL, false }, /* interrupt (rubout) */
+    { SIGQUIT,   ACT_EXIT,   SIG_DFL, false }, /* quit (ASCII FS) */
+    { SIGILL,    ACT_SYSTEM, SIG_DFL, false }, /* illegal instruction (not reset when caught) */
 /* changed from ACT_ABOUT to ACT_SYSTEM to try and get collector to run*/
-    { SIGTRAP,   ACT_ABORT,  NULL },    /* trace trap (not reset when caught) */
+    { SIGTRAP,   ACT_ABORT,  SIG_DFL, false }, /* trace trap (not reset when caught) */
 #if ( SIGIOT != SIGABRT )
-    { SIGIOT,    ACT_ABORT,  NULL },    /* IOT instruction */
+    { SIGIOT,    ACT_ABORT,  SIG_DFL, false }, /* IOT instruction */
 #endif
-    { SIGABRT,   ACT_ABORT,  NULL },    /* used by abort, replace SIGIOT in the future */
+#if defined(FORCE_DEFAULT_SIGNAL)
+    { SIGABRT,   ACT_SYSTEM, SIG_DFL, false }, /* used by abort, replace SIGIOT in the future */
+#else
+    { SIGABRT,   ACT_ABORT,  SIG_DFL, false }, /* used by abort, replace SIGIOT in the future */
+#endif
 #ifdef SIGEMT
-    { SIGEMT,    ACT_SYSTEM,  NULL },    /* EMT instruction */
+    { SIGEMT,    ACT_SYSTEM, SIG_DFL, false }, /* EMT instruction */
 /* changed from ACT_ABORT to ACT_SYSTEM to remove handler*/
 /* SIGEMT may also be used by the profiler - so it is probably not a good
 plan to have the new handler use this signal*/
 #endif
-    { SIGFPE,    ACT_ABORT,  NULL },    /* floating point exception */
-    { SIGKILL,   ACT_SYSTEM, NULL },    /* kill (cannot be caught or ignored) */
-    { SIGBUS,    ACT_ABORT,  NULL },    /* bus error */
-    { SIGSEGV,   ACT_ABORT,  NULL },    /* segmentation violation */
+    { SIGFPE,    ACT_ABORT,  SIG_DFL, false }, /* floating point exception */
+    { SIGKILL,   ACT_SYSTEM, SIG_DFL, false }, /* kill (cannot be caught or ignored) */
+    { SIGBUS,    ACT_ABORT,  SIG_DFL, false }, /* bus error */
+#if defined(FORCE_DEFAULT_SIGNAL)
+    { SIGSEGV,   ACT_SYSTEM, SIG_DFL, false }, /* segmentation violation */
+#else
+    { SIGSEGV,   ACT_ABORT,  SIG_DFL, false }, /* segmentation violation */
+#endif
 #ifdef SIGSYS
-    { SIGSYS,    ACT_ABORT,  NULL },    /* bad argument to system call */
+    { SIGSYS,    ACT_ABORT,  SIG_DFL, false }, /* bad argument to system call */
 #endif
-    { SIGPIPE,   ACT_HIDE,   NULL },    /* write on a pipe with no one to read it */
-    { SIGALRM,   ACT_EXIT,   NULL },    /* alarm clock */
-    { SIGTERM,   ACT_EXIT,   NULL },    /* software termination signal from kill */
-    { SIGUSR1,   ACT_SYSTEM, NULL },    /* user defined signal 1 */
-    { SIGUSR2,   ACT_SYSTEM, NULL },    /* user defined signal 2 */
-    { SIGCHLD,   ACT_SYSTEM, NULL },    /* child status change */
+    { SIGPIPE,   ACT_HIDE,   SIG_DFL, false }, /* write on a pipe with no one to read it */
+#if defined(FORCE_DEFAULT_SIGNAL)
+    { SIGALRM,   ACT_SYSTEM, SIG_DFL, false }, /* alarm clock */
+#else
+    { SIGALRM,   ACT_EXIT,   SIG_DFL, false }, /* alarm clock */
+#endif
+    { SIGTERM,   ACT_EXIT,   SIG_DFL, false }, /* software termination signal from kill */
+    { SIGUSR1,   ACT_SYSTEM, SIG_DFL, false }, /* user defined signal 1 */
+    { SIGUSR2,   ACT_SYSTEM, SIG_DFL, false }, /* user defined signal 2 */
+    { SIGCHLD,   ACT_SYSTEM, SIG_DFL, false }, /* child status change */
 #ifdef SIGPWR
-    { SIGPWR,    ACT_IGNORE, NULL },    /* power-fail restart */
+    { SIGPWR,    ACT_IGNORE, SIG_DFL, false }, /* power-fail restart */
 #endif
-    { SIGWINCH,  ACT_IGNORE, NULL },    /* window size change */
-    { SIGURG,    ACT_EXIT,   NULL },    /* urgent socket condition */
+    { SIGWINCH,  ACT_IGNORE, SIG_DFL, false }, /* window size change */
+    { SIGURG,    ACT_EXIT,   SIG_DFL, false }, /* urgent socket condition */
 #ifdef SIGPOLL
-    { SIGPOLL,   ACT_EXIT,   NULL },    /* pollable event occurred */
+    { SIGPOLL,   ACT_EXIT,   SIG_DFL, false }, /* pollable event occurred */
 #endif
-    { SIGSTOP,   ACT_SYSTEM, NULL },    /* stop (cannot be caught or ignored) */
-    { SIGTSTP,   ACT_SYSTEM, NULL },    /* user stop requested from tty */
-    { SIGCONT,   ACT_SYSTEM, NULL },    /* stopped process has been continued */
-    { SIGTTIN,   ACT_SYSTEM, NULL },    /* background tty read attempted */
-    { SIGTTOU,   ACT_SYSTEM, NULL },    /* background tty write attempted */
-    { SIGVTALRM, ACT_EXIT,   NULL },    /* virtual timer expired */
-    { SIGPROF,   ACT_SYSTEM,   NULL },    /* profiling timer expired */
+    { SIGSTOP,   ACT_SYSTEM, SIG_DFL, false }, /* stop (cannot be caught or ignored) */
+    { SIGTSTP,   ACT_SYSTEM, SIG_DFL, false }, /* user stop requested from tty */
+    { SIGCONT,   ACT_SYSTEM, SIG_DFL, false }, /* stopped process has been continued */
+    { SIGTTIN,   ACT_SYSTEM, SIG_DFL, false }, /* background tty read attempted */
+    { SIGTTOU,   ACT_SYSTEM, SIG_DFL, false }, /* background tty write attempted */
+    { SIGVTALRM, ACT_EXIT,   SIG_DFL, false }, /* virtual timer expired */
+    { SIGPROF,   ACT_SYSTEM, SIG_DFL, false }, /* profiling timer expired */
 /*Change from ACT_EXIT to ACT_SYSTEM for SIGPROF is so that profiling signals do
 not get taken by the new handler - the new handler does not pass on context
 information which causes 'collect' to crash. This is a way of avoiding
 what looks like a bug in the new handler*/
-    { SIGXCPU,   ACT_ABORT,  NULL },    /* exceeded cpu limit */
-    { SIGXFSZ,   ACT_ABORT,  NULL }     /* exceeded file size limit */
+    { SIGXCPU,   ACT_ABORT,  SIG_DFL, false }, /* exceeded cpu limit */
+    { SIGXFSZ,   ACT_ABORT,  SIG_DFL, false }  /* exceeded file size limit */
 };
-const int NoSignals = sizeof(Signals) / sizeof(struct SignalAction);
+const int NoSignals = SAL_N_ELEMENTS(Signals);
 
-#ifdef USE_JAVA
-static bool               bErrorReportingEnabled = false;
-#else	// USE_JAVA
-static bool               bErrorReportingEnabled = true;
-#endif	// USE_JAVA
-static bool               bInitSignal = false;
-static oslMutex               SignalListMutex;
-static oslSignalHandlerImpl*  SignalList;
-static bool               bSetSEGVHandler = false;
-static bool               bSetWINCHHandler = false;
-static bool               bSetILLHandler = false;
+bool bSetSEGVHandler = false;
+bool bSetWINCHHandler = false;
+bool bSetILLHandler = false;
 
-static void SignalHandlerFunction(int);
+void signalHandlerFunction(int, siginfo_t *, void *);
 
-static void getExecutableName_Impl (rtl_String ** ppstrProgName)
+#if HAVE_FEATURE_BREAKPAD
+bool is_unset_signal(int signal)
 {
-    rtl_uString * ustrProgFile = 0;
-    osl_getExecutableFile (&ustrProgFile);
-    if (ustrProgFile)
-    {
-        rtl_uString * ustrProgName = 0;
-        osl_systemPathGetFileNameOrLastDirectoryPart (ustrProgFile, &ustrProgName);
-        if (ustrProgName != 0)
-        {
-            rtl_uString2String (
-                ppstrProgName,
-                rtl_uString_getStr (ustrProgName), rtl_uString_getLength (ustrProgName),
-                osl_getThreadTextEncoding(),
-                OUSTRING_TO_OSTRING_CVTFLAGS);
-            rtl_uString_release (ustrProgName);
-        }
-        rtl_uString_release (ustrProgFile);
-    }
+#ifdef DBG_UTIL
+    return (!bSetSEGVHandler && signal == SIGSEGV) ||
+        (!bSetWINCHHandler && signal == SIGWINCH) ||
+        (!bSetILLHandler && signal == SIGILL);
+#else
+    (void) signal;
+    return false;
+#endif
+}
+#endif
+
 }
 
-static bool is_soffice_Impl (void)
+bool onInitSignal()
 {
-    sal_Int32    idx       = -1;
-    rtl_String * strProgName = 0;
-
-    getExecutableName_Impl (&strProgName);
-    if (strProgName)
-    {
-        idx = rtl_str_indexOfStr (rtl_string_getStr (strProgName), "soffice");
-        rtl_string_release (strProgName);
-    }
-    return (idx != -1);
-}
-
-static bool InitSignal(void)
-{
-    int i;
-    struct sigaction act;
-    struct sigaction oact;
-    sigset_t unset;
-
-    if (is_soffice_Impl())
+    if (sal::detail::isSoffice())
     {
         // WORKAROUND FOR SEGV HANDLER CONFLICT
         //
@@ -244,29 +180,28 @@ static bool InitSignal(void)
     bSetSEGVHandler = bSetWINCHHandler = bSetILLHandler = false;
 #endif
 
-    SignalListMutex = osl_createMutex();
-
-    act.sa_handler = SignalHandlerFunction;
-    act.sa_flags   = SA_RESTART;
+    struct sigaction act;
+    act.sa_sigaction = signalHandlerFunction;
+    act.sa_flags = SA_RESTART | SA_SIGINFO;
 
     sigfillset(&(act.sa_mask));
 
     /* Initialize the rest of the signals */
-    for (i = 0; i < NoSignals; ++i)
+    for (SignalAction & rSignal : Signals)
     {
 #if defined HAVE_VALGRIND_HEADERS
-        if (Signals[i].Signal == SIGUSR2 && RUNNING_ON_VALGRIND)
-            Signals[i].Action = ACT_IGNORE;
+        if (rSignal.Signal == SIGUSR2 && RUNNING_ON_VALGRIND)
+            rSignal.Action = ACT_IGNORE;
 #endif
 
         /* hack: stomcatd is attaching JavaVM which does not work with an sigaction(SEGV) */
-        if ((bSetSEGVHandler || Signals[i].Signal != SIGSEGV)
-        && (bSetWINCHHandler || Signals[i].Signal != SIGWINCH)
-        && (bSetILLHandler   || Signals[i].Signal != SIGILL))
+        if ((bSetSEGVHandler || rSignal.Signal != SIGSEGV)
+        && (bSetWINCHHandler || rSignal.Signal != SIGWINCH)
+        && (bSetILLHandler   || rSignal.Signal != SIGILL))
         {
-            if (Signals[i].Action != ACT_SYSTEM)
+            if (rSignal.Action != ACT_SYSTEM)
             {
-                if (Signals[i].Action == ACT_HIDE)
+                if (rSignal.Action == ACT_HIDE)
                 {
                     struct sigaction ign;
 
@@ -274,638 +209,157 @@ static bool InitSignal(void)
                     ign.sa_flags   = 0;
                     sigemptyset(&ign.sa_mask);
 
-                    if (sigaction(Signals[i].Signal, &ign, &oact) == 0)
-                        Signals[i].Handler = oact.sa_handler;
-                    else
-                        Signals[i].Handler = SIG_DFL;
+                    struct sigaction oact;
+                    if (sigaction(rSignal.Signal, &ign, &oact) == 0) {
+                        rSignal.siginfo = (oact.sa_flags & SA_SIGINFO) != 0;
+                        if (rSignal.siginfo) {
+                            rSignal.Handler = reinterpret_cast<Handler1>(
+                                oact.sa_sigaction);
+                        } else {
+                            rSignal.Handler = oact.sa_handler;
+                        }
+                    } else {
+                        rSignal.Handler = SIG_DFL;
+                        rSignal.siginfo = false;
+                    }
                 }
                 else
                 {
-                    if (sigaction(Signals[i].Signal, &act, &oact) == 0)
-                        Signals[i].Handler = oact.sa_handler;
-                    else
-                        Signals[i].Handler = SIG_DFL;
+                    struct sigaction oact;
+                    if (sigaction(rSignal.Signal, &act, &oact) == 0) {
+                        rSignal.siginfo = (oact.sa_flags & SA_SIGINFO) != 0;
+                        if (rSignal.siginfo) {
+                            rSignal.Handler = reinterpret_cast<Handler1>(
+                                oact.sa_sigaction);
+                        } else {
+                            rSignal.Handler = oact.sa_handler;
+                        }
+                    } else {
+                        rSignal.Handler = SIG_DFL;
+                        rSignal.siginfo = false;
+                    }
                 }
             }
         }
     }
 
-    /* Clear signal mask inherited from parent process (on Mac OS X, upon a
+    /* Clear signal mask inherited from parent process (on macOS, upon a
        crash soffice re-execs itself from within the signal handler, so the
        second soffice would have the guilty signal blocked and would freeze upon
        encountering a similar crash again): */
+    sigset_t unset;
     if (sigemptyset(&unset) < 0 ||
-        pthread_sigmask(SIG_SETMASK, &unset, NULL) < 0)
+        pthread_sigmask(SIG_SETMASK, &unset, nullptr) < 0)
     {
-        OSL_TRACE("sigemptyset or pthread_sigmask failed");
+        SAL_WARN("sal.osl", "sigemptyset or pthread_sigmask failed");
     }
 
     return true;
 }
 
-static bool DeInitSignal(void)
+bool onDeInitSignal()
 {
-    int i;
     struct sigaction act;
 
-    act.sa_flags   = 0;
     sigemptyset(&(act.sa_mask));
 
     /* Initialize the rest of the signals */
-    for (i = NoSignals - 1; i >= 0; i--)
-        if (Signals[i].Action != ACT_SYSTEM)
+    for (int i = NoSignals - 1; i >= 0; i--)
+        if (Signals[i].Action != ACT_SYSTEM
+            && ((bSetSEGVHandler || Signals[i].Signal != SIGSEGV)
+                && (bSetWINCHHandler || Signals[i].Signal != SIGWINCH)
+                && (bSetILLHandler || Signals[i].Signal != SIGILL)))
         {
-            act.sa_handler = Signals[i].Handler;
+            if (Signals[i].siginfo) {
+                act.sa_sigaction = reinterpret_cast<Handler2>(
+                    Signals[i].Handler);
+                act.sa_flags = SA_SIGINFO;
+            } else {
+                act.sa_handler = Signals[i].Handler;
+                act.sa_flags = 0;
+            }
 
-            sigaction(Signals[i].Signal, &act, NULL);
+            sigaction(Signals[i].Signal, &act, nullptr);
         }
-
-    osl_destroyMutex(SignalListMutex);
 
     return false;
 }
 
-#if HAVE_FEATURE_CRASHDUMP && defined(INCLUDE_BACKTRACE)
-
-static sal_uInt32 calc_md5_checksum( const char *filename, sal_uInt8 *pChecksum, sal_uInt32 nChecksumLen )
+namespace
 {
-    sal_uInt32  nBytesProcessed = 0;
-
-    FILE *fp = fopen( filename, "r" );
-
-    if ( fp )
-    {
-        rtlDigest digest = rtl_digest_createMD5();
-
-        if ( digest )
-        {
-            size_t          nBytesRead;
-            sal_uInt8       buffer[4096];
-            rtlDigestError  error = rtl_Digest_E_None;
-
-            while ( rtl_Digest_E_None == error &&
-                0 != (nBytesRead = fread( buffer, 1, sizeof(buffer), fp )) )
-            {
-                error = rtl_digest_updateMD5( digest, buffer, nBytesRead );
-                nBytesProcessed += nBytesRead;
-            }
-
-            if ( rtl_Digest_E_None == error )
-            {
-                error = rtl_digest_getMD5( digest, pChecksum, nChecksumLen );
-            }
-
-            if ( rtl_Digest_E_None != error )
-                nBytesProcessed = 0;
-
-            rtl_digest_destroyMD5( digest );
-        }
-
-        fclose( fp );
-    }
-
-    return nBytesProcessed;
-}
-
-/*****************************************************************************/
-/* Call crash reporter  */
-/*****************************************************************************/
-
-/* Helper function to encode and write a string to a stream */
-
-static int fputs_xml( const char *string, FILE *stream )
+void printStack(int sig)
 {
-    int result = 0;
-
-    while ( result >= 0 && *string )
-    {
-        switch( *string )
-        {
-        case '&':
-            result = fputs( "&amp;", stream );
-            break;
-        case '<':
-            result = fputs( "&lt;", stream );
-            break;
-        case '>':
-            result = fputs( "&gt;", stream );
-            break;
-        default:
-            result = fputc( *string, stream );
-            break;
-        }
-
-        string++;
-    }
-
-    return result;
-}
-#endif
-
-/* Create intermediate files and run crash reporter */
-
-#if HAVE_FEATURE_CRASHDUMP && defined INCLUDE_BACKTRACE && defined LINUX
-
-typedef struct
-{
-    const char *name;
-    ElfW(Off) offset;
-} dynamic_entry;
-
-static int
-callback(struct dl_phdr_info *info, size_t size, void *data)
-{
-    const ElfW(Phdr) *pDynamic = NULL;
-
-    if (size == sizeof(struct dl_phdr_info))
-    {
-        int i;
-        for (i = 0; i < info->dlpi_phnum; ++i)
-        {
-            if (info->dlpi_phdr[i].p_type == PT_DYNAMIC)
-            {
-                pDynamic = &(info->dlpi_phdr[i]);
-                break;
-            }
-        }
-    }
-
-    if (pDynamic)
-    {
-        char buffer[100];
-        int len;
-        char exe[PATH_MAX];
-        const char *dsoname = info->dlpi_name;
-
-        dynamic_entry* entry = (dynamic_entry*)data;
-
-        if (strcmp(dsoname, "") == 0)
-        {
-            snprintf(buffer, sizeof(buffer), "/proc/%d/exe", getpid());
-            if ((len = readlink(buffer, exe, PATH_MAX)) != -1)
-            {
-                exe[len] = '\0';
-                dsoname = exe;
-            }
-        }
-
-        if (strcmp(dsoname, entry->name) == 0)
-        {
-            entry->offset = pDynamic->p_offset;
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* Get the location of the .dynamic section offset for the given elf file.
- * i.e. same as the "Offset" value shown for DYNAMIC from readelf -l foo
- *
- * We want to know this value so that if the binaries have been modified
- * by prelink then we can still process the call stack on server side
- * by comparing this value to that of an "un-prelinked but known to be
- * otherwise equivalent" version of those binaries and adjust the call
- * stack addresses by the differences between .dynamic addresses so as
- * to be able to map the prelinked addresses back to the unprelinked
- * addresses
- *
- * cmc@openoffice.org
- */
-static ElfW(Off)
-dynamic_section_offset(const char *name)
-{
-    dynamic_entry entry;
-
-    entry.name = name;
-    entry.offset = 0;
-
-    dl_iterate_phdr(callback, &entry);
-
-    return entry.offset;
-}
-#endif
-
-static int ReportCrash( int Signal )
-{
-#if HAVE_FEATURE_CRASHDUMP
-
-#define REPORTENV_PARAM     "-crashreportenv:"
-
-    static bool bCrashReporterExecuted = false;
-    bool bAutoCrashReport = false;
-
-    sal_uInt32  argi;
-    sal_uInt32  argc;
-    rtl_uString *ustrCommandArg = NULL;
-
-    if ( !bErrorReportingEnabled )
-        return -1;
-
-    argc = osl_getCommandArgCount();
-
-    for ( argi = 0; argi < argc; argi++ )
-    {
-        if ( osl_Process_E_None == osl_getCommandArg( argi, &ustrCommandArg ) )
-        {
-            if ( 0 == rtl_ustr_ascii_compare( rtl_uString_getStr( ustrCommandArg ), "--nocrashreport" ) )
-            {
-                rtl_uString_release( ustrCommandArg );
-                return -1;
-            }
-            else if ( 0 == rtl_ustr_ascii_compare( rtl_uString_getStr( ustrCommandArg ), "--autocrashreport" ) )
-            {
-                bAutoCrashReport = true;
-            }
-            else if ( 0 == rtl_ustr_ascii_shortenedCompare_WithLength(
-                rtl_uString_getStr( ustrCommandArg ), rtl_uString_getLength( ustrCommandArg ),
-                REPORTENV_PARAM, strlen(REPORTENV_PARAM) )
-                )
-            {
-                rtl_uString *ustrEnvironment = NULL;
-                rtl_String *strEnv = NULL;
-
-                rtl_uString_newFromStr( &ustrEnvironment, rtl_uString_getStr( ustrCommandArg ) + strlen(REPORTENV_PARAM) );
-
-                if ( ustrEnvironment )
-                {
-                    rtl_uString2String(
-                        &strEnv,
-                        rtl_uString_getStr( ustrEnvironment ), rtl_uString_getLength( ustrEnvironment ),
-                        osl_getThreadTextEncoding(), OUSTRING_TO_OSTRING_CVTFLAGS
-                        );
-
-                    if ( strEnv )
-                    {
-                        putenv( rtl_string_getStr( strEnv ) );
-                        rtl_string_release( strEnv );
-                    }
-
-                    rtl_uString_release( ustrEnvironment );
-                }
-
-            }
-
-        }
-    }
-
-    if ( ustrCommandArg )
-        rtl_uString_release( ustrCommandArg );
-
-    if ( !bCrashReporterExecuted )
-    {
-        int i;
-        /* struct sigaction act; */
-
-        for (i = 0; i < NoSignals; i++)
-        {
-            if (Signals[i].Signal == Signal && Signals[i].Action == ACT_ABORT )
-            {
-                int  ret;
-                char szShellCmd[512] = { '\0' };
-                char *pXMLTempName = NULL;
-                char *pStackTempName = NULL;
-                char *pChecksumTempName = NULL;
-
-#ifdef INCLUDE_BACKTRACE
-                char szXMLTempNameBuffer[L_tmpnam];
-                char szChecksumTempNameBuffer[L_tmpnam];
-                char szStackTempNameBuffer[L_tmpnam];
-
-                void *stackframes[MAX_STACK_FRAMES];
-                int  iFrame;
-                int  nFrames = backtrace( stackframes, SAL_N_ELEMENTS(stackframes) );
-
-                FILE *xmlout = NULL, *stackout = NULL, *checksumout = NULL;
-                int fdxml, fdstk, fdchksum;
-
-                strncpy( szXMLTempNameBuffer, P_tmpdir, sizeof(szXMLTempNameBuffer) );
-                strncat( szXMLTempNameBuffer, "/crxmlXXXXXX", sizeof(szXMLTempNameBuffer) - strlen(szXMLTempNameBuffer) - 1 );
-
-                strncpy( szStackTempNameBuffer, P_tmpdir, sizeof(szStackTempNameBuffer) );
-                strncat( szStackTempNameBuffer, "/crstkXXXXXX", sizeof(szStackTempNameBuffer) - strlen(szStackTempNameBuffer) - 1 );
-
-                strncpy( szChecksumTempNameBuffer, P_tmpdir, sizeof(szChecksumTempNameBuffer) );
-                strncat( szChecksumTempNameBuffer, "/crchkXXXXXX", sizeof(szChecksumTempNameBuffer) - strlen(szChecksumTempNameBuffer) - 1 );
-
-                fdxml = mkstemp(szXMLTempNameBuffer);
-                fdstk = mkstemp(szStackTempNameBuffer);
-                fdchksum = mkstemp(szChecksumTempNameBuffer);
-
-                xmlout = fdopen( fdxml , "w" );
-                stackout = fdopen( fdstk , "w" );
-                checksumout = fdopen( fdchksum, "w" );
-
-                pXMLTempName = szXMLTempNameBuffer;
-                pStackTempName = szStackTempNameBuffer;
-                pChecksumTempName = szChecksumTempNameBuffer;
-
-                if ( xmlout && stackout && checksumout )
-                {
-                    fprintf( xmlout, "<errormail:Stack type=\"%s\">\n", STACKTYPE );
-
-                    fprintf( checksumout, "<errormail:Checksums type=\"MD5\">\n" );
-
-                    for ( iFrame = 0; iFrame < nFrames; iFrame++ )
-                    {
-                        Dl_info dl_info;
-
-                        fprintf( stackout, "0x%" SAL_PRIxUINTPTR ":",
-                            reinterpret_cast<sal_uIntPtr>(stackframes[iFrame]) );
-
-                        fprintf( xmlout, "<errormail:StackInfo pos=\"%d\" ip=\"0x%" SAL_PRIxUINTPTR "\"",
-                            iFrame,
-                            reinterpret_cast<sal_uIntPtr>(stackframes[iFrame])
-                            );
-
-                        memset( &dl_info, 0, sizeof(dl_info) );
-
-                        /* dladdr may fail */
-                        if ( dladdr( stackframes[iFrame], &dl_info) )
-                        {
-                            const char *dli_fname = NULL;
-                            char *dli_fdir = NULL;
-                            char szDirectory[PATH_MAX];
-                            char szCanonicDirectory[PATH_MAX];
-
-                            /* Don't expect that dladdr filled all members of dl_info */
-
-                            dli_fname = dl_info.dli_fname ? strrchr(  dl_info.dli_fname, '/' ) : NULL;
-                            if ( dli_fname )
-                            {
-                                ++dli_fname;
-                                memcpy( szDirectory, dl_info.dli_fname, dli_fname - dl_info.dli_fname );
-                                szDirectory[dli_fname - dl_info.dli_fname] = 0;
-
-                                dli_fdir = realpath( szDirectory, szCanonicDirectory ) ? szCanonicDirectory : szDirectory;
-
-                                if ( *dli_fdir && dli_fdir[ strlen(dli_fdir) - 1 ] != '/' )
-                                    strcat( dli_fdir, "/" );
-                            }
-                            else
-                                dli_fname = dl_info.dli_fname;
-
-                            /* create checksum of library on stack */
-                            if ( dli_fname )
-                            {
-                                sal_uInt8   checksum[RTL_DIGEST_LENGTH_MD5];
-
-                                sal_uInt32 nBytesProcessed = calc_md5_checksum(
-                                    dl_info.dli_fname, checksum, sizeof(checksum) );
-                                if ( nBytesProcessed )
-                                {
-                                    int j;
-
-                                    fprintf( checksumout, "<errormail:Checksum sum=\"0x" );
-                                    for ( j = 0; j < 16; fprintf( checksumout, "%02X", checksum[j++] ) );
-                                    fprintf( checksumout,
-                                        "\" bytes=\"%lu\" file=\"%s\"/>\n",
-                                        sal::static_int_cast<
-                                            unsigned long>(nBytesProcessed),
-                                        dli_fname );
-                                }
-                            }
-
-                            if ( dl_info.dli_fbase && dl_info.dli_fname )
-                            {
-#ifdef LINUX
-                                ElfW(Off) dynamic_offset = dynamic_section_offset(dl_info.dli_fname);
-                                fprintf( stackout, " 0x%" SAL_PRI_SIZET "x:", dynamic_offset);
-#endif
-
-                                fprintf( stackout, " %s + 0x%" SAL_PRI_PTRDIFFT "x",
-                                    dl_info.dli_fname,
-                                    (char*)stackframes[iFrame] - (char*)dl_info.dli_fbase
-                                    );
-
-                                fprintf( xmlout, " rel=\"0x%" SAL_PRI_PTRDIFFT "x\"", (char *)stackframes[iFrame] - (char *)dl_info.dli_fbase );
-                                if ( dli_fname )
-                                    fprintf( xmlout, " name=\"%s\"", dli_fname );
-
-                                if ( dli_fdir )
-                                    fprintf( xmlout, " path=\"%s\"", dli_fdir );
-
-#ifdef LINUX
-                                fprintf( xmlout, " dynamicoffset=\"0x%" SAL_PRI_SIZET "x\"", dynamic_offset );
-#endif
-                            }
-                            else
-                                fprintf( stackout, " ????????" );
-
-                            if ( dl_info.dli_sname && dl_info.dli_saddr )
-                            {
-                                fputs( " (", stackout );
-                                fputs_xml( dl_info.dli_sname, stackout );
-                                fprintf( stackout, " + 0x%" SAL_PRI_PTRDIFFT "x)",
-                                    (char*)stackframes[iFrame] - (char*)dl_info.dli_saddr );
-
-                                fputs( " ordinal=\"", xmlout );
-                                fputs_xml( dl_info.dli_sname, xmlout );
-                                fprintf( xmlout, "+0x%" SAL_PRI_PTRDIFFT "x\"",
-                                    (char *)stackframes[iFrame] - (char *)dl_info.dli_saddr );
-                            }
-
-                        }
-                        else /* dladdr failed */
-                        {
-                            fprintf( stackout, " ????????" );
-                        }
-
-                        fprintf( stackout, "\n" );
-                        fprintf( xmlout, "/>\n" );
-
-                    }
-
-                    fprintf( xmlout, "</errormail:Stack>\n" );
-                    fprintf( checksumout, "</errormail:Checksums>\n" );
-                }
-                else
-                {
-                    pXMLTempName = NULL;
-                    pStackTempName = NULL;
-                    pChecksumTempName = NULL;
-                }
-
-                if ( stackout )
-                    fclose( stackout );
-                if ( xmlout )
-                    fclose( xmlout );
-                if ( checksumout )
-                    fclose( checksumout );
-
-                if ( pXMLTempName && pChecksumTempName && pStackTempName )
-#endif /* INCLUDE_BACKTRACE */
-                {
-                    rtl_uString * crashrep_url = NULL;
-                    rtl_uString * crashrep_path = NULL;
-                    rtl_String  * crashrep_path_system = NULL;
-                    rtl_string2UString(
-                        &crashrep_url,
-                        RTL_CONSTASCII_USTRINGPARAM(
-                            "$BRAND_BASE_DIR/program/crashrep"),
-                        OSTRING_TO_OUSTRING_CVTFLAGS);
-                    rtl_bootstrap_expandMacros(&crashrep_url);
-                    osl_getSystemPathFromFileURL(crashrep_url, &crashrep_path);
-                    rtl_uString2String(
-                        &crashrep_path_system,
-                        rtl_uString_getStr(crashrep_path),
-                        rtl_uString_getLength(crashrep_path),
-                        osl_getThreadTextEncoding(),
-                        (RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR
-                         | RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR));
-                    rtl_uString_release(crashrep_url);
-                    rtl_uString_release(crashrep_path);
-#if defined INCLUDE_BACKTRACE && (defined LINUX || defined MACOSX)
-                    snprintf( szShellCmd, SAL_N_ELEMENTS(szShellCmd),
-                        "%s -p %d -s %d -xml %s -chksum %s -stack %s -noui%s",
-                        rtl_string_getStr(crashrep_path_system),
-                        getpid(),
-                        Signal,
-                        pXMLTempName,
-                        pChecksumTempName,
-                        pStackTempName,
-                        bAutoCrashReport ? " -send" : "" );
-#elif defined INCLUDE_BACKTRACE && defined SOLARIS
-                    snprintf( szShellCmd, SAL_N_ELEMENTS(szShellCmd),
-                        "%s -p %d -s %d -xml %s -chksum %s -noui%s",
-                        rtl_string_getStr(crashrep_path_system),
-                        getpid(),
-                        Signal,
-                        pXMLTempName,
-                        pChecksumTempName,
-                        bAutoCrashReport ? " -send" : "" );
-#else
-                    snprintf( szShellCmd, SAL_N_ELEMENTS(szShellCmd),
-                        "%s -p %d -s %d -noui%s",
-                        rtl_string_getStr(crashrep_path_system),
-                        getpid(), Signal, bAutoCrashReport ? " -send" : "" );
-#endif
-                    rtl_string_release(crashrep_path_system);
-                }
-
-                ret = szShellCmd[0] == '\0' ? -1 : system( szShellCmd );
-
-                if ( pXMLTempName )
-                    unlink( pXMLTempName );
-
-                if ( pStackTempName )
-                    unlink( pStackTempName );
-
-                if ( pChecksumTempName )
-                    unlink( pChecksumTempName );
-
-                if ( -1 != ret )
-                {
-                    bCrashReporterExecuted = true;
-                    return 1;
-                }
-                else
-                    return -1;
-
-            }
-        }
-
-        return 0;
-    }
-
-    return 1;
-#else /* HAVE_FEATURE_CRASHDUMP */
-    /* the utility crash_report is not build, so do the same as when
-       the option -nocrashreport is used */
-    (void) Signal; // avoid warnings
-    return -1;
-#endif /* HAVE_FEATURE_CRASHDUMP */
-}
-
-static void PrintStack( int sig )
-{
-#ifndef USE_JAVA
-#ifdef INCLUDE_BACKTRACE
+#ifdef USE_JAVA
+    (void)sig;
+#else	// USE_JAVA
     void *buffer[MAX_STACK_FRAMES];
     int size = backtrace( buffer, SAL_N_ELEMENTS(buffer) );
-#endif
 
     fprintf( stderr, "\n\nFatal exception: Signal %d\n", sig );
 
-#if defined( MACOSX ) && !defined( INCLUDE_BACKTRACE )
+#if ! HAVE_FEATURE_BACKTRACE && defined( MACOSX ) && !defined( INTEL )
     fprintf( stderr, "Please turn on Enable Crash Reporting and\nAutomatic Display of Crashlogs in the Console application\n" );
-#else
-#ifdef INCLUDE_BACKTRACE
+#endif
+
     if ( size > 0 )
     {
         fputs( "Stack:\n", stderr );
         backtrace_symbols_fd( buffer, size, fileno(stderr) );
     }
-#endif
-#endif
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
 }
 
-static oslSignalAction CallSignalHandler(oslSignalInfo *pInfo)
-{
-    oslSignalHandlerImpl* pHandler = SignalList;
-    oslSignalAction Action = osl_Signal_ActCallNextHdl;
-
-    while (pHandler != NULL)
-    {
-        if ((Action = pHandler->Handler(pHandler->pData, pInfo))
-            != osl_Signal_ActCallNextHdl)
-            break;
-
-        pHandler = pHandler->pNext;
-    }
-
-    return Action;
-}
-
-void CallSystemHandler(int Signal)
+void callSystemHandler(int signal, siginfo_t * info, void * context)
 {
     int i;
-    struct sigaction act;
 
     for (i = 0; i < NoSignals; i++)
     {
-        if (Signals[i].Signal == Signal)
+        if (Signals[i].Signal == signal)
             break;
     }
 
-    if (i < NoSignals)
+    if (i >= NoSignals)
+        return;
+
+    if ((Signals[i].Handler == SIG_DFL) ||
+        (Signals[i].Handler == SIG_IGN) ||
+         (Signals[i].Handler == SIG_ERR))
     {
-        if ((Signals[i].Handler == NULL)    ||
-            (Signals[i].Handler == SIG_DFL) ||
-            (Signals[i].Handler == SIG_IGN) ||
-             (Signals[i].Handler == SIG_ERR))
+        switch (Signals[i].Action)
         {
-            switch (Signals[i].Action)
-            {
-                case ACT_EXIT:      /* terminate */
-                    /* prevent dumping core on exit() */
-                    _exit(255);
-                    break;
+            case ACT_EXIT:      /* terminate */
+                /* prevent dumping core on exit() */
+                _exit(255);
+                break;
 
-                case ACT_ABORT:     /* terminate witch core dump */
-                    ReportCrash( Signal );
-                    act.sa_handler = SIG_DFL;
-                    act.sa_flags   = 0;
-                    sigemptyset(&(act.sa_mask));
-                    sigaction(SIGABRT, &act, NULL);
-                    PrintStack( Signal );
-                    abort();
-                    break;
+            case ACT_ABORT:     /* terminate with core dump */
+                struct sigaction act;
+                act.sa_handler = SIG_DFL;
+                act.sa_flags   = 0;
+                sigemptyset(&(act.sa_mask));
+                sigaction(SIGABRT, &act, nullptr);
+                printStack( signal );
+                abort();
+                break;
 
-                case ACT_IGNORE:    /* ignore */
-                    break;
+            case ACT_IGNORE:    /* ignore */
+                break;
 
-                default:            /* should never happen */
-                    OSL_ASSERT(false);
-            }
+            default:            /* should never happen */
+                OSL_ASSERT(false);
         }
-        else
-            (*Signals[i].Handler)(Signal);
+    }
+    else if (Signals[i].siginfo) {
+        (*reinterpret_cast<Handler2>(Signals[i].Handler))(
+            signal, info, context);
+    } else {
+        (*Signals[i].Handler)(signal);
     }
 }
 
 #if defined HAVE_VALGRIND_HEADERS
-static void DUMPCURRENTALLOCS(void)
+void DUMPCURRENTALLOCS()
 {
     VALGRIND_PRINTF( "=== start memcheck dump of active allocations ===\n" );
 
@@ -924,15 +378,14 @@ static void DUMPCURRENTALLOCS(void)
 }
 #endif
 
-void SignalHandlerFunction(int Signal)
+void signalHandlerFunction(int signal, siginfo_t * info, void * context)
 {
-    oslSignalInfo    Info;
-    struct sigaction act;
+    oslSignalInfo Info;
 
-    Info.UserSignal = Signal;
-    Info.UserData   = NULL;
+    Info.UserSignal = signal;
+    Info.UserData   = nullptr;
 
-    switch (Signal)
+    switch (signal)
     {
         case SIGBUS:
         case SIGILL:
@@ -971,21 +424,28 @@ void SignalHandlerFunction(int Signal)
             break;
     }
 
-    ReportCrash( Signal );
+#if HAVE_FEATURE_BREAKPAD
+    if ((Info.Signal == osl_Signal_AccessViolation ||
+            Info.Signal == osl_Signal_IntegerDivideByZero ||
+            Info.Signal == osl_Signal_FloatDivideByZero) && !is_unset_signal(signal))
+    {
+        callSystemHandler(signal, info, context);
+    }
+#endif
 
-    switch (CallSignalHandler(&Info))
+    switch (callSignalHandler(&Info))
     {
     case osl_Signal_ActCallNextHdl:
-        CallSystemHandler(Signal);
+        callSystemHandler(signal, info, context);
         break;
 
     case osl_Signal_ActAbortApp:
-        ReportCrash( Signal );
+        struct sigaction act;
         act.sa_handler = SIG_DFL;
         act.sa_flags   = 0;
         sigemptyset(&(act.sa_mask));
-        sigaction(SIGABRT, &act, NULL);
-        PrintStack( Signal );
+        sigaction(SIGABRT, &act, nullptr);
+        printStack( signal );
         abort();
         break;
 
@@ -998,107 +458,6 @@ void SignalHandlerFunction(int Signal)
     }
 }
 
-oslSignalHandler SAL_CALL osl_addSignalHandler(oslSignalHandlerFunction Handler, void* pData)
-{
-    oslSignalHandlerImpl* pHandler;
-
-    OSL_ASSERT(Handler != NULL);
-    if ( Handler == 0 )
-    {
-        return 0;
-    }
-
-    if (! bInitSignal)
-        bInitSignal = InitSignal();
-
-    pHandler = (oslSignalHandlerImpl*) calloc(1, sizeof(oslSignalHandlerImpl));
-
-    if (pHandler != NULL)
-    {
-        pHandler->Handler = Handler;
-        pHandler->pData   = pData;
-
-        osl_acquireMutex(SignalListMutex);
-
-        pHandler->pNext = SignalList;
-        SignalList      = pHandler;
-
-        osl_releaseMutex(SignalListMutex);
-
-        return (pHandler);
-    }
-
-    return (NULL);
-}
-
-sal_Bool SAL_CALL osl_removeSignalHandler(oslSignalHandler Handler)
-{
-    oslSignalHandlerImpl *pHandler, *pPrevious = NULL;
-
-    OSL_ASSERT(Handler != NULL);
-
-    if (! bInitSignal)
-        bInitSignal = InitSignal();
-
-    osl_acquireMutex(SignalListMutex);
-
-    pHandler = SignalList;
-
-    while (pHandler != NULL)
-    {
-        if (pHandler == Handler)
-        {
-            if (pPrevious)
-                pPrevious->pNext = pHandler->pNext;
-            else
-                SignalList = pHandler->pNext;
-
-            osl_releaseMutex(SignalListMutex);
-
-            if (SignalList == NULL)
-                bInitSignal = DeInitSignal();
-
-            free(pHandler);
-
-            return (sal_True);
-        }
-
-        pPrevious = pHandler;
-        pHandler  = pHandler->pNext;
-    }
-
-    osl_releaseMutex(SignalListMutex);
-
-    return (sal_False);
-}
-
-oslSignalAction SAL_CALL osl_raiseSignal(sal_Int32 UserSignal, void* UserData)
-{
-    oslSignalInfo   Info;
-    oslSignalAction Action;
-
-    if (! bInitSignal)
-        bInitSignal = InitSignal();
-
-    osl_acquireMutex(SignalListMutex);
-
-    Info.Signal     = osl_Signal_User;
-    Info.UserSignal = UserSignal;
-    Info.UserData   = UserData;
-
-    Action = CallSignalHandler(&Info);
-
-    osl_releaseMutex(SignalListMutex);
-
-    return (Action);
-}
-
-sal_Bool SAL_CALL osl_setErrorReporting( sal_Bool bEnable )
-{
-    bool bOld = bErrorReportingEnabled;
-    bErrorReportingEnabled = bEnable;
-
-    return bOld;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

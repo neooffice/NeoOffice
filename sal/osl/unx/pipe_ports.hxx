@@ -40,5 +40,5 @@
 #include "sockimpl.hxx"
 
 SAL_DLLPRIVATE sal_Bool osl_createPortFileForPipe( oslPipe pPipe );
-SAL_DLLPRIVATE sal_uInt16 osl_getPortForPipeName( const sal_Char *pName );
-SAL_DLLPRIVATE void osl_unlinkPortFileForPipeName( const sal_Char *pName );
+SAL_DLLPRIVATE sal_uInt16 osl_getPortForPipeName( const char *pName );
+SAL_DLLPRIVATE void osl_unlinkPortFileForPipeName( const char *pName );

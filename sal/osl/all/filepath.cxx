@@ -26,21 +26,21 @@
 
 #include <osl/file.h>
 #include <rtl/ustring.h>
+#include <cassert>
 
 #if defined USE_JAVA && defined MACOSX
 #include "../unx/system.hxx"
 #endif	// USE_JAVA && MACOSX
 
-static sal_uInt32 SAL_CALL osl_defCalcTextWidth( rtl_uString *ustrText )
+static sal_uInt32 osl_defCalcTextWidth( rtl_uString *ustrText )
 {
     return ustrText ? ustrText->length : 0;
 }
 
 oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl_uString **pustrCompacted, sal_uInt32 uMaxWidth, oslCalcTextWidthFunc pfnCalcWidth )
 {
-    oslFileError    error = osl_File_E_None;
-    rtl_uString     *ustrPath = NULL;
-    rtl_uString     *ustrFile = NULL;
+    rtl_uString     *ustrPath = nullptr;
+    rtl_uString     *ustrFile = nullptr;
     sal_uInt32      uPathWidth, uFileWidth;
 
     if ( !pfnCalcWidth )
@@ -75,6 +75,8 @@ oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl
             rtl_uString_newFromString( &ustrFile, ustrSystemPath );
         }
     }
+
+    assert(ustrPath && ustrFile);
 
     uPathWidth = pfnCalcWidth( ustrPath );
     uFileWidth = pfnCalcWidth( ustrFile );
@@ -117,7 +119,7 @@ oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl
 
     rtl_uString_newConcat( pustrCompacted, ustrPath, ustrFile );
 
-    /* Event now if path was compacted to ".../..." it can be to large */
+    /* Event now if path was compacted to ".../..." it can be too large */
 
     uPathWidth += uFileWidth;
 
@@ -128,13 +130,10 @@ oslFileError SAL_CALL osl_abbreviateSystemPath( rtl_uString *ustrSystemPath, rtl
         uPathWidth = pfnCalcWidth( *pustrCompacted );
     }
 
-    if ( ustrPath )
-        rtl_uString_release( ustrPath );
+    rtl_uString_release(ustrPath);
+    rtl_uString_release(ustrFile);
 
-    if ( ustrFile )
-        rtl_uString_release( ustrFile );
-
-    return error;
+    return osl_File_E_None;
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

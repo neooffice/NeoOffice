@@ -38,6 +38,7 @@
 #include <osl/mutex.hxx>
 #include <osl/thread.h>
 #include <rtl/bootstrap.hxx>
+#include <rtl/byteseq.hxx>
 
 #include "pipe_ports.hxx"
 
@@ -175,7 +176,7 @@ sal_Bool osl_createPortFileForPipe( oslPipe pPipe )
 	return bRet;
 }
 
-sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
+sal_uInt16 osl_getPortForPipeName( const char *pName )
 {
 	sal_uInt16 nRet = 0;
 
@@ -198,7 +199,7 @@ sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
 		rtl::ByteSequence aBytes;
 		if ( aFile.readLine( aBytes ) == FileBase::E_None )
 		{
-			rtl::OString aLine( (sal_Char *)aBytes.getArray(), aBytes.getLength() );
+			rtl::OString aLine( (char *)aBytes.getArray(), aBytes.getLength() );
 			sal_Int32 nPort = aLine.toInt32();
 			if ( nPort > 0 && nPort <= SAL_MAX_UINT16 )
 				nRet = (sal_uInt16)nPort;
@@ -209,7 +210,7 @@ sal_uInt16 osl_getPortForPipeName( const sal_Char *pName )
 	return nRet;
 }
 
-void osl_unlinkPortFileForPipeName( const sal_Char *pName )
+void osl_unlinkPortFileForPipeName( const char *pName )
 {
 	if ( !pName )
 		return;

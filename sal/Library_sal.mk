@@ -21,25 +21,28 @@ $(eval $(call gb_Library_Library,sal))
 
 $(eval $(call gb_Library_set_soversion_script,sal,$(SRCDIR)/sal/util/sal.map))
 
-$(eval $(call gb_Library_set_precompiled_header,sal,$(SRCDIR)/sal/inc/pch/precompiled_sal))
+$(eval $(call gb_Library_set_precompiled_header,sal,sal/inc/pch/precompiled_sal))
+
+$(eval $(call gb_Library_set_is_ure_library_or_dependency,sal))
 
 $(eval $(call gb_Library_set_include,sal,\
 	$$(INCLUDE) \
 	-I$(SRCDIR)/sal/inc \
+	$(BACKTRACE_CFLAGS) \
 ))
 
 $(eval $(call gb_Library_add_defs,sal,\
-	$(if $(filter $(ALLOC),SYS_ALLOC TCMALLOC JEMALLOC)$(filter-out X$(ENABLE_RUNTIME_OPTIMIZATIONS),XTRUE), \
-		-DFORCE_SYSALLOC \
+	$(if $(filter FUZZERS,$(BUILD_TYPE)), \
+		-DFORCE_DEFAULT_SIGNAL \
 	) \
-	$(if $(filter $(OS),IOS), \
+	$(if $(filter iOS,$(OS)), \
 		-DNO_CHILD_PROCESSES \
 	) \
-	$(LFS_CFLAGS) \
 	-DSAL_DLLIMPLEMENTATION \
-	-DRTL_OS="\"$(RTL_OS)"\" \
-	-DRTL_ARCH="\"$(RTL_ARCH)"\" \
+	-DRTL_OS="\"$(RTL_OS)\"" \
+	-DRTL_ARCH="\"$(RTL_ARCH)\"" \
 	-DSRCDIR="\"$(SRCDIR)\"" \
+    $(call gb_CondLibSalTextenc,-DCOND_LIB_SAL_TEXTENC) \
 ))
 
 ifneq ($(strip $(PRODUCT_FILETYPE)),)
@@ -54,46 +57,45 @@ $(eval $(call gb_Library_add_defs,sal,\
 ))
 endif	# PRODUCT_BUILD_TYPE == java
 
-# need the "ure-link" symlink to exist in INSTDIR so it's possible to link sal
-# FIXME: this creates cyclic dependency between ure and sal modules
-$(eval $(call gb_Library_use_package,sal,ure_install))
-
 $(eval $(call gb_Library_use_libraries,sal,\
-	$(if $(filter $(OS),ANDROID), \
+	$(if $(filter ANDROID,$(OS)), \
 		lo-bootstrap \
 	) \
-	$(gb_UWINAPI) \
 ))
 
 $(eval $(call gb_Library_use_externals,sal,\
+    dragonbox \
+    dtoa \
     valgrind \
-    boost_headers \
+    zlib \
 ))
 
 $(eval $(call gb_Library_use_system_win32_libs,sal,\
 	advapi32 \
 	comdlg32 \
+	dbghelp \
 	mpr \
 	ole32 \
 	shell32 \
 	user32 \
+	userenv \
+	wer \
 	ws2_32 \
 ))
 
 $(eval $(call gb_Library_add_libs,sal,\
-	$(if $(filter-out $(OS),WNT), \
-		$(if $(filter $(OS),ANDROID),, \
-			-lpthread \
-		) \
-	) \
-	$(if $(filter $(OS),LINUX), \
+	$(if $(filter LINUX,$(OS)), \
 		-ldl \
 		-lrt \
 	) \
-	$(if $(filter $(OS),SOLARIS), \
+	$(if $(filter SOLARIS,$(OS)), \
 		-lnsl \
 		-lsocket \
 	) \
+	$(if $(filter HAIKU,$(OS)), \
+		-lnetwork \
+	) \
+	$(BACKTRACE_LIBS) \
 ))
 
 ifeq ($(OS),MACOSX)
@@ -111,6 +113,8 @@ $(eval $(call gb_Library_add_exception_objects,sal,\
 	sal/osl/all/filepath \
 	sal/osl/all/loadmodulerelative \
 	sal/osl/all/log  \
+	sal/osl/all/mutexshared \
+	sal/osl/all/signalshared  \
 	sal/osl/all/utility \
 	sal/rtl/alloc_arena \
 	sal/rtl/alloc_cache \
@@ -124,7 +128,6 @@ $(eval $(call gb_Library_add_exception_objects,sal,\
 	sal/rtl/digest \
 	sal/rtl/hash \
 	sal/rtl/locale \
-	sal/rtl/logfile \
 	sal/rtl/math \
 	sal/rtl/random \
 	sal/rtl/rtl_process \
@@ -146,32 +149,33 @@ $(eval $(call gb_Library_add_exception_objects,sal,\
 	sal/textenc/unichars \
 ))
 
-ifeq ($(OS),IOS)
+ifeq ($(OS),iOS)
 $(eval $(call gb_Library_add_cxxflags,sal,\
     $(gb_OBJCXXFLAGS) \
 ))
 endif
 
-ifeq ($(OS),ANDROID)
+ifeq (,$(call gb_CondLibSalTextenc,$(true)))
 $(eval $(call gb_Library_add_exception_objects,sal,\
-	sal/textenc/context \
-	sal/textenc/convertbig5hkscs \
-	sal/textenc/converteuctw \
-	sal/textenc/convertgb18030 \
-	sal/textenc/convertisciidevangari \
-	sal/textenc/convertiso2022cn \
-	sal/textenc/convertiso2022jp \
-	sal/textenc/convertiso2022kr \
-	sal/textenc/convertsinglebytetobmpunicode \
-	sal/textenc/tables \
-	sal/textenc/tcvtbyte \
-	sal/textenc/tcvtmb \
-	sal/textenc/tcvtutf7 \
+    sal/textenc/context \
+    sal/textenc/convertbig5hkscs \
+    sal/textenc/converteuctw \
+    sal/textenc/convertgb18030 \
+    sal/textenc/convertisciidevangari \
+    sal/textenc/convertiso2022cn \
+    sal/textenc/convertiso2022jp \
+    sal/textenc/convertiso2022kr \
+    sal/textenc/convertsinglebytetobmpunicode \
+    sal/textenc/tables \
+    sal/textenc/tcvtbyte \
+    sal/textenc/tcvtmb \
+    sal/textenc/tcvtutf7 \
 ))
 endif
 
 ifneq ($(OS),WNT)
 $(eval $(call gb_Library_add_exception_objects,sal,\
+	sal/osl/unx/backtraceapi \
 	sal/osl/unx/conditn \
 	sal/osl/unx/file \
 	sal/osl/unx/file_error_transl \
@@ -188,21 +192,23 @@ $(eval $(call gb_Library_add_exception_objects,sal,\
 	sal/osl/unx/process \
 	sal/osl/unx/process_impl \
 	sal/osl/unx/profile \
+	sal/osl/unx/random \
 	sal/osl/unx/readwrite_helper \
+	sal/osl/unx/salinit \
 	sal/osl/unx/security \
 	sal/osl/unx/signal \
 	sal/osl/unx/socket \
-	sal/osl/unx/system \
+	sal/osl/unx/soffice \
 	sal/osl/unx/tempfile \
 	sal/osl/unx/thread \
 	sal/osl/unx/time \
-        $(if $(filter DESKTOP,$(BUILD_TYPE)), sal/osl/unx/salinit) \
 ))
 
-# Note that the uunxapi.mm file just includes the uunxapi.cxx one
+# Note that the uunxapi.mm file just includes the uunxapi.cxx one. Ditto for system.mm
 ifeq ($(OS),MACOSX)
 $(eval $(call gb_Library_add_objcxxobjects,sal,\
 	sal/osl/unx/uunxapi \
+	sal/osl/unx/system \
 ))
 ifeq ($(GUIBASE),java)
 $(eval $(call gb_Library_add_objcxxobjects,sal,\
@@ -215,20 +221,21 @@ endif	# GUIBASE == java
 else
 $(eval $(call gb_Library_add_exception_objects,sal,\
 	sal/osl/unx/uunxapi \
+	sal/osl/unx/system \
 ))
 endif
 
-ifneq ($(filter $(OS),MACOSX IOS),)
+ifneq ($(filter MACOSX iOS,$(OS)),)
 $(eval $(call gb_Library_add_exception_objects,sal,\
 	sal/osl/unx/osxlocale \
 ))
 endif
-ifneq ($(filter $(OS),SOLARIS FREEBSD NETBSD MACOSX AIX OPENBSD DRAGONFLY)$(filter $(OS)$(CPUNAME),LINUXSPARC),)
+ifneq ($(OS),WNT)
 $(eval $(call gb_Library_add_cobjects,sal,\
 	sal/osl/unx/backtrace \
 ))
 endif
-ifneq ($(filter $(CPUNAME),SPARC64 SPARC),)
+ifneq ($(filter SPARC64 SPARC,$(CPUNAME)),)
 $(eval $(call gb_Library_add_asmobjects,sal,\
 	sal/osl/unx/asm/interlck_sparc \
 ))
@@ -240,45 +247,42 @@ endif
 
 else # $(OS) == WNT
 
-# FIXME ?
-# .IF "$(CCNUMVER)" >= "001400000000"
-# $(eval $(call gb_Library_add_defs,sal,\
-	-D_CRT_NON_CONFORMING_SWPRINTFS \
-))
-# .ENDIF
-
-$(eval $(call gb_Library_add_defs,sal,\
-	-D_WIN32_WINNT=0x0502 \
-))
-
 $(eval $(call gb_Library_add_exception_objects,sal,\
+	sal/osl/w32/backtrace \
+	sal/osl/w32/conditn \
+	sal/osl/w32/dllentry \
 	sal/osl/w32/file \
 	sal/osl/w32/file_dirvol \
+	sal/osl/w32/file_error \
 	sal/osl/w32/file_url \
+	sal/osl/w32/interlck \
+	sal/osl/w32/memory \
 	sal/osl/w32/module \
+	sal/osl/w32/mutex \
+	sal/osl/w32/nlsupport \
 	sal/osl/w32/path_helper \
+	sal/osl/w32/pipe \
 	sal/osl/w32/process \
 	sal/osl/w32/procimpl \
 	sal/osl/w32/profile \
+	sal/osl/w32/random \
 	sal/osl/w32/salinit \
+	sal/osl/w32/security \
 	sal/osl/w32/signal \
 	sal/osl/w32/socket \
 	sal/osl/w32/tempfile \
-))
-$(eval $(call gb_Library_add_cobjects,sal,\
-	sal/osl/w32/conditn \
-	sal/osl/w32/dllentry \
-	sal/osl/w32/file_error \
-	sal/osl/w32/interlck \
-	sal/osl/w32/memory \
-	sal/osl/w32/mutex \
-	sal/osl/w32/nlsupport \
-	sal/osl/w32/pipe \
-	sal/osl/w32/security \
 	sal/osl/w32/thread \
 	sal/osl/w32/time \
 ))
 
 endif # ifneq ($(OS),WNT)
+
+ifeq ($(ENABLE_CIPHER_OPENSSL_BACKEND),TRUE)
+$(eval $(call gb_Library_add_defs,sal,-DLIBO_CIPHER_OPENSSL_BACKEND))
+$(eval $(call gb_Library_use_externals,sal, \
+    openssl \
+    openssl_headers \
+))
+endif
 
 # vim: set noet sw=4 ts=4:

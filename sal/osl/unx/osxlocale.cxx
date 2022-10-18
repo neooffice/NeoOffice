@@ -38,7 +38,7 @@
 
 #include <rtl/ustrbuf.hxx>
 
-#include <nlsupport.hxx>
+#include "nlsupport.hxx"
 
 namespace
 {
@@ -63,33 +63,34 @@ namespace
         CFPropertyListRef pref = CFPreferencesCopyAppValue(CFSTR("AppleLanguages"), kCFPreferencesCurrentApplication);
         CFPropertyListGuard proplGuard(pref);
 
-        if (pref == NULL) // return fallback value 'en_US'
+        if (pref == nullptr) // return fallback value 'en_US'
              return CFStringCreateWithCString(kCFAllocatorDefault, "en_US", kCFStringEncodingASCII);
 
-        CFStringRef sref = (CFGetTypeID(pref) == CFArrayGetTypeID()) ? (CFStringRef)CFArrayGetValueAtIndex((CFArrayRef)pref, 0) : (CFStringRef)pref;
+        CFStringRef sref = (CFGetTypeID(pref) == CFArrayGetTypeID()) ? static_cast<CFStringRef>(CFArrayGetValueAtIndex(static_cast<CFArrayRef>(pref), 0)) : static_cast<CFStringRef>(pref);
 
         return CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorDefault, sref);
     }
 
-    void append(rtl::OUStringBuffer & buffer, CFStringRef string) {
+    void append(OUStringBuffer & buffer, CFStringRef string) {
         CFIndex n = CFStringGetLength(string);
         CFStringGetCharacters(
-            string, CFRangeMake(0, n), buffer.appendUninitialized(n));
+            string, CFRangeMake(0, n),
+            reinterpret_cast<UniChar *>(buffer.appendUninitialized(n)));
     }
 }
 
 /** Grab current locale from system.
 */
-rtl::OUString macosx_getLocale()
+OUString macosx_getLocale()
 {
     CFStringRef sref = getProcessLocale();
     CFStringGuard sGuard(sref);
 
-    assert(sref != NULL && "osxlocale.cxx: getProcessLocale must return a non-NULL value");
+    assert(sref != nullptr && "osxlocale.cxx: getProcessLocale must return a non-NULL value");
 
     // split the string into substrings; the first two (if there are two) substrings
     // are language and country
-    CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));
+    CFArrayRef subs = CFStringCreateArrayBySeparatingStrings(nullptr, sref, CFSTR("-"));
 #ifdef USE_JAVA
     if (CFArrayGetCount(subs) < 2)
     {
@@ -101,8 +102,8 @@ rtl::OUString macosx_getLocale()
 #endif	// USE_JAVA
     CFArrayGuard arrGuard(subs);
 
-    rtl::OUStringBuffer buf;
-    append(buf, (CFStringRef)CFArrayGetValueAtIndex(subs, 0));
+    OUStringBuffer buf;
+    append(buf, static_cast<CFStringRef>(CFArrayGetValueAtIndex(subs, 0)));
 
     // country also available? Assumption: if the array contains more than one
     // value the second value is always the country!
@@ -117,7 +118,7 @@ rtl::OUString macosx_getLocale()
             else if (CFStringCompare(country, CFSTR("Hant"), 0) == kCFCompareEqualTo)
                 country = CFSTR("TW");
             else
-                country = NULL;
+                country = nullptr;
         }
 
         if (country)
@@ -127,10 +128,10 @@ rtl::OUString macosx_getLocale()
         }
 #else	// USE_JAVA
         buf.append("_");
-        append(buf, (CFStringRef)CFArrayGetValueAtIndex(subs, 1));
+        append(buf, static_cast<CFStringRef>(CFArrayGetValueAtIndex(subs, 1)));
 #endif	// USE_JAVA
     }
-    // Append 'UTF-8' to the locale because the Mac OS X file
+    // Append 'UTF-8' to the locale because the macOS file
     // system interface is UTF-8 based and sal tries to determine
     // the file system locale from the locale information
     buf.append(".UTF-8");

@@ -14,13 +14,13 @@
 #   License, Version 2.0 (the "License"); you may not use this file
 #   except in compliance with the License. You may obtain a copy of
 #   the License at http://www.apache.org/licenses/LICENSE-2.0 .
-#
 #   Modified November 2016 by Patrick Luby. NeoOffice is only distributed
 #   under the GNU General Public License, Version 3 as allowed by Section 3.3
 #   of the Mozilla Public License, v. 2.0.
 #
 #   You should have received a copy of the GNU General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 #
 
 UDK_3_0_0 {
@@ -203,13 +203,6 @@ UDK_3_0_0 {
         rtl_reallocateMemory;
         rtl_zeroMemory;
         rtl_findInMemory;
-        rtl_hashentry_destroy;
-        rtl_hashfunc;
-        rtl_hashtable_add;
-        rtl_hashtable_destroy;
-        rtl_hashtable_find;
-        rtl_hashtable_grow;
-        rtl_hashtable_init;
         rtl_locale_equals;
         rtl_locale_getCountry;
         rtl_locale_getDefault;
@@ -689,6 +682,40 @@ LIBO_UDK_4.3 { # symbols available in >= LibO 4.3
         osl_areCommandArgsSet;
 } LIBO_UDK_4.2;
 
+LIBO_UDK_5.0 { # symbols available in >= LibO 5.0
+    global:
+        rtl_secureZeroMemory;
+} LIBO_UDK_4.3;
+
+LIBO_UDK_5.1 { # symbols available in >= LibO 5.1
+    global:
+        rtl_uString_newConcatAsciiL;
+        rtl_uString_newReplaceAllToAsciiL;
+        rtl_uString_newReplaceFirstToAsciiL;
+} LIBO_UDK_5.0;
+
+LIBO_UDK_5.2 { # symbols available in >= LibO 5.2
+    global:
+        osl_getShortUserName;
+} LIBO_UDK_5.1;
+
+LIBO_UDK_5.3 { # symbols available in >= LibO 5.3
+    global:
+        rtl_math_approxEqual;
+        rtl_uString_newConcatUtf16L;
+        rtl_uString_newReplaceAllAsciiLUtf16L;
+        rtl_uString_newReplaceAllUtf16LAsciiL;
+        rtl_uString_newReplaceAllUtf16LUtf16L;
+        rtl_uString_newReplaceFirstAsciiLUtf16L;
+        rtl_uString_newReplaceFirstUtf16LAsciiL;
+        rtl_uString_newReplaceFirstUtf16LUtf16L;
+} LIBO_UDK_5.2;
+
+LIBO_UDK_6.2 { # symbols available in >= LibO 6.2
+    global:
+        osl_replaceFile;
+} LIBO_UDK_5.3;
+
 PRIVATE_1.0 {
     global:
         osl_detail_ObjectRegistry_storeAddresses;
@@ -709,6 +736,41 @@ PRIVATE_1.2 { # LibreOffice 3.5
         sal_detail_log;
         sal_detail_logFormat;
 } PRIVATE_1.1;
+
+PRIVATE_1.3 { # LibreOffice 5.4
+    global:
+        sal_detail_log_report;
+} PRIVATE_1.2;
+
+PRIVATE_1.4 { # LibreOffice 6.0
+    global:
+        _ZN3sal13backtrace_getEj;
+        _ZN3sal13backtrace_getEm;
+        _ZN3sal19backtrace_to_stringEPNS_14BacktraceStateE;
+} PRIVATE_1.3;
+
+PRIVATE_1.5 { # LibreOffice 6.1
+    global:
+        rtl_alloc_preInit;
+} PRIVATE_1.4;
+
+PRIVATE_1.6 { # LibreOffice 6.4
+    global:
+        rtl_str_toInt64_WithLength;
+        rtl_ustr_toInt64_WithLength;
+        sal_detail_set_log_selector;
+} PRIVATE_1.5;
+
+PRIVATE_1.7 { # LibreOffice 7.1
+    global:
+        rtl_uString_newReplaceAllFromIndexUtf16LUtf16L;
+} PRIVATE_1.5;
+
+PRIVATE_1.8 { # LibreOffice 7.3
+    global:
+        rtl_string_newReplaceStrAt_WithLength;
+        rtl_uString_newReplaceStrAtUtf16L;
+} PRIVATE_1.7;
 
 PRIVATE_textenc.1 { # LibreOffice 3.6
     global:
