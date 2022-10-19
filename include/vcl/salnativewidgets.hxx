@@ -84,6 +84,9 @@ enum class ControlType {
 // all parts like slider, buttons
     Scrollbar          =  60,
     Slider             =  65,
+#ifdef USE_JAVA
+    Groupbox           =  70,
+#endif	// USE_JAVA
 // A separator line
     Fixedline          =  80,
 // A toolbar control with buttons and a grip
