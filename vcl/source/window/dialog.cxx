@@ -24,41 +24,56 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <config_features.h>
+#include <config_feature_desktop.h>
 
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/util/thePathSettings.hpp>
+#ifdef IOS
+#include <premac.h>
+#include <UIKit/UIKit.h>
+#include <postmac.h>
+#endif
+
+#include <com/sun/star/frame/theGlobalEventBroadcaster.hpp>
+#include <comphelper/lok.hxx>
+#include <comphelper/scopeguard.hxx>
 #include <comphelper/processfactory.hxx>
-#include <osl/file.hxx>
+#include <officecfg/Office/Common.hxx>
+#include <osl/diagnose.h>
 
-#include <tools/debug.hxx>
-
-#include <tools/rc.h>
 #include <svdata.hxx>
 #include <window.h>
+#include <accel.hxx>
 #include <brdwin.hxx>
 
+#include <rtl/bootstrap.hxx>
 #include <rtl/strbuf.hxx>
 #include <sal/log.hxx>
 
+#include <vcl/abstdlg.hxx>
 #include <vcl/builder.hxx>
+#include <vcl/toolkit/floatwin.hxx>
 #include <vcl/layout.hxx>
 #include <vcl/svapp.hxx>
 #include <vcl/event.hxx>
+#include <vcl/locktoplevels.hxx>
 #include <vcl/wrkwin.hxx>
-#include <vcl/button.hxx>
+#include <vcl/toolkit/button.hxx>
 #include <vcl/mnemonic.hxx>
-#include <vcl/dialog.hxx>
-#include <vcl/decoview.hxx>
-#include <vcl/msgbox.hxx>
-#include <vcl/unowrap.hxx>
+#include <vcl/toolkit/dialog.hxx>
+#include <vcl/dialoghelper.hxx>
 #include <vcl/settings.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/weld.hxx>
+#include <vcl/uitest/uiobject.hxx>
+#include <vcl/uitest/logger.hxx>
+#include <vcl/IDialogRenderable.hxx>
+#include <messagedialog.hxx>
+#include <salframe.hxx>
+#include <tools/json_writer.hxx>
 
 #include <iostream>
-
-#if !HAVE_FEATURE_DESKTOP
-#include <touch/touch.h>
-#endif
+#include <stack>
+#include <utility>
+#include <vector>
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -69,26 +84,19 @@
 
 static OString ImplGetDialogText( Dialog* pDialog )
 {
-    OStringBuffer aErrorStr(OUStringToOString(
-        pDialog->GetText(), RTL_TEXTENCODING_UTF8));
+    OUString aErrorStr(pDialog->GetText());
 
     OUString sMessage;
-    if (MessBox* pMessBox = dynamic_cast<MessBox*>(pDialog))
-    {
-        sMessage = pMessBox->GetMessText();
-    }
-    else if (MessageDialog* pMessDialog = dynamic_cast<MessageDialog*>(pDialog))
+    if (MessageDialog* pMessDialog = dynamic_cast<MessageDialog*>(pDialog))
     {
         sMessage = pMessDialog->get_primary_text();
     }
 
     if (!sMessage.isEmpty())
     {
-        aErrorStr.append(", ");
-        aErrorStr.append(OUStringToOString(
-            sMessage, RTL_TEXTENCODING_UTF8));
+        aErrorStr += ", " + sMessage;
     }
-    return aErrorStr.makeStringAndClear();
+    return OUStringToOString(aErrorStr, RTL_TEXTENCODING_UTF8);
 }
 
 static bool ImplIsMnemonicCtrl( vcl::Window* pWindow )
@@ -96,35 +104,32 @@ static bool ImplIsMnemonicCtrl( vcl::Window* pWindow )
     if( ! pWindow->GetSettings().GetStyleSettings().GetAutoMnemonic() )
         return false;
 
-    if ( (pWindow->GetType() == WINDOW_RADIOBUTTON) ||
-         (pWindow->GetType() == WINDOW_CHECKBOX) ||
-         (pWindow->GetType() == WINDOW_TRISTATEBOX) ||
-         (pWindow->GetType() == WINDOW_PUSHBUTTON) )
+    if ( (pWindow->GetType() == WindowType::RADIOBUTTON) ||
+         (pWindow->GetType() == WindowType::CHECKBOX) ||
+         (pWindow->GetType() == WindowType::TRISTATEBOX) ||
+         (pWindow->GetType() == WindowType::PUSHBUTTON) )
         return true;
 
-    if ( pWindow->GetType() == WINDOW_FIXEDTEXT )
+    if ( pWindow->GetType() == WindowType::FIXEDTEXT )
     {
         FixedText *pText = static_cast<FixedText*>(pWindow);
         if (pText->get_mnemonic_widget())
             return true;
         //This is the legacy pre-layout logic which we retain
         //until we can be sure we can remove it
-        if ( pWindow->GetStyle() & (WB_INFO | WB_NOLABEL) )
+        if (pWindow->GetStyle() & WB_NOLABEL)
             return false;
-        vcl::Window* pNextWindow = pWindow->GetWindow( WINDOW_NEXT );
+        vcl::Window* pNextWindow = pWindow->GetWindow( GetWindowType::Next );
         if ( !pNextWindow )
             return false;
-        pNextWindow = pNextWindow->GetWindow( WINDOW_CLIENT );
-        if ( !(pNextWindow->GetStyle() & WB_TABSTOP) ||
-             (pNextWindow->GetType() == WINDOW_FIXEDTEXT) ||
-             (pNextWindow->GetType() == WINDOW_GROUPBOX) ||
-             (pNextWindow->GetType() == WINDOW_RADIOBUTTON) ||
-             (pNextWindow->GetType() == WINDOW_CHECKBOX) ||
-             (pNextWindow->GetType() == WINDOW_TRISTATEBOX) ||
-             (pNextWindow->GetType() == WINDOW_PUSHBUTTON) )
-            return false;
-
-        return true;
+        pNextWindow = pNextWindow->GetWindow( GetWindowType::Client );
+        return !(!(pNextWindow->GetStyle() & WB_TABSTOP) ||
+                 (pNextWindow->GetType() == WindowType::FIXEDTEXT) ||
+                 (pNextWindow->GetType() == WindowType::GROUPBOX) ||
+                 (pNextWindow->GetType() == WindowType::RADIOBUTTON) ||
+                 (pNextWindow->GetType() == WindowType::CHECKBOX) ||
+                 (pNextWindow->GetType() == WindowType::TRISTATEBOX) ||
+                 (pNextWindow->GetType() == WindowType::PUSHBUTTON));
     }
 
     return false;
@@ -138,78 +143,86 @@ void ImplHideSplash()
             pSVData->mpIntroWindow->Hide();
 }
 
-//Get next window after pChild of a pTopLevel window as
-//if any intermediate layout widgets didn't exist
-vcl::Window * nextLogicalChildOfParent(vcl::Window *pTopLevel, vcl::Window *pChild)
+vcl::Window * nextLogicalChildOfParent(const vcl::Window *pTopLevel, const vcl::Window *pChild)
 {
-    vcl::Window *pLastChild = pChild;
+    const vcl::Window *pLastChild = pChild;
 
-    if (isContainerWindow(*pChild))
-        pChild = pChild->GetWindow(WINDOW_FIRSTCHILD);
+    if (pChild->GetType() == WindowType::SCROLLWINDOW)
+        pChild = static_cast<const VclScrolledWindow*>(pChild)->get_child();
+    else if (isContainerWindow(*pChild))
+        pChild = pChild->GetWindow(GetWindowType::FirstChild);
     else
-        pChild = pChild->GetWindow(WINDOW_NEXT);
+        pChild = pChild->GetWindow(GetWindowType::Next);
 
     while (!pChild)
     {
         vcl::Window *pParent = pLastChild->GetParent();
         if (!pParent)
-            return NULL;
+            return nullptr;
         if (pParent == pTopLevel)
-            return NULL;
+            return nullptr;
         pLastChild = pParent;
-        pChild = pParent->GetWindow(WINDOW_NEXT);
+        pChild = pParent->GetWindow(GetWindowType::Next);
     }
 
-    if (pChild && isContainerWindow(*pChild))
+    if (isContainerWindow(*pChild))
         pChild = nextLogicalChildOfParent(pTopLevel, pChild);
 
-    return pChild;
+    return const_cast<vcl::Window *>(pChild);
 }
 
-vcl::Window * prevLogicalChildOfParent(vcl::Window *pTopLevel, vcl::Window *pChild)
+vcl::Window * prevLogicalChildOfParent(const vcl::Window *pTopLevel, const vcl::Window *pChild)
 {
-    vcl::Window *pLastChild = pChild;
+    const vcl::Window *pLastChild = pChild;
 
-    if (isContainerWindow(*pChild))
-        pChild = pChild->GetWindow(WINDOW_LASTCHILD);
+    if (pChild->GetType() == WindowType::SCROLLWINDOW)
+        pChild = static_cast<const VclScrolledWindow*>(pChild)->get_child();
+    else if (isContainerWindow(*pChild))
+        pChild = pChild->GetWindow(GetWindowType::LastChild);
     else
-        pChild = pChild->GetWindow(WINDOW_PREV);
+        pChild = pChild->GetWindow(GetWindowType::Prev);
 
     while (!pChild)
     {
         vcl::Window *pParent = pLastChild->GetParent();
         if (!pParent)
-            return NULL;
+            return nullptr;
         if (pParent == pTopLevel)
-            return NULL;
+            return nullptr;
         pLastChild = pParent;
-        pChild = pParent->GetWindow(WINDOW_PREV);
+        pChild = pParent->GetWindow(GetWindowType::Prev);
     }
 
-    if (pChild && isContainerWindow(*pChild))
+    if (isContainerWindow(*pChild))
         pChild = prevLogicalChildOfParent(pTopLevel, pChild);
 
-    return pChild;
+    return const_cast<vcl::Window *>(pChild);
 }
 
-//Get first window of a pTopLevel window as
-//if any intermediate layout widgets didn't exist
-vcl::Window * firstLogicalChildOfParent(vcl::Window *pTopLevel)
+vcl::Window * firstLogicalChildOfParent(const vcl::Window *pTopLevel)
 {
-    vcl::Window *pChild = pTopLevel->GetWindow(WINDOW_FIRSTCHILD);
+    const vcl::Window *pChild = pTopLevel->GetWindow(GetWindowType::FirstChild);
     if (pChild && isContainerWindow(*pChild))
         pChild = nextLogicalChildOfParent(pTopLevel, pChild);
-    return pChild;
+    return const_cast<vcl::Window *>(pChild);
 }
 
-void ImplWindowAutoMnemonic( vcl::Window* pWindow )
+vcl::Window * lastLogicalChildOfParent(const vcl::Window *pTopLevel)
+{
+    const vcl::Window *pChild = pTopLevel->GetWindow(GetWindowType::LastChild);
+    if (pChild && isContainerWindow(*pChild))
+        pChild = prevLogicalChildOfParent(pTopLevel, pChild);
+    return const_cast<vcl::Window *>(pChild);
+}
+
+void GenerateAutoMnemonicsOnHierarchy(const vcl::Window* pWindow)
 {
     MnemonicGenerator   aMnemonicGenerator;
     vcl::Window*                 pGetChild;
     vcl::Window*                 pChild;
 
     // register the assigned mnemonics
-    pGetChild = pWindow->GetWindow( WINDOW_FIRSTCHILD );
+    pGetChild = pWindow->GetWindow( GetWindowType::FirstChild );
     while ( pGetChild )
     {
         pChild = pGetChild->ImplGetWindow();
@@ -218,15 +231,15 @@ void ImplWindowAutoMnemonic( vcl::Window* pWindow )
     }
 
     // take the Controls of the dialog into account for TabPages
-    if ( pWindow->GetType() == WINDOW_TABPAGE )
+    if ( pWindow->GetType() == WindowType::TABPAGE )
     {
         vcl::Window* pParent = pWindow->GetParent();
-        if ( pParent->GetType() == WINDOW_TABCONTROL )
+        if (pParent && pParent->GetType() == WindowType::TABCONTROL )
             pParent = pParent->GetParent();
 
-        if ( (pParent->GetStyle() & (WB_DIALOGCONTROL | WB_NODIALOGCONTROL)) == WB_DIALOGCONTROL )
+        if (pParent && (pParent->GetStyle() & (WB_DIALOGCONTROL | WB_NODIALOGCONTROL)) == WB_DIALOGCONTROL )
         {
-            pGetChild = pParent->GetWindow( WINDOW_FIRSTCHILD );
+            pGetChild = pParent->GetWindow( GetWindowType::FirstChild );
             while ( pGetChild )
             {
                 pChild = pGetChild->ImplGetWindow();
@@ -237,7 +250,7 @@ void ImplWindowAutoMnemonic( vcl::Window* pWindow )
     }
 
     // assign mnemonics to Controls which have none
-    pGetChild = pWindow->GetWindow( WINDOW_FIRSTCHILD );
+    pGetChild = pWindow->GetWindow( GetWindowType::FirstChild );
     while ( pGetChild )
     {
         pChild = pGetChild->ImplGetWindow();
@@ -253,33 +266,33 @@ void ImplWindowAutoMnemonic( vcl::Window* pWindow )
     }
 }
 
-static VclButtonBox* getActionArea(Dialog *pDialog)
+static VclButtonBox* getActionArea(Dialog const *pDialog)
 {
-    VclButtonBox *pButtonBox = NULL;
+    VclButtonBox *pButtonBox = nullptr;
     if (pDialog->isLayoutEnabled())
     {
-        vcl::Window *pBox = pDialog->GetWindow(WINDOW_FIRSTCHILD);
-        vcl::Window *pChild = pBox->GetWindow(WINDOW_LASTCHILD);
+        vcl::Window *pBox = pDialog->GetWindow(GetWindowType::FirstChild);
+        vcl::Window *pChild = pBox->GetWindow(GetWindowType::LastChild);
         while (pChild)
         {
             pButtonBox = dynamic_cast<VclButtonBox*>(pChild);
             if (pButtonBox)
                 break;
-            pChild = pChild->GetWindow(WINDOW_PREV);
+            pChild = pChild->GetWindow(GetWindowType::Prev);
         }
     }
     return pButtonBox;
 }
 
-static vcl::Window* getActionAreaButtonList(Dialog *pDialog)
+static vcl::Window* getActionAreaButtonList(Dialog const *pDialog)
 {
     VclButtonBox* pButtonBox = getActionArea(pDialog);
     if (pButtonBox)
-        return pButtonBox->GetWindow(WINDOW_FIRSTCHILD);
-    return pDialog->GetWindow(WINDOW_FIRSTCHILD);
+        return pButtonBox->GetWindow(GetWindowType::FirstChild);
+    return pDialog->GetWindow(GetWindowType::FirstChild);
 }
 
-static PushButton* ImplGetDefaultButton( Dialog* pDialog )
+static PushButton* ImplGetDefaultButton( Dialog const * pDialog )
 {
     vcl::Window* pChild = getActionAreaButtonList(pDialog);
     while ( pChild )
@@ -291,50 +304,50 @@ static PushButton* ImplGetDefaultButton( Dialog* pDialog )
                 return pPushButton;
         }
 
-        pChild = pChild->GetWindow( WINDOW_NEXT );
+        pChild = pChild->GetWindow( GetWindowType::Next );
     }
 
-    return NULL;
+    return nullptr;
 }
 
-static PushButton* ImplGetOKButton( Dialog* pDialog )
+static PushButton* ImplGetOKButton( Dialog const * pDialog )
 {
     vcl::Window* pChild = getActionAreaButtonList(pDialog);
     while ( pChild )
     {
-        if ( pChild->GetType() == WINDOW_OKBUTTON )
+        if ( pChild->GetType() == WindowType::OKBUTTON )
             return static_cast<PushButton*>(pChild);
 
-        pChild = pChild->GetWindow( WINDOW_NEXT );
+        pChild = pChild->GetWindow( GetWindowType::Next );
     }
 
-    return NULL;
+    return nullptr;
 }
 
-static PushButton* ImplGetCancelButton( Dialog* pDialog )
+static PushButton* ImplGetCancelButton( Dialog const * pDialog )
 {
     vcl::Window* pChild = getActionAreaButtonList(pDialog);
 
     while ( pChild )
     {
-        if ( pChild->GetType() == WINDOW_CANCELBUTTON )
+        if ( pChild->GetType() == WindowType::CANCELBUTTON )
             return static_cast<PushButton*>(pChild);
 
-        pChild = pChild->GetWindow( WINDOW_NEXT );
+        pChild = pChild->GetWindow( GetWindowType::Next );
     }
 
-    return NULL;
+    return nullptr;
 }
 
 static void ImplMouseAutoPos( Dialog* pDialog )
 {
-    sal_uLong nMouseOptions = pDialog->GetSettings().GetMouseSettings().GetOptions();
-    if ( nMouseOptions & MOUSE_OPTION_AUTOCENTERPOS )
+    MouseSettingsOptions nMouseOptions = pDialog->GetSettings().GetMouseSettings().GetOptions();
+    if ( nMouseOptions & MouseSettingsOptions::AutoCenterPos )
     {
         Size aSize = pDialog->GetOutputSizePixel();
         pDialog->SetPointerPosPixel( Point( aSize.Width()/2, aSize.Height()/2 ) );
     }
-    else if ( nMouseOptions & MOUSE_OPTION_AUTODEFBTNPOS )
+    else if ( nMouseOptions & MouseSettingsOptions::AutoDefBtnPos )
     {
         vcl::Window* pWindow = ImplGetDefaultButton( pDialog );
         if ( !pWindow )
@@ -350,149 +363,214 @@ static void ImplMouseAutoPos( Dialog* pDialog )
 
 struct DialogImpl
 {
-    long    mnResult;
+    std::vector<VclPtr<PushButton>> maOwnedButtons;
+    std::map<VclPtr<vcl::Window>, short> maResponses;
+    tools::Long    mnResult;
     bool    mbStartedModal;
-    Link    maEndDialogHdl;
+    VclAbstractDialog::AsyncContext maEndCtx;
+    Link<const CommandEvent&, bool> m_aPopupMenuHdl;
+    Link<void*, vcl::ILibreOfficeKitNotifier*> m_aInstallLOKNotifierHdl;
+    bool    m_bLOKTunneling;
 
-    DialogImpl() : mnResult( -1 ), mbStartedModal( false ) {}
+    DialogImpl() : mnResult( -1 ), mbStartedModal( false ), m_bLOKTunneling( true ) {}
+
+#ifndef NDEBUG
+    short get_response(vcl::Window *pWindow) const
+    {
+        auto aFind = maResponses.find(pWindow);
+        if (aFind != maResponses.end())
+            return aFind->second;
+        return RET_CANCEL;
+    }
+#endif
+
+    ~DialogImpl()
+    {
+        for (VclPtr<PushButton> & pOwnedButton : maOwnedButtons)
+            pOwnedButton.disposeAndClear();
+    }
 };
+
+void Dialog::disposeOwnedButtons()
+{
+    for (VclPtr<PushButton> & pOwnedButton : mpDialogImpl->maOwnedButtons)
+        pOwnedButton.disposeAndClear();
+}
 
 void Dialog::ImplInitDialogData()
 {
     mpWindowImpl->mbDialog  = true;
-    mpPrevExecuteDlg        = NULL;
     mbInExecute             = false;
-    mbOldSaveBack           = false;
+    mbInSyncExecute         = false;
     mbInClose               = false;
     mbModalMode             = false;
-    mpContentArea           = NULL;
-    mpActionArea            = NULL;
+    mpContentArea.clear();
+    mpActionArea.clear();
     mnMousePositioned       = 0;
-    mpDialogImpl            = new DialogImpl;
+    mpDialogImpl.reset(new DialogImpl);
 }
 
-void Dialog::ImplInit( vcl::Window* pParent, WinBits nStyle )
+void Dialog::PixelInvalidate(const tools::Rectangle* pRectangle)
 {
-    sal_uInt16 nSysWinMode = Application::GetSystemWindowMode();
+    if (!mpDialogImpl->m_bLOKTunneling)
+        return;
+
+    Window::PixelInvalidate(pRectangle);
+}
+
+vcl::Window* Dialog::GetDefaultParent(WinBits nStyle)
+{
+    vcl::Window* pParent = Dialog::GetDefDialogParent();
+    if (!pParent && !(nStyle & WB_SYSTEMWINDOW))
+        pParent = ImplGetSVData()->maFrameData.mpAppWin;
+
+    // If Parent is disabled, then we search for a modal dialog
+    // in this frame
+    if (pParent && (!pParent->IsInputEnabled() || pParent->IsInModalMode()))
+    {
+        ImplSVData* pSVData = ImplGetSVData();
+        auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
+        auto it = std::find_if(rExecuteDialogs.rbegin(), rExecuteDialogs.rend(),
+            [&pParent](VclPtr<Dialog>& rDialogPtr) {
+                return pParent->ImplGetFirstOverlapWindow() &&
+                    pParent->ImplGetFirstOverlapWindow()->IsWindowOrChild(rDialogPtr, true) &&
+                    rDialogPtr->IsReallyVisible() && rDialogPtr->IsEnabled() &&
+                    rDialogPtr->IsInputEnabled() && !rDialogPtr->IsInModalMode(); });
+        if (it != rExecuteDialogs.rend())
+            pParent = it->get();
+    }
+
+    return pParent;
+}
+
+VclPtr<vcl::Window> Dialog::AddBorderWindow(vcl::Window* pParent, WinBits nStyle)
+{
+    VclPtrInstance<ImplBorderWindow> pBorderWin( pParent, nStyle, BorderWindowStyle::Frame );
+    ImplInit( pBorderWin, nStyle & ~WB_BORDER, nullptr );
+    pBorderWin->mpWindowImpl->mpClientWindow = this;
+    pBorderWin->GetBorder( mpWindowImpl->mnLeftBorder, mpWindowImpl->mnTopBorder, mpWindowImpl->mnRightBorder, mpWindowImpl->mnBottomBorder );
+    mpWindowImpl->mpBorderWindow  = pBorderWin;
+    mpWindowImpl->mpRealParent    = pParent;
+
+    return pBorderWin;
+}
+
+void Dialog::ImplInitDialog( vcl::Window* pParent, WinBits nStyle, InitFlag eFlag )
+{
+    SystemWindowFlags nSysWinMode = Application::GetSystemWindowMode();
 
     if ( !(nStyle & WB_NODIALOGCONTROL) )
         nStyle |= WB_DIALOGCONTROL;
-    nStyle |= WB_ROLLABLE;
 
     // Now, all Dialogs are per default system windows !!!
     nStyle |= WB_SYSTEMWINDOW;
 
-    // parent is NULL: get the default Dialog parent
-    if ( !pParent )
+    if (InitFlag::NoParent == eFlag)
     {
-        pParent = Application::GetDefDialogParent();
-        if ( !pParent && !(nStyle & WB_SYSTEMWINDOW) )
-            pParent = ImplGetSVData()->maWinData.mpAppWin;
-
-        // If Parent is disabled, then we search for a modal dialog
-        // in this frame
-        if ( pParent && (!pParent->IsInputEnabled() || pParent->IsInModalMode()) )
-        {
-            ImplSVData* pSVData = ImplGetSVData();
-            Dialog*     pExeDlg = pSVData->maWinData.mpLastExecuteDlg;
-            while ( pExeDlg )
-            {
-                // only if visible and enabled
-                if ( pParent->ImplGetFirstOverlapWindow()->IsWindowOrChild( pExeDlg, true ) &&
-                     pExeDlg->IsReallyVisible() &&
-                     pExeDlg->IsEnabled() && pExeDlg->IsInputEnabled() && !pExeDlg->IsInModalMode() )
-                {
-                    pParent = pExeDlg;
-                    break;
-                }
-
-                pExeDlg = pExeDlg->mpPrevExecuteDlg;
-            }
-        }
+        pParent = nullptr;
     }
-    // DIALOG_NO_PARENT: explicitly don't have a parent for this Dialog
-    else if( pParent == DIALOG_NO_PARENT )
-        pParent = NULL;
+    else if (!pParent) // parent is NULL: get the default Dialog parent
+    {
+        pParent = Dialog::GetDefaultParent(nStyle);
+    }
 
     if ( !pParent || (nStyle & WB_SYSTEMWINDOW) ||
-         (pParent->mpWindowImpl->mpFrameData->mbNeedSysWindow && !(nSysWinMode & SYSTEMWINDOW_MODE_NOAUTOMODE)) ||
-         (nSysWinMode & SYSTEMWINDOW_MODE_DIALOG) )
+         (pParent->mpWindowImpl->mpFrameData->mbNeedSysWindow && !(nSysWinMode & SystemWindowFlags::NOAUTOMODE)) ||
+         (nSysWinMode & SystemWindowFlags::DIALOG) )
     {
         // create window with a small border ?
-        if ( (nStyle & (WB_BORDER | WB_NOBORDER | WB_MOVEABLE | WB_SIZEABLE | WB_CLOSEABLE)) == WB_BORDER )
+        if ((nStyle & WB_ALLOWMENUBAR) || ((nStyle & (WB_BORDER | WB_NOBORDER | WB_MOVEABLE | WB_SIZEABLE | WB_CLOSEABLE)) == WB_BORDER))
         {
-            ImplBorderWindow* pBorderWin  = new ImplBorderWindow( pParent, nStyle, BORDERWINDOW_STYLE_FRAME );
-            SystemWindow::ImplInit( pBorderWin, nStyle & ~WB_BORDER, NULL );
-            pBorderWin->mpWindowImpl->mpClientWindow = this;
-            pBorderWin->GetBorder( mpWindowImpl->mnLeftBorder, mpWindowImpl->mnTopBorder, mpWindowImpl->mnRightBorder, mpWindowImpl->mnBottomBorder );
-            mpWindowImpl->mpBorderWindow  = pBorderWin;
-            mpWindowImpl->mpRealParent    = pParent;
+            AddBorderWindow(pParent, nStyle);
         }
         else
         {
             mpWindowImpl->mbFrame         = true;
             mpWindowImpl->mbOverlapWin    = true;
-            SystemWindow::ImplInit( pParent, (nStyle & (WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_CLOSEABLE | WB_STANDALONE)) | WB_CLOSEABLE, NULL );
+            ImplInit( pParent, (nStyle & (WB_MOVEABLE | WB_SIZEABLE | WB_STANDALONE)) | WB_CLOSEABLE, nullptr );
             // Now set all style bits
             mpWindowImpl->mnStyle = nStyle;
         }
     }
     else
     {
-        ImplBorderWindow* pBorderWin  = new ImplBorderWindow( pParent, nStyle, BORDERWINDOW_STYLE_OVERLAP | BORDERWINDOW_STYLE_BORDER );
-        SystemWindow::ImplInit( pBorderWin, nStyle & ~WB_BORDER, NULL );
+        VclPtrInstance<ImplBorderWindow> pBorderWin( pParent, nStyle, BorderWindowStyle::Overlap );
+        ImplInit( pBorderWin, nStyle & ~WB_BORDER, nullptr );
         pBorderWin->mpWindowImpl->mpClientWindow = this;
         pBorderWin->GetBorder( mpWindowImpl->mnLeftBorder, mpWindowImpl->mnTopBorder, mpWindowImpl->mnRightBorder, mpWindowImpl->mnBottomBorder );
         mpWindowImpl->mpBorderWindow  = pBorderWin;
         mpWindowImpl->mpRealParent    = pParent;
     }
 
-    SetActivateMode( ACTIVATE_MODE_GRABFOCUS );
+    SetActivateMode( ActivateModeFlags::GrabFocus );
 
     ImplInitSettings();
+}
+
+void Dialog::ApplySettings(vcl::RenderContext& rRenderContext)
+{
+    if (IsControlBackground())
+    {
+        // user override
+        SetBackground(GetControlBackground());
+    }
+    else if (rRenderContext.IsNativeControlSupported(ControlType::WindowBackground, ControlPart::BackgroundDialog))
+    {
+        // NWF background
+        mpWindowImpl->mnNativeBackground = ControlPart::BackgroundDialog;
+        EnableChildTransparentMode();
+    }
+    else
+    {
+        // fallback to settings color
+        rRenderContext.SetBackground(GetSettings().GetStyleSettings().GetDialogColor());
+    }
 }
 
 void Dialog::ImplInitSettings()
 {
     // user override
-    if ( IsControlBackground() )
-        SetBackground( GetControlBackground() );
+    if (IsControlBackground())
+        SetBackground(GetControlBackground());
     // NWF background
-    else if( IsNativeControlSupported( CTRL_WINDOW_BACKGROUND, PART_BACKGROUND_DIALOG ) )
+    else if( IsNativeControlSupported(ControlType::WindowBackground, ControlPart::BackgroundDialog))
     {
-        mpWindowImpl->mnNativeBackground = PART_BACKGROUND_DIALOG;
-        EnableChildTransparentMode( true );
+        mpWindowImpl->mnNativeBackground = ControlPart::BackgroundDialog;
+        EnableChildTransparentMode();
     }
     // fallback to settings color
     else
-        SetBackground( GetSettings().GetStyleSettings().GetDialogColor() );
+        SetBackground(GetSettings().GetStyleSettings().GetDialogColor());
+}
+
+void Dialog::ImplLOKNotifier(vcl::Window* pParent)
+{
+    if (comphelper::LibreOfficeKit::isActive() && pParent)
+    {
+        if (VclPtr<vcl::Window> pWin = pParent->GetParentWithLOKNotifier())
+        {
+            SetLOKNotifier(pWin->GetLOKNotifier());
+        }
+    }
 }
 
 Dialog::Dialog( WindowType nType )
-    : SystemWindow( nType )
+    : SystemWindow( nType, "vcl::Dialog maLayoutIdle" )
+    , mnInitFlag(InitFlag::Default)
 {
     ImplInitDialogData();
 }
 
-OUString VclBuilderContainer::getUIRootDir()
+void VclBuilderContainer::disposeBuilder()
 {
-    /*to-do, check if user config has an override before using shared one, etc*/
-    css::uno::Reference< css::util::XPathSettings > xPathSettings = css::util::thePathSettings::get(
-        ::comphelper::getProcessComponentContext() );
+    if (m_pUIBuilder)
+        m_pUIBuilder->disposeBuilder();
+}
 
-    OUString sShareLayer = xPathSettings->getBasePathShareLayer();
-
-    // "UIConfig" is a "multi path" ... use first part only here!
-    sal_Int32 nPos = sShareLayer.indexOf(';');
-    if (nPos > 0)
-        sShareLayer = sShareLayer.copy(0, nPos);
-
-    // Note: May be an user uses URLs without a final slash! Check it ...
-    if (!sShareLayer.endsWith("/"))
-        sShareLayer += "/";
-
-    sShareLayer += "soffice.cfg/";
-    /*to-do, can we merge all this foo with existing soffice.cfg finding code, etc*/
+OUString AllSettings::GetUIRootDir()
+{
+    OUString sShareLayer("$BRAND_BASE_DIR/$BRAND_SHARE_SUBDIR/config/soffice.cfg/");
+    rtl::Bootstrap::expandMacros(sShareLayer);
     return sShareLayer;
 }
 
@@ -500,78 +578,101 @@ OUString VclBuilderContainer::getUIRootDir()
 //do the init. Find the real parent stashed in mpDialogParent.
 void Dialog::doDeferredInit(WinBits nBits)
 {
-    vcl::Window *pParent = mpDialogParent;
-    mpDialogParent = NULL;
-    ImplInit(pParent, nBits);
-    mbIsDefferedInit = false;
+    VclPtr<vcl::Window> pParent = mpDialogParent;
+    mpDialogParent = nullptr;
+    ImplInitDialog(pParent, nBits | WB_BORDER, mnInitFlag);
+    mbIsDeferredInit = false;
 }
 
-Dialog::Dialog(vcl::Window* pParent, const OUString& rID, const OUString& rUIXMLDescription)
-    : SystemWindow(WINDOW_DIALOG)
+Dialog::Dialog(vcl::Window* pParent, std::u16string_view rID, const OUString& rUIXMLDescription)
+    : SystemWindow(WindowType::DIALOG, "vcl::Dialog maLayoutIdle")
+    , mnInitFlag(InitFlag::Default)
 {
+    ImplLOKNotifier(pParent);
     ImplInitDialogData();
     loadUI(pParent, OUStringToOString(rID, RTL_TEXTENCODING_UTF8), rUIXMLDescription);
 }
 
-Dialog::Dialog(vcl::Window* pParent, const OUString& rID, const OUString& rUIXMLDescription, WindowType nType)
-    : SystemWindow(nType)
+Dialog::Dialog(vcl::Window* pParent, WinBits nStyle, InitFlag eFlag)
+    : SystemWindow(WindowType::DIALOG, "vcl::Dialog maLayoutIdle")
+    , mnInitFlag(eFlag)
 {
+    ImplLOKNotifier(pParent);
     ImplInitDialogData();
-    loadUI(pParent, OUStringToOString(rID, RTL_TEXTENCODING_UTF8), rUIXMLDescription);
+    ImplInitDialog( pParent, nStyle, eFlag );
 }
 
-Dialog::Dialog(vcl::Window* pParent, WinBits nStyle)
-    : SystemWindow(WINDOW_DIALOG)
+void Dialog::set_action_area(VclButtonBox* pBox)
 {
-    ImplInitDialogData();
-    ImplInit( pParent, nStyle );
+    mpActionArea.set(pBox);
+    if (pBox)
+    {
+        const DialogStyle& rDialogStyle =
+            GetSettings().GetStyleSettings().GetDialogStyle();
+        pBox->set_border_width(rDialogStyle.action_area_border);
+    }
 }
 
-void Dialog::set_action_area(VclButtonBox* pActionArea)
+void Dialog::set_content_area(VclBox* pBox)
 {
-    mpActionArea = pActionArea;
+    mpContentArea.set(pBox);
 }
 
-void Dialog::set_content_area(VclBox* pContentArea)
-{
-    mpContentArea = pContentArea;
-}
-
-void Dialog::settingOptimalLayoutSize(VclBox *pBox)
+void Dialog::settingOptimalLayoutSize(Window *pBox)
 {
     const DialogStyle& rDialogStyle =
         GetSettings().GetStyleSettings().GetDialogStyle();
-    pBox->set_border_width(rDialogStyle.content_area_border);
-    pBox->set_spacing(pBox->get_spacing() +
-        rDialogStyle.content_area_spacing);
-
-    VclButtonBox *pActionArea = getActionArea(this);
-    if (pActionArea)
-    {
-        pActionArea->set_border_width(rDialogStyle.action_area_border);
-        pActionArea->set_spacing(rDialogStyle.button_spacing);
-    }
+    VclBox * pBox2 = static_cast<VclBox*>(pBox);
+    pBox2->set_border_width(rDialogStyle.content_area_border);
 }
 
 Dialog::~Dialog()
 {
-    delete mpDialogImpl;
-    mpDialogImpl = NULL;
+    disposeOnce();
 }
 
-IMPL_LINK_NOARG(Dialog, ImplAsyncCloseHdl)
+void Dialog::dispose()
+{
+    bool bTunnelingEnabled = mpDialogImpl->m_bLOKTunneling;
+
+    mpDialogImpl.reset();
+    RemoveFromDlgList();
+    mpActionArea.clear();
+    mpContentArea.clear();
+
+    css::uno::Reference< css::uno::XComponentContext > xContext(
+            comphelper::getProcessComponentContext() );
+    css::uno::Reference<css::frame::XGlobalEventBroadcaster> xEventBroadcaster(css::frame::theGlobalEventBroadcaster::get(xContext), css::uno::UNO_SET_THROW);
+    css::document::DocumentEvent aObject;
+    aObject.EventName = "DialogClosed";
+    xEventBroadcaster->documentEventOccured(aObject);
+    UITestLogger::getInstance().log(u"Close Dialog");
+
+    if (comphelper::LibreOfficeKit::isActive())
+    {
+        if(const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
+        {
+            if (bTunnelingEnabled)
+                pNotifier->notifyWindow(GetLOKWindowId(), "close");
+            ReleaseLOKNotifier();
+        }
+    }
+
+    SystemWindow::dispose();
+}
+
+IMPL_LINK_NOARG(Dialog, ImplAsyncCloseHdl, void*, void)
 {
     Close();
-    return 0;
 }
 
-bool Dialog::Notify( NotifyEvent& rNEvt )
+bool Dialog::EventNotify( NotifyEvent& rNEvt )
 {
     // first call the base class due to Tab control
-    bool nRet = SystemWindow::Notify( rNEvt );
-    if ( !nRet )
+    bool bRet = SystemWindow::EventNotify( rNEvt );
+    if ( !bRet )
     {
-        if ( rNEvt.GetType() == EVENT_KEYINPUT )
+        if ( rNEvt.GetType() == MouseNotifyEvent::KEYINPUT )
         {
             const KeyEvent* pKEvt = rNEvt.GetKeyEvent();
             vcl::KeyCode    aKeyCode = pKEvt->GetKeyCode();
@@ -584,20 +685,19 @@ bool Dialog::Notify( NotifyEvent& rNEvt )
                 // like e.g. SfxModelessDialog which destroy themselves inside Close()
                 // post this Close asynchronous so we can leave our key handler before
                 // we get destroyed
-                PostUserEvent( LINK( this, Dialog, ImplAsyncCloseHdl ), this );
+                PostUserEvent( LINK( this, Dialog, ImplAsyncCloseHdl ), nullptr, true);
                 return true;
             }
         }
-        else if ( rNEvt.GetType() == EVENT_GETFOCUS )
+        else if ( rNEvt.GetType() == MouseNotifyEvent::GETFOCUS )
         {
             // make sure the dialog is still modal
             // changing focus between application frames may
             // have re-enabled input for our parent
             if( mbInExecute && mbModalMode )
             {
-                // do not change modal counter (pSVData->maAppData.mnModalDialog)
-                SetModalInputMode( false );
-                SetModalInputMode( true );
+                ImplSetModalInputMode( false );
+                ImplSetModalInputMode( true );
 
                 // #93022# def-button might have changed after show
                 if( !mnMousePositioned )
@@ -610,7 +710,7 @@ bool Dialog::Notify( NotifyEvent& rNEvt )
         }
     }
 
-    return nRet;
+    return bRet;
 }
 
 //What we really want here is something that gives the available width and
@@ -618,7 +718,8 @@ bool Dialog::Notify( NotifyEvent& rNEvt )
 //taskbar, menus, etc.
 Size bestmaxFrameSizeForScreenSize(const Size &rScreenSize)
 {
-    long w = rScreenSize.Width();
+#ifndef IOS
+    tools::Long w = rScreenSize.Width();
     if (w <= 800)
         w -= 15;
     else if (w <= 1024)
@@ -626,20 +727,76 @@ Size bestmaxFrameSizeForScreenSize(const Size &rScreenSize)
     else
         w -= 115;
 
-    long h = rScreenSize.Height();
+    tools::Long h = rScreenSize.Height();
     if (h <= 768)
         h -= 50;
     else
         h -= 100;
 
-    return Size(w, h);
+    return Size(std::max<tools::Long>(w, 640 - 15),
+                std::max<tools::Long>(h, 480 - 50));
+#else
+    // Don't bother with ancient magic numbers of unclear relevance on non-desktop apps anyway. It
+    // seems that at least currently in the iOS app, this function is called just once per dialog,
+    // with a rScreenSize parameter of 1x1 (!). This would lead to always returning 625x430 which is
+    // a bit random and needlessly small on an iPad at least. We want something that closely will
+    // just fit on the display in either orientation.
+
+    // We ignore the rScreenSize as it will be the dummy 1x1 from iosinst.cxx (see "Totally wrong of course").
+    (void) rScreenSize;
+
+    const int n = std::min<CGFloat>([[UIScreen mainScreen] bounds].size.width, [[UIScreen mainScreen] bounds].size.height);
+    return Size(n-10, n-10);
+#endif
+}
+
+void Dialog::SetPopupMenuHdl(const Link<const CommandEvent&, bool>& rLink)
+{
+    mpDialogImpl->m_aPopupMenuHdl = rLink;
+}
+
+void Dialog::SetInstallLOKNotifierHdl(const Link<void*, vcl::ILibreOfficeKitNotifier*>& rLink)
+{
+    mpDialogImpl->m_aInstallLOKNotifierHdl = rLink;
+}
+
+void Dialog::SetLOKTunnelingState(bool bEnabled)
+{
+    mpDialogImpl->m_bLOKTunneling = bEnabled;
 }
 
 void Dialog::StateChanged( StateChangedType nType )
 {
-    if (nType == StateChangedType::INITSHOW)
+    bool bTunnelingEnabled = mpDialogImpl->m_bLOKTunneling;
+
+    if (nType == StateChangedType::InitShow)
     {
         DoInitialLayout();
+
+        const bool bKitActive = comphelper::LibreOfficeKit::isActive();
+        if (bKitActive && bTunnelingEnabled)
+        {
+            std::vector<vcl::LOKPayloadItem> aItems;
+            aItems.emplace_back("type", "dialog");
+            aItems.emplace_back("size", GetSizePixel().toString());
+            if (!GetText().isEmpty())
+                aItems.emplace_back("title", GetText().toUtf8());
+
+            if (const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
+            {
+                pNotifier->notifyWindow(GetLOKWindowId(), "created", aItems);
+                pNotifier->notifyWindow(GetLOKWindowId(), "created", aItems);
+            }
+            else
+            {
+                vcl::ILibreOfficeKitNotifier* pViewShell = mpDialogImpl->m_aInstallLOKNotifierHdl.Call(nullptr);
+                if (pViewShell)
+                {
+                    SetLOKNotifier(pViewShell);
+                    pViewShell->notifyWindow(GetLOKWindowId(), "created", aItems);
+                }
+            }
+        }
 
         if ( !HasChildPathFocus() || HasFocus() )
             GrabFocusToFirstControl();
@@ -654,13 +811,34 @@ void Dialog::StateChanged( StateChangedType nType )
 
         ImplMouseAutoPos( this );
     }
+    else if (nType == StateChangedType::Text)
+    {
+        const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier();
+        if (pNotifier && bTunnelingEnabled)
+        {
+            std::vector<vcl::LOKPayloadItem> aPayload;
+            aPayload.emplace_back("title", GetText().toUtf8());
+            pNotifier->notifyWindow(GetLOKWindowId(), "title_changed", aPayload);
+        }
+    }
 
     SystemWindow::StateChanged( nType );
 
-    if (nType == StateChangedType::CONTROLBACKGROUND)
+    if (nType == StateChangedType::ControlBackground)
     {
         ImplInitSettings();
         Invalidate();
+    }
+
+    if (!mbModalMode && nType == StateChangedType::Visible)
+    {
+        const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier();
+        if (pNotifier && bTunnelingEnabled)
+        {
+            std::vector<vcl::LOKPayloadItem> aPayload;
+            aPayload.emplace_back("title", GetText().toUtf8());
+            pNotifier->notifyWindow(GetLOKWindowId(), IsVisible()? OUString("show"): OUString("hide"), aPayload);
+        }
     }
 }
 
@@ -668,8 +846,8 @@ void Dialog::DataChanged( const DataChangedEvent& rDCEvt )
 {
     SystemWindow::DataChanged( rDCEvt );
 
-    if ( (rDCEvt.GetType() == DATACHANGED_SETTINGS) &&
-         (rDCEvt.GetFlags() & SETTINGS_STYLE) )
+    if ( (rDCEvt.GetType() == DataChangedEventType::SETTINGS) &&
+         (rDCEvt.GetFlags() & AllSettingsFlags::STYLE) )
     {
         ImplInitSettings();
         Invalidate();
@@ -678,22 +856,37 @@ void Dialog::DataChanged( const DataChangedEvent& rDCEvt )
 
 bool Dialog::Close()
 {
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
-    ImplCallEventListeners( VCLEVENT_WINDOW_CLOSE );
-    if ( aDelData.IsDead() )
+    VclPtr<vcl::Window> xWindow = this;
+    CallEventListeners( VclEventId::WindowClose );
+    if ( xWindow->isDisposed() )
         return false;
-    ImplRemoveDel( &aDelData );
 
     if ( mpWindowImpl->mxWindowPeer.is() && IsCreatedWithToolkit() && !IsInExecute() )
         return false;
 
+    // If there's a cancel button with a custom handler, then always give it a chance to
+    // handle Dialog::Close
+    PushButton* pCustomCancelButton;
+    PushButton* pCancelButton = dynamic_cast<PushButton*>(get_widget_for_response(RET_CANCEL));
+    if (!mbInClose && pCancelButton && pCancelButton->GetClickHdl().IsSet())
+        pCustomCancelButton = pCancelButton;
+    else
+        pCustomCancelButton = nullptr;
+
     mbInClose = true;
+
+    if (pCustomCancelButton)
+    {
+        pCustomCancelButton->Click();
+        if (xWindow->isDisposed())
+            return true;
+        mbInClose = false;
+        return false;
+    }
 
     if ( !(GetStyle() & WB_CLOSEABLE) )
     {
         bool bRet = true;
-        ImplAddDel( &aDelData );
         PushButton* pButton = ImplGetCancelButton( this );
         if ( pButton )
             pButton->Click();
@@ -705,15 +898,14 @@ bool Dialog::Close()
             else
                 bRet = false;
         }
-        if ( aDelData.IsDead() )
+        if ( xWindow->isDisposed() )
             return true;
-        ImplRemoveDel( &aDelData );
         return bRet;
     }
 
-    if ( IsInExecute() )
+    if (IsInExecute() || mpDialogImpl->maEndCtx.isSet())
     {
-        EndDialog( RET_CANCEL );
+        EndDialog();
         mbInClose = false;
         return true;
     }
@@ -724,96 +916,149 @@ bool Dialog::Close()
     }
 }
 
-bool Dialog::ImplStartExecuteModal()
+bool Dialog::ImplStartExecute()
 {
-    if ( mbInExecute )
+    setDeferredProperties();
+
+    if (IsInExecute() || mpDialogImpl->maEndCtx.isSet())
     {
 #ifdef DBG_UTIL
-        OStringBuffer aErrorStr;
-        aErrorStr.append("Dialog::StartExecuteModal() is called in Dialog::StartExecuteModal(): ");
-        aErrorStr.append(ImplGetDialogText(this));
-        OSL_FAIL(aErrorStr.getStr());
+        SAL_WARN( "vcl", "Dialog::StartExecuteModal() is called in Dialog::StartExecuteModal(): "
+                    << ImplGetDialogText(this) );
 #endif
         return false;
     }
-
-    switch ( Application::GetDialogCancelMode() )
-    {
-    case Application::DIALOG_CANCEL_OFF:
-        break;
-    case Application::DIALOG_CANCEL_SILENT:
-        SAL_INFO(
-            "vcl",
-            "Dialog \"" << ImplGetDialogText(this).getStr()
-                << "\"cancelled in silent mode");
-        return false;
-    default:
-        assert(false && "this cannot happen");
-        // fall through
-    case Application::DIALOG_CANCEL_FATAL:
-        std::abort();
-    }
-
-#ifdef DBG_UTIL
-    vcl::Window* pParent = GetParent();
-    if ( pParent )
-    {
-        pParent = pParent->ImplGetFirstOverlapWindow();
-        DBG_ASSERT( pParent->IsReallyVisible(),
-                    "Dialog::StartExecuteModal() - Parent not visible" );
-        DBG_ASSERT( pParent->IsInputEnabled(),
-                    "Dialog::StartExecuteModal() - Parent input disabled, use another parent to ensure modality!" );
-        DBG_ASSERT( ! pParent->IsInModalMode(),
-                    "Dialog::StartExecuteModal() - Parent already modally disabled, use another parent to ensure modality!" );
-
-    }
-#endif
-
-#if defined USE_JAVA && defined MACOSX
-    // Do not attempt to run a modal dialog while we are in a signal handler as
-    // it will deadlock. Also, fix bug 1108 by not running it if a native sheet
-    // is being displayed. Also, fix infinite loop in Dialog::Execute() when
-    // the restart dialog is displayed after selecting the "Restart Now" option
-    // after changing the selected Java version by cancelling the dialog if
-    // we are already shutting down.
-    if ( Application::IsShutDown() || GetSalData()->mbInSignalHandler || GetSalData()->mbInNativeModalSheet )
-        return sal_False;
-#endif	// USE_JAVA && MACOSX
 
     ImplSVData* pSVData = ImplGetSVData();
 
-     // link all dialogs which are being executed
-    mpPrevExecuteDlg = pSVData->maWinData.mpLastExecuteDlg;
-    pSVData->maWinData.mpLastExecuteDlg = this;
+    const bool bKitActive = comphelper::LibreOfficeKit::isActive();
 
-    // stop capturing, in order to have control over the dialog
-    if ( pSVData->maWinData.mpTrackWin )
-        pSVData->maWinData.mpTrackWin->EndTracking( ENDTRACK_CANCEL );
-    if ( pSVData->maWinData.mpCaptureWin )
-        pSVData->maWinData.mpCaptureWin->ReleaseMouse();
-    EnableInput( true, true );
+    const bool bModal = GetType() != WindowType::MODELESSDIALOG;
 
-    if ( GetParent() )
+    if (bModal)
     {
-        NotifyEvent aNEvt( EVENT_EXECUTEDIALOG, this );
-        GetParent()->Notify( aNEvt );
+        if (bKitActive && !GetLOKNotifier())
+            SetLOKNotifier(mpDialogImpl->m_aInstallLOKNotifierHdl.Call(nullptr));
+
+        switch ( Application::GetDialogCancelMode() )
+        {
+        case DialogCancelMode::Off:
+            break;
+        case DialogCancelMode::Silent:
+            if (bModal && GetLOKNotifier())
+            {
+                // check if there's already some dialog being ::Execute()d
+                const bool bDialogExecuting = std::any_of(pSVData->mpWinData->mpExecuteDialogs.begin(),
+                                                          pSVData->mpWinData->mpExecuteDialogs.end(),
+                                                          [](const Dialog* pDialog) {
+                                                              return pDialog->IsInSyncExecute();
+                                                          });
+                if (!(bDialogExecuting && IsInSyncExecute()))
+                    break;
+                else
+                    SAL_WARN("lok.dialog", "Dialog \"" << ImplGetDialogText(this) << "\" is being synchronously executed over an existing synchronously executing dialog.");
+            }
+
+            SAL_INFO(
+                "vcl",
+                "Dialog \"" << ImplGetDialogText(this)
+                    << "\"cancelled in silent mode");
+            return false;
+
+        case DialogCancelMode::LOKSilent:
+            return false;
+
+        default: // default cannot happen
+        case DialogCancelMode::Fatal:
+            std::abort();
+        }
+
+#ifdef DBG_UTIL
+        vcl::Window* pParent = GetParent();
+        if ( pParent )
+        {
+            pParent = pParent->ImplGetFirstOverlapWindow();
+            if (pParent)
+            {
+                SAL_WARN_IF( !pParent->IsReallyVisible(), "vcl",
+                            "Dialog::StartExecuteModal() - Parent not visible" );
+                SAL_WARN_IF( !pParent->IsInputEnabled(), "vcl",
+                            "Dialog::StartExecuteModal() - Parent input disabled, use another parent to ensure modality!" );
+                SAL_WARN_IF(  pParent->IsInModalMode(), "vcl",
+                            "Dialog::StartExecuteModal() - Parent already modally disabled, use another parent to ensure modality!" );
+            }
+        }
+#endif
+
+#if defined USE_JAVA && defined MACOSX
+        // Do not attempt to run a modal dialog while we are in a signal
+        // handler as it will deadlock. Also, fix bug 1108 by not running it if
+        // a native sheet is being displayed. Also, fix infinite loop in
+        // Dialog::Execute() when the restart dialog is displayed after
+        // selecting the "Restart Now" option after changing the selected Java
+        // version by cancelling the dialog if we are already shutting down.
+        if ( Application::IsShutDown() || GetSalData()->mbInSignalHandler || GetSalData()->mbInNativeModalSheet )
+            return false;
+#endif	// USE_JAVA && MACOSX
+
+        // link all dialogs which are being executed
+        pSVData->mpWinData->mpExecuteDialogs.push_back(this);
+
+        // stop capturing, in order to have control over the dialog
+        if (pSVData->mpWinData->mpTrackWin)
+            pSVData->mpWinData->mpTrackWin->EndTracking(TrackingEventFlags::Cancel);
+        if (pSVData->mpWinData->mpCaptureWin)
+            pSVData->mpWinData->mpCaptureWin->ReleaseMouse();
+        EnableInput();
     }
+
     mbInExecute = true;
-    SetModalInputMode( true );
-    mbOldSaveBack = IsSaveBackgroundEnabled();
-    EnableSaveBackground();
+    // no real modality in LibreOfficeKit
+    if (!bKitActive && bModal)
+        SetModalInputMode(true);
 
     // FIXME: no layouting, workaround some clipping issues
     ImplAdjustNWFSizes();
 
-    Show();
+    css::uno::Reference< css::uno::XComponentContext > xContext(
+        comphelper::getProcessComponentContext());
+    bool bForceFocusAndToFront(officecfg::Office::Common::View::NewDocumentHandling::ForceFocusAndToFront::get());
+    ShowFlags showFlags = bForceFocusAndToFront ? ShowFlags::ForegroundTask : ShowFlags::NONE;
+    Show(true, showFlags);
 
 #if defined USE_JAVA && defined MACOSX
     // Force modal windows to the front
-    mpWindowImpl->mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
+    mpWindowImpl->mpFrame->ToTop( SalFrameToTop::GrabFocus | SalFrameToTop::GrabFocusOnly );
 #endif	// USE_JAVA && MACOSX
 
-    pSVData->maAppData.mnModalMode++;
+    if (bModal)
+        pSVData->maAppData.mnModalMode++;
+
+    css::uno::Reference<css::frame::XGlobalEventBroadcaster> xEventBroadcaster(
+        css::frame::theGlobalEventBroadcaster::get(xContext), css::uno::UNO_SET_THROW);
+    css::document::DocumentEvent aObject;
+    aObject.EventName = "DialogExecute";
+    xEventBroadcaster->documentEventOccured(aObject);
+    if (bModal)
+        UITestLogger::getInstance().log(OUStringConcatenation("Open Modal " + get_id()));
+    else
+        UITestLogger::getInstance().log(OUStringConcatenation("Open Modeless " + get_id()));
+
+    bool bTunnelingEnabled = mpDialogImpl->m_bLOKTunneling;
+    if (comphelper::LibreOfficeKit::isActive() && bTunnelingEnabled)
+    {
+        if (const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
+        {
+            // Dialog boxes don't get the Resize call and they
+            // can have invalid size at 'created' message above.
+            // If there is no difference, the client should detect it and ignore us,
+            // otherwise, this should make sure that the window has the correct size.
+            std::vector<vcl::LOKPayloadItem> aItems;
+            aItems.emplace_back("size", GetSizePixel().toString());
+            pNotifier->notifyWindow(GetLOKWindowId(), "size_changed", aItems);
+        }
+    }
+
     return true;
 }
 
@@ -825,189 +1070,184 @@ void Dialog::ImplEndExecuteModal()
 
 short Dialog::Execute()
 {
-#if HAVE_FEATURE_DESKTOP
+    VclPtr<vcl::Window> xWindow = this;
 
-    setDeferredProperties();
+    mbInSyncExecute = true;
+    comphelper::ScopeGuard aGuard([&]() {
+            mbInSyncExecute = false;
+        });
 
-    if ( !ImplStartExecuteModal() )
+    if ( !ImplStartExecute() )
         return 0;
-
-    ImplDelData aDelData;
-    ImplAddDel( &aDelData );
-
-#ifdef DBG_UTIL
-    ImplDelData aParentDelData;
-    vcl::Window* pDialogParent = mpDialogParent;
-    if( pDialogParent )
-        pDialogParent->ImplAddDel( &aParentDelData );
-#endif
 
     // Yield util EndDialog is called or dialog gets destroyed
     // (the latter should not happen, but better safe than sorry
-    while ( !aDelData.IsDead() && mbInExecute )
+    while ( !xWindow->isDisposed() && mbInExecute && !Application::IsQuit() )
         Application::Yield();
 
     ImplEndExecuteModal();
-
 #ifdef DBG_UTIL
-    if( pDialogParent  )
-    {
-        if( ! aParentDelData.IsDead() )
-            pDialogParent->ImplRemoveDel( &aParentDelData );
-        else
-            OSL_FAIL( "Dialog::Execute() - Parent of dialog destroyed in Execute()" );
-    }
+    assert (!mpDialogParent || !mpDialogParent->isDisposed());
 #endif
-    if ( !aDelData.IsDead() )
-        ImplRemoveDel( &aDelData );
-#ifdef DBG_UTIL
+    if ( !xWindow->isDisposed() )
+        xWindow.clear();
     else
     {
         OSL_FAIL( "Dialog::Execute() - Dialog destroyed in Execute()" );
     }
-#endif
 
-    long nRet = mpDialogImpl->mnResult;
-    mpDialogImpl->mnResult = -1;
-    return (short)nRet;
+    assert(mpDialogImpl);
 
-#else
-
-    MLODialogKind kind;
-
-    switch (GetType())
+    if (mpDialogImpl)
     {
-    case WINDOW_MESSBOX:
-        kind = MLODialogMessage;
-        break;
-    case WINDOW_INFOBOX:
-        kind = MLODialogInformation;
-        break;
-    case WINDOW_WARNINGBOX:
-        kind = MLODialogWarning;
-        break;
-    case WINDOW_ERRORBOX:
-        kind = MLODialogError;
-        break;
-    case WINDOW_QUERYBOX:
-        kind = MLODialogQuery;
-        break;
-    default:
-        SAL_WARN("vcl", "Dialog::Execute: Unhandled window type %d" << GetType());
-        kind = MLODialogInformation;
-        break;
+        tools::Long nRet = mpDialogImpl->mnResult;
+        mpDialogImpl->mnResult = -1;
+
+        return static_cast<short>(nRet);
     }
-
-    MLODialogResult result = touch_ui_dialog_modal(kind, ImplGetDialogText(this).getStr());
-
-    switch (result)
+    else
     {
-    case MLODialogOK:
-        return RET_OK;
-    case MLODialogCancel:
-        return RET_CANCEL;
-    case MLODialogNo:
-        return RET_NO;
-    case MLODialogYes:
-        return RET_YES;
-    case MLODialogRetry:
-        return RET_RETRY;
-    case MLODialogIgnore:
-        return RET_IGNORE;
-    default:
-        SAL_WARN("vcl", "Dialog::Execute: Unhandled dialog result %d" << result);
-        return RET_OK;
+        SAL_WARN( "vcl", "Dialog::Execute() : missing mpDialogImpl " );
+        return 0;
     }
-
-#endif
 }
 
 // virtual
-void Dialog::StartExecuteModal( const Link& rEndDialogHdl )
+bool Dialog::StartExecuteAsync( VclAbstractDialog::AsyncContext &rCtx )
 {
-    if ( !ImplStartExecuteModal() )
-        return;
+    const bool bModal = GetType() != WindowType::MODELESSDIALOG;
+    if (!ImplStartExecute())
+    {
+        rCtx.mxOwner.disposeAndClear();
+        rCtx.mxOwnerDialogController.reset();
+        rCtx.mxOwnerSelf.reset();
+        return false;
+    }
 
-    mpDialogImpl->maEndDialogHdl = rEndDialogHdl;
-    mpDialogImpl->mbStartedModal = true;
+    mpDialogImpl->maEndCtx = rCtx;
+    mpDialogImpl->mbStartedModal = bModal;
+
+    return true;
 }
 
-void Dialog::EndDialog( long nResult )
+void Dialog::RemoveFromDlgList()
 {
-    if ( mbInExecute )
-    {
-        SetModalInputMode( false );
+    ImplSVData* pSVData = ImplGetSVData();
+    auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
 
-        // remove dialog from the list of dialogs which are being executed
-        ImplSVData* pSVData = ImplGetSVData();
-        Dialog* pExeDlg = pSVData->maWinData.mpLastExecuteDlg;
-        while ( pExeDlg )
+    // remove dialog from the list of dialogs which are being executed
+    rExecuteDialogs.erase(std::remove_if(rExecuteDialogs.begin(), rExecuteDialogs.end(), [this](VclPtr<Dialog>& dialog){ return dialog.get() == this; }), rExecuteDialogs.end());
+}
+
+void Dialog::EndDialog( tools::Long nResult )
+{
+    if (!mbInExecute || isDisposed())
+        return;
+
+    const bool bModal = GetType() != WindowType::MODELESSDIALOG;
+
+    Hide();
+
+    if (comphelper::LibreOfficeKit::isActive())
+    {
+        if(const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier())
         {
-            if ( pExeDlg == this )
-            {
-                pSVData->maWinData.mpLastExecuteDlg = mpPrevExecuteDlg;
-                break;
-            }
-            pExeDlg = pExeDlg->mpPrevExecuteDlg;
+            pNotifier->notifyWindow(GetLOKWindowId(), "close");
+            ReleaseLOKNotifier();
         }
-        // set focus to previous modal dialogue if it is modal for
+    }
+
+    if (bModal)
+    {
+        SetModalInputMode(false);
+
+        RemoveFromDlgList();
+
+        // set focus to previous modal dialog if it is modal for
         // the same frame parent (or NULL)
-        if( mpPrevExecuteDlg )
+        ImplSVData* pSVData = ImplGetSVData();
+        if (!pSVData->mpWinData->mpExecuteDialogs.empty())
         {
+            VclPtr<Dialog> pPrevious = pSVData->mpWinData->mpExecuteDialogs.back();
+
             vcl::Window* pFrameParent = ImplGetFrameWindow()->ImplGetParent();
-            vcl::Window* pPrevFrameParent = mpPrevExecuteDlg->ImplGetFrameWindow()->ImplGetParent();
+            vcl::Window* pPrevFrameParent = pPrevious->ImplGetFrameWindow()? pPrevious->ImplGetFrameWindow()->ImplGetParent(): nullptr;
             if( ( !pFrameParent && !pPrevFrameParent ) ||
                 ( pFrameParent && pPrevFrameParent && pFrameParent->ImplGetFrame() == pPrevFrameParent->ImplGetFrame() )
                 )
             {
-                mpPrevExecuteDlg->GrabFocus();
+                pPrevious->GrabFocus();
             }
         }
-        mpPrevExecuteDlg = NULL;
+    }
 
-        Hide();
-        EnableSaveBackground( mbOldSaveBack );
-        if ( GetParent() )
-        {
-            NotifyEvent aNEvt( EVENT_ENDEXECUTEDIALOG, this );
-            GetParent()->Notify( aNEvt );
-        }
+    mpDialogImpl->mnResult = nResult;
 
-        mpDialogImpl->mnResult = nResult;
+    if ( mpDialogImpl->mbStartedModal )
+        ImplEndExecuteModal();
 
-        if ( mpDialogImpl->mbStartedModal )
-        {
-            ImplEndExecuteModal();
-            mpDialogImpl->maEndDialogHdl.Call( this );
+    if ( mpDialogImpl && mpDialogImpl->maEndCtx.isSet() )
+    {
+        auto fn = std::move(mpDialogImpl->maEndCtx.maEndDialogFn);
+        // std::move leaves maEndDialogFn in a valid state with unspecified
+        // value. For the SwSyncBtnDlg case gcc and msvc left maEndDialogFn
+        // unset, but clang left maEndDialogFn at its original value, keeping
+        // an extra reference to the DialogController in its lambda giving
+        // an inconsistent lifecycle for the dialog. Force it to be unset.
+        mpDialogImpl->maEndCtx.maEndDialogFn = nullptr;
+        fn(nResult);
+    }
 
-            mpDialogImpl->maEndDialogHdl = Link();
-            mpDialogImpl->mbStartedModal = false;
-            mpDialogImpl->mnResult = -1;
-        }
-        mbInExecute = false;
+    if ( mpDialogImpl && mpDialogImpl->mbStartedModal )
+    {
+        mpDialogImpl->mbStartedModal = false;
+        mpDialogImpl->mnResult = -1;
+    }
+    mbInExecute = false;
+
+    if ( mpDialogImpl )
+    {
+        // Destroy ourselves (if we have a context with VclPtr owner)
+        std::shared_ptr<weld::DialogController> xOwnerDialogController = std::move(mpDialogImpl->maEndCtx.mxOwnerDialogController);
+        std::shared_ptr<weld::Dialog> xOwnerSelf = std::move(mpDialogImpl->maEndCtx.mxOwnerSelf);
+        mpDialogImpl->maEndCtx.mxOwner.disposeAndClear();
+        xOwnerDialogController.reset();
+        xOwnerSelf.reset();
     }
 }
 
-long Dialog::GetResult() const
+namespace vcl
 {
-    return mpDialogImpl->mnResult;
-}
+    void EndAllDialogs( vcl::Window const * pParent )
+    {
+        ImplSVData* pSVData = ImplGetSVData();
+        auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
 
-void Dialog::EndAllDialogs( vcl::Window* pParent )
-{
-   ImplSVData*  pSVData = ImplGetSVData();
-   Dialog*      pTempModDialog;
-   Dialog*      pModDialog = pSVData->maWinData.mpLastExecuteDlg;
-   while ( pModDialog )
-   {
-     pTempModDialog = pModDialog->mpPrevExecuteDlg;
-     if( !pParent || ( pParent && pParent->IsWindowOrChild( pModDialog, true ) ) )
-     {
-        pModDialog->EndDialog( RET_CANCEL );
-        pModDialog->PostUserEvent( Link() );
-     }
-     pModDialog = pTempModDialog;
-   }
+        for (auto it = rExecuteDialogs.rbegin(); it != rExecuteDialogs.rend(); ++it)
+        {
+            if (!pParent || pParent->IsWindowOrChild(*it, true))
+            {
+                (*it)->EndDialog();
+                (*it)->PostUserEvent(Link<void*, void>());
+            }
+        }
+    }
+
+    void EnableDialogInput(vcl::Window* pWindow)
+    {
+        if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow))
+        {
+            pDialog->EnableInput();
+        }
+    }
+
+    void CloseTopLevel(vcl::Window* pWindow)
+    {
+        if (Dialog* pDialog = dynamic_cast<Dialog*>(pWindow))
+            pDialog->Close();
+        else if (FloatingWindow* pFloatWin = dynamic_cast<FloatingWindow*>(pWindow))
+            pFloatWin->EndPopupMode(FloatWinPopupEndFlags::Cancel | FloatWinPopupEndFlags::CloseAll);
+    }
 }
 
 void Dialog::SetModalInputMode( bool bModal )
@@ -1015,17 +1255,37 @@ void Dialog::SetModalInputMode( bool bModal )
     if ( bModal == mbModalMode )
         return;
 
+    ImplGetFrame()->SetModal(bModal);
+
+    if (GetParent())
+    {
+        SalFrame* pFrame = GetParent()->ImplGetFrame();
+        pFrame->NotifyModalHierarchy(bModal);
+    }
+
+    ImplSetModalInputMode(bModal);
+}
+
+void Dialog::ImplSetModalInputMode( bool bModal )
+{
+    if ( bModal == mbModalMode )
+        return;
+
+    // previously Execute()'d dialog - the one below the top-most one
+    VclPtr<Dialog> pPrevious;
     ImplSVData* pSVData = ImplGetSVData();
+    auto& rExecuteDialogs = pSVData->mpWinData->mpExecuteDialogs;
+    if (rExecuteDialogs.size() > 1)
+        pPrevious = rExecuteDialogs[rExecuteDialogs.size() - 2];
+
     mbModalMode = bModal;
     if ( bModal )
     {
-        pSVData->maAppData.mnModalDialog++;
-
-        // Diable the prev Modal Dialog, because our dialog must close at first,
+        // Disable the prev Modal Dialog, because our dialog must close at first,
         // before the other dialog can be closed (because the other dialog
         // is on stack since our dialog returns)
-        if ( mpPrevExecuteDlg && !mpPrevExecuteDlg->IsWindowOrChild( this, true ) )
-            mpPrevExecuteDlg->EnableInput( false, true, true, this );
+        if (pPrevious && !pPrevious->IsWindowOrChild(this, true))
+            pPrevious->EnableInput(false, this);
 
         // determine next overlap dialog parent
         vcl::Window* pParent = GetParent();
@@ -1035,71 +1295,44 @@ void Dialog::SetModalInputMode( bool bModal )
             // #115933# disable the whole frame hierarchy, useful if our parent
             // is a modeless dialog
             mpDialogParent = pParent->mpWindowImpl->mpFrameWindow;
-            mpDialogParent->ImplIncModalCount();
+            mpDialogParent->IncModalCount();
         }
-
     }
     else
     {
-        pSVData->maAppData.mnModalDialog--;
-
         if ( mpDialogParent )
         {
             // #115933# re-enable the whole frame hierarchy again (see above)
             // note that code in getfocus assures that we do not accidentally enable
             // windows that were disabled before
-            mpDialogParent->ImplDecModalCount();
+            mpDialogParent->DecModalCount();
         }
 
         // Enable the prev Modal Dialog
-        if ( mpPrevExecuteDlg && !mpPrevExecuteDlg->IsWindowOrChild( this, true ) )
+        if (pPrevious && !pPrevious->IsWindowOrChild(this, true))
         {
-            mpPrevExecuteDlg->EnableInput( true, true, true, this );
+            pPrevious->EnableInput(true, this);
+
             // ensure continued modality of prev dialog
             // do not change modality counter
 
             // #i119994# need find the last modal dialog before reactive it
-            Dialog * pPrevModalDlg = mpPrevExecuteDlg;
-
-            while( pPrevModalDlg && !pPrevModalDlg->IsModalInputMode() )
-                pPrevModalDlg = pPrevModalDlg->mpPrevExecuteDlg;
-
-            if( pPrevModalDlg &&
-            ( pPrevModalDlg == mpPrevExecuteDlg
-                || !pPrevModalDlg->IsWindowOrChild( this, true ) ) )
+            if (pPrevious->IsModalInputMode() || !pPrevious->IsWindowOrChild(this, true))
             {
-                mpPrevExecuteDlg->SetModalInputMode( false );
-                mpPrevExecuteDlg->SetModalInputMode( true );
+                pPrevious->ImplSetModalInputMode(false);
+                pPrevious->ImplSetModalInputMode(true);
             }
         }
     }
 }
 
-void Dialog::SetModalInputMode( bool bModal, bool bSubModalDialogs )
+vcl::Window* Dialog::GetFirstControlForFocus()
 {
-    if ( bSubModalDialogs )
-    {
-        vcl::Window* pOverlap = ImplGetFirstOverlapWindow();
-        pOverlap = pOverlap->mpWindowImpl->mpFirstOverlap;
-        while ( pOverlap )
-        {
-            if ( pOverlap->IsDialog() )
-                static_cast<Dialog*>(pOverlap)->SetModalInputMode( bModal, true );
-            pOverlap = pOverlap->mpWindowImpl->mpNext;
-        }
-    }
-
-    SetModalInputMode( bModal );
-}
-
-void Dialog::GrabFocusToFirstControl()
-{
-    vcl::Window* pFocusControl;
+    vcl::Window* pFocusControl = nullptr;
+    vcl::Window* pFirstOverlapWindow = ImplGetFirstOverlapWindow();
 
     // find focus control, even if the dialog has focus
-    if ( HasFocus() )
-        pFocusControl = NULL;
-    else
+    if (!HasFocus() && pFirstOverlapWindow && pFirstOverlapWindow->mpWindowImpl)
     {
         // prefer a child window which had focus before
         pFocusControl = ImplGetFirstOverlapWindow()->mpWindowImpl->mpLastFocusWindow;
@@ -1115,23 +1348,29 @@ void Dialog::GrabFocusToFirstControl()
          !isVisibleInLayout(pFocusControl) ||
          !isEnabledInLayout(pFocusControl) || !pFocusControl->IsInputEnabled() )
     {
-        sal_uInt16 n = 0;
-        pFocusControl = ImplGetDlgWindow( n, DLGWINDOW_FIRST );
+        pFocusControl = ImplGetDlgWindow( 0, GetDlgWindowType::First );
     }
+
+    return pFocusControl;
+}
+
+void Dialog::GrabFocusToFirstControl()
+{
+    vcl::Window* pFocusControl = GetFirstControlForFocus();
     if ( pFocusControl )
-        pFocusControl->ImplControlFocus( GETFOCUS_INIT );
+        pFocusControl->ImplControlFocus( GetFocusFlags::Init );
 }
 
 void Dialog::GetDrawWindowBorder( sal_Int32& rLeftBorder, sal_Int32& rTopBorder, sal_Int32& rRightBorder, sal_Int32& rBottomBorder ) const
 {
-    ImplBorderWindow aImplWin( (vcl::Window*)this, WB_BORDER|WB_STDWORK, BORDERWINDOW_STYLE_OVERLAP );
-    aImplWin.GetBorder( rLeftBorder, rTopBorder, rRightBorder, rBottomBorder );
+    ScopedVclPtrInstance<ImplBorderWindow> aImplWin( static_cast<vcl::Window*>(const_cast<Dialog *>(this)), WB_BORDER|WB_STDWORK, BorderWindowStyle::Overlap );
+    aImplWin->GetBorder( rLeftBorder, rTopBorder, rRightBorder, rBottomBorder );
 }
 
-void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal_uLong )
+void Dialog::Draw( OutputDevice* pDev, const Point& rPos, SystemTextColorFlags )
 {
     Point aPos = pDev->LogicToPixel( rPos );
-    Size aSize = pDev->LogicToPixel( rSize );
+    Size aSize = GetSizePixel();
 
     Wallpaper aWallpaper = GetBackground();
     if ( !aWallpaper.IsBitmap() )
@@ -1146,18 +1385,18 @@ void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, sal
     else
     {
         pDev->SetFillColor( aWallpaper.GetColor() );
-        pDev->DrawRect( Rectangle( aPos, aSize ) );
+        pDev->DrawRect( tools::Rectangle( aPos, aSize ) );
     }
 
     if (!( GetStyle() & WB_NOBORDER ))
     {
-        ImplBorderWindow aImplWin( this, WB_BORDER|WB_STDWORK, BORDERWINDOW_STYLE_OVERLAP );
-        aImplWin.SetText( GetText() );
-        aImplWin.setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
-        aImplWin.SetDisplayActive( true );
-        aImplWin.InitView();
+        ScopedVclPtrInstance< ImplBorderWindow > aImplWin( this, WB_BORDER|WB_STDWORK, BorderWindowStyle::Overlap );
+        aImplWin->SetText( GetText() );
+        aImplWin->setPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
+        aImplWin->SetDisplayActive( true );
+        aImplWin->InitView();
 
-        aImplWin.Draw( Rectangle( aPos, aSize ), pDev, aPos );
+        aImplWin->Draw( pDev, aPos );
     }
 
     pDev->Pop();
@@ -1170,7 +1409,24 @@ void Dialog::queue_resize(StateChangedType eReason)
     SystemWindow::queue_resize(eReason);
 }
 
-bool Dialog::set_property(const OString &rKey, const OString &rValue)
+void Dialog::Resize()
+{
+    SystemWindow::Resize();
+
+    if (comphelper::LibreOfficeKit::isDialogPainting())
+        return;
+
+    bool bTunnelingEnabled = mpDialogImpl->m_bLOKTunneling;
+    const vcl::ILibreOfficeKitNotifier* pNotifier = GetLOKNotifier();
+    if (pNotifier && bTunnelingEnabled)
+    {
+        std::vector<vcl::LOKPayloadItem> aItems;
+        aItems.emplace_back("size", GetSizePixel().toString());
+        pNotifier->notifyWindow(GetLOKWindowId(), "size_changed", aItems);
+    }
+}
+
+bool Dialog::set_property(const OString &rKey, const OUString &rValue)
 {
     if (rKey == "border-width")
         set_border_width(rValue.toInt32());
@@ -1179,30 +1435,307 @@ bool Dialog::set_property(const OString &rKey, const OString &rValue)
     return true;
 }
 
-VclBuilderContainer::VclBuilderContainer()
-    : m_pUIBuilder(NULL)
+FactoryFunction Dialog::GetUITestFactory() const
 {
+    return DialogUIObject::create;
+}
+
+IMPL_LINK(Dialog, ResponseHdl, Button*, pButton, void)
+{
+    auto aFind = mpDialogImpl->maResponses.find(pButton);
+    if (aFind == mpDialogImpl->maResponses.end())
+        return;
+    short nResponse = aFind->second;
+    if (nResponse == RET_HELP)
+    {
+        vcl::Window* pFocusWin = Application::GetFocusWindow();
+        if (!pFocusWin || comphelper::LibreOfficeKit::isActive())
+            pFocusWin = pButton;
+        HelpEvent aEvt(pFocusWin->GetPointerPosPixel(), HelpEventMode::CONTEXT);
+        pFocusWin->RequestHelp(aEvt);
+        return;
+    }
+    EndDialog(nResponse);
+}
+
+void Dialog::add_button(PushButton* pButton, int response, bool bTransferOwnership)
+{
+    if (bTransferOwnership)
+        mpDialogImpl->maOwnedButtons.push_back(pButton);
+    mpDialogImpl->maResponses[pButton] = response;
+    switch (pButton->GetType())
+    {
+        case WindowType::PUSHBUTTON:
+        {
+            if (!pButton->GetClickHdl().IsSet())
+                pButton->SetClickHdl(LINK(this, Dialog, ResponseHdl));
+            break;
+        }
+        //insist that the response ids match the default actions for those
+        //widgets, and leave their default handlers in place
+        case WindowType::OKBUTTON:
+            assert(mpDialogImpl->get_response(pButton) == RET_OK);
+            break;
+        case WindowType::CANCELBUTTON:
+            assert(mpDialogImpl->get_response(pButton) == RET_CANCEL || mpDialogImpl->get_response(pButton) == RET_CLOSE);
+            break;
+        case WindowType::HELPBUTTON:
+            assert(mpDialogImpl->get_response(pButton) == RET_HELP);
+            break;
+        default:
+            SAL_WARN("vcl.layout", "The type of widget " <<
+                pButton->GetHelpId() << " is currently not handled");
+            break;
+    }
+}
+
+vcl::Window* Dialog::get_widget_for_response(int response)
+{
+    //copy explicit responses
+    std::map<VclPtr<vcl::Window>, short> aResponses(mpDialogImpl->maResponses);
+
+    if (mpActionArea)
+    {
+        //add implicit responses
+        for (vcl::Window* pChild = mpActionArea->GetWindow(GetWindowType::FirstChild); pChild;
+             pChild = pChild->GetWindow(GetWindowType::Next))
+        {
+            if (aResponses.find(pChild) != aResponses.end())
+                continue;
+            switch (pChild->GetType())
+            {
+                case WindowType::OKBUTTON:
+                    aResponses[pChild] = RET_OK;
+                    break;
+                case WindowType::CANCELBUTTON:
+                    aResponses[pChild] = RET_CANCEL;
+                    break;
+                case WindowType::HELPBUTTON:
+                    aResponses[pChild] = RET_HELP;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    for (const auto& a : aResponses)
+    {
+        if (a.second == response)
+           return a.first;
+    }
+
+    return nullptr;
+}
+
+int Dialog::get_default_response() const
+{
+    //copy explicit responses
+    std::map<VclPtr<vcl::Window>, short> aResponses(mpDialogImpl->maResponses);
+
+    if (mpActionArea)
+    {
+        //add implicit responses
+        for (vcl::Window* pChild = mpActionArea->GetWindow(GetWindowType::FirstChild); pChild;
+             pChild = pChild->GetWindow(GetWindowType::Next))
+        {
+            if (aResponses.find(pChild) != aResponses.end())
+                continue;
+            switch (pChild->GetType())
+            {
+                case WindowType::OKBUTTON:
+                    aResponses[pChild] = RET_OK;
+                    break;
+                case WindowType::CANCELBUTTON:
+                    aResponses[pChild] = RET_CANCEL;
+                    break;
+                case WindowType::HELPBUTTON:
+                    aResponses[pChild] = RET_HELP;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    for (const auto& a : aResponses)
+    {
+        if (a.first->GetStyle() & WB_DEFBUTTON)
+        {
+            return a.second;
+        }
+    }
+    return RET_CANCEL;
+}
+
+void Dialog::set_default_response(int response)
+{
+    //copy explicit responses
+    std::map<VclPtr<vcl::Window>, short> aResponses(mpDialogImpl->maResponses);
+
+    if (mpActionArea)
+    {
+        //add implicit responses
+        for (vcl::Window* pChild = mpActionArea->GetWindow(GetWindowType::FirstChild); pChild;
+             pChild = pChild->GetWindow(GetWindowType::Next))
+        {
+            if (aResponses.find(pChild) != aResponses.end())
+                continue;
+            switch (pChild->GetType())
+            {
+                case WindowType::OKBUTTON:
+                    aResponses[pChild] = RET_OK;
+                    break;
+                case WindowType::CANCELBUTTON:
+                    aResponses[pChild] = RET_CANCEL;
+                    break;
+                case WindowType::HELPBUTTON:
+                    aResponses[pChild] = RET_HELP;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    for (auto& a : aResponses)
+    {
+        if (a.second == response)
+        {
+            a.first->SetStyle(a.first->GetStyle() | WB_DEFBUTTON);
+            a.first->GrabFocus();
+        }
+        else
+        {
+            a.first->SetStyle(a.first->GetStyle() & ~WB_DEFBUTTON);
+        }
+    }
+}
+
+VclBuilderContainer::VclBuilderContainer()
+{
+}
+
+void VclBuilderContainer::setDeferredProperties()
+{
+    if (!m_pUIBuilder)
+        return;
+    m_pUIBuilder->setDeferredProperties();
 }
 
 VclBuilderContainer::~VclBuilderContainer()
 {
-    delete m_pUIBuilder;
 }
 
-ModelessDialog::ModelessDialog(vcl::Window* pParent, const OUString& rID, const OUString& rUIXMLDescription)
-    : Dialog(pParent, rID, rUIXMLDescription, WINDOW_MODELESSDIALOG)
+void Dialog::Activate()
+{
+    if (GetType() == WindowType::MODELESSDIALOG)
+    {
+        css::uno::Reference< css::uno::XComponentContext > xContext(
+                comphelper::getProcessComponentContext() );
+        css::uno::Reference<css::frame::XGlobalEventBroadcaster> xEventBroadcaster(css::frame::theGlobalEventBroadcaster::get(xContext), css::uno::UNO_SET_THROW);
+        css::document::DocumentEvent aObject;
+        aObject.EventName = "ModelessDialogVisible";
+        xEventBroadcaster->documentEventOccured(aObject);
+    }
+    SystemWindow::Activate();
+}
+
+void Dialog::Command(const CommandEvent& rCEvt)
+{
+    if (mpDialogImpl && mpDialogImpl->m_aPopupMenuHdl.Call(rCEvt))
+        return;
+    SystemWindow::Command(rCEvt);
+}
+
+struct TopLevelWindowLockerImpl
+{
+    std::stack<std::vector<VclPtr<vcl::Window>>> m_aBusyStack;
+};
+
+TopLevelWindowLocker::TopLevelWindowLocker()
+    : m_xImpl(std::make_unique<TopLevelWindowLockerImpl>())
 {
 }
 
-ModalDialog::ModalDialog( vcl::Window* pParent, WinBits nStyle ) :
-    Dialog( WINDOW_MODALDIALOG )
+void TopLevelWindowLocker::incBusy(const weld::Widget* pIgnore)
 {
-    ImplInit( pParent, nStyle );
+    // lock any toplevel windows from being closed until busy is over
+    std::vector<VclPtr<vcl::Window>> aTopLevels;
+    vcl::Window *pTopWin = Application::GetFirstTopLevelWindow();
+    while (pTopWin)
+    {
+        vcl::Window* pCandidate = pTopWin;
+        if (pCandidate->GetType() == WindowType::BORDERWINDOW)
+            pCandidate = pCandidate->GetWindow(GetWindowType::FirstChild);
+        // tdf#125266 ignore HelpTextWindows
+        if (pCandidate &&
+            pCandidate->GetType() != WindowType::HELPTEXTWINDOW &&
+            pCandidate->GetType() != WindowType::FLOATINGWINDOW &&
+            pCandidate->GetFrameWeld() != pIgnore)
+        {
+            aTopLevels.push_back(pCandidate);
+        }
+        pTopWin = Application::GetNextTopLevelWindow(pTopWin);
+    }
+    for (auto& a : aTopLevels)
+    {
+        a->IncModalCount();
+        a->ImplGetFrame()->NotifyModalHierarchy(true);
+    }
+    m_xImpl->m_aBusyStack.push(aTopLevels);
 }
 
-ModalDialog::ModalDialog( vcl::Window* pParent, const OUString& rID, const OUString& rUIXMLDescription ) :
-    Dialog(pParent, rID, rUIXMLDescription, WINDOW_MODALDIALOG)
+void TopLevelWindowLocker::decBusy()
 {
+    // unlock locked toplevel windows from being closed now busy is over
+    for (auto& a : m_xImpl->m_aBusyStack.top())
+    {
+        if (a->isDisposed())
+            continue;
+        a->DecModalCount();
+        a->ImplGetFrame()->NotifyModalHierarchy(false);
+    }
+    m_xImpl->m_aBusyStack.pop();
+}
+
+bool TopLevelWindowLocker::isBusy() const
+{
+    return !m_xImpl->m_aBusyStack.empty();
+}
+
+TopLevelWindowLocker::~TopLevelWindowLocker()
+{
+}
+
+void Dialog::DumpAsPropertyTree(tools::JsonWriter& rJsonWriter)
+{
+    SystemWindow::DumpAsPropertyTree(rJsonWriter);
+    rJsonWriter.put("title", GetText());
+    if (vcl::Window* pActionArea = get_action_area())
+    {
+        if (!pActionArea->IsVisible())
+            rJsonWriter.put("collapsed", "true");
+    }
+
+    OUString sDialogId = OStringToOUString(GetHelpId(), RTL_TEXTENCODING_ASCII_US);
+    sal_Int32 nStartPos = sDialogId.lastIndexOf('/');
+    nStartPos = nStartPos >= 0 ? nStartPos + 1 : 0;
+    rJsonWriter.put("dialogid", sDialogId.copy(nStartPos));
+
+    {
+        auto aResponses = rJsonWriter.startArray("responses");
+        for (const auto& rResponse : mpDialogImpl->maResponses)
+        {
+            auto aResponse = rJsonWriter.startStruct();
+            rJsonWriter.put("id", rResponse.first->get_id());
+            rJsonWriter.put("response", rResponse.second);
+        }
+    }
+
+    vcl::Window* pFocusControl = GetFirstControlForFocus();
+    if (pFocusControl)
+        rJsonWriter.put("init_focus_id", pFocusControl->get_id());
 }
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

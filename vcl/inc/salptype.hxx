@@ -27,28 +27,32 @@
 #ifndef INCLUDED_VCL_INC_SALPTYPE_HXX
 #define INCLUDED_VCL_INC_SALPTYPE_HXX
 
-#include <tools/solar.h>
+#include <sal/config.h>
 
-// - SalJobSetupFlags -
+#include <o3tl/typed_flags_set.hxx>
 
-#define SAL_JOBSET_ORIENTATION                  ((sal_uLong)0x00000001)
-#define SAL_JOBSET_PAPERBIN                     ((sal_uLong)0x00000002)
-#define SAL_JOBSET_PAPERSIZE                    ((sal_uLong)0x00000004)
-#define SAL_JOBSET_DUPLEXMODE                   ((sal_uLong)0x00000008)
-#define SAL_JOBSET_ALL                          (SAL_JOBSET_ORIENTATION |\
-                                                 SAL_JOBSET_PAPERBIN    |\
-                                                 SAL_JOBSET_PAPERSIZE   |\
-                                                 SAL_JOBSET_DUPLEXMODE)
+enum class JobSetFlags : sal_uInt16 {
+    ORIENTATION  = 1,
+    PAPERBIN     = 2,
+    PAPERSIZE    = 4,
+    DUPLEXMODE   = 8,
 #if defined USE_JAVA && defined MACOSX
-#define SAL_JOBSET_EXACTPAPERSIZE               ((sal_uLong)0x00010000)
+    EXACTPAPERSIZE = 0x00010000,
 #endif	// USE_JAVA && MACOSX
+    ALL          = ORIENTATION | PAPERBIN | PAPERSIZE | DUPLEXMODE
+};
 
-// - SalPrinterError -
+namespace o3tl {
 
-#define SAL_PRINTER_ERROR_GENERALERROR          1
-#define SAL_PRINTER_ERROR_ABORT                 2
+template<> struct typed_flags<JobSetFlags>: is_typed_flags<JobSetFlags, 0xF> {};
 
-// - SalPrinterProcs -
+}
+
+enum class SalPrinterError {
+  NONE = 0,
+  General = 1,
+  Abort = 2
+};
 
 class SalPrinter;
 typedef long (*SALPRNABORTPROC)( void* pInst, SalPrinter* pPrinter );
