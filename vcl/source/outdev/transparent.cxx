@@ -1454,8 +1454,10 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
     rOutMtf.Clear();
 
+#if !defined USE_JAVA || !defined MACOSX
     if(!bReduceTransparency || bTransparencyAutoMode)
         bTransparent = rInMtf.HasTransparentActions();
+#endif	// !USE_JAVA || !MACOSX
 
     // #i10613# Determine set of connected components containing transparent objects. These are
     // then processed as bitmaps, the original actions are removed from the metafile.
