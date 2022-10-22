@@ -84,7 +84,7 @@ endif
 TARGET_MACHINE:=$(shell uname -m)
 ifeq ($(TARGET_MACHINE),arm64)
 ifdef CROSS_COMPILE_X86_64
-CONFIGURE_EXTRA_OPTIONS:=--host=x86_64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no --enable-bogus-pkg-config'
+CONFIGURE_EXTRA_OPTIONS:=--host=x86_64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --disable-skia --without-fonts --enable-python=no --enable-bogus-pkg-config'
 CROSS_COMPILE=true;
 TARGET_MACHINE=x86_64
 ULONGNAME=Intel
@@ -93,7 +93,7 @@ ULONGNAME=Silicon
 endif
 else
 ifdef CROSS_COMPILE_ARM64
-CONFIGURE_EXTRA_OPTIONS:=--host=aarch64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --without-fonts --enable-python=no --enable-bogus-pkg-config'
+CONFIGURE_EXTRA_OPTIONS:=--host=aarch64-apple-darwin --build=$(TARGET_MACHINE)-apple-darwin --enable-python=no --with-galleries=no --with-build-platform-configure-options='--disable-odk --disable-skia --without-fonts --enable-python=no --enable-bogus-pkg-config'
 CROSS_COMPILE=true;
 TARGET_MACHINE=arm64
 ULONGNAME=Silicon
@@ -351,7 +351,7 @@ build.libo_configure: build.libo_patches
 ifeq ("$(OS_TYPE)","macOS")
 # Check that JDK_HOME is set to something reasonable
 	@sh -e -c 'if [ ! -d "$(JDK_HOME)" -o ! -x "$(JDK_HOME)/bin/java" ] ; then echo "JDK_HOME is invalid Java SDK path: $(JDK_HOME)" ; exit 1 ; fi'
-	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; GNUMAKE="$(GNUMAKE)" ; export GNUMAKE ; GPERF="$(GPERF)" ; export GPERF ; autoconf ; ./configure $(CONFIGURE_EXTRA_OPTIONS) --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
+	cd "$(LIBO_BUILD_HOME)" ; unset DYLD_LIBRARY_PATH ; PATH=/usr/bin:/bin:/usr/sbin:/sbin:/opt/local/bin ; export PATH ; GNUMAKE="$(GNUMAKE)" ; export GNUMAKE ; GPERF="$(GPERF)" ; export GPERF ; autoconf ; ./configure $(CONFIGURE_EXTRA_OPTIONS) --with-jdk-home="$(JDK_HOME)" --without-parallelism --with-ant-home="$(PWD)/$(BUILD_HOME)/$(ANT_PACKAGE)" --with-macosx-version-min-required="$(PRODUCT_MIN_OSVERSION)" --without-junit --disable-cups --disable-odk --disable-skia --with-lang="$(LIBO_LANGUAGES)" --without-fonts --with-help --with-myspell-dicts --enable-bogus-pkg-config
 else
 	@echo "$@ not implemented" ; exit 1
 endif
