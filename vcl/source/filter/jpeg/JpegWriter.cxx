@@ -25,18 +25,21 @@
  */
 
 #include <sal/config.h>
+#include <sal/log.hxx>
 
-#include "stdio.h"
 #include "jpeg.h"
 #include <jpeglib.h>
 #include <jerror.h>
 
 #include "JpegWriter.hxx"
-#include <vcl/bmpacc.hxx>
+#include <vcl/BitmapReadAccess.hxx>
 #include <vcl/FilterConfigItem.hxx>
-#include <vcl/graphicfilter.hxx>
+#include <tools/helpers.hxx>
+#include <tools/stream.hxx>
 
 #define BUFFER_SIZE  4096
+
+namespace {
 
 struct DestinationManagerStruct
 {
@@ -45,23 +48,27 @@ struct DestinationManagerStruct
     JOCTET * buffer;                  /* start of buffer */
 };
 
-extern "C" void init_destination (j_compress_ptr cinfo)
+}
+
+extern "C" {
+
+static void init_destination (j_compress_ptr cinfo)
 {
-    DestinationManagerStruct * destination = (DestinationManagerStruct *) cinfo->dest;
+    DestinationManagerStruct * destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
 
     /* Allocate the output buffer -- it will be released when done with image */
-    destination->buffer = (JOCTET *)
-        (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE, BUFFER_SIZE * sizeof(JOCTET));
+    destination->buffer = static_cast<JOCTET *>(
+        (*cinfo->mem->alloc_small) (reinterpret_cast<j_common_ptr>(cinfo), JPOOL_IMAGE, BUFFER_SIZE * sizeof(JOCTET)));
 
     destination->pub.next_output_byte = destination->buffer;
     destination->pub.free_in_buffer = BUFFER_SIZE;
 }
 
-extern "C" boolean empty_output_buffer (j_compress_ptr cinfo)
+static boolean empty_output_buffer (j_compress_ptr cinfo)
 {
-    DestinationManagerStruct * destination = (DestinationManagerStruct *) cinfo->dest;
+    DestinationManagerStruct * destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
 
-    if (destination->stream->Write(destination->buffer, BUFFER_SIZE) != (size_t) BUFFER_SIZE)
+    if (destination->stream->WriteBytes(destination->buffer, BUFFER_SIZE) != BUFFER_SIZE)
     {
         ERREXIT(cinfo, JERR_FILE_WRITE);
     }
@@ -72,24 +79,26 @@ extern "C" boolean empty_output_buffer (j_compress_ptr cinfo)
     return TRUE;
 }
 
-extern "C" void term_destination (j_compress_ptr cinfo)
+static void term_destination (j_compress_ptr cinfo)
 {
-    DestinationManagerStruct * destination = (DestinationManagerStruct *) cinfo->dest;
+    DestinationManagerStruct * destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
     size_t datacount = BUFFER_SIZE - destination->pub.free_in_buffer;
 
     /* Write any data remaining in the buffer */
     if (datacount > 0)
     {
-        if (destination->stream->Write(destination->buffer, datacount) != datacount)
+        if (destination->stream->WriteBytes(destination->buffer, datacount) != datacount)
         {
             ERREXIT(cinfo, JERR_FILE_WRITE);
         }
     }
 }
 
+}
+
 void jpeg_svstream_dest (j_compress_ptr cinfo, void* output)
 {
-    SvStream* stream = (SvStream*) output;
+    SvStream* stream = static_cast<SvStream*>(output);
     DestinationManagerStruct * destination;
 
     /* The destination object is made permanent so that multiple JPEG images
@@ -98,13 +107,13 @@ void jpeg_svstream_dest (j_compress_ptr cinfo, void* output)
      * manager serially with the same JPEG object, because their private object
      * sizes may be different.  Caveat programmer.
      */
-    if (cinfo->dest == NULL)
+    if (cinfo->dest == nullptr)
     {    /* first time for this JPEG object? */
-        cinfo->dest = (jpeg_destination_mgr*)
-        (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof(DestinationManagerStruct));
+        cinfo->dest = static_cast<jpeg_destination_mgr*>(
+        (*cinfo->mem->alloc_small) (reinterpret_cast<j_common_ptr>(cinfo), JPOOL_PERMANENT, sizeof(DestinationManagerStruct)));
     }
 
-    destination = (DestinationManagerStruct *) cinfo->dest;
+    destination = reinterpret_cast<DestinationManagerStruct *>(cinfo->dest);
     destination->pub.init_destination = init_destination;
     destination->pub.empty_output_buffer = empty_output_buffer;
     destination->pub.term_destination = term_destination;
@@ -113,34 +122,30 @@ void jpeg_svstream_dest (j_compress_ptr cinfo, void* output)
 
 JPEGWriter::JPEGWriter( SvStream& rStream, const css::uno::Sequence< css::beans::PropertyValue >* pFilterData, bool* pExportWasGrey ) :
     mrStream     ( rStream ),
-    mpReadAccess ( NULL ),
-    mpBuffer     ( NULL ),
+    mpBuffer     ( nullptr ),
     mbNative     ( false ),
     mpExpWasGrey ( pExportWasGrey )
 {
-    FilterConfigItem aConfigItem( (css::uno::Sequence< css::beans::PropertyValue >*) pFilterData );
+    FilterConfigItem aConfigItem( pFilterData );
     mbGreys = aConfigItem.ReadInt32( "ColorMode", 0 ) != 0;
     mnQuality = aConfigItem.ReadInt32( "Quality", 75 );
     maChromaSubsampling = aConfigItem.ReadInt32( "ChromaSubsamplingMode", 0 );
 
     if ( pFilterData )
     {
-        int nArgs = pFilterData->getLength();
-        const css::beans::PropertyValue* pValues = pFilterData->getConstArray();
-        while( nArgs-- )
+        for( const auto& rValue : *pFilterData )
         {
-            if ( pValues->Name == "StatusIndicator" )
+            if ( rValue.Name == "StatusIndicator" )
             {
-                pValues->Value >>= mxStatusIndicator;
+                rValue.Value >>= mxStatusIndicator;
             }
-            pValues++;
         }
     }
 }
 
-void* JPEGWriter::GetScanline( long nY )
+void* JPEGWriter::GetScanline( tools::Long nY )
 {
-    void* pScanline = NULL;
+    void* pScanline = nullptr;
 
     if( mpReadAccess )
     {
@@ -151,14 +156,15 @@ void* JPEGWriter::GetScanline( long nY )
         else if( mpBuffer )
         {
             BitmapColor aColor;
-            long        nWidth = mpReadAccess->Width();
+            tools::Long        nWidth = mpReadAccess->Width();
             sal_uInt8*  pTmp = mpBuffer;
 
             if( mpReadAccess->HasPalette() )
             {
-                for( long nX = 0L; nX < nWidth; nX++ )
+                Scanline pScanlineRead = mpReadAccess->GetScanline( nY );
+                for( tools::Long nX = 0; nX < nWidth; nX++ )
                 {
-                    aColor = mpReadAccess->GetPaletteColor( mpReadAccess->GetPixelIndex( nY, nX ) );
+                    aColor = mpReadAccess->GetPaletteColor( mpReadAccess->GetIndexFromData( pScanlineRead, nX ) );
                     *pTmp++ = aColor.GetRed();
                     if ( !mbGreys )
                     {
@@ -169,9 +175,10 @@ void* JPEGWriter::GetScanline( long nY )
             }
             else
             {
-                for( long nX = 0L; nX < nWidth; nX++ )
+                Scanline pScanlineRead = mpReadAccess->GetScanline( nY );
+                for( tools::Long nX = 0; nX < nWidth; nX++ )
                 {
-                    aColor = mpReadAccess->GetPixel( nY, nX );
+                    aColor = mpReadAccess->GetPixelFromData( pScanlineRead, nX );
                     *pTmp++ = aColor.GetRed();
                     if ( !mbGreys )
                     {
@@ -194,39 +201,45 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
 
     if ( mxStatusIndicator.is() )
     {
-        OUString aMsg;
-        mxStatusIndicator->start( aMsg, 100 );
+        mxStatusIndicator->start( OUString(), 100 );
     }
 
-    Bitmap aGraphicBmp( rGraphic.GetBitmap() );
+    // This slightly weird logic is here to match the behaviour in ImpGraphic::ImplGetBitmap
+    // and is necessary to match pre-existing behaviour. We should probably pass down the expected
+    // background color for alpha from the higher layers.
+    Bitmap aGraphicBmp;
+    if (rGraphic.GetType() == GraphicType::Bitmap)
+        aGraphicBmp = rGraphic.GetBitmapEx().GetBitmap(COL_WHITE);
+    else
+        aGraphicBmp = rGraphic.GetBitmapEx().GetBitmap();
 
     if ( mbGreys )
     {
-        if ( !aGraphicBmp.Convert( BMP_CONVERSION_8BIT_GREYS ) )
-            aGraphicBmp = rGraphic.GetBitmap();
+        if ( !aGraphicBmp.Convert( BmpConversion::N8BitGreys ) )
+            aGraphicBmp = rGraphic.GetBitmapEx().GetBitmap();
     }
 
-    mpReadAccess = aGraphicBmp.AcquireReadAccess();
+    mpReadAccess = Bitmap::ScopedReadAccess(aGraphicBmp);
     if( mpReadAccess )
     {
         if ( !mbGreys )  // bitmap was not explicitly converted into greyscale,
         {                // check if source is greyscale only
             bool bIsGrey = true;
 
-            long nWidth = mpReadAccess->Width();
-            for ( long nY = 0; bIsGrey && ( nY < mpReadAccess->Height() ); nY++ )
+            tools::Long nWidth = mpReadAccess->Width();
+            for ( tools::Long nY = 0; bIsGrey && ( nY < mpReadAccess->Height() ); nY++ )
             {
                 BitmapColor aColor;
-                for( long nX = 0L; bIsGrey && ( nX < nWidth ); nX++ )
+                Scanline pScanlineRead = mpReadAccess->GetScanline( nY );
+                for( tools::Long nX = 0; bIsGrey && ( nX < nWidth ); nX++ )
                 {
-                    aColor = mpReadAccess->HasPalette() ? mpReadAccess->GetPaletteColor( mpReadAccess->GetPixelIndex( nY, nX ) )
-                                                : mpReadAccess->GetPixel( nY, nX );
+                    aColor = mpReadAccess->HasPalette() ? mpReadAccess->GetPaletteColor( mpReadAccess->GetIndexFromData( pScanlineRead, nX ) )
+                                                : mpReadAccess->GetPixelFromData( pScanlineRead, nX );
                     bIsGrey = ( aColor.GetRed() == aColor.GetGreen() ) && ( aColor.GetRed() == aColor.GetBlue() );
                 }
             }
             if ( bIsGrey )
                 mbGreys = true;
-
 #ifdef USE_JAVA
             // Fix stretched grayscale bitmaps when exporting to PDF reported
             // in the testing/neooffice2017bugs_emails/20170921 e-mail by
@@ -234,7 +247,7 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
             if ( mbGreys && aGraphicBmp.GetBitCount() > 8 )
             {
                 aGraphicBmp.ReleaseAccess( mpReadAccess );
-                mpReadAccess = NULL;
+                mpReadAccess = nullptr;
                 return Write( aGraphicBmp );
             }
 #endif	// USE_JAVA
@@ -242,18 +255,24 @@ bool JPEGWriter::Write( const Graphic& rGraphic )
         if( mpExpWasGrey )
             *mpExpWasGrey = mbGreys;
 
-        mbNative = ( mpReadAccess->GetScanlineFormat() == BMP_FORMAT_24BIT_TC_RGB );
+        if ( mbGreys )
+            mbNative = ( mpReadAccess->GetScanlineFormat() == ScanlineFormat::N8BitPal && aGraphicBmp.HasGreyPalette8Bit());
+        else
+            mbNative = ( mpReadAccess->GetScanlineFormat() == ScanlineFormat::N24BitTcRgb );
 
         if( !mbNative )
             mpBuffer = new sal_uInt8[ AlignedWidth4Bytes( mbGreys ? mpReadAccess->Width() * 8L : mpReadAccess->Width() * 24L ) ];
 
-        bRet = WriteJPEG( this, &mrStream, mpReadAccess->Width(), mpReadAccess->Height(), mbGreys, mnQuality, maChromaSubsampling, mxStatusIndicator );
+        SAL_INFO("vcl", "\nJPEG Export - DPI X: " << rGraphic.GetPPI().getX() << "\nJPEG Export - DPI Y: " << rGraphic.GetPPI().getY());
+
+        bRet = WriteJPEG( this, &mrStream, mpReadAccess->Width(),
+                          mpReadAccess->Height(), rGraphic.GetPPI(), mbGreys,
+                          mnQuality, maChromaSubsampling, mxStatusIndicator );
 
         delete[] mpBuffer;
-        mpBuffer = NULL;
+        mpBuffer = nullptr;
 
-        aGraphicBmp.ReleaseAccess( mpReadAccess );
-        mpReadAccess = NULL;
+        mpReadAccess.reset();
     }
     if ( mxStatusIndicator.is() )
         mxStatusIndicator->end();

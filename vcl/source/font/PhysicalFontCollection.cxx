@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <sal/config.h>
@@ -71,7 +78,12 @@ namespace vcl::font
 PhysicalFontCollection::PhysicalFontCollection()
     : mbMatchData( false )
 #ifndef NO_LIBO_FONT_ALIAS_MATCHING
+#ifdef USE_JAVA
+    // Fix bug 3668 by reenabling map names
+    , mbMapNames( true )
+#else	// USE_JAVA
     , mbMapNames( false )
+#endif	// USE_JAVA
 #endif	// !NO_LIBO_FONT_ALIAS_MATCHING
     , mpPreMatchHook( nullptr )
     , mpFallbackHook( nullptr )
@@ -334,7 +346,12 @@ PhysicalFontFamily* PhysicalFontCollection::ImplFindFontFamilyByAliasName(const 
     // use the font's alias names to find the font
     // TODO: get rid of linear search
     PhysicalFontFamilies::const_iterator it = maPhysicalFontFamilies.begin();
+#ifdef USE_JAVA
+    // Fix infinite loop by incrementing iterator
+    for ( ; it != maPhysicalFontFamilies.end(); ++it )
+#else	// USE_JAVA
     while( it != maPhysicalFontFamilies.end() )
+#endif	// USE_JAVA
     {
         PhysicalFontFamily* pData = (*it).second;
         if( pData->GetAliasNames().isEmpty() )
