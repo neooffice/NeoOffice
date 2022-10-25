@@ -602,7 +602,6 @@ osx/DataFlavorMapping.cxx
 osx/a11ywrappertabgroup.h
 osx/PictToBmpFlt.cxx.orig
 osx/a11ywrapperrow.h
-osx/a11yfocustracker.cxx
 osx/a11ywrappergroup.h
 osx/OSXTransferable.cxx
 osx/DragSourceContext.cxx
