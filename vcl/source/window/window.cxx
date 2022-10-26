@@ -2213,6 +2213,13 @@ vcl::Font Window::GetPointFont(vcl::RenderContext const & rRenderContext) const
 
 void Window::Show(bool bVisible, ShowFlags nFlags)
 {
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crashing bug in help text timer by checking
+    // if this window has been deleted
+    if ( !ImplIsValidWindow( this ) )
+        return;
+#endif	// USE_JAVA
+
     if ( !mpWindowImpl || mpWindowImpl->mbVisible == bVisible )
         return;
 

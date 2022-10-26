@@ -2549,7 +2549,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSArray *pRet = [super accessibilityChildren];
 
-	if ( mpChildWrapper && ![mpChildWrapper isDisposed] )
+	if ( mpChildWrapper && ImplIsValidAquaA11yWrapper( mpChildWrapper ) && ![mpChildWrapper isDisposed] )
 		pRet = MergeAccessibilityChildren( pRet, [mpChildWrapper accessibilitySelectedChildren] );
 
 	return pRet;
@@ -2559,7 +2559,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSArray *pRet = [super accessibilityChildren];
 
-	if ( mpChildWrapper && ![mpChildWrapper isDisposed] )
+	if ( mpChildWrapper && ImplIsValidAquaA11yWrapper( mpChildWrapper ) && ![mpChildWrapper isDisposed] )
 		pRet = MergeAccessibilityChildren( pRet, [mpChildWrapper accessibilityChildren] );
 
 	return pRet;
