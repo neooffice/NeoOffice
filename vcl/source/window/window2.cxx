@@ -1233,6 +1233,13 @@ GetFocusFlags Window::GetGetFocusFlags() const
 
 bool Window::IsCompoundControl() const
 {
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crashing bug in help text timer by checking
+    // if this window has been deleted
+    if ( !ImplIsValidWindow( this ) )
+        return false;
+#endif	// USE_JAVA
+
     return mpWindowImpl && mpWindowImpl->mbCompoundControl;
 }
 
