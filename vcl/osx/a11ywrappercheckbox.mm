@@ -57,7 +57,7 @@
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return isSettable;
     }
@@ -77,7 +77,7 @@
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return [ NSArray array ];
     }

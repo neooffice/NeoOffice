@@ -57,8 +57,15 @@
 #include <com/sun/star/lang/DisposedException.hpp>
 
 #ifdef USE_JAVA
+
+#include <unordered_map>
+
 #include "../java/source/app/salinst_cocoa.h"
 #include "../java/source/java/VCLEventQueue_cocoa.h"
+
+static ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* > aWrapperMap;
+static ::osl::Mutex aWrapperMutex;
+
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star::accessibility;
@@ -178,9 +185,22 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         }
     } catch ( const Exception ) {
     }
+
+#ifdef USE_JAVA
+    ::osl::MutexGuard aGuard( aWrapperMutex );
+    aWrapperMap[ self ] = self;
+#endif	// USE_JAVA
 }
 
 -(void)dealloc {
+#ifdef USE_JAVA
+    ::osl::ClearableMutexGuard aGuard( aWrapperMutex );
+    ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* >::iterator it = aWrapperMap.find( self );
+    if ( it != aWrapperMap.end() )
+        aWrapperMap.erase( it );
+	aGuard.clear();
+#endif	// USE_JAVA
+
     if ( mpReferenceWrapper != nil ) {
 #ifdef USE_JAVA
 		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_DELETEREFWRAPPER, NULL, mpReferenceWrapper );
@@ -854,7 +874,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nil;
     }
@@ -901,7 +921,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return ignored;
     }
@@ -947,7 +967,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nil;
     }
@@ -1072,7 +1092,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return isSettable;
     }
@@ -1104,7 +1124,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return attributeNames;
     }
@@ -1129,7 +1149,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nil;
     }
@@ -1166,7 +1186,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return;
     }
@@ -1208,7 +1228,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nil;
     }
@@ -1298,14 +1318,14 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return bRet;
     }
 #endif	// USE_JAVA
     AquaA11yWrapper * actionResponder = [ self actionResponder ];
 #ifdef USE_JAVA
-    if ( actionResponder != nil && ! [ actionResponder isDisposed ] ) {
+    if ( actionResponder != nil && ImplIsValidAquaA11yWrapper( actionResponder ) && ! [ actionResponder isDisposed ] ) {
         // Fix hang when performing an action that displays a modal dialog by
         // performing the action in the post notification queue
         [ AquaA11yDoAction addElementToPendingNotificationQueue: actionResponder action: action ];
@@ -1332,7 +1352,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nil;
     }
@@ -1442,7 +1462,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nil;
     }
@@ -1934,7 +1954,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return NSZeroRect;
     }
@@ -1964,7 +1984,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return pRet;
     }
@@ -1984,7 +2004,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return pRet;
     }
@@ -2004,7 +2024,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return pRet;
     }
@@ -2024,7 +2044,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return bRet;
     }
@@ -2044,7 +2064,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return nRet;
     }
@@ -2064,7 +2084,7 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     // Set drag lock if it has not already been set since dispatching native
     // events to windows during an accessibility call can cause crashing
     ACQUIRE_DRAGPRINTLOCK
-    if ( [ self isDisposed ] ) {
+    if ( !ImplIsValidAquaA11yWrapper( self ) || [ self isDisposed ] ) {
         RELEASE_DRAGPRINTLOCKIFNEEDED
         return pRet;
     }
@@ -2107,6 +2127,13 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
     }
 
     return [ super isAccessibilitySelectorAllowed: aSelector ];
+}
+
+bool ImplIsValidAquaA11yWrapper( const AquaA11yWrapper* pWrapper )
+{
+    ::osl::MutexGuard aGuard( aWrapperMutex );
+    ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* >::const_iterator it = aWrapperMap.find( pWrapper );
+    return ( it != aWrapperMap.end() ? true : false );
 }
 
 #endif	// USE_JAVA

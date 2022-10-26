@@ -144,6 +144,10 @@ struct ReferenceWrapper
 -(::com::sun::star::accessibility::XAccessibleTextMarkup *)accessibleTextMarkup;
 @end
 
+#ifdef USE_JAVA
+bool ImplIsValidAquaA11yWrapper( const AquaA11yWrapper* pWrapper );
+#endif	// USE_JAVA
+
 #endif // INCLUDED_VCL_INC_OSX_A11YWRAPPER_H
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */
