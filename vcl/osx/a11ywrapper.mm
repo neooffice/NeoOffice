@@ -457,6 +457,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                     Reference< XAccessibleContext > rMateAccessibleContext( rMateAccessible -> getAccessibleContext() );
                     if ( rMateAccessibleContext.is() ) {
                         id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rMateAccessibleContext ];
+#ifdef USE_JAVA
+                        // Attempt to fix Mac App Store crash by checking for
+                        // released or disposed child wrappers
+                        if ( wrapper && ImplIsValidAquaA11yWrapper( wrapper ) && ! [ wrapper isDisposed ] )
+#endif	// USE_JAVA
                         [ children addObject: wrapper ];
 #ifndef USE_JAVA
                         [ wrapper release ];
