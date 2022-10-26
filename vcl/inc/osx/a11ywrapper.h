@@ -122,6 +122,9 @@ struct ReferenceWrapper
 -(void)setActsAsRadioGroup:(BOOL)actsAsRadioGroup;
 -(BOOL)actsAsRadioGroup;
 -(NSWindow*)windowForParent;
+#ifdef USE_JAVA
+-(id)init;
+#endif	// USE_JAVA
 -(id)initWithAccessibleContext: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) anAccessibleContext;
 -(void) setDefaults: (::com::sun::star::uno::Reference < ::com::sun::star::accessibility::XAccessibleContext >) rxAccessibleContext;
 -(void) dealloc;

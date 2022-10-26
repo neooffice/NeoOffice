@@ -117,10 +117,28 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 #pragma mark -
 #pragma mark Init and dealloc
 
+#ifdef USE_JAVA
+
+-(id)init {
+    self = [ super init ];
+    if ( self != nil ) {
+        ::osl::MutexGuard aGuard( aWrapperMutex );
+        aWrapperMap[ self ] = self;
+    }
+    return self;
+}
+
+#endif	// USE_JAVA
+
 -(id)initWithAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext {
     self = [ super init ];
     if ( self != nil ) {
         [ self setDefaults: rxAccessibleContext ];
+
+#ifdef USE_JAVA
+        ::osl::MutexGuard aGuard( aWrapperMutex );
+        aWrapperMap[ self ] = self;
+#endif	// USE_JAVA
     }
     return self;
 }
@@ -185,11 +203,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         }
     } catch ( const Exception ) {
     }
-
-#ifdef USE_JAVA
-    ::osl::MutexGuard aGuard( aWrapperMutex );
-    aWrapperMap[ self ] = self;
-#endif	// USE_JAVA
 }
 
 -(void)dealloc {
