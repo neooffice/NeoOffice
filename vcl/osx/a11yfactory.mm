@@ -604,7 +604,7 @@ static BOOL bInPostPendingNotifications = NO;
 
 - (void)postNotification
 {
-    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || !ImplIsValidAquaA11yWrapper( mpElement ) || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
+    if ( mpElement && mpName && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ( ImplIsValidAquaA11yWrapper( mpElement ) && ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) ) )
         NSAccessibilityPostNotification( mpElement, mpName );
 }
 
@@ -697,7 +697,7 @@ static BOOL bInPostPendingNotifications = NO;
 
 - (void)postNotification
 {
-    if ( mpElement && mpAction && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || !ImplIsValidAquaA11yWrapper( mpElement ) || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
+    if ( mpElement && mpAction && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ( ImplIsValidAquaA11yWrapper( mpElement ) && ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) ) )
         [ AquaA11yActionWrapper doAction: mpAction ofElement: mpElement ];
 }
 
@@ -739,7 +739,7 @@ static BOOL bInPostPendingNotifications = NO;
 
 - (void)postNotification
 {
-    if ( mpElement && mpAttribute && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || !ImplIsValidAquaA11yWrapper( mpElement ) || ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) )
+    if ( mpElement && mpAttribute && ( ! [ mpElement isKindOfClass: [ AquaA11yWrapper class ] ] || ( ImplIsValidAquaA11yWrapper( mpElement ) && ! [ (AquaA11yWrapper *)mpElement isDisposed ] ) ) )
         [ (AquaA11yWrapper *)mpElement setValue: mpValue forAttribute: mpAttribute ];
 }
 
