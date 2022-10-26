@@ -1011,6 +1011,13 @@ SalFrame* Window::ImplGetFrame() const
 
 vcl::Window* Window::ImplGetParent() const
 {
+#ifdef USE_JAVA
+    // Attempt to fix Mac App Store crashing bug in help text timer by checking
+    // if this window has been deleted
+    if ( !ImplIsValidWindow( this ) )
+        return nullptr;
+#endif	// USE_JAVA
+
 #ifdef NO_LIBO_DISPOSED_WINDOW_FIX
     return mpWindowImpl->mpParent;
 #else	// NO_LIBO_DISPOSED_WINDOW_FIX
