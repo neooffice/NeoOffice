@@ -120,11 +120,11 @@ Window::Window( vcl::Window* pParent, WinBits nStyle )
     // true: this outdev will be mirrored if RTL window layout (UI mirroring) is globally active
     mpWindowImpl->mxOutDev->mbEnableRTL = AllSettings::GetLayoutRTL();
 
-    ImplInit( pParent, nStyle, nullptr );
-
 #ifdef USE_JAVA
     aWindowMap[ this ] = this;
 #endif	// USE_JAVA
+
+    ImplInit( pParent, nStyle, nullptr );
 }
 
 #if OSL_DEBUG_LEVEL > 0
