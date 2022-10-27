@@ -44,6 +44,7 @@
 #include <vcl/cmdevt.hxx>
 #include <vcl/window.hxx>
 
+#include "window.h"
 #include "java/saldata.hxx"
 #include "osx/a11yfactory.h"
 
@@ -2437,6 +2438,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)accessibilityAttributeValue:(NSString *)pAttribute
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityAttributeValue:pAttribute];
 	else
@@ -2445,6 +2447,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (BOOL)accessibilityIsIgnored
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityIsIgnored];
 	else
@@ -2453,6 +2456,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSArray *)accessibilityAttributeNames
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityAttributeNames];
 	else
@@ -2461,6 +2465,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (BOOL)accessibilityIsAttributeSettable:(NSString *)pAttribute
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityIsAttributeSettable:pAttribute];
 	else
@@ -2469,6 +2474,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSArray *)accessibilityParameterizedAttributeNames
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityParameterizedAttributeNames];
 	else
@@ -2477,6 +2483,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (BOOL)accessibilitySetOverrideValue:(id)pValue forAttribute:(NSString *)pAttribute
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilitySetOverrideValue:pValue forAttribute:pAttribute];
 	else
@@ -2485,12 +2492,14 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)accessibilitySetValue:(id)pValue forAttribute:(NSString *)pAttribute
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
-		return [mpChildWrapper accessibilitySetValue:pValue forAttribute:pAttribute];
+		[mpChildWrapper accessibilitySetValue:pValue forAttribute:pAttribute];
 }
 
 - (id)accessibilityAttributeValue:(NSString *)pAttribute forParameter:(id)pParameter
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityAttributeValue:pAttribute forParameter:pParameter];
 	else
@@ -2499,6 +2508,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)accessibilityFocusedUIElement
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityFocusedUIElement];
 	else
@@ -2507,6 +2517,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (NSString *)accessibilityActionDescription:(NSString *)pAction
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityActionDescription:pAction];
 	else
@@ -2515,12 +2526,14 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)accessibilityPerformAction:(NSString *)pAction
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
-		return [mpChildWrapper accessibilityPerformAction:pAction];
+		[mpChildWrapper accessibilityPerformAction:pAction];
 }
 
 - (NSArray *)accessibilityActionNames
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityActionNames];
 	else
@@ -2529,6 +2542,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)accessibilityHitTest:(NSPoint)aPoint
 {
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper )
 		return [mpChildWrapper accessibilityHitTest:aPoint];
 	else
@@ -2549,6 +2563,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSArray *pRet = [super accessibilityChildren];
 
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper && ImplIsValidAquaA11yWrapper( mpChildWrapper ) && ![mpChildWrapper isDisposed] )
 		pRet = MergeAccessibilityChildren( pRet, [mpChildWrapper accessibilitySelectedChildren] );
 
@@ -2559,6 +2574,7 @@ static CFDataRef aRTFSelection = nil;
 {
 	NSArray *pRet = [super accessibilityChildren];
 
+	[self insertRegisteredViewIntoWrapperRepository];
 	if ( mpChildWrapper && ImplIsValidAquaA11yWrapper( mpChildWrapper ) && ![mpChildWrapper isDisposed] )
 		pRet = MergeAccessibilityChildren( pRet, [mpChildWrapper accessibilityChildren] );
 
@@ -3444,6 +3460,7 @@ static CFDataRef aRTFSelection = nil;
 	mbTextInputWantsNonRepeatKeyDown = NO;
 #ifdef USE_AQUA_A11Y
 	mpChildWrapper = nil;
+	mbNeedtoCreateChildWrapper = NO;
 #endif	// USE_AQUA_A11Y
 
 	return self;
@@ -3514,11 +3531,13 @@ static CFDataRef aRTFSelection = nil;
 
 #ifdef USE_AQUA_A11Y
 
-- (void)registerView
+- (void)insertRegisteredViewIntoWrapperRepository
 {
-	[self revokeView];
+	if ( !mbNeedtoCreateChildWrapper )
+		return;
 
-	if ( !mpFrame )
+	mbNeedtoCreateChildWrapper = NO;
+	if ( mpChildWrapper || !mpFrame )
 		return;
 
 	// Exclude tootip and show only menus windows by not register windows
@@ -3527,9 +3546,17 @@ static CFDataRef aRTFSelection = nil;
 	if ( !pNSWindow || ![pNSWindow isAccessibilityElement] )
 		return;
 
-	vcl::Window *pWindow = mpFrame->GetWindow();
-	if ( !pWindow )
+	if ( !ImplApplicationIsRunning() )
 		return;
+	// Set drag lock if it has not already been set since dispatching native
+	// events to windows during an accessibility call can cause crashing
+	ACQUIRE_DRAGPRINTLOCK
+	vcl::Window *pWindow = mpFrame->GetWindow();
+	if ( mpChildWrapper || !pWindow || !ImplIsValidWindow( pWindow ) )
+	{
+		RELEASE_DRAGPRINTLOCKIFNEEDED
+		return;
+    }
 
 	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > xAccessibleContext( pWindow->GetAccessible()->getAccessibleContext() );
 	mpChildWrapper = [[VCLA11yWrapper alloc] initWithParent:self accessibleContext:xAccessibleContext];
@@ -3541,11 +3568,22 @@ static CFDataRef aRTFSelection = nil;
 			[self addSubview:(NSView *)mpChildWrapper positioned:NSWindowBelow relativeTo:nil];
 		}
 		[AquaA11yFactory insertIntoWrapperRepository:mpChildWrapper forAccessibleContext:xAccessibleContext];
+	}
+
+	RELEASE_DRAGPRINTLOCK
 }
+
+- (void)registerView
+{
+	[self revokeView];
+
+	mbNeedtoCreateChildWrapper = YES;
 }
 
 - (void)revokeView
 {
+	mbNeedtoCreateChildWrapper = NO;
+
 	if ( mpChildWrapper )
 	{
 		[AquaA11yFactory revokeView:mpChildWrapper];

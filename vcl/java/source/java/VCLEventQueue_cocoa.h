@@ -97,6 +97,7 @@
 	BOOL					mbTextInputWantsNonRepeatKeyDown;
 #ifdef USE_AQUA_A11Y
 	VCLA11yWrapper*			mpChildWrapper;
+	BOOL					mbNeedtoCreateChildWrapper;
 #endif	// USE_AQUA_A11Y
 }
 - (BOOL)acceptsFirstResponder;
@@ -158,6 +159,7 @@
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 #ifdef USE_AQUA_A11Y
+- (void)insertRegisteredViewIntoWrapperRepository;
 - (void)registerView;
 - (void)revokeView;
 #endif	// USE_AQUA_A11Y
