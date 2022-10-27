@@ -3536,10 +3536,6 @@ static CFDataRef aRTFSelection = nil;
 	if ( !mbNeedtoCreateChildWrapper )
 		return;
 
-	mbNeedtoCreateChildWrapper = NO;
-	if ( mpChildWrapper || !mpFrame )
-		return;
-
 	// Exclude tootip and show only menus windows by not register windows
 	// that are not accessibility elements
 	NSWindow *pNSWindow = [self window];
@@ -3551,8 +3547,20 @@ static CFDataRef aRTFSelection = nil;
 	// Set drag lock if it has not already been set since dispatching native
 	// events to windows during an accessibility call can cause crashing
 	ACQUIRE_DRAGPRINTLOCK
+
+	if ( !mbNeedtoCreateChildWrapper )
+	{
+		RELEASE_DRAGPRINTLOCKIFNEEDED
+		return;
+    }
+
+	[self revokeView];
+
+	if ( !mpFrame )
+		return;
+
 	vcl::Window *pWindow = mpFrame->GetWindow();
-	if ( mpChildWrapper || !pWindow || !ImplIsValidWindow( pWindow ) )
+	if ( !pWindow || !ImplIsValidWindow( pWindow ) )
 	{
 		RELEASE_DRAGPRINTLOCKIFNEEDED
 		return;
