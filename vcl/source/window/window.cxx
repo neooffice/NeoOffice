@@ -106,10 +106,10 @@ Window::Window( vcl::Window* pParent, WinBits nStyle )
 {
 
     ImplInitWindowData( WINDOW_WINDOW );
-    ImplInit( pParent, nStyle, NULL );
 #ifdef USE_JAVA
     aWindowMap[ this ] = this;
 #endif	// USE_JAVA
+    ImplInit( pParent, nStyle, NULL );
 }
 
 Window::Window( vcl::Window* pParent, const ResId& rResId )
@@ -118,15 +118,14 @@ Window::Window( vcl::Window* pParent, const ResId& rResId )
     rResId.SetRT( RSC_WINDOW );
     WinBits nStyle = ImplInitRes( rResId );
     ImplInitWindowData( WINDOW_WINDOW );
+#ifdef USE_JAVA
+    aWindowMap[ this ] = this;
+#endif	// USE_JAVA
     ImplInit( pParent, nStyle, NULL );
     ImplLoadRes( rResId );
 
     if ( !(nStyle & WB_HIDE) )
         Show();
-
-#ifdef USE_JAVA
-    aWindowMap[ this ] = this;
-#endif	// USE_JAVA
 }
 
 #if OSL_DEBUG_LEVEL > 0
