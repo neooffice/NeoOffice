@@ -230,6 +230,14 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(void)disposing {
     mbDisposed = YES;
+
+    // Delete the reference wrapper here as delaying deletion can cause a crash
+    // in a variety of places in the LibreOffice code because the reference
+    // wrapper's data members are deleted soon after this call 
+    if ( mpReferenceWrapper ) {
+        delete mpReferenceWrapper;
+        mpReferenceWrapper = nullptr;
+    }
 }
 
 -(BOOL)isDisposed {
@@ -564,6 +572,12 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         // Even dirtier fix for infinite loop in fdo#55156
         if ( loops++ == 100 )
             break;
+#ifdef USE_JAVA
+        // Fix crash when closing a window by checking if the wrapper is
+        // disposed
+        if ( ! aTentativeParentWrapper || ! ImplIsValidAquaA11yWrapper( aTentativeParentWrapper ) || [ aTentativeParentWrapper isDisposed ] )
+            break;
+#endif	// USE_JAVA
         aWrapper = aTentativeParentWrapper;
 #ifndef USE_JAVA
         [ aWrapper autorelease ];
