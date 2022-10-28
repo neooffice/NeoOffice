@@ -120,6 +120,7 @@
 - (NSArray *)accessibilitySelectedChildren;
 - (NSArray *)accessibilityChildren;
 - (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder;
+- (BOOL)isAccessibilitySelectorAllowed:(SEL)aSelector;
 #else	// USE_AQUA_A11Y
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
 #endif	// USE_AQUA_A11Y
