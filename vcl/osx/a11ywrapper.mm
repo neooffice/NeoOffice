@@ -509,6 +509,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                     // the menubar is already accessible (including Apple- and Application-Menu) through NSApplication => omit it here
                     if ( xChildContext.is() && AccessibleRole::MENU_BAR != xChildContext -> getAccessibleRole() ) {
                         id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: xChildContext ];
+#ifdef USE_JAVA
+                        if ( wrapper && ImplIsValidAquaA11yWrapper( wrapper ) && ! [ wrapper isDisposed ] )
+#endif	// USE_JAVA
                         [ children addObject: wrapper ];
 #ifndef USE_JAVA
                         [ wrapper release ];
