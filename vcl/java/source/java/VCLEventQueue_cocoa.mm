@@ -2586,6 +2586,14 @@ static CFDataRef aRTFSelection = nil;
 	return [self accessibilityChildren];
 }
 
+- (BOOL)isAccessibilitySelectorAllowed:(SEL)aSelector
+{
+	// Fix VoiceOver frame set to only the window frame when application has
+	// been launched with VoiceOver already running
+	[self insertRegisteredViewIntoWrapperRepository];
+	return [super isAccessibilitySelectorAllowed:aSelector];
+}
+
 #else	// USE_AQUA_A11Y
 
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute
