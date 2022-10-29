@@ -59,9 +59,9 @@ using namespace ::com::sun::star::uno;
 #ifdef USE_JAVA
                 // Eliminate exception thrown when opening the Tools > Options
                 // dialog by skipping NULL wrappers
-                AquaA11yWrapper * wrapper = [ AquaA11yFactory wrapperForAccessible: xAccessibleSelection -> getSelectedAccessibleChild( i ) ];
-                if ( wrapper )
-                    [ children addObject: wrapper ];
+                AquaA11yWrapper * child_wrapper = [ AquaA11yFactory wrapperForAccessible: xAccessibleSelection -> getSelectedAccessibleChild( i ) ];
+                if ( child_wrapper && ImplIsValidAquaA11yWrapper( child_wrapper ) && ! [ child_wrapper isDisposed ] )
+                    [ children addObject: child_wrapper ];
 #else	// USE_JAVA
                 [ children addObject: [ AquaA11yFactory wrapperForAccessible: xAccessibleSelection -> getSelectedAccessibleChild( i ) ] ];
 #endif	// USE_JAVA

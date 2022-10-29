@@ -91,8 +91,10 @@ id AquaA11yFocusListener::getFocusedUIElement()
 #endif	// USE_JAVA
                     m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
 #ifdef USE_JAVA
-                    if ( m_focusedObject )
+                    if ( m_focusedObject && ImplIsValidAquaA11yWrapper( m_focusedObject ) && ! [ m_focusedObject isDisposed ] )
                         [ m_focusedObject retain ];
+                    else
+                        m_focusedObject = nil;
                 }
 #endif	// USE_JAVA
             }
@@ -142,10 +144,12 @@ AquaA11yFocusListener::focusedObjectChanged(const Reference< XAccessible >& xAcc
                 // create it on the main thread
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
 #endif	// USE_ONLY_MAIN_THREAD_TO_CREATE_AQUAA11YWRAPPERS
-                if ( m_focusedObject ) {
+                if ( m_focusedObject && ImplIsValidAquaA11yWrapper( m_focusedObject ) && ! [ m_focusedObject isDisposed ] ) {
                     [ m_focusedObject retain ];
-
                     [ AquaA11yPostNotification addElementToPendingNotificationQueue: m_focusedObject name: NSAccessibilityFocusedUIElementChangedNotification ];
+                }
+                else {
+                    m_focusedObject = nil;
                 }
 #else	// USE_JAVA
                 m_focusedObject = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];

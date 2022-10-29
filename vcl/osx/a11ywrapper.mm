@@ -417,7 +417,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             Reference < XAccessibleContext > rxAccessibleContext = rxAccessible -> getAccessibleContext();
             id parent_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessibleContext createIfNotExists: YES asRadioGroup: YES ];
 #ifdef USE_JAVA
-            if ( parent_wrapper )
+            if ( parent_wrapper && ImplIsValidAquaA11yWrapper( parent_wrapper ) && ! [ parent_wrapper isDisposed ] )
 #else	// USE_JAVA
             [ parent_wrapper autorelease ];
 #endif	// USE_JAVA
@@ -432,7 +432,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             if ( xContext.is() ) {
                 id parent_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: xContext ];
 #ifdef USE_JAVA
-                if ( parent_wrapper )
+                if ( parent_wrapper && ImplIsValidAquaA11yWrapper( parent_wrapper ) && ! [ parent_wrapper isDisposed ] )
 #else	// USE_JAVA
                 [ parent_wrapper autorelease ];
 #endif	// USE_JAVA
@@ -466,8 +466,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                     if ( rMateAccessibleContext.is() ) {
                         id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rMateAccessibleContext ];
 #ifdef USE_JAVA
-                        // Attempt to fix Mac App Store crash by checking for
-                        // released or disposed child wrappers
                         if ( wrapper && ImplIsValidAquaA11yWrapper( wrapper ) && ! [ wrapper isDisposed ] )
 #endif	// USE_JAVA
                         [ children addObject: wrapper ];
@@ -528,6 +526,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                     if ( [ element accessibleContext ] -> getAccessibleRole() == AccessibleRole::RADIO_BUTTON ) {
                         if ( [ element isFirstRadioButtonInGroup ] ) {
                             id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ element accessibleContext ] createIfNotExists: YES asRadioGroup: YES ];
+#ifdef USE_JAVA
+                            if ( wrapper && ImplIsValidAquaA11yWrapper( wrapper ) && ! [ wrapper isDisposed ] )
+#endif	// USE_JAVA
                             [ children replaceObjectAtIndex: [ children indexOfObjectIdenticalTo: element ] withObject: wrapper ];
                         }
                         [ children removeObject: element ];
@@ -849,6 +850,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             if ( relationLabeledBy.RelationType == AccessibleRelationType::LABELED_BY && relationLabeledBy.TargetSet.hasElements()  ) {
                 Reference < XAccessible > rxAccessible ( relationLabeledBy.TargetSet[0], UNO_QUERY );
                 titleElement = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessible -> getAccessibleContext() ];
+#ifdef USE_JAVA
+                if ( ! titleElement || ! ImplIsValidAquaA11yWrapper( titleElement ) || [ titleElement isDisposed ] )
+                    titleElement = nil;
+#endif	// USE_JAVA
             }
         }
 #ifndef USE_JAVA
@@ -869,6 +874,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( relationLabelFor.RelationType == AccessibleRelationType::LABEL_FOR && relationLabelFor.TargetSet.hasElements() ) {
             Reference < XAccessible > rxAccessible ( relationLabelFor.TargetSet[0], UNO_QUERY );
             titleForElement = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessible -> getAccessibleContext() ];
+#ifdef USE_JAVA
+            if ( ! titleForElement || ! ImplIsValidAquaA11yWrapper( titleForElement ) || [ titleForElement isDisposed ] )
+                titleForElement = nil;
+#endif	// USE_JAVA
         }
         return titleForElement;
     } else {
@@ -917,6 +926,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // if we are no longer in the wrapper repository, we have been disposed
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ self accessibleContext ] createIfNotExists: NO ];
     if ( theWrapper != nil || mIsTableCell ) {
+#ifdef USE_JAVA
+        if ( ImplIsValidAquaA11yWrapper( theWrapper ) && ! [ theWrapper isDisposed ] )
+        {
+#endif	// USE_JAVA
         try {
             SEL methodSelector = [ self selectorForAttribute: attribute asGetter: YES withGetterParameter: NO ];
             if ( [ self respondsToSelector: methodSelector ] ) {
@@ -932,6 +945,14 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         } catch ( const Exception & e ) {
             // empty
         }
+#ifdef USE_JAVA
+        }
+        else
+        {
+            mIsTableCell = NO; // just to be sure
+            [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
+        }
+#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK
@@ -1569,7 +1590,14 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
         wrapper = [ AquaA11yFactory wrapperForAccessibleContext: hitChild ];
     }
     if ( wrapper != nil ) {
+#ifdef USE_JAVA
+        if ( ImplIsValidAquaA11yWrapper( wrapper ) && ! [ wrapper isDisposed ] )
+#endif	// USE_JAVA
         [ wrapper retain ]; // TODO: retain only when transient ?
+#ifdef USE_JAVA
+        else
+            wrapper = nil;
+#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK

@@ -67,6 +67,9 @@ using namespace ::com::sun::star::uno;
                         if ( rAccessibleCell.is() )
                         {
                             id cell_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rAccessibleCell -> getAccessibleContext() ];
+#ifdef USE_JAVA
+                            if ( cell_wrapper && ImplIsValidAquaA11yWrapper( cell_wrapper ) && ! [ cell_wrapper isDisposed ] )
+#endif	// USE_JAVA
                             [ cells addObject: cell_wrapper ];
 #ifndef USE_JAVA
                             [ cell_wrapper release ];
@@ -112,6 +115,9 @@ using namespace ::com::sun::star::uno;
                             if ( rAccessibleCell.is() )
                             {
                                 id cell_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rAccessibleCell -> getAccessibleContext() ];
+#ifdef USE_JAVA
+                                if ( cell_wrapper && ImplIsValidAquaA11yWrapper( cell_wrapper ) && ! [ cell_wrapper isDisposed ] )
+#endif	// USE_JAVA
                                 [ cells addObject: cell_wrapper ];
 #ifndef USE_JAVA
                                 [ cell_wrapper release ];
@@ -188,6 +194,9 @@ using namespace ::com::sun::star::uno;
                     if ( rAccessibleCell.is() )
                     {
                         id cell_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rAccessibleCell -> getAccessibleContext() ];
+#ifdef USE_JAVA
+                        if ( cell_wrapper && ImplIsValidAquaA11yWrapper( cell_wrapper ) && ! [ cell_wrapper isDisposed ] )
+#endif	// USE_JAVA
                         [ cells addObject: cell_wrapper ];
 #ifndef USE_JAVA
                         [ cell_wrapper release ];
@@ -239,6 +248,9 @@ using namespace ::com::sun::star::uno;
                     if ( rAccessibleCell.is() )
                     {
                         id cell_wrapper = [ AquaA11yFactory wrapperForAccessibleContext: rAccessibleCell -> getAccessibleContext() ];
+#ifdef USE_JAVA
+                        if ( cell_wrapper && ImplIsValidAquaA11yWrapper( cell_wrapper ) && ! [ cell_wrapper isDisposed ] )
+#endif	// USE_JAVA
                         [ cells addObject: cell_wrapper ];
 #ifndef USE_JAVA
                         [ cell_wrapper release ];
