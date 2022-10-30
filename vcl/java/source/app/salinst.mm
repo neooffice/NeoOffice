@@ -1429,12 +1429,6 @@ JavaSalEvent::~JavaSalEvent()
 				delete pCommandMediaData;
 				break;
 			}
-			case SALEVENT_DELETEREFWRAPPER:
-			{
-				ReferenceWrapper *pReferenceWrapper = (ReferenceWrapper *)mpData;
-				delete pReferenceWrapper;
-				break;
-			}
 			default:
 				break;
 		}
@@ -2452,12 +2446,6 @@ void JavaSalEvent::dispatch()
 				if ( Menu::IsValidMenu( (Menu *)pMenuEvent->mpMenu ) )
 					pFrame->CallCallback( nID, pMenuEvent );
 			}
-			break;
-		}
-		case SALEVENT_DELETEREFWRAPPER:
-		{
-			// Nothing to do as this event is only used to delete the event's
-			// data pointer
 			break;
 		}
 		default:

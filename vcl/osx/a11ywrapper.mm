@@ -25,11 +25,9 @@
  */
 
 
-#ifdef USE_JAVA
-#include "java/salinst.h"
-#else	// USE_JAVA
+#ifndef USE_JAVA
 #include "osx/salinst.h"
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 #include "osx/saldata.hxx"
 
 #include "osx/a11ywrapper.h"
@@ -64,7 +62,6 @@
 #include "../java/source/java/VCLEventQueue_cocoa.h"
 
 static ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* > aWrapperMap;
-static ::osl::Mutex aWrapperMutex;
 
 #endif	// USE_JAVA
 
@@ -121,10 +118,8 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(id)init {
     self = [ super init ];
-    if ( self != nil ) {
-        ::osl::MutexGuard aGuard( aWrapperMutex );
+    if ( self != nil )
         aWrapperMap[ self ] = self;
-    }
     return self;
 }
 
@@ -136,7 +131,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         [ self setDefaults: rxAccessibleContext ];
 
 #ifdef USE_JAVA
-        ::osl::MutexGuard aGuard( aWrapperMutex );
         aWrapperMap[ self ] = self;
 #endif	// USE_JAVA
     }
@@ -215,22 +209,17 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(void)dealloc {
 #ifdef USE_JAVA
-    ::osl::ClearableMutexGuard aGuard( aWrapperMutex );
-    ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* >::iterator it = aWrapperMap.find( self );
-    if ( it != aWrapperMap.end() )
-        aWrapperMap.erase( it );
-	aGuard.clear();
-#endif	// USE_JAVA
-
-    if ( mpReferenceWrapper != nil ) {
-#ifdef USE_JAVA
-		JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_DELETEREFWRAPPER, NULL, mpReferenceWrapper );
-		JavaSalEventQueue::postCachedEvent( pUserEvent );
-		pUserEvent->release();
-#else	// USE_JAVA
-        delete mpReferenceWrapper;
-#endif	// USE_JAVA
+    if ( !mbDisposed && ImplApplicationIsRunning() ) {
+        // We should never get here, but prevent leaks just in case
+        ACQUIRE_SOLARMUTEX
+        [ self disposing ];
+        RELEASE_SOLARMUTEX
     }
+#else	// USE_JAVA
+    if ( mpReferenceWrapper != nil ) {
+        delete mpReferenceWrapper;
+    }
+#endif	// USE_JAVA
     [ super dealloc ];
 }
 
@@ -238,6 +227,12 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(void)disposing {
     mbDisposed = YES;
+
+#ifdef USE_JAVA
+    ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* >::iterator it = aWrapperMap.find( self );
+    if ( it != aWrapperMap.end() )
+        aWrapperMap.erase( it );
+#endif	// USE_JAVA
 
     // Delete the reference wrapper here as delaying deletion can cause a crash
     // in a variety of places in the LibreOffice code because the reference
@@ -2321,7 +2316,6 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
 bool ImplIsValidAquaA11yWrapper( const AquaA11yWrapper* pWrapper )
 {
-    ::osl::MutexGuard aGuard( aWrapperMutex );
     ::std::unordered_map< const AquaA11yWrapper*, const AquaA11yWrapper* >::const_iterator it = aWrapperMap.find( pWrapper );
     return ( it != aWrapperMap.end() ? true : false );
 }
