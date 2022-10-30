@@ -639,7 +639,6 @@ osx/a11ywrapperscrollarea.h
 osx/salframe.cxx.orig
 osx/DragActionConversion.hxx
 osx/salinst.cxx
-osx/documentfocuslistener.cxx
 osx/DataFlavorMapping.hxx
 osx/printview.mm
 osx/a11ywrappertoolbar.h

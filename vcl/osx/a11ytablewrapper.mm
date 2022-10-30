@@ -97,7 +97,11 @@ using namespace ::com::sun::star::uno;
                 point.X = tableSize.Width - 1;
                 point.Y = tableSize.Height - 1;
                 Reference < XAccessible > rAccessibleBottomRight = accessibleComponent -> getAccessibleAtPoint ( point );
+#ifdef USE_JAVA
+                if ( rAccessibleTopLeft.is() && rAccessibleBottomRight.is() && rAccessibleTopLeft->getAccessibleContext().is() && rAccessibleBottomRight->getAccessibleContext().is() )
+#else	// USE_JAVA
                 if ( rAccessibleTopLeft.is() && rAccessibleBottomRight.is() )
+#endif	// USE_JAVA
                 {
                     sal_Int32 idxTopLeft = rAccessibleTopLeft -> getAccessibleContext() -> getAccessibleIndexInParent();
                     sal_Int32 idxBottomRight = rAccessibleBottomRight -> getAccessibleContext() -> getAccessibleIndexInParent();

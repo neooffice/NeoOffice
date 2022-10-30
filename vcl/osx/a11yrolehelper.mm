@@ -173,8 +173,10 @@ using namespace ::com::sun::star::uno;
         if ( rxAccessible.is() ) {
             Reference < XAccessibleContext > rxAccessibleContext = rxAccessible -> getAccessibleContext();
             if ( rxAccessibleContext.is() && rxAccessibleContext -> getAccessibleRole() == AccessibleRole::TEXT ) {
+#ifdef USE_JAVA
+                if ( ! rxAccessibleContext -> getAccessibleStateSet().is() || ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::EDITABLE ) ) {
+#else	// USE_JAVA
                 if ( ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::EDITABLE ) ) {
-#ifndef USE_JAVA
                     [ nativeRole release ];
 #endif	// !USE_JAVA
                     nativeRole = NSAccessibilityPopUpButtonRole;

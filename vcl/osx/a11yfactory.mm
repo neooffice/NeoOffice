@@ -160,6 +160,9 @@ static bool enabled = false;
 
 +(AquaA11yWrapper *)wrapperForAccessibleContext: (Reference < XAccessibleContext >) rxAccessibleContext createIfNotExists:(BOOL) bCreate asRadioGroup:(BOOL) asRadioGroup{
 #ifdef USE_JAVA
+    if ( ! rxAccessibleContext.is() )
+        return nil;
+
     NSValue * nKey = [ AquaA11yFactory keyForAccessibleContext: rxAccessibleContext ];
     NSMutableDictionary * dWrapper = ( asRadioGroup ? [ AquaA11yFactory radioGroupWrapper ] : [ AquaA11yFactory allWrapper ] );
     AquaA11yWrapper * aWrapper = (AquaA11yWrapper *) [ dWrapper objectForKey: nKey ];
@@ -233,7 +236,7 @@ static bool enabled = false;
            is destroyed an finally all the transients are released.
         */
 #ifdef USE_JAVA
-        if ( rxAccessibleContext.is() && ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
+        if ( ! rxAccessibleContext.is() || ! rxAccessibleContext -> getAccessibleStateSet().is() || ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
 #else	// USE_JAVA
         if ( ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
 #endif	// USE_JAVA

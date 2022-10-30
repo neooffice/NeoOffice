@@ -100,15 +100,21 @@ using namespace ::com::sun::star::uno;
 {
     Reference< XAccessibleSelection > xAccessibleSelection = [ wrapper accessibleSelection ];
 #ifdef USE_JAVA
-    if( xAccessibleSelection.is() )
+    if( xAccessibleSelection.is() && value )
     {
 #endif	// USE_JAVA
     try {
         xAccessibleSelection -> clearAccessibleSelection();
 
+#ifdef USE_JAVA
+        for ( AquaA11yWrapper *element : value ) {
+            if ( element && ImplIsValidAquaA11yWrapper( element ) && ! [ element isDisposed ] && [ element accessibleContext ] )
+                xAccessibleSelection -> selectAccessibleChild( [ element accessibleContext ] -> getAccessibleIndexInParent() );
+#else	// USE_JAVA
         unsigned c = [ value count ];
         for ( unsigned i = 0 ; i < c ; ++i ) {
             xAccessibleSelection -> selectAccessibleChild( [ [ value objectAtIndex: i ] accessibleContext ] -> getAccessibleIndexInParent() );
+#endif	// USE_JAVA
         }
     } catch ( Exception& e) {
     }

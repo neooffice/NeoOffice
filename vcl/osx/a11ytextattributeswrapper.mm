@@ -331,6 +331,10 @@ using namespace ::com::sun::star::uno;
 }
 
 +(void)addMarkup:(XAccessibleTextMarkup*)markup withType:(long)type toString:(NSMutableAttributedString*)string inRange:(NSRange)range {
+#ifdef USE_JAVA
+    if ( ! markup )
+        return;
+#endif	// USE_JAVA
     const long markupCount = markup->getTextMarkupCount(type);
     for (long markupIndex = 0; markupIndex < markupCount; ++markupIndex) {
         TextSegment markupSegment = markup->getTextMarkup(markupIndex, type);

@@ -185,15 +185,15 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
            Unfortunately this can increase memory consumption drastically until the non transient parent
            is destroyed an finally all the transients are released.
         */
+#ifdef USE_JAVA
+        if ( ! rxAccessibleContext.is() || ! rxAccessibleContext -> getAccessibleStateSet().is() || ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
+#else	// USE_JAVA
         if ( ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
+#endif	// USE_JAVA
         #endif
         {
             Reference< XAccessibleEventBroadcaster > xBroadcaster(rxAccessibleContext, UNO_QUERY);
-#ifdef USE_JAVA
-            if( xBroadcaster.is() && rxAccessibleContext.is() ) {
-#else	// USE_JAVA
             if( xBroadcaster.is() ) {
-#endif	// USE_JAVA
                 /*
                  * We intentionally do not hold a reference to the event listener in the wrapper object,
                  * but let the listener control the life cycle of the wrapper instead ..
@@ -318,7 +318,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(BOOL)isFirstRadioButtonInGroup {
     Reference < XAccessible > rFirstMateAccessible = [ self getFirstRadioButtonInGroup ];
+#ifdef USE_JAVA
+    if ( [ self accessibleContext ] && rFirstMateAccessible.is() && rFirstMateAccessible -> getAccessibleContext().get() == [ self accessibleContext ] ) {
+#else	// USE_JAVA
     if ( rFirstMateAccessible.is() && rFirstMateAccessible -> getAccessibleContext().get() == [ self accessibleContext ] ) {
+#endif	// USE_JAVA
         return YES;
     }
     return NO;
@@ -484,7 +488,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( mActsAsRadioGroup ) {
 #ifdef USE_JAVA
         NSMutableArray * children = nil;
-        if ( ! [ self accessibleContext ] )
+        if ( ! [ self accessibleContext ] || ! [ self accessibleContext ] -> getAccessibleRelationSet().is() )
             return children;
 #else	// USE_JAVA
         NSMutableArray * children = [ [ NSMutableArray alloc ] init ];
@@ -518,10 +522,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         AquaA11yTableWrapper* pTable = [self isKindOfClass: [AquaA11yTableWrapper class]] ? (AquaA11yTableWrapper*)self : nil;
         return [ AquaA11yTableWrapper childrenAttributeForElement: pTable ];
 #ifdef USE_JAVA
-    } else if ( ! [ self accessibleContext ] ) {
-        return nil;
-#endif	// USE_JAVA
+    } else if ( [ self accessibleContext ] ) {
+#else	// USE_JAVA
     } else {
+#endif	// USE_JAVA
         try {
 #ifndef USE_JAVA
             NSMutableArray * children = [ [ NSMutableArray alloc ] init ];
@@ -563,7 +567,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
                 NSEnumerator * enumerator = [ children objectEnumerator ];
                 AquaA11yWrapper * element;
                 while ( ( element = ( (AquaA11yWrapper *) [ enumerator nextObject ] ) ) ) {
+#ifdef USE_JAVA
+                    if ( [ element accessibleContext ] && [ element accessibleContext ] -> getAccessibleRole() == AccessibleRole::RADIO_BUTTON ) {
+#else	// USE_JAVA
                     if ( [ element accessibleContext ] -> getAccessibleRole() == AccessibleRole::RADIO_BUTTON ) {
+#endif	// USE_JAVA
                         if ( [ element isFirstRadioButtonInGroup ] ) {
                             id wrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ element accessibleContext ] createIfNotExists: YES asRadioGroup: YES ];
 #ifdef USE_JAVA
@@ -804,7 +812,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(id)expandedAttribute {
 #ifdef USE_JAVA
-    return [ NSNumber numberWithBool: [ self accessibleContext ] ? [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::EXPANDED ) : NO ];
+    return [ NSNumber numberWithBool: [ self accessibleContext ] && [ self accessibleContext ] -> getAccessibleStateSet().is() ? [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::EXPANDED ) : NO ];
 #else	// USE_JAVA
     return [ NSNumber numberWithBool: [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::EXPANDED ) ];
 #endif	// USE_JAVA
@@ -812,7 +820,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(id)selectedAttribute {
 #ifdef USE_JAVA
-    return [ NSNumber numberWithBool: [ self accessibleContext ] ? [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::SELECTED ) : NO ];
+    return [ NSNumber numberWithBool: [ self accessibleContext ] && [ self accessibleContext ] -> getAccessibleStateSet().is() ? [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::SELECTED ) : NO ];
 #else	// USE_JAVA
     return [ NSNumber numberWithBool: [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::SELECTED ) ];
 #endif	// USE_JAVA
@@ -883,18 +891,17 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     NSString * orientation = nil;
 #endif	// USE_JAVA
     Reference < XAccessibleStateSet > stateSet = [ self accessibleContext ] -> getAccessibleStateSet();
-    if ( stateSet -> contains ( AccessibleStateType::HORIZONTAL ) ) {
 #ifdef USE_JAVA
+    if ( stateSet.is() && stateSet -> contains ( AccessibleStateType::HORIZONTAL ) ) {
         orientation = [ NSNumber numberWithInteger: NSAccessibilityOrientationHorizontal ];
-#else	// USE_JAVA
-        orientation = NSAccessibilityHorizontalOrientationValue;
-#endif	// USE_JAVA
-    } else if ( stateSet -> contains ( AccessibleStateType::VERTICAL ) ) {
-#ifdef USE_JAVA
+    } else if ( stateSet.is() && stateSet -> contains ( AccessibleStateType::VERTICAL ) ) {
         orientation = [ NSNumber numberWithInteger: NSAccessibilityOrientationVertical ];
     } else {
         orientation = [ NSNumber numberWithInteger: NSAccessibilityOrientationUnknown ];
 #else	// USE_JAVA
+    if ( stateSet -> contains ( AccessibleStateType::HORIZONTAL ) ) {
+        orientation = NSAccessibilityHorizontalOrientationValue;
+    } else if ( stateSet -> contains ( AccessibleStateType::VERTICAL ) ) {
         orientation = NSAccessibilityVerticalOrientationValue;
 #endif	// USE_JAVA
     }
@@ -913,6 +920,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             AccessibleRelation relationLabeledBy = [ self accessibleContext ] -> getAccessibleRelationSet() -> getRelationByType ( AccessibleRelationType::LABELED_BY );
             if ( relationLabeledBy.RelationType == AccessibleRelationType::LABELED_BY && relationLabeledBy.TargetSet.hasElements()  ) {
                 Reference < XAccessible > rxAccessible ( relationLabeledBy.TargetSet[0], UNO_QUERY );
+#ifdef USE_JAVA
+                if ( rxAccessible.is() )
+#endif	// USE_JAVA
                 titleElement = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessible -> getAccessibleContext() ];
 #ifdef USE_JAVA
                 if ( ! titleElement || ! ImplIsValidAquaA11yWrapper( titleElement ) || [ titleElement isDisposed ] )
@@ -941,6 +951,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         AccessibleRelation relationLabelFor = [ self accessibleContext ] -> getAccessibleRelationSet() -> getRelationByType ( AccessibleRelationType::LABEL_FOR );
         if ( relationLabelFor.RelationType == AccessibleRelationType::LABEL_FOR && relationLabelFor.TargetSet.hasElements() ) {
             Reference < XAccessible > rxAccessible ( relationLabelFor.TargetSet[0], UNO_QUERY );
+#ifdef USE_JAVA
+            if ( rxAccessible.is() )
+#endif	// USE_JAVA
             titleForElement = [ AquaA11yFactory wrapperForAccessibleContext: rxAccessible -> getAccessibleContext() ];
 #ifdef USE_JAVA
             if ( ! titleForElement || ! ImplIsValidAquaA11yWrapper( titleForElement ) || [ titleForElement isDisposed ] )
@@ -1054,7 +1067,7 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             break;
         default:
 #ifdef USE_JAVA
-            ignored = ! ( pAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::VISIBLE ) );
+            ignored = ! pAccessibleContext -> getAccessibleStateSet().is() || ! ( pAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::VISIBLE ) );
 #else	// USE_JAVA
             ignored = ! ( [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::VISIBLE ) );
 #endif	// USE_JAVA
@@ -1533,7 +1546,11 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 
         // iterate the hirerachy looking doing recursive hit testing.
         // apparently necessary as a special treatment for e.g. comboboxes
+#ifdef USE_JAVA
+        if ( !hitChild.is() && rxAccessibleContext.is() ) {
+#else	// USE_JAVA
         if ( !hitChild.is() ) {
+#endif	// USE_JAVA
             bool bSafeToIterate = true;
             sal_Int32 nCount = rxAccessibleContext -> getAccessibleChildCount();
 
