@@ -232,7 +232,11 @@ static bool enabled = false;
            Unfortunately this can increase memory consumption drastically until the non transient parent
            is destroyed an finally all the transients are released.
         */
+#ifdef USE_JAVA
+        if ( rxAccessibleContext.is() && ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
+#else	// USE_JAVA
         if ( ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::TRANSIENT ) )
+#endif	// USE_JAVA
         #endif
         {
 #ifdef USE_JAVA

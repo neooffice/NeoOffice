@@ -81,7 +81,11 @@ using namespace ::com::sun::star::uno;
 #endif	// USE_JAVA
                 }
             }
+#ifdef USE_JAVA
+            else if ( [ wrapper accessibleComponent ] )
+#else	// USE_JAVA
             else
+#endif	// USE_JAVA
             {
                 XAccessibleComponent * accessibleComponent = [ wrapper accessibleComponent ];
                 // find out which cells are actually visible by determining the top-left-cell and the bottom-right-cell

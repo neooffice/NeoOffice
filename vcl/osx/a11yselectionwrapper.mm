@@ -99,6 +99,10 @@ using namespace ::com::sun::star::uno;
 +(void)setSelectedChildrenAttributeForElement:(AquaA11yWrapper *)wrapper to:(id)value
 {
     Reference< XAccessibleSelection > xAccessibleSelection = [ wrapper accessibleSelection ];
+#ifdef USE_JAVA
+    if( xAccessibleSelection.is() )
+    {
+#endif	// USE_JAVA
     try {
         xAccessibleSelection -> clearAccessibleSelection();
 
@@ -108,6 +112,9 @@ using namespace ::com::sun::star::uno;
         }
     } catch ( Exception& e) {
     }
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
 }
 
 @end

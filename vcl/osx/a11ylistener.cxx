@@ -153,6 +153,8 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
         {
             // The accessibleComponent selector only executes C++ code so no
             // need to perform the selector on the main thread
+            if ( [ element accessibleComponent ] )
+            {
 #endif	// USE_JAVA
             bounds = [ element accessibleComponent ] -> getBounds();
             if ( m_oldBounds.X != 0 && ( bounds.X != m_oldBounds.X || bounds.Y != m_oldBounds.Y ) ) {
@@ -171,6 +173,7 @@ AquaA11yEventListener::notifyEvent( const AccessibleEventObject& aEvent ) throw(
             }
             m_oldBounds = bounds;
 #ifdef USE_JAVA
+            }
         }
 #endif	// USE_JAVA
             break;

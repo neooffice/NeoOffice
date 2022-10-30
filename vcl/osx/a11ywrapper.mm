@@ -189,7 +189,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         #endif
         {
             Reference< XAccessibleEventBroadcaster > xBroadcaster(rxAccessibleContext, UNO_QUERY);
+#ifdef USE_JAVA
+            if( xBroadcaster.is() && rxAccessibleContext.is() ) {
+#else	// USE_JAVA
             if( xBroadcaster.is() ) {
+#endif	// USE_JAVA
                 /*
                  * We intentionally do not hold a reference to the event listener in the wrapper object,
                  * but let the listener control the life cycle of the wrapper instead ..
@@ -198,7 +202,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
             }
         }
         // TABLE_CELL
+#ifdef USE_JAVA
+        if ( rxAccessibleContext.is() && rxAccessibleContext -> getAccessibleRole() == AccessibleRole::TABLE_CELL ) {
+#else	// USE_JAVA
         if ( rxAccessibleContext -> getAccessibleRole() == AccessibleRole::TABLE_CELL ) {
+#endif	// USE_JAVA
             mIsTableCell = YES;
         }
     } catch ( const Exception ) {
@@ -291,6 +299,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(Reference < XAccessible >)getFirstRadioButtonInGroup {
+#ifdef USE_JAVA
+    if ( [ self accessibleContext ] )
+    {
+#endif	// USE_JAVA
     Reference < XAccessibleRelationSet > rxAccessibleRelationSet = [ self accessibleContext ] -> getAccessibleRelationSet();
     if( rxAccessibleRelationSet.is() )
     {
@@ -298,6 +310,9 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         if ( relationMemberOf.RelationType == AccessibleRelationType::MEMBER_OF && relationMemberOf.TargetSet.hasElements() )
             return Reference < XAccessible > ( relationMemberOf.TargetSet[0], UNO_QUERY );
     }
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
     return Reference < XAccessible > ();
 }
 
@@ -333,6 +348,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 -(id)subroleAttribute {
     if ( mActsAsRadioGroup ) {
         return @"";
+#ifdef USE_JAVA
+    } else if ( ! [ self accessibleContext ] ) {
+        return @"";
+#endif	// USE_JAVA
     } else {
         NSString * subRole = [ AquaA11yRoleHelper getNativeSubroleFrom: [ self accessibleContext ] -> getAccessibleRole() ];
         if ( ! [ subRole isEqualToString: @"" ] ) {
@@ -365,13 +384,20 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)descriptionAttribute {
+#ifdef USE_JAVA
+    if ( [ self accessibleContext ] && [ self accessibleContext ] -> getAccessibleRole() == AccessibleRole::COMBO_BOX ) {
+#else	// USE_JAVA
     if ( [ self accessibleContext ] -> getAccessibleRole() == AccessibleRole::COMBO_BOX ) {
+#endif	// USE_JAVA
         return [ self titleAttribute ];
     } else if ( [ self accessibleExtendedComponent ] != nil ) {
         return [ AquaA11yComponentWrapper descriptionAttributeForElement: self ];
     } else {
 #ifdef USE_JAVA
-        return [ CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() ) autorelease ];
+        if ( [ self accessibleContext ] )
+            return [ CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() ) autorelease ];
+        else
+            return @"";
 #else	// USE_JAVA
         return CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() );
 #endif	// USE_JAVA
@@ -393,6 +419,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)focusedAttribute {
+#ifdef USE_JAVA
+    if ( ! [ self accessibleContext ] )
+        return nil;
+#endif	// USE_JAVA
     if ( [ self accessibleContext ] -> getAccessibleRole() == AccessibleRole::COMBO_BOX ) {
         id isFocused = nil;
         Reference < XAccessible > rxParent = [ self accessibleContext ] -> getAccessibleParent();
@@ -411,6 +441,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)parentAttribute {
+#ifdef USE_JAVA
+    if ( ! [ self accessibleContext ] )
+        return nil;
+#endif	// USE_JAVA
     if ( [ self accessibleContext ] -> getAccessibleRole() == AccessibleRole::RADIO_BUTTON && ! mActsAsRadioGroup ) {
         Reference < XAccessible > rxAccessible = [ self getFirstRadioButtonInGroup ];
         if ( rxAccessible.is() && rxAccessible -> getAccessibleContext().is() ) {
@@ -450,6 +484,8 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     if ( mActsAsRadioGroup ) {
 #ifdef USE_JAVA
         NSMutableArray * children = nil;
+        if ( ! [ self accessibleContext ] )
+            return children;
 #else	// USE_JAVA
         NSMutableArray * children = [ [ NSMutableArray alloc ] init ];
 #endif	// USE_JAVA
@@ -481,6 +517,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     {
         AquaA11yTableWrapper* pTable = [self isKindOfClass: [AquaA11yTableWrapper class]] ? (AquaA11yTableWrapper*)self : nil;
         return [ AquaA11yTableWrapper childrenAttributeForElement: pTable ];
+#ifdef USE_JAVA
+    } else if ( ! [ self accessibleContext ] ) {
+        return nil;
+#endif	// USE_JAVA
     } else {
         try {
 #ifndef USE_JAVA
@@ -567,7 +607,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // go upstairs until reaching the broken connection
     AquaA11yWrapper * aWrapper = self;
     int loops = 0;
+#ifdef USE_JAVA
+    while ( [ aWrapper accessibleContext ] && [ aWrapper accessibleContext ] -> getAccessibleParent().is() ) {
+#else	// USE_JAVA
     while ( [ aWrapper accessibleContext ] -> getAccessibleParent().is() ) {
+#endif	// USE_JAVA
         AquaA11yWrapper *aTentativeParentWrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ aWrapper accessibleContext ] -> getAccessibleParent() -> getAccessibleContext() ];
         // Quick-and-dirty fix for infinite loop after fixing crash in
         // fdo#47275
@@ -614,6 +658,8 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 
 -(id)helpAttribute {
 #ifdef USE_JAVA
+    if ( ! [ self accessibleContext ] )
+        return @"";
     return [ CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() ) autorelease ];
 #else	// USE_JAVA
     return CreateNSString ( [ self accessibleContext ] -> getAccessibleDescription() );
@@ -623,6 +669,10 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 -(id)roleDescriptionAttribute {
     if ( mActsAsRadioGroup ) {
         return [ AquaA11yRoleHelper getRoleDescriptionFrom: NSAccessibilityRadioGroupRole with: @"" ];
+#ifdef USE_JAVA
+	} else if( ! [ self accessibleContext ] ) {
+        return @"";
+#endif	// USE_JAVA
 	} else if( [ self accessibleContext ] -> getAccessibleRole() == AccessibleRole::RADIO_BUTTON ) {
 		// FIXME: VO should read this because of hierarchy, this is just a workaround
 		// get parent and its children
@@ -753,11 +803,19 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)expandedAttribute {
+#ifdef USE_JAVA
+    return [ NSNumber numberWithBool: [ self accessibleContext ] ? [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::EXPANDED ) : NO ];
+#else	// USE_JAVA
     return [ NSNumber numberWithBool: [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::EXPANDED ) ];
+#endif	// USE_JAVA
 }
 
 -(id)selectedAttribute {
+#ifdef USE_JAVA
+    return [ NSNumber numberWithBool: [ self accessibleContext ] ? [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::SELECTED ) : NO ];
+#else	// USE_JAVA
     return [ NSNumber numberWithBool: [ self accessibleContext ] -> getAccessibleStateSet() -> contains ( AccessibleStateType::SELECTED ) ];
+#endif	// USE_JAVA
 }
 
 -(id)stringForRangeAttributeForParameter:(id)range {
@@ -819,6 +877,8 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 -(id)orientationAttribute {
 #ifdef USE_JAVA
     NSNumber * orientation = nil;
+    if ( ! [ self accessibleContext ] )
+        return orientation;
 #else	// USE_JAVA
     NSString * orientation = nil;
 #endif	// USE_JAVA
@@ -842,7 +902,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)titleUIElementAttribute {
+#ifdef USE_JAVA
+    if ( [ self accessibleContext ] && [ self accessibleContext ] -> getAccessibleRelationSet().is() ) {
+#else	// USE_JAVA
     if ( [ self accessibleContext ] -> getAccessibleRelationSet().is() ) {
+#endif	// USE_JAVA
         NSString * title = [ self titleAttribute ];
         id titleElement = nil;
         if ( [ title length ] == 0 ) {
@@ -868,7 +932,11 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
 }
 
 -(id)servesAsTitleForUIElementsAttribute {
+#ifdef USE_JAVA
+    if ( [ self accessibleContext ] && [ self accessibleContext ] -> getAccessibleRelationSet().is() ) {
+#else	// USE_JAVA
     if ( [ self accessibleContext ] -> getAccessibleRelationSet().is() ) {
+#endif	// USE_JAVA
         id titleForElement = nil;
         AccessibleRelation relationLabelFor = [ self accessibleContext ] -> getAccessibleRelationSet() -> getRelationByType ( AccessibleRelationType::LABEL_FOR );
         if ( relationLabelFor.RelationType == AccessibleRelationType::LABEL_FOR && relationLabelFor.TargetSet.hasElements() ) {
@@ -926,10 +994,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
     // if we are no longer in the wrapper repository, we have been disposed
     AquaA11yWrapper * theWrapper = [ AquaA11yFactory wrapperForAccessibleContext: [ self accessibleContext ] createIfNotExists: NO ];
     if ( theWrapper != nil || mIsTableCell ) {
-#ifdef USE_JAVA
-        if ( ImplIsValidAquaA11yWrapper( theWrapper ) && ! [ theWrapper isDisposed ] )
-        {
-#endif	// USE_JAVA
         try {
             SEL methodSelector = [ self selectorForAttribute: attribute asGetter: YES withGetterParameter: NO ];
             if ( [ self respondsToSelector: methodSelector ] ) {
@@ -945,14 +1009,6 @@ static std::ostream &operator<<(std::ostream &s, NSPoint point) {
         } catch ( const Exception & e ) {
             // empty
         }
-#ifdef USE_JAVA
-        }
-        else
-        {
-            mIsTableCell = NO; // just to be sure
-            [ AquaA11yFactory removeFromWrapperRepositoryFor: [ self accessibleContext ] ];
-        }
-#endif	// USE_JAVA
     }
 #ifdef USE_JAVA
     RELEASE_DRAGPRINTLOCK
@@ -1558,10 +1614,16 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
                 // we have a child window that is hit
 #ifdef USE_JAVA
                 Reference < XAccessibleRelationSet > relationSet;
-                if ( [ element isKindOfClass: [ VCLPanel class ] ] )
-                	relationSet = [ ( ( VCLPanel * ) element ) accessibleContext ] -> getAccessibleRelationSet();
-                else
-                	relationSet = [ ( ( VCLWindow * ) element ) accessibleContext ] -> getAccessibleRelationSet();
+                if ( [ element isKindOfClass: [ VCLPanel class ] ] ) {
+                	Reference < XAccessibleContext > panelContext = [ ( ( VCLPanel * ) element ) accessibleContext ];
+                	if ( panelContext.is() )
+                	    relationSet = panelContext -> getAccessibleRelationSet();
+                }
+                else {
+                	Reference < XAccessibleContext > windowContext = [ ( ( VCLWindow * ) element ) accessibleContext ];
+                	if ( windowContext.is() )
+                	    relationSet = windowContext -> getAccessibleRelationSet();
+                }
 #else	// USE_JAVA
                 Reference < XAccessibleRelationSet > relationSet = [ ( ( SalFrameWindow * ) element ) accessibleContext ] -> getAccessibleRelationSet();
 #endif	// USE_JAVA
@@ -1609,51 +1671,99 @@ Reference < XAccessibleContext > hitTestRunner ( com::sun::star::awt::Point poin
 #pragma mark Access Methods
 
 -(XAccessibleAction *)accessibleAction {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleAction.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleAction.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleContext *)accessibleContext {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleContext.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleContext.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleComponent *)accessibleComponent {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleComponent.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleComponent.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleExtendedComponent *)accessibleExtendedComponent {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleExtendedComponent.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleExtendedComponent.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleSelection *)accessibleSelection {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleSelection.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleSelection.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleTable *)accessibleTable {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleTable.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleTable.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleText *)accessibleText {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleText.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleText.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleEditableText *)accessibleEditableText {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleEditableText.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleEditableText.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleValue *)accessibleValue {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleValue.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleValue.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleTextAttributes *)accessibleTextAttributes {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleTextAttributes.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleTextAttributes.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleMultiLineText *)accessibleMultiLineText {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleMultiLineText.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleMultiLineText.get();
+#endif	// USE_JAVA
 }
 
 -(XAccessibleTextMarkup *)accessibleTextMarkup {
+#ifdef USE_JAVA
+    return mpReferenceWrapper ? mpReferenceWrapper -> rAccessibleTextMarkup.get() : nullptr;
+#else	// USE_JAVA
     return mpReferenceWrapper -> rAccessibleTextMarkup.get();
+#endif	// USE_JAVA
 }
 
 -(NSWindow*)windowForParent {

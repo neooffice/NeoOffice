@@ -142,6 +142,11 @@ using namespace ::com::sun::star::uno;
 
 +(id)getNativeRoleFrom: (XAccessibleContext *) accessibleContext {
     id nativeRole = [ AquaA11yRoleHelper simpleMapNativeRoleFrom: accessibleContext ];
+#ifdef USE_JAVA
+    if ( ! nativeRole )
+        nativeRole = @"";
+    if ( accessibleContext ) {
+#endif	// USE_JAVA
     if ( accessibleContext -> getAccessibleRole() == AccessibleRole::LABEL ) {
         if ( accessibleContext -> getAccessibleChildCount() > 0 ) {
 #ifndef USE_JAVA
@@ -177,6 +182,9 @@ using namespace ::com::sun::star::uno;
             }
         }
     }
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
     return nativeRole;
 }
 
@@ -281,7 +289,13 @@ using namespace ::com::sun::star::uno;
 
 +(id)getRoleDescriptionFrom: (NSString *) role with: (NSString *) subRole {
 	id roleDescription;
+#ifdef USE_JAVA
+	if ( ! role )
+        role = @"";
+	if ( ! subRole || [ subRole length ] == 0 )
+#else	// USE_JAVA
 	if ( [ subRole length ] == 0 )
+#endif	// USE_JAVA
 		roleDescription = NSAccessibilityRoleDescription( role, nil );
 	else
 		roleDescription = NSAccessibilityRoleDescription( role, subRole );

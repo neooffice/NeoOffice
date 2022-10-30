@@ -43,6 +43,8 @@ using namespace ::com::sun::star::uno;
 
 +(id)sizeAttributeForElement:(AquaA11yWrapper *)wrapper {
 #ifdef USE_JAVA
+    if ( ! [ wrapper accessibleComponent ] )
+        return nil;
     ::com::sun::star::awt::Size size = [ wrapper accessibleComponent ] -> getSize();
 #else	// USE_JAVA
     Size size = [ wrapper accessibleComponent ] -> getSize();
@@ -55,6 +57,8 @@ using namespace ::com::sun::star::uno;
 +(id)positionAttributeForElement:(AquaA11yWrapper *)wrapper {
     // VCL coordinates are in upper-left-notation, Cocoa likes it the Cartesian way (lower-left)
 #ifdef USE_JAVA
+    if ( ! [ wrapper accessibleComponent ] )
+        return nil;
     NSRect screenRect = JavaSalFrame::GetTotalScreenBounds();
     ::com::sun::star::awt::Size size = [ wrapper accessibleComponent ] -> getSize();
     ::com::sun::star::awt::Point location = [ wrapper accessibleComponent ] -> getLocationOnScreen();
@@ -104,7 +108,11 @@ using namespace ::com::sun::star::uno;
 
 +(void)setFocusedAttributeForElement:(AquaA11yWrapper *)wrapper to:(id)value {
     if ( [ value boolValue ] == YES ) {
+#ifdef USE_JAVA
+        if ( [ wrapper accessibleContext ] && [ wrapper accessibleContext ] -> getAccessibleRole() == AccessibleRole::COMBO_BOX ) {
+#else	// USE_JAVA
         if ( [ wrapper accessibleContext ] -> getAccessibleRole() == AccessibleRole::COMBO_BOX ) {
+#endif	// USE_JAVA
             // special treatment for comboboxes: find the corresponding PANEL and set focus to it
             Reference < XAccessible > rxParent = [ wrapper accessibleContext ] -> getAccessibleParent();
             if ( rxParent.is() ) {
@@ -116,7 +124,11 @@ using namespace ::com::sun::star::uno;
                     }
                 }
             }
+#ifdef USE_JAVA
+        } else if ( [ wrapper accessibleComponent ] ) {
+#else	// USE_JAVA
         } else {
+#endif	// USE_JAVA
             [ wrapper accessibleComponent ] -> grabFocus();
         }
     }

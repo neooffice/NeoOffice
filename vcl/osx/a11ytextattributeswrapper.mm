@@ -357,6 +357,10 @@ using namespace ::com::sun::star::uno;
     static const Sequence < OUString > emptySequence;
     // vars
     NSMutableAttributedString * string = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return string;
+#endif	// USE_JAVA
     int loc = [ origRange rangeValue ].location;
     int len = [ origRange rangeValue ].length;
     int endIndex = loc + len;

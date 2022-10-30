@@ -15,6 +15,13 @@
  *   License, Version 2.0 (the "License"); you may not use this file
  *   except in compliance with the License. You may obtain a copy of
  *   the License at http://www.apache.org/licenses/LICENSE-2.0 .
+ * 
+ *   Modified October 2022 by Patrick Luby. NeoOffice is only distributed
+ *   under the GNU General Public License, Version 3 as allowed by Section 3.3
+ *   of the Mozilla Public License, v. 2.0.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -38,6 +45,8 @@ using namespace ::com::sun::star::uno;
 
 +(id)valueAttributeForElement:(AquaA11yWrapper *)wrapper {
 #ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return @"";
     return [ CreateNSString ( [ wrapper accessibleText ] -> getText() ) autorelease ];
 #else	// USE_JAVA
     return CreateNSString ( [ wrapper accessibleText ] -> getText() );
@@ -52,11 +61,17 @@ using namespace ::com::sun::star::uno;
 }
 
 +(id)numberOfCharactersAttributeForElement:(AquaA11yWrapper *)wrapper {
+#ifdef USE_JAVA
+    return [ NSNumber numberWithLong: [ wrapper accessibleText ] ? [ wrapper accessibleText ] -> getCharacterCount() : 0 ];
+#else	// USE_JAVA
     return [ NSNumber numberWithLong: [ wrapper accessibleText ] -> getCharacterCount() ];
+#endif	// USE_JAVA
 }
 
 +(id)selectedTextAttributeForElement:(AquaA11yWrapper *)wrapper {
 #ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return @"";
     return [ CreateNSString ( [ wrapper accessibleText ] -> getSelectedText() ) autorelease ];
 #else	// USE_JAVA
     return CreateNSString ( [ wrapper accessibleText ] -> getSelectedText() );
@@ -78,6 +93,10 @@ using namespace ::com::sun::star::uno;
 }
 
 +(id)selectedTextRangeAttributeForElement:(AquaA11yWrapper *)wrapper {
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return nil;
+#endif	// USE_JAVA
     sal_Int32 start = [ wrapper accessibleText ] -> getSelectionStart();
     sal_Int32 end = [ wrapper accessibleText ] -> getSelectionEnd();
     if ( start != end ) {
@@ -92,6 +111,10 @@ using namespace ::com::sun::star::uno;
 }
 
 +(void)setSelectedTextRangeAttributeForElement:(AquaA11yWrapper *)wrapper to:(id)value {
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return;
+#endif	// USE_JAVA
     NSRange range = [ value rangeValue ];
     try {
         [ wrapper accessibleText ] -> setSelection ( range.location, range.location + range.length );
@@ -101,6 +124,10 @@ using namespace ::com::sun::star::uno;
 }
 
 +(id)visibleCharacterRangeAttributeForElement:(AquaA11yWrapper *)wrapper {
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return nil;
+#endif	// USE_JAVA
     // the OOo a11y API returns only the visible portion...
     return [ NSValue valueWithRange: NSMakeRange ( 0, [ wrapper accessibleText ] -> getCharacterCount() ) ];
 }
@@ -122,9 +149,12 @@ using namespace ::com::sun::star::uno;
 
 +(id)sharedCharacterRangeAttributeForElement:(AquaA11yWrapper *)wrapper
 {
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return nil;
+#else	// USE_JAVA
     (void)wrapper;
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
     return [ NSValue valueWithRange: NSMakeRange ( 0, [wrapper accessibleText]->getCharacterCount() ) ];
 }
 
@@ -164,6 +194,10 @@ using namespace ::com::sun::star::uno;
 
 +(id)lineForIndexAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)index {
     NSNumber * lineNumber = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleMultiLineText ] )
+        return lineNumber;
+#endif	// USE_JAVA
     try {
         sal_Int32 line = [ wrapper accessibleMultiLineText ] -> getLineNumberAtIndex ( (sal_Int32) [ index intValue ] );
         lineNumber = [ NSNumber numberWithInt: line ];
@@ -175,6 +209,10 @@ using namespace ::com::sun::star::uno;
 
 +(id)rangeForLineAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)line {
     NSValue * range = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleMultiLineText ] )
+        return range;
+#endif	// USE_JAVA
     try {
         TextSegment textSegment = [ wrapper accessibleMultiLineText ] -> getTextAtLineNumber ( [ line intValue ] );
         range = [ NSValue valueWithRange: NSMakeRange ( textSegment.SegmentStart, textSegment.SegmentEnd - textSegment.SegmentStart ) ];
@@ -185,6 +223,10 @@ using namespace ::com::sun::star::uno;
 }
 
 +(id)stringForRangeAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)range {
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return @"";
+#endif	// USE_JAVA
     int loc = [ range rangeValue ].location;
     int len = [ range rangeValue ].length;
 #ifdef USE_JAVA
@@ -210,6 +252,10 @@ using namespace ::com::sun::star::uno;
 
 +(id)rangeForIndexAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)index {
     NSValue * range = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return range;
+#endif	// USE_JAVA
     try {
         TextSegment textSegment = [ wrapper accessibleText ] -> getTextBeforeIndex ( [ index intValue ], AccessibleTextType::GLYPH );
         range = [ NSValue valueWithRange: NSMakeRange ( textSegment.SegmentStart, textSegment.SegmentEnd - textSegment.SegmentStart ) ];
@@ -223,6 +269,10 @@ using namespace ::com::sun::star::uno;
 
 +(id)rangeForPositionAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)point {
     NSValue * value = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleComponent ] || ! [ wrapper accessibleText ] )
+        return value;
+#endif	// USE_JAVA
     Point aPoint( [ AquaA11yUtil nsPointToVclPoint: point ]);
     const Point screenPos = [ wrapper accessibleComponent ] -> getLocationOnScreen();
     aPoint.X -= screenPos.X;
@@ -236,6 +286,10 @@ using namespace ::com::sun::star::uno;
 
 +(id)boundsForRangeAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)range {
     NSValue * rect = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return rect;
+#endif	// USE_JAVA
     try {
         // TODO: this is ugly!!!
         // the UNP-API can only return the bounds for a single character, not for a range
@@ -274,6 +328,10 @@ using namespace ::com::sun::star::uno;
 
 +(id)styleRangeForIndexAttributeForElement:(AquaA11yWrapper *)wrapper forParameter:(id)index {
     NSValue * range = nil;
+#ifdef USE_JAVA
+    if ( ! [ wrapper accessibleText ] )
+        return range;
+#endif	// USE_JAVA
     try {
         TextSegment textSegment = [ wrapper accessibleText ] -> getTextAtIndex ( [ index intValue ], AccessibleTextType::ATTRIBUTE_RUN );
         range = [ NSValue valueWithRange: NSMakeRange ( textSegment.SegmentStart, textSegment.SegmentEnd - textSegment.SegmentStart ) ];
