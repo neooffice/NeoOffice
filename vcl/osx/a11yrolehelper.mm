@@ -178,7 +178,7 @@ using namespace ::com::sun::star::uno;
 #else	// USE_JAVA
                 if ( ! rxAccessibleContext -> getAccessibleStateSet() -> contains ( AccessibleStateType::EDITABLE ) ) {
                     [ nativeRole release ];
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
                     nativeRole = NSAccessibilityPopUpButtonRole;
                 }
             }
