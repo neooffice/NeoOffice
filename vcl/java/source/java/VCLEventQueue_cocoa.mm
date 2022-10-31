@@ -2586,14 +2586,6 @@ static CFDataRef aRTFSelection = nil;
 	return [self accessibilityChildren];
 }
 
-- (BOOL)isAccessibilitySelectorAllowed:(SEL)aSelector
-{
-	// Fix VoiceOver frame set to only the window frame when application has
-	// been launched with VoiceOver already running
-	[self insertRegisteredViewIntoWrapperRepository];
-	return [super isAccessibilitySelectorAllowed:aSelector];
-}
-
 #else	// USE_AQUA_A11Y
 
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute
@@ -3468,7 +3460,7 @@ static CFDataRef aRTFSelection = nil;
 	mbTextInputWantsNonRepeatKeyDown = NO;
 #ifdef USE_AQUA_A11Y
 	mpChildWrapper = nil;
-	mbNeedtoCreateChildWrapper = NO;
+	mbNeedChildWrapper = NO;
 #endif	// USE_AQUA_A11Y
 
 	return self;
@@ -3541,7 +3533,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (void)insertRegisteredViewIntoWrapperRepository
 {
-	if ( !mbNeedtoCreateChildWrapper )
+	if ( !mbNeedChildWrapper )
 		return;
 
 	// Exclude tootip and show only menus windows by not register windows
@@ -3556,7 +3548,7 @@ static CFDataRef aRTFSelection = nil;
 	// events to windows during an accessibility call can cause crashing
 	ACQUIRE_DRAGPRINTLOCK
 
-	if ( !mbNeedtoCreateChildWrapper )
+	if ( !mbNeedChildWrapper )
 	{
 		RELEASE_DRAGPRINTLOCKIFNEEDED
 		return;
@@ -3596,12 +3588,12 @@ static CFDataRef aRTFSelection = nil;
 {
 	[self revokeView];
 
-	mbNeedtoCreateChildWrapper = YES;
+	mbNeedChildWrapper = YES;
 }
 
 - (void)revokeView
 {
-	mbNeedtoCreateChildWrapper = NO;
+	mbNeedChildWrapper = NO;
 
 	if ( mpChildWrapper )
 	{

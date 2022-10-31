@@ -97,7 +97,7 @@
 	BOOL					mbTextInputWantsNonRepeatKeyDown;
 #ifdef USE_AQUA_A11Y
 	VCLA11yWrapper*			mpChildWrapper;
-	BOOL					mbNeedtoCreateChildWrapper;
+	BOOL					mbNeedChildWrapper;
 #endif	// USE_AQUA_A11Y
 }
 - (BOOL)acceptsFirstResponder;
@@ -120,7 +120,6 @@
 - (NSArray *)accessibilitySelectedChildren;
 - (NSArray *)accessibilityChildren;
 - (NSArray <id<NSAccessibilityElement>> *)accessibilityChildrenInNavigationOrder;
-- (BOOL)isAccessibilitySelectorAllowed:(SEL)aSelector;
 #else	// USE_AQUA_A11Y
 - (id)accessibilityAttributeValue:(NSAccessibilityAttributeName)aAttribute;
 #endif	// USE_AQUA_A11Y
