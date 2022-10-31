@@ -3565,7 +3565,10 @@ static CFDataRef aRTFSelection = nil;
 	[self revokeView];
 
 	if ( !mpFrame )
+	{
+		RELEASE_DRAGPRINTLOCKIFNEEDED
 		return;
+	}
 
 	vcl::Window *pWindow = mpFrame->GetWindow();
 	if ( !pWindow || !ImplIsValidWindow( pWindow ) )
