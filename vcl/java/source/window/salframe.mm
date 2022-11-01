@@ -1971,15 +1971,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	if ( mpWindow )
 	{
-		// Native accessibility calls will be called when the following
-		// selector is run on the main thread so release the
-		// application mutex
-		sal_uLong nCount = Application::ReleaseSolarMutex();
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 			[(VCLPanel *)mpWindow registerWindow];
 		else
 			[(VCLWindow *)mpWindow registerWindow];
-		Application::AcquireSolarMutex( nCount );
 	}
 }
 
@@ -1989,15 +1984,10 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	if ( mpWindow )
 	{
-		// Native accessibility calls will be called when the following
-		// selector is run on the main thread so release the
-		// application mutex
-		sal_uLong nCount = Application::ReleaseSolarMutex();
 		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 			[(VCLPanel *)mpWindow revokeWindow];
 		else
 			[(VCLWindow *)mpWindow revokeWindow];
-		Application::AcquireSolarMutex( nCount );
 	}
 }
 
@@ -3982,7 +3972,12 @@ void JavaSalFrame::RegisterWindow()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
 		osl_performSelectorOnMainThread( mpWindow, @selector(registerWindow:), mpWindow, YES );
+		Application::AcquireSolarMutex( nCount );
 
 		[pPool release];
 	}
@@ -3996,7 +3991,12 @@ void JavaSalFrame::RevokeWindow()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
 		osl_performSelectorOnMainThread( mpWindow, @selector(revokeWindow:), mpWindow, YES );
+		Application::AcquireSolarMutex( nCount );
 
 		[pPool release];
 	}
