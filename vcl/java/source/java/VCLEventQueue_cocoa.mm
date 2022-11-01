@@ -3543,7 +3543,10 @@ static CFDataRef aRTFSelection = nil;
 	// that are not accessibility elements
 	NSWindow *pNSWindow = [self window];
 	if ( !pNSWindow || ![pNSWindow isAccessibilityElement] || ( ![pNSWindow isVisible] && ![pNSWindow isMiniaturized] ) )
+	{
+		mbNeedChildWrapper = NO;
 		return;
+	}
 
 	if ( !ImplApplicationIsRunning() )
 		return;
@@ -3555,9 +3558,9 @@ static CFDataRef aRTFSelection = nil;
 	{
 		RELEASE_DRAGPRINTLOCKIFNEEDED
 		return;
-    }
+	}
 
-	[self revokeView];
+	mbNeedChildWrapper = NO;
 
 	if ( !mpFrame )
 	{
@@ -3570,7 +3573,13 @@ static CFDataRef aRTFSelection = nil;
 	{
 		RELEASE_DRAGPRINTLOCKIFNEEDED
 		return;
-    }
+	}
+
+	if ( mpChildWrapper )
+	{
+		RELEASE_DRAGPRINTLOCKIFNEEDED
+		return;
+	}
 
 	::com::sun::star::uno::Reference< ::com::sun::star::accessibility::XAccessibleContext > xAccessibleContext( pWindow->GetAccessible()->getAccessibleContext() );
 	mpChildWrapper = [[VCLA11yWrapper alloc] initWithParent:self accessibleContext:xAccessibleContext];
@@ -3601,12 +3610,15 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpChildWrapper && ImplApplicationIsRunning() )
 	{
 		ACQUIRE_SOLARMUTEX
-		[AquaA11yFactory revokeView:mpChildWrapper];
-		if ( [mpChildWrapper isKindOfClass:[NSView class]] )
-			[(NSView *)mpChildWrapper removeFromSuperviewWithoutNeedingDisplay];
-		[mpChildWrapper setAccessibilityParent:nil];
-		[mpChildWrapper release];
-		mpChildWrapper = nil;
+		if ( mpChildWrapper )
+		{
+			[AquaA11yFactory revokeView:mpChildWrapper];
+			if ( [mpChildWrapper isKindOfClass:[NSView class]] )
+				[(NSView *)mpChildWrapper removeFromSuperviewWithoutNeedingDisplay];
+			[mpChildWrapper setAccessibilityParent:nil];
+			[mpChildWrapper release];
+			mpChildWrapper = nil;
+		}
 		RELEASE_SOLARMUTEX
 	}
 }
