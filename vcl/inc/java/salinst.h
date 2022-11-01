@@ -59,6 +59,8 @@
 #define SALEVENT_ABOUT				((sal_uInt16)130)
 #define SALEVENT_PREFS				((sal_uInt16)140)
 #define SALEVENT_WAKEUP				((sal_uInt16)150)
+#define SALEVENT_REGISTERA11YFRAME	((sal_uInt16)161)
+#define SALEVENT_REVOKEA11YFRAME	((sal_uInt16)162)
 
 // -----------------
 // - SalYieldMutex -

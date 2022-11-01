@@ -1352,6 +1352,8 @@ JavaSalEvent::JavaSalEvent( sal_uInt16 nID, JavaSalFrame *pFrame, void *pData, c
 		case SALEVENT_PAINT:
 		case SALEVENT_RESIZE:
 		case SALEVENT_WHEELMOUSE:
+		case SALEVENT_REGISTERA11YFRAME:
+		case SALEVENT_REVOKEA11YFRAME:
 			mbNative = true;
 	}
 
@@ -2446,6 +2448,18 @@ void JavaSalEvent::dispatch()
 				if ( Menu::IsValidMenu( (Menu *)pMenuEvent->mpMenu ) )
 					pFrame->CallCallback( nID, pMenuEvent );
 			}
+			break;
+		}
+		case SALEVENT_REGISTERA11YFRAME:
+		{
+			if ( pFrame )
+				pFrame->RegisterWindow();
+			break;
+		}
+		case SALEVENT_REVOKEA11YFRAME:
+		{
+			if ( pFrame )
+				pFrame->RevokeWindow();
 			break;
 		}
 		default:

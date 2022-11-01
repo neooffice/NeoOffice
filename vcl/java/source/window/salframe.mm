@@ -637,6 +637,10 @@ static BOOL bIOPMAssertionIDSet = NO;
 - (void)mouseEntered:(NSEvent *)pEvent;
 - (void)mouseExited:(NSEvent *)pEvent;
 - (void)mouseMoved:(NSEvent *)pEvent;
+#ifdef USE_AQUA_A11Y
+- (void)registerWindow:(id)pObject;
+- (void)revokeWindow:(id)pObject;
+#endif	// USE_AQUA_A11Y
 - (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs;
 - (void)requestFocus:(VCLWindowWrapperArgs *)pArgs;
 - (BOOL)roundedCorners;
@@ -1672,13 +1676,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 {
 	if ( mpWindow )
 	{
-#ifdef USE_AQUA_A11Y
-		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-			[(VCLPanel *)mpWindow revokeWindow];
-		else
-			[(VCLWindow *)mpWindow revokeWindow];
-#endif	// USE_AQUA_A11Y
-
 		// Disconnect frame from native window as the frame may be deleted
 		// before the destroy: selector is run
 		[self disconnectJavaFrame:self];
@@ -1705,6 +1702,16 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			[pParentWindow removeChildWindow:mpWindow];
 
 		CloseOrOrderOutWindow( mpWindow );
+
+#ifdef USE_AQUA_A11Y
+		// Fix deadlock by waiting to revoke the window until we are in the
+		// delayed performSelector: call queued above as revoking may need
+		// to acquire the application mutex
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow revokeWindow];
+		else
+			[(VCLWindow *)mpWindow revokeWindow];
+#endif	// USE_AQUA_A11Y
 
 		::std::map< NSWindow*, JavaSalGraphics* >::iterator nwit = aNativeWindowMap.find( mpWindow );
 		if ( nwit != aNativeWindowMap.end() )
@@ -1955,6 +1962,46 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 	mbInMouseMoved = NO;
 }
+
+#ifdef USE_AQUA_A11Y
+
+- (void)registerWindow:(id)pObject
+{
+	(void)pObject;
+
+	if ( mpWindow )
+	{
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow registerWindow];
+		else
+			[(VCLWindow *)mpWindow registerWindow];
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+- (void)revokeWindow:(id)pObject
+{
+	(void)pObject;
+
+	if ( mpWindow )
+	{
+		// Native accessibility calls will be called when the following
+		// selector is run on the main thread so release the
+		// application mutex
+		sal_uLong nCount = Application::ReleaseSolarMutex();
+		if ( [mpWindow isKindOfClass:[VCLPanel class]] )
+			[(VCLPanel *)mpWindow revokeWindow];
+		else
+			[(VCLWindow *)mpWindow revokeWindow];
+		Application::AcquireSolarMutex( nCount );
+	}
+}
+
+#endif	// USE_AQUA_A11Y
 
 - (void)removeTrackingArea:(VCLWindowWrapperArgs *)pArgs
 {
@@ -2264,13 +2311,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			// before displaying the window
 			[self adjustCornerRadius];
 
-#ifdef USE_AQUA_A11Y
-			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-				[(VCLPanel *)mpWindow registerWindow];
-			else
-				[(VCLWindow *)mpWindow registerWindow];
-#endif	// USE_AQUA_A11Y
-
 			[mpWindow orderWindow:NSWindowAbove relativeTo:( mpParent ? [mpParent windowNumber] : 0 )];
 			BOOL bCanBecomeKeyWindow;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
@@ -2294,9 +2334,25 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 
 			if ( pApp && [mpWindow level] == NSModalPanelWindowLevel )
 				[pApp requestUserAttention:NSInformationalRequest];
+
+#ifdef USE_AQUA_A11Y
+			// Fix VoiceOver frame set to only the window frame when the
+			// application has been launched with VoiceOver already running by
+			// delaying registration of the window until after the currently
+			// queued LibreOffice internal events have been dispatched
+			JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_REGISTERA11YFRAME, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pUserEvent );
+			pUserEvent->release();
+#endif	// USE_AQUA_A11Y
 		}
 		else
 		{
+#ifdef USE_AQUA_A11Y
+			JavaSalEvent *pUserEvent = new JavaSalEvent( SALEVENT_REVOKEA11YFRAME, mpFrame, NULL );
+			JavaSalEventQueue::postCachedEvent( pUserEvent );
+			pUserEvent->release();
+#endif	// USE_AQUA_A11Y
+
 			[self animateWaitingView:NO];
 
 			NSWindow *pParentWindow = [mpWindow parentWindow];
@@ -2304,13 +2360,6 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 				[pParentWindow removeChildWindow:mpWindow];
 
 			CloseOrOrderOutWindow( mpWindow );
-
-#ifdef USE_AQUA_A11Y
-			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
-				[(VCLPanel *)mpWindow revokeWindow];
-			else
-				[(VCLWindow *)mpWindow revokeWindow];
-#endif	// USE_AQUA_A11Y
 
 			// Release cached cursor
 			::std::map< NSWindow*, NSCursor* >::iterator cit = aNativeCursorMap.find( mpWindow );
@@ -3923,6 +3972,34 @@ bool JavaSalFrame::ScreenParamsChanged()
 	}
 
 	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::RegisterWindow()
+{
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		osl_performSelectorOnMainThread( mpWindow, @selector(registerWindow:), mpWindow, YES );
+
+		[pPool release];
+	}
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::RevokeWindow()
+{
+	if ( mpWindow )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		osl_performSelectorOnMainThread( mpWindow, @selector(revokeWindow:), mpWindow, YES );
+
+		[pPool release];
+	}
 }
 
 // -----------------------------------------------------------------------

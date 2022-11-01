@@ -941,7 +941,7 @@ static VCLUpdateSystemAppearance *pVCLUpdateSystemAppearance = nil;
 {
 	[self revokeWindow];
 
-	if ( ![self isIgnoredWindow] )
+	if ( ![self isIgnoredWindow] && ( [self isVisible] || [self isMiniaturized] ) )
 	{
 		VCLView *pContentView = [self contentView];
 		if ( pContentView && [pContentView isKindOfClass:[VCLView class]] )
@@ -3077,6 +3077,8 @@ static CFDataRef aRTFSelection = nil;
 		// retaining the window
 		[pWindow retain];
 
+		if ( ImplApplicationIsRunning() )
+		{
 			ACQUIRE_SOLARMUTEX
 			// Fix bug 2426 by checking the frame pointer before any use
 			SalData *pSalData = GetSalData();
@@ -3152,6 +3154,7 @@ static CFDataRef aRTFSelection = nil;
 				}
 			}
 			RELEASE_SOLARMUTEX
+		}
 
 		[pWindow release];
 	}
@@ -3539,7 +3542,7 @@ static CFDataRef aRTFSelection = nil;
 	// Exclude tootip and show only menus windows by not register windows
 	// that are not accessibility elements
 	NSWindow *pNSWindow = [self window];
-	if ( !pNSWindow || ![pNSWindow isAccessibilityElement] )
+	if ( !pNSWindow || ![pNSWindow isAccessibilityElement] || ( ![pNSWindow isVisible] && ![pNSWindow isMiniaturized] ) )
 		return;
 
 	if ( !ImplApplicationIsRunning() )
@@ -3595,14 +3598,16 @@ static CFDataRef aRTFSelection = nil;
 {
 	mbNeedChildWrapper = NO;
 
-	if ( mpChildWrapper )
+	if ( mpChildWrapper && ImplApplicationIsRunning() )
 	{
+		ACQUIRE_SOLARMUTEX
 		[AquaA11yFactory revokeView:mpChildWrapper];
 		if ( [mpChildWrapper isKindOfClass:[NSView class]] )
 			[(NSView *)mpChildWrapper removeFromSuperviewWithoutNeedingDisplay];
 		[mpChildWrapper setAccessibilityParent:nil];
 		[mpChildWrapper release];
 		mpChildWrapper = nil;
+		RELEASE_SOLARMUTEX
 	}
 }
 
