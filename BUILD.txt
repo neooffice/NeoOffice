@@ -17,9 +17,9 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
 1. Make sure that you have downloaded and installed the following dependencies from http://developer.apple.com/ website:
 
-   macOS 12.6 Monterey:
-     Xcode v14
-     Command Line Tools for Xcode v14
+   macOS 12.6.1 Monterey:
+     Xcode v14.1
+     Command Line Tools for Xcode v14.1
 
 2. Download and install Oracle's Java 8 Development Kit (JDK) from the following URL:
 
