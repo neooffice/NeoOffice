@@ -42,9 +42,15 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
 
 5. Make sure the git LFS extension is installed by downloading git-lfs:
 
-   curl -L -O https://github.com/git-lfs/git-lfs/releases/download/v3.0.2/git-lfs-darwin-amd64-v3.0.2.zip
-   mkdir git-lfs-darwin-amd64-v3.0.2 && cd git-lfs-darwin-amd64-v3.0.2 && unzip ../git-lfs-darwin-amd64-v3.0.2.zip && sudo ./install.sh
-   git lfs install
+   For Silicon Macs:
+     curl -L -O https://github.com/git-lfs/git-lfs/releases/download/v3.2.0/git-lfs-darwin-arm64-v3.2.0.zip
+     unzip git-lfs-darwin-arm64-v3.2.0.zip && cd git-lfs-3.2.0 && sudo ./install.sh
+     git lfs install
+
+   For Intel Macs:
+     curl -L -O https://github.com/git-lfs/git-lfs/releases/download/v3.2.0/git-lfs-darwin-amd64-v3.2.0.zip
+     unzip git-lfs-darwin-amd64-v3.2.0.zip && cd git-lfs-3.2.0 && sudo ./install.sh
+     git lfs install
 
 6. Download all LFS files from Github's LFS repository:
 
