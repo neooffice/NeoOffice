@@ -75,6 +75,15 @@
 
 #include "pdfwriter_impl.hxx"
 
+#if defined USE_JAVA && defined MACOSX
+
+#include "java/salatslayout.hxx"
+#include "java/saldata.hxx"
+
+#include <unotools/tempfile.hxx>
+
+#endif	// USE_JAVA && MACOSX
+
 #if !defined(ANDROID) && !defined(IOS) && !defined(_WIN32)
 // NSS headers for PDF signing
 #include "nss.h"
@@ -97,15 +106,6 @@
 #if ENABLE_EOT
 #include <libeot/libeot.h>
 #endif
-
-#if defined USE_JAVA && defined MACOSX
-
-#include "java/salatslayout.hxx"
-#include "java/saldata.hxx"
-
-#include <unotools/tempfile.hxx>
-
-#endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
 
