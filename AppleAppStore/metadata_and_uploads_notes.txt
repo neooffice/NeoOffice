@@ -36,8 +36,8 @@ Two engineers created NeoOffice in 2003 when they made OpenOffice run natively o
 What's New in this Version:
 Before you download NeoOffice, please click on the "Support" link and read the installation notes.
 
-This version of NeoOffice fixes the following bug:
-• Command-clicking on a hyperlink in a document would display a "fatal error" dialog and then crash if the hyperlink does not point to a local file. This bug was caused by our fix for LibreOffice bug 150873 that was added in the previous release to resolve any macOS aliases in a file path.
+This version of NeoOffice fixes the following bugs:
+• NeoOffice would crash in several different code locations due to a failure of our new VoiceOver code to detect C++ pointers that LibreOffice has already deleted.
 
 
 Promotional Text:
