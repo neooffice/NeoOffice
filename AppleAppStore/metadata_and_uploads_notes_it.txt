@@ -41,7 +41,6 @@ This version of NeoOffice fixes the following bugs:
 
 
 Promotional Text:
-NeoOffice ora supporta VoiceOver.
 
 
 Keywords:
