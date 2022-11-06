@@ -37,7 +37,7 @@ What's New in this Version:
 Prima di scaricare NeoOffice, per favore clicca sul link «Supporto» e leggi le note d'installazione.
 
 This version of NeoOffice fixes the following bugs:
-• NeoOffice would crash in several different code locations due to a failure of our new VoiceOver code to detect C++ pointers that LibreOffice has already deleted.
+• VoiceOver support has been removed as several completely new crashing bugs were reported soon after we released 2022.4. While our fixes in 2022.4 do detect C++ pointers that LibreOffice has already deleted, our fixes only delayed crashing long enough that NeoOffice would eventually crash in a new set of code locations.
 
 
 Promotional Text:
