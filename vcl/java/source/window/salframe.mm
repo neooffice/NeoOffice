@@ -1570,14 +1570,18 @@ static ::std::map< NSWindow*, VCLWindow* > aShowOnlyMenusWindowMap;
 			if ( [mpWindow isKindOfClass:[VCLPanel class]] )
 			{
 				[(VCLPanel *)mpWindow setJavaFrame:mpFrame];
+#ifdef USE_AQUA_A11Y
 				[(VCLPanel *)mpWindow setJavaShowOnlyMenus:mbShowOnlyMenus];
 				[(VCLPanel *)mpWindow setJavaStyle:mnStyle];
+#endif	// USE_AQUA_A11Y
 			}
 			else
 			{
 				[(VCLWindow *)mpWindow setJavaFrame:mpFrame];
+#ifdef USE_AQUA_A11Y
 				[(VCLPanel *)mpWindow setJavaShowOnlyMenus:mbShowOnlyMenus];
 				[(VCLPanel *)mpWindow setJavaStyle:mnStyle];
+#endif	// USE_AQUA_A11Y
 			}
 
 			// Cache the window's insets

@@ -568,6 +568,8 @@ static void PostSystemColorsDidChange()
 	}
 }
 
+#ifdef USE_AQUA_A11Y
+
 static NSArray *MergeAccessibilityChildren( NSArray *pDefaultChildren, NSArray *pUnignoredChildrenToAdd )
 {
 	NSArray *pRet = pDefaultChildren;
@@ -595,6 +597,8 @@ static NSArray *MergeAccessibilityChildren( NSArray *pDefaultChildren, NSArray *
 
 	return pRet;
 }
+
+#endif	// USE_AQUA_A11Y
 
 static NSString *pAppleInterfaceStylePref = @"AppleInterfaceStyle";
 static NSString *pAppleInterfaceStyleSwitchesAutomaticallyPref = @"AppleInterfaceStyleSwitchesAutomatically";
@@ -2636,7 +2640,9 @@ static CFDataRef aRTFSelection = nil;
 	if ( mpTextInput )
 		[mpTextInput release];
 
+#ifdef USE_AQUA_A11Y
 	[self revokeView];
+#endif	// USE_AQUA_A11Y
 
 	[super dealloc];
 }
