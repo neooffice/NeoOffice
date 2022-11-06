@@ -162,12 +162,6 @@ bool Window::IsDisposed() const
 
 Window::~Window()
 {
-#ifdef USE_JAVA
-    ::boost::unordered_map< const vcl::Window*, const vcl::Window* >::iterator it = aWindowMap.find( this );
-    if ( it != aWindowMap.end() )
-        aWindowMap.erase( it );
-#endif	// USE_JAVA
-
     vcl::LazyDeletor<vcl::Window>::Undelete( this );
 
     DBG_ASSERT( !mpWindowImpl->mbInDtor, "~Window - already in DTOR!" );
@@ -616,6 +610,14 @@ Window::~Window()
 
     // should be the last statements
     delete mpWindowImpl; mpWindowImpl = NULL;
+
+#ifdef USE_JAVA
+    // Fix crash when closing a VclBuilder instance by not removing this window
+    // from the valid list until the very end of the destructor
+    ::boost::unordered_map< const vcl::Window*, const vcl::Window* >::iterator it = aWindowMap.find( this );
+    if ( it != aWindowMap.end() )
+        aWindowMap.erase( it );
+#endif	// USE_JAVA
 }
 
 } /* namespace vcl */
