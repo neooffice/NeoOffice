@@ -32,7 +32,6 @@
  <vendorInfos>
  <vendor name="Oracle Corporation">
   <minVersion>1.8.0</minVersion>
-  <maxVersion>17.999.999</maxVersion>
  </vendor>
 </vendorInfos>
 
