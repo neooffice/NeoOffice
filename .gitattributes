@@ -1,3 +1,2 @@
 patches/libreoffice/libreoffice-4.4.7.2.tar.xz filter=lfs diff=lfs merge=lfs -text
 patches/libreoffice/external/tarballs/libreoffice-translations-4.4.7.2.tar.xz filter=lfs diff=lfs merge=lfs -text
-patches/ooo-build/src/ooo310-m19-libs-extern-sys.tar.bz2 filter=lfs diff=lfs merge=lfs -text
