@@ -9,9 +9,21 @@
                      fileAccessClass = Class.forName(fileaccess_class_name);
                  }
                  Constructor constructor =
---- misc/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2008-05-27 05:26:44.000000000 -0700
-+++ misc/build/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2016-02-28 08:24:27.000000000 -0800
-@@ -1224,9 +1224,7 @@
+--- misc/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2023-02-26 15:32:15.000000000 -0500
++++ misc/build/hsqldb/src/org/hsqldb/DatabaseCommandInterpreter.java	2023-02-26 15:56:48.000000000 -0500
+@@ -403,6 +403,11 @@
+                     throw Trace.error(Trace.INVALID_IDENTIFIER);
+                 }
+ 
++                // added condition to avoid execution of spurious command in .script or .log file
++                if (session.isProcessingScript() || session.isProcessingLog()) {
++                    return new Result(ResultConstants.UPDATECOUNT);
++                }
++
+                 dsw = new ScriptWriterText(database, token, true, true, true);
+ 
+                 dsw.writeAll();
+@@ -1224,9 +1229,7 @@
              t.createPrimaryKey(null, primaryConst.core.mainColArray, true);
  
              if (primaryConst.core.mainColArray != null) {
