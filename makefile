@@ -895,6 +895,8 @@ ifdef PRODUCT_BUILD3
 	"lib-dynload"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/mailmerge.py" "Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/pythonloader.py" "Resources"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources/java"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Resources/java/hsqldb.jar" "Resources/java"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/Frameworks/libupdchklo.dylib" "Frameworks"
 else ifdef PRODUCT_BUILD2
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTDIR)/$(LIBO_PRODUCT_NAME).app/Contents/MacOS/soffice2" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
