@@ -42,8 +42,8 @@
 #include "java/salframe.h"
 #include "osx/a11ywrapper.h"
 
-// Comment out to disable LibreOffice's native accessibility code
-// #define USE_AQUA_A11Y
+// Uncomment to disable LibreOffice's native accessibility code
+#define USE_AQUA_A11Y
 
 #ifdef __OBJC__
 
