@@ -176,6 +176,35 @@ NSImage*   CreateNSImage( const Image& );
 
 #endif	// !USE_JAVA
 
+#ifndef NO_LIBO_BUG_49853_FIX
+
+inline bool ImplMenuItemTriggered()
+{
+    // tdf#49853 Keyboard shortcuts are also handled by the menu bar, but at least some of them
+    // must still end up in the view. This is necessary to handle common edit actions in docked
+    // windows (e.g. in toolbar fields).
+    NSEvent* pEvent = [NSApp currentEvent];
+    if( pEvent && [pEvent type] == NSEventTypeKeyDown )
+    {
+        unsigned int nModMask = ([pEvent modifierFlags] & (NSEventModifierFlagShift|NSEventModifierFlagControl|NSEventModifierFlagOption|NSEventModifierFlagCommand));
+        NSString* charactersIgnoringModifiers = [pEvent charactersIgnoringModifiers];
+        if( nModMask == NSEventModifierFlagCommand &&
+          ( [charactersIgnoringModifiers isEqualToString: @"v"] ||
+            [charactersIgnoringModifiers isEqualToString: @"c"] ||
+            [charactersIgnoringModifiers isEqualToString: @"x"] ||
+            [charactersIgnoringModifiers isEqualToString: @"a"] ||
+            [charactersIgnoringModifiers isEqualToString: @"z"] ) )
+        {
+            [[[NSApp keyWindow] contentView] keyDown: pEvent];
+            return true;
+        }
+    }
+
+    return false;
+}
+
+#endif	// !NO_LIBO_BUG_49853_FIX
+
 #endif // INCLUDED_VCL_INC_OSX_SALINST_H
 
 /* vim:set shiftwidth=4 softtabstop=4 expandtab: */

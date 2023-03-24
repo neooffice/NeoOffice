@@ -49,6 +49,7 @@
 #include "java/salframe.h"
 #include "java/salinst.h"
 #include "java/salmenu.h"
+#include "osx/salinst.h"
 
 #include "../app/salinst_cocoa.h"
 #include "../java/VCLApplicationDelegate_cocoa.h"
@@ -969,6 +970,11 @@ static JavaSalMenu *pJavaSalPopUpMenu = nil;
 
 - (void)selected
 {
+#ifndef NO_LIBO_BUG_49853_FIX
+	if (ImplMenuItemTriggered())
+		return;
+#endif	// !NO_LIBO_BUG_49853_FIX
+
 	BOOL bOldInPerformKeyEquivalent = NO;
 	VCLApplicationDelegate *pAppDelegate = [VCLApplicationDelegate sharedDelegate];
 	if ( pAppDelegate )
