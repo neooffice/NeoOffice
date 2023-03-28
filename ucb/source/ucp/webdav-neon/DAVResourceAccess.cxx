@@ -23,15 +23,6 @@
  * version 3 along with OpenOffice.org.  If not, see
  * <http://www.openoffice.org/license.html>
  * for a copy of the LGPLv3 License.
- * 
- * This file incorporates work covered by the following license notice:
- *
- *   Modified December 2016 by Patrick Luby. NeoOffice is only distributed
- *   under the GNU General Public License, Version 3 as allowed by Section 3.3
- *   of the Mozilla Public License, v. 2.0.
- *
- *   You should have received a copy of the GNU General Public License
- *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  ************************************************************************/
 
