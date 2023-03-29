@@ -69,7 +69,7 @@ At this time, NeoOffice will only build on macOS 12 Monterey. The resulting buil
    Developer ID Application
    Developer ID Installer
 
-9. Assign the codesigning certificates obtained in the previous step by copying the "<source folder>/certs.neo.mk" file to "<source folder>/certs.mk". Then, open the "<source folder>/certs.mk" file and replace all of Planamesa Inc.'s certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
+9. Assign the codesigning certificates obtained in the previous step by copying the "<source folder>/certs.neo.mk" file to "<source folder>/certs.mk". Then, open the "<source folder>/certs.mk" file and replace all of the certificate names and team ID with your certificate names team ID. Important note: each certificate name assigned in the "<source folder>/certs.mk" file must match the certificate's "Common Name" field in the macOS Keychain Access application.
 
 10. Start the build by invoking the following commands:
 

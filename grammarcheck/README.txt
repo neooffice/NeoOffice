@@ -39,9 +39,3 @@ extension using the following steps:
    called Tools :: Add-ons :: Check Grammar of Entire Document and
    Tools :: Add-ons :: Check Grammar of Selected Text should be present in
    in NeoOffice Writer.
-
-Edward Peterlin
-12/10/2007
-
-Patrick Luby
-01/14/2008
