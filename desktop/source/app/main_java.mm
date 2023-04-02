@@ -72,9 +72,9 @@ static BOOL IsSupportedMacOSXVersion()
 		}
 		free( pMaxOSVersion );
 	}
-#else	// PRODUCT_MIN_OSVERSION
+#else	// PRODUCT_MAX_OSVERSION
 	nMajorMaxOSVersion = 0xffff;
-#endif	// PRODUCT_MIN_OSVERSION
+#endif	// PRODUCT_MAX_OSVERSION
 
 	BOOL bRet = NO;
 
