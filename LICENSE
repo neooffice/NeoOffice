@@ -1,3 +1,23 @@
+LibreOffice developers: The NeoOffice application is licensed under the
+GNU General Public Library (GPL) v3.0 (see below for the license text).
+However, most of the source code files authored by NeoOffice contributors
+is licensed under the same license as LibreOffice: the Mozilla Public License
+(MPL) v2.0:
+
+  http://mozilla.org/MPL/2.0/
+
+Important note when copying source code: like LibreOffice, parts of NeoOffice
+are built with third party source code and artwork. Some of the third party
+source code and artwork use open source licenses that are more restrictive
+than and/or incompatible with the MPL v2.0.
+
+Before copying any NeoOffice source code or artwork, we recommend verifying
+that, for each of the source code and artwork files that you want to copy,
+each file's license is the MPL v2.0.
+
+Below is the text of the GPL v3.0 license:
+
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
