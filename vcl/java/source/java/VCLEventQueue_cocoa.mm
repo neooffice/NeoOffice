@@ -3109,38 +3109,62 @@ static CFDataRef aRTFSelection = nil;
 			// uncommitted text to a non-nil string
 			if ( mbInKeyDown && !mpTextInput && mpLastKeyDownEvent && [mpLastKeyDownEvent isARepeat] )
 			{
-				// Improve emulation of the TextEdit application's behavior when
-				// pressing and holding a vowel key by posting a backspace event
-				// and then marking the current character
-				mpTextInput = [mpLastKeyDownEvent characters];
-				if ( mpTextInput )
+                // tdf#154708 Preserve selection for repeating Shift-arrow on Japanese keyboard
+                // Skip the posting of SalEvent::ExtTextInput and
+                // SalEvent::EndExtTextInput events for private use area characters.
+				NSString *pChars = [mpLastKeyDownEvent characters];
+				if ( pChars )
 				{
-					[mpTextInput retain];
+                    NSUInteger nLen = [pChars length];
+                    unichar pBuf[ nLen + 1 ];
+                    NSUInteger nBufLen = 0;
+                    for ( NSUInteger i = 0; i < nLen; i++ )
+                    {
+                        unichar aChar = [pChars characterAtIndex:i];
+                        if ( aChar >= 0xf700 && aChar < 0xf780 )
+                            continue;
 
-					NSUInteger i = 0;
-					NSUInteger nLength = [mpTextInput length];
-					for ( ; i < nLength; i++ )
-					{
-						SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
-						pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
-						pKeyDownEvent->mnCode = KEY_BACKSPACE;
-						pKeyDownEvent->mnCharCode = 0;
-						pKeyDownEvent->mnRepeat = 0;
+                        pBuf[nBufLen++] = aChar;
+                    }
+                    pBuf[nBufLen] = 0;
 
-						// Only post a key down event. Posting a matching key up
-						// event will backspace two characters instead of one.
-						JavaSalEvent *pSalKeyDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
-						JavaSalEventQueue::postCachedEvent( pSalKeyDownEvent );
-						pSalKeyDownEvent->release();
+					// Improve emulation of the TextEdit application's behavior
+					// when pressing and holding a vowel key by posting a
+					// backspace event and then marking the current character
+                    if ( nBufLen )
+                    {
+						mpTextInput = [NSString stringWithCharacters:pBuf length:nBufLen];
+						if ( mpTextInput && [mpTextInput length] )
+						{
+							[mpTextInput retain];
+
+							NSUInteger i = 0;
+							NSUInteger nLength = [mpTextInput length];
+							for ( ; i < nLength; i++ )
+							{
+								SalKeyEvent *pKeyDownEvent = new SalKeyEvent();
+								pKeyDownEvent->mnTime = (sal_uLong)( JavaSalEventQueue::getLastNativeEventTime() * 1000 );
+								pKeyDownEvent->mnCode = KEY_BACKSPACE;
+								pKeyDownEvent->mnCharCode = 0;
+								pKeyDownEvent->mnRepeat = 0;
+
+								// Only post a key down event. Posting a
+								// matching key up event will backspace two
+								// characters instead of one.
+								JavaSalEvent *pSalKeyDownEvent = new JavaSalEvent( SALEVENT_KEYINPUT, mpFrame, pKeyDownEvent );
+								JavaSalEventQueue::postCachedEvent( pSalKeyDownEvent );
+								pSalKeyDownEvent->release();
+							}
+
+							id pTextInput = mpTextInput;
+							[pTextInput retain];
+							[self setMarkedText:pTextInput selectedRange:NSMakeRange( 0, nLength ) replacementRange:NSMakeRange( 0, nLength )];
+							[pTextInput release];
+
+							if ( mpTextInput )
+								mbTextInputWantsNonRepeatKeyDown = YES;
+						}
 					}
-
-					id pTextInput = mpTextInput;
-					[pTextInput retain];
-					[self setMarkedText:pTextInput selectedRange:NSMakeRange( 0, nLength ) replacementRange:NSMakeRange( 0, nLength )];
-					[pTextInput release];
-
-					if ( mpTextInput )
-						mbTextInputWantsNonRepeatKeyDown = YES;
 				}
 			}
 			RELEASE_SOLARMUTEX
