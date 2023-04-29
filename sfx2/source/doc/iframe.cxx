@@ -23,6 +23,9 @@
 #include <com/sun/star/frame/Frame.hpp>
 #include <com/sun/star/frame/XFrame2.hpp>
 #include <com/sun/star/frame/XSynchronousFrameLoader.hpp>
+#ifndef NO_LIBO_CHECK_IFRAME_TARGET
+#include <com/sun/star/task/InteractionHandler.hpp>
+#endif	// !NO_LIBO_CHECK_IFRAME_TARGET
 #include <com/sun/star/util/URLTransformer.hpp>
 #include <com/sun/star/util/XURLTransformer.hpp>
 #include <com/sun/star/util/XCloseable.hpp>
@@ -38,6 +41,9 @@
 #include <svtools/miscopt.hxx>
 #include <svl/ownlist.hxx>
 #include <svl/itemprop.hxx>
+#ifndef NO_LIBO_CHECK_IFRAME_TARGET
+#include <sfx2/docfile.hxx>
+#endif	// !NO_LIBO_CHECK_IFRAME_TARGET
 #include <sfx2/frmdescr.hxx>
 #ifndef NO_LIBO_CHECK_IFRAME_TARGET
 #include <sfx2/objsh.hxx>
@@ -184,15 +190,28 @@ throw( uno::RuntimeException, std::exception )
         uno::Reference < util::XURLTransformer > xTrans( util::URLTransformer::create( mxContext ) );
         xTrans->parseStrict( aTargetURL );
 
-        if (INetURLObject(aTargetURL.Complete).GetProtocol() == INetProtocol::INET_PROT_MACRO)
+        INetURLObject aURLObject(aTargetURL.Complete);
+        if (aURLObject.GetProtocol() == INetProtocol::INET_PROT_MACRO || aTargetURL.Complete.startsWith("vnd.sun.star.script"))
+            return false;
+
+        uno::Reference<frame::XFramesSupplier> xParentFrame = xFrame->getCreator();
+        SfxObjectShell* pDoc = SfxMacroLoader::GetObjectShell(xParentFrame);
+
+        bool bUpdateAllowed(true);
+        if (pDoc)
         {
-            uno::Reference<frame::XFramesSupplier> xParentFrame = xFrame->getCreator();
-            SfxObjectShell* pDoc = SfxMacroLoader::GetObjectShell(xParentFrame);
-            if (pDoc && !pDoc->AdjustMacroMode(OUString()))
-                return false;
+            comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = pDoc->getEmbeddedObjectContainer();
+            bUpdateAllowed = rEmbeddedObjectContainer.getUserAllowsLinkUpdate();
         }
+        if (!bUpdateAllowed)
+            return false;
+
+        OUString sReferer;
+        if (pDoc && pDoc->HasName())
+            sReferer = pDoc->GetMedium()->GetName();
 #endif	// !NO_LIBO_CHECK_IFRAME_TARGET
 
+#ifdef NO_LIBO_CHECK_IFRAME_TARGET
         DBG_ASSERT( !mxFrame.is(), "Frame already existing!" );
         vcl::Window* pParent = VCLUnoHelper::GetWindow( xFrame->getContainerWindow() );
         IFrameWindow_Impl* pWin = new IFrameWindow_Impl( pParent, maFrmDescr.IsFrameBorderOn() );
@@ -215,18 +234,54 @@ throw( uno::RuntimeException, std::exception )
         if ( xFramesSupplier.is() )
             mxFrame->setCreator( xFramesSupplier );
 
-#ifdef NO_LIBO_CHECK_IFRAME_TARGET
         util::URL aTargetURL;
         aTargetURL.Complete = OUString( maFrmDescr.GetURL().GetMainURL( INetURLObject::NO_DECODE ) );
         uno::Reference < util::XURLTransformer > xTrans( util::URLTransformer::create( mxContext ) );
         xTrans->parseStrict( aTargetURL );
+#else	// NO_LIBO_CHECK_IFRAME_TARGET
+        uno::Reference<css::awt::XWindow> xParentWindow(xFrame->getContainerWindow());
+
+        if (!mxFrame.is())
+        {
+            vcl::Window* pParent = VCLUnoHelper::GetWindow(xParentWindow);
+            IFrameWindow_Impl* pWin = new IFrameWindow_Impl( pParent, maFrmDescr.IsFrameBorderOn() );
+            pWin->SetSizePixel( pParent->GetOutputSizePixel() );
+            pWin->SetBackground();
+            pWin->Show();
+
+            uno::Reference < awt::XWindow > xWindow( pWin->GetComponentInterface(), uno::UNO_QUERY );
+            xFrame->setComponent( xWindow, uno::Reference < frame::XController >() );
+
+            // we must destroy the IFrame before the parent is destroyed
+            xWindow->addEventListener( this );
+
+            mxFrame = frame::Frame::create( mxContext );
+            uno::Reference < awt::XWindow > xWin( pWin->GetComponentInterface(), uno::UNO_QUERY );
+            mxFrame->initialize( xWin );
+            mxFrame->setName( maFrmDescr.GetName() );
+
+            uno::Reference < frame::XFramesSupplier > xFramesSupplier( xFrame, uno::UNO_QUERY );
+            if ( xFramesSupplier.is() )
+                mxFrame->setCreator( xFramesSupplier );
+        }
 #endif	// NO_LIBO_CHECK_IFRAME_TARGET
 
+#ifdef NO_LIBO_CHECK_IFRAME_TARGET
         uno::Sequence < beans::PropertyValue > aProps(2);
+#else	// NO_LIBO_CHECK_IFRAME_TARGET
+        uno::Reference<task::XInteractionHandler> xInteractionHandler(task::InteractionHandler::createWithParent(mxContext, xParentWindow));
+        uno::Sequence < beans::PropertyValue > aProps(4);
+#endif	// NO_LIBO_CHECK_IFRAME_TARGET
         aProps[0].Name = "PluginMode";
         aProps[0].Value <<= (sal_Int16) 2;
         aProps[1].Name = "ReadOnly";
         aProps[1].Value <<= true;
+#ifndef NO_LIBO_CHECK_IFRAME_TARGET
+        aProps[2].Name = "InteractionHandler";
+        aProps[2].Value <<= xInteractionHandler;
+        aProps[3].Name = "Referer";
+        aProps[3].Value <<= sReferer;
+#endif	// !NO_LIBO_CHECK_IFRAME_TARGET
         uno::Reference < frame::XDispatch > xDisp = mxFrame->queryDispatch( aTargetURL, "_self", 0 );
         if ( xDisp.is() )
             xDisp->dispatch( aTargetURL, aProps );
