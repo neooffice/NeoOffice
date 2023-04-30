@@ -467,6 +467,7 @@ build.neo_patches: \
 # Custom modules that need to link directly to other custom modules
 build.neo_avmedia_patch build.neo_cpputools_patch build.neo_extensions_patch build.neo_fpicker_patch build.neo_lingucomponent_patch build.neo_shell_patch build.neo_sw_patch build.neo_vcl_patch : build.neo_sal_patch
 build.neo_accessibility_patch build.neo_cui_patch build.neo_sfx2_patch : build.neo_vcl_patch
+build.neo_sc_patch: build.neo_svx_patch
 build.neo_sd_patch: build.neo_vcl_patch build.neo_editeng_patch build.neo_svx_patch
 build.neo_sfx2_patch: build.neo_sal_patch build.neo_unotools_patch build.neo_vcl_patch
 build.neo_svtools_patch: build.neo_sal_patch build.neo_extensions_patch build.neo_vcl_patch
