@@ -639,6 +639,7 @@ source/unodraw/unoshtxt.cxx
 source/unodraw/unohtabl.cxx
 source/unodraw/unoctabl.cxx
 source/unodraw/UnoGraphicExporter.hxx
+source/unodraw/unoshap4.cxx
 source/unodraw/UnoNameItemTable.cxx
 source/unodraw/unobrushitemhelper.cxx
 source/unodraw/unomlstr.cxx
@@ -658,6 +659,7 @@ source/unodraw/tableshape.cxx
 source/unodraw/gluepts.hxx
 source/unodraw/unomtabl.cxx
 source/unodraw/unopool.cxx
+source/unodraw/shapeimpl.hxx
 source/unodraw/unodtabl.cxx
 source/unodraw/unoshcol.cxx
 source/unodraw/unoshap4.cxx.orig
@@ -832,6 +834,7 @@ source/svdraw/svdstr.src
 source/svdraw/svdopath.cxx
 source/svdraw/svdotextpathdecomposition.cxx
 source/svdraw/sdrpagewindow.cxx
+source/svdraw/svdoole2.cxx
 source/svdraw/svdoole2.cxx.orig
 source/svdraw/svdoutlinercache.cxx
 source/svdraw/sdrundomanager.cxx

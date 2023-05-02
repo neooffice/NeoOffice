@@ -153,11 +153,7 @@ bool DocumentLinkManager::hasDdeOrOleOrWebServiceLinks(bool bDde, bool bOle, boo
         sfx2::SvBaseLink* pBase = *rLinks[i];
         if (bDde && dynamic_cast<ScDdeLink*>(pBase))
             return true;
-#ifdef NO_LIBO_CHECK_IFRAME_TARGET
         if (bOle && dynamic_cast<SdrEmbedObjectLink*>(pBase))
-#else	// NO_LIBO_CHECK_IFRAME_TARGET
-        if (bOle && (dynamic_cast<SdrEmbedObjectLink*>(pBase) || dynamic_cast<SdrIFrameLink*>(pBase)))
-#endif	// NO_LIBO_CHECK_IFRAME_TARGET
             return true;
 #ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
         if (bWebService && dynamic_cast<ScWebServiceLink*>(pBase))
@@ -193,15 +189,6 @@ bool DocumentLinkManager::updateDdeOrOleOrWebServiceLinks(vcl::Window* pWin)
             pOleLink->Update();
             continue;
         }
-
-#ifndef NO_LIBO_CHECK_IFRAME_TARGET
-        SdrIFrameLink* pIFrameLink = dynamic_cast<SdrIFrameLink*>(pBase);
-        if (pIFrameLink)
-        {
-            pIFrameLink->Update();
-            continue;
-        }
-#endif	// !NO_LIBO_CHECK_IFRAME_TARGET
 
 #ifndef NO_LIBO_WEBSERVICE_LOADING_FIX
         ScWebServiceLink* pWebserviceLink = dynamic_cast<ScWebServiceLink*>(pBase);

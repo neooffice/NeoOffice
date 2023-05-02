@@ -420,9 +420,7 @@ void ScDocShell::Execute( SfxRequest& rReq )
         case SID_UPDATETABLINKS:
             {
                 comphelper::EmbeddedObjectContainer& rEmbeddedObjectContainer = getEmbeddedObjectContainer();
-#ifdef NO_LIBO_CHECK_IFRAME_TARGET
                 rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
-#endif	// NO_LIBO_CHECK_IFRAME_TARGET
 
                 ScDocument& rDoc = GetDocument();
 
@@ -464,9 +462,6 @@ void ScDocShell::Execute( SfxRequest& rReq )
 
                 if (nDlgRet == RET_YES || nSet==LM_ALWAYS)
                 {
-#ifndef NO_LIBO_CHECK_IFRAME_TARGET
-                    rEmbeddedObjectContainer.setUserAllowsLinkUpdate(true);
-#endif	// !NO_LIBO_CHECK_IFRAME_TARGET
                     ReloadTabLinks();
                     aDocument.UpdateExternalRefLinks(GetActiveDialogParent());
 

@@ -245,6 +245,7 @@ inc/swatrset.hxx
 inc/fldbas.hxx
 inc/finalthreadmanager.hxx
 inc/txatritr.hxx
+inc/ndole.hxx
 inc/AnnotationWin.hxx
 inc/chpfld.hxx
 inc/docfunc.hxx
@@ -902,6 +903,7 @@ source/core/undo/undoflystrattr.cxx
 source/core/undo/untbl.cxx
 source/core/undo/SwRewriter.cxx
 source/core/undo/unoutl.cxx
+source/core/ole/ndole.cxx
 source/core/graphic/grfatr.cxx
 source/core/graphic/ndgrf.cxx
 source/core/edit/acorrect.cxx

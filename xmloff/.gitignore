@@ -611,6 +611,7 @@ source/draw/ximp3dobject.cxx
 source/draw/ximpgrp.cxx
 source/draw/eventimp.hxx
 source/draw/numithdl.hxx
+source/draw/ximpshap.cxx
 source/draw/XMLImageMapContext.cxx
 source/draw/ximpshow.hxx
 source/draw/ximpcustomshape.cxx
@@ -623,6 +624,7 @@ source/draw/EnhancedCustomShapeToken.cxx
 source/draw/ximp3dscene.hxx
 source/draw/sdxmlexp_impl.hxx
 source/draw/ximp3dobject.hxx
+source/draw/ximpshap.hxx
 source/draw/eventimp.cxx
 source/draw/ximpgrp.hxx
 source/draw/numithdl.cxx
