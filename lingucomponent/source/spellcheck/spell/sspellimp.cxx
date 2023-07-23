@@ -275,7 +275,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                 OUString aLocaleString( ImplGetLocaleString( aLocale ) );
                 if ( aLocaleString.getLength() )
                 {
-                    CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aLocaleString.getStr(), aLocaleString.getLength(), kCFAllocatorNull );
+                    CFStringRef aString = CFStringCreateWithCharacters( NULL, aLocaleString.getStr(), aLocaleString.getLength() );
                     if ( aString )
                     {
                         CFArrayAppendValue( aAppLocales, aString );
@@ -289,7 +289,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                         OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
                         if ( aTmpLocaleString.getLength() )
                         {
-                            CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
+                            CFStringRef aTmpString = CFStringCreateWithCharacters( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength() );
                             if ( aTmpString )
                             {
                                 CFArrayAppendValue( aAppLocales, aTmpString );
@@ -304,7 +304,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                         OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
                         if ( aTmpLocaleString.getLength() )
                         {
-                            CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
+                            CFStringRef aTmpString = CFStringCreateWithCharacters( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength() );
                             if ( aTmpString )
                             {
                                 CFArrayAppendValue( aAppLocales, aTmpString );
@@ -746,7 +746,7 @@ sal_Int16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rL
 
             if ( bFound )
             {
-                CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
+                CFStringRef aString = CFStringCreateWithCharacters( kCFAllocatorDefault, rWord.getStr(), rWord.getLength() );
                 if ( aString )
                 {
                     if ( !NSSpellChecker_checkSpellingOfString( aString, it->second ) )
@@ -899,7 +899,7 @@ Reference< XSpellAlternatives >
 
            if ( bFound )
            {
-               CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
+               CFStringRef aString = CFStringCreateWithCharacters( kCFAllocatorDefault, rWord.getStr(), rWord.getLength() );
                if ( aString )
                {
                    CFArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
