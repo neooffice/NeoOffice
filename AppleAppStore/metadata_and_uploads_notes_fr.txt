@@ -36,9 +36,10 @@ Deux ingénieurs ont créé NeoOffice en 2003 quand ils ont fait OpenOffice fonc
 What's New in this Version:
 Avant de télécharger NeoOffice, s'il vous plaît cliquer sur le lien « Assistance » et lire les notes d'installation.
 
-This version of NeoOffice adds the following features:
-• NeoOffice can now load Oracle's JDK 19 and higher
-• NeoOffice has VoiceOver support again
+This version of NeoOffice fixes the following bugs:
+• Fix for LibreOffice copy/paste bug #49853
+• Fix for LibreOffice Japanese keyboard bug #154708
+• Fix for crash when spellchecking
 
 
 Promotional Text:
