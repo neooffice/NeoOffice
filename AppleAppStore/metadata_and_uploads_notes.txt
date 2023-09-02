@@ -16,7 +16,7 @@ https://www.neooffice.org/neojava/faq.php#privacy
 Description:
 Paste the following paragraphs into the Description text area. Stop before the "Keywords" section:
 
-NeoOffice is an office suite for macOS that is based on old versions of OpenOffice and LibreOffice. With NeoOffice, you can view, edit, and save old OpenOffice and LibreOffice documents.
+NeoOffice is an office suite for macOS that is based on old versions of OpenOffice and LibreOffice. With NeoOffice, you can view, edit, and save older OpenOffice and LibreOffice documents.
 
 Note: if you need to view, edit, and save newer LibreOffice or Microsoft Office documents, you may want to try LibreOffice. In most cases, the latest version of LibreOffice can open and save Microsoft Office documents far better than NeoOffice.
 
