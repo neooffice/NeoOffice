@@ -1,3 +1,5 @@
+## <p align="center">The NeoOffice project is no longer active<br>As a replacement, you may want to try <a href="http://www.libreoffice.org/">LibreOffice</a></p>
+
 NeoOffice is an office suite for macOS that is based on old versions of <a href="http://www.openoffice.org/">OpenOffice</a> and <a href="http://www.libreoffice.org/">LibreOffice</a>. With NeoOffice, you can view, edit, and save older OpenOffice and LibreOffice documents.
 
 Note: if you need to view, edit, and save newer LibreOffice or Microsoft Office documents, you may want to try <a href="http://www.libreoffice.org/">LibreOffice</a>. In most cases, the latest version of LibreOffice can open and save Microsoft Office documents far better than NeoOffice.
